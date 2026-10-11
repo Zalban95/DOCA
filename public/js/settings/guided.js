@@ -13,35 +13,35 @@ async function guidedLoad() {
   panel.innerHTML = '<div class="card"><div class="card-title">Set-up</div><p class="guided-muted">Looking at this machine…</p></div>';
   try { _guided = await apiFetch('/api/guided'); }
   catch (e) { panel.innerHTML = `<div class="card"><div class="card-title">Set-up</div><p style="color:var(--red)">${escHtml(e.message)}</p></div>`; return; }
-  const g = _guided, a = g.answers || {};
+  const g = _guided, a = g.answers || {}, B = escHtml(guidedBrand());
   const uses = new Set(a.uses || ['talk']), devices = new Set(a.devices || ['browser']);
   const box = (name, id, label, on) => `<label class="guided-choice"><input type="checkbox" name="${name}" value="${escHtml(id)}"${on ? ' checked' : ''}> ${escHtml(label)}</label>`;
   const routeQ = g.shapeHere === 'local'
-    ? `<div class="guided-q"><div class="guided-q-title">2. Where should it run?</div>
+    ? `<div class="guided-q"><div class="guided-q-title">2. Where should it run?${infoBtn('This machine can run models itself. On this machine (the default): private and free, with online providers only for what it cannot run. Online providers: you paste a key from a company that runs models and bills you; nothing big is installed here.')}</div>
         <label class="guided-choice"><input type="radio" name="guided-route" value="local"${a.route !== 'providers' ? ' checked' : ''}> On this machine where it fits — private, nothing to pay; providers only for what it cannot run</label>
         <label class="guided-choice"><input type="radio" name="guided-route" value="providers"${a.route === 'providers' ? ' checked' : ''}> Online providers for everything — you paste a key, they bill you, nothing big is installed here</label></div>`
     : g.have?.chat
       ? `<div class="guided-q"><div class="guided-q-title">2. Where it runs</div>
-        <p class="guided-muted">DOCA's agent already has a model — <b>${escHtml(g.have.chat.model)}</b> on ${escHtml(g.have.chat.provider)} — and it answers. Nothing heavy is installed here.</p></div>`
+        <p class="guided-muted">${B}'s agent already has a model — <b>${escHtml(g.have.chat.model)}</b> on ${escHtml(g.have.chat.provider)} — and it answers. Nothing heavy is installed here.</p></div>`
       : `<div class="guided-q"><div class="guided-q-title">2. Where it runs</div>
-        <p class="guided-muted">This machine cannot run the agent's model well, so DOCA will use a model elsewhere: an online provider's (paste its key below), or <b>one you already run</b> on another machine (give its address below). Nothing heavy is installed here.</p></div>`;
+        <p class="guided-muted">This machine cannot run the agent's model well, so ${B} will use a model elsewhere: an online provider's (paste its key below), or <b>one you already run</b> on another machine (give its address below). Nothing heavy is installed here.</p></div>`;
   panel.innerHTML = `<div class="card guided">
     <div class="card-title">Set-up</div>
-    <p class="guided-lead">Say what you want DOCA for. It looks at this machine, picks what fits, and sets up only that — every install waits for your click, every online service for your key.</p>
+    <p class="guided-lead">Say what you want ${B} for. It looks at this machine, picks what fits, and sets up only that — every install waits for your click, every online service for your key.</p>
     <div class="guided-machine"><b>This machine:</b> ${escHtml(g.machine.summary)}<br>
-      <span class="guided-muted" title="${escHtml(`Models it suggests come from a list tested by the DOCA project (version ${g.suggestions.version}, ${g.suggestions.updated}).`)}">${g.shapeHere === 'local' ? 'It can run its own models.' : 'It cannot run the agent\'s model well, so the model will come from elsewhere: an online provider, or one you run on another machine.'}</span>
-      ${g.have?.chat ? `<br><span style="color:var(--green)">✓ DOCA has a model: ${escHtml(g.have.chat.model)} on ${escHtml(g.have.chat.provider)}, and it answers.</span>` : ''}
+      <span class="guided-muted" title="${escHtml(`Models it suggests come from a list tested by the ${guidedBrand()} project (version ${g.suggestions.version}, ${g.suggestions.updated}).`)}">${g.shapeHere === 'local' ? 'It can run its own models.' : 'It cannot run the agent\'s model well, so the model will come from elsewhere: an online provider, or one you run on another machine.'}</span>
+      ${g.have?.chat ? `<br><span style="color:var(--green)">✓ ${B} has a model: ${escHtml(g.have.chat.model)} on ${escHtml(g.have.chat.provider)}, and it answers.</span>` : ''}
       <br><span class="guided-muted">The suggested models were checked on <b>${escHtml(g.suggestions.checked || g.suggestions.updated || '—')}</b>${g.suggestions.local ? ` (${g.suggestions.local} added here from the model scout)` : ''}.</span>
       ${g.scout?.on ? `<button class="btn btn-xs" onclick="guidedCheckModels(this)" title="Ask the model scout to look for newer models now">Check for newer models</button>
       <span class="status-line" id="guided-models-status"></span>`
         : g.scout?.developer ? `<br><span class="guided-muted">The model scout, which looks for newer models every few days, is off: an experiment, switched on in <a href="#settings/experiments" onclick="settingsSubNav('experiments'); return false">Settings → Developer</a>.</span>`
-        : '<span class="guided-muted">A newer list arrives with DOCA\'s updates.</span>'}
+        : `<span class="guided-muted">A newer list arrives with ${B}'s updates.</span>`}
       ${g.suggestions.local ? '<div id="guided-accepted"></div>' : ''}</div>
-    <div class="guided-q"><div class="guided-q-title">1. What do you want DOCA for?</div>
+    <div class="guided-q"><div class="guided-q-title">1. What do you want ${B} for?${infoBtn('Tick everything you want. Each choice adds what it needs — a model, a speech service, a key — fitted to this machine. Nothing is installed by ticking: you see the plan below first, and every install waits for its own click.')}</div>
       ${g.uses.map(u => box('guided-use', u.id, u.label, uses.has(u.id))).join('')}
-      <textarea id="guided-free" class="input guided-free" rows="2" placeholder="Anything else, in your own words (optional)">${escHtml(a.free || '')}</textarea></div>
+      <textarea id="guided-free" aria-label="Anything else, in your own words" class="input guided-free" rows="2" placeholder="Anything else, in your own words (optional)">${escHtml(a.free || '')}</textarea></div>
     ${routeQ}
-    <div class="guided-q"><div class="guided-q-title">3. Where will you use it?</div>
+    <div class="guided-q"><div class="guided-q-title">3. Where will you use it?${infoBtn('The devices you will talk to it from. Each one ticked gets a line below saying how it joins (an app to install, a code to pair). Nothing is installed on them from here.')}</div>
       ${g.devices.map(d => box('guided-device', d.id, d.label, devices.has(d.id))).join('')}</div>
     <div class="guided-actions">
       <button class="btn btn-sm btn-blue" onclick="guidedApply(this)">Set it up</button>
@@ -56,6 +56,9 @@ async function guidedLoad() {
   // "Only show what it would do" (self-test round two, C4).
   guidedPreview();
 }
+
+/** The product's name as this install shows it (branding), never written into the page. */
+function guidedBrand() { return (typeof BRAND !== 'undefined' && BRAND?.product) || document.querySelector('[data-brand]')?.textContent?.trim() || 'the hub'; }
 
 function guidedAnswers() {
   const q = sel => [...document.querySelectorAll(sel)];

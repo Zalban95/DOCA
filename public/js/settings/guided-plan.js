@@ -7,7 +7,7 @@
 
 // Where a role's model is chosen once its provider works: the agent's own model is set from here.
 let _guidedLastPlan = null;   // the plan drawn last: each key row's providers and their key pages
-const _GUIDED_WHERE = { coding: 'Controls → DOCA ⚙ (or a specialist\'s own model)', vision: 'Settings → Harness → Vision', embeddings: 'Settings → Harness → Retrieval' };
+const _GUIDED_WHERE = { coding: 'Controls → the agent\'s ⚙ (or a specialist\'s own model)', vision: 'Settings → Harness → Vision', embeddings: 'Settings → Harness → Retrieval' };
 
 function guidedPlanRender(p, applied) {
   const el = document.getElementById('guided-plan');
@@ -32,39 +32,41 @@ function _guidedInstallRow(s, i, applied) {
     : pr?.status === 'installed' ? '<span style="color:var(--green)">✓ installed</span>'
     : pr ? `<button class="btn btn-xs btn-green" onclick="guidedInstall(${jsArg(pr.id)}, ${i}, ${pr.needsPassword ? 'true' : 'false'})">${escHtml(pr.verb || 'Install')}</button>` : '';
   const use = s.role === 'chat' && s.kind === 'ollama-model'
-    ? ` <button class="btn btn-xs" id="guided-use-${i}" style="display:${pr?.status === 'installed' ? '' : 'none'}" onclick="guidedUseModel('ollama', ${jsArg(s.id)}, ${i})">Use it for DOCA's agent</button>` : '';
+    ? ` <button class="btn btn-xs" id="guided-use-${i}" style="display:${pr?.status === 'installed' ? '' : 'none'}" onclick="guidedUseModel('ollama', ${jsArg(s.id)}, ${i})">Use it for the agent</button>` : '';
   return `<div class="guided-step"><div class="guided-step-title">⬇ ${escHtml(s.label)} <span class="guided-muted">— ${escHtml(s.why)}</span></div>
     <div class="toolbar">${state}${use}<span class="status-line" id="guided-st-${i}"></span></div></div>`;
 }
 
 /** Already set up: the agent's model answers (whatever provider it is on). */
 function _guidedHaveRow(s) {
-  return `<div class="guided-step"><div class="guided-step-title">✓ ${escHtml(s.label)}: ${escHtml(s.model)} <span class="guided-muted">— on ${escHtml(s.provider)}, and it answers. Change it with ⚙ on the DOCA row in Controls.</span></div></div>`;
+  return `<div class="guided-step"><div class="guided-step-title">✓ ${escHtml(s.label)}: ${escHtml(s.model)} <span class="guided-muted">— on ${escHtml(s.provider)}, and it answers. Change it with ⚙ on its row in Controls.</span></div></div>`;
 }
 
 /** Or a model the person already runs (llama.cpp, vLLM, LM Studio, Ollama…) at an address: added as Field → API keys → + Add provider adds it. */
 function _guidedOwnRow(i) {   // the advanced route: folded, so the common way (a key) is what a newcomer meets first
   return advancedFold(`<div class="guided-step" id="guided-own-${i}"><div class="guided-step-title">🖧 Or a model you already run <span class="guided-muted">— llama.cpp, vLLM, LM Studio, Ollama or any OpenAI-compatible server, by its address</span></div>
-    <div class="toolbar guided-key">
-      <input class="input" autocomplete="off" placeholder="http://192.168.1.20:8080/v1" id="guided-own-url-${i}" title="Its address, usually ending in /v1">
-      <input class="input" type="password" autocomplete="off" placeholder="Key, if it needs one" id="guided-own-key-${i}">
-      <input class="input" autocomplete="off" placeholder="Its name (optional) — e.g. My model at the office" id="guided-own-name-${i}" title="What DOCA calls it in your lists">
-      <button class="btn btn-xs btn-blue" onclick="guidedOwnConnect(${i})">Connect and test</button>
-      <span class="status-line" id="guided-own-st-${i}"></span></div>
+    <div class="form-row guided-key">
+      ${_gField(`guided-own-url-${i}`, 'Address', 'Where the model server answers, usually ending in /v1, e.g. http://192.168.1.20:8080/v1. It is tested before anything is saved.', `<input class="input" autocomplete="off" placeholder="http://192.168.1.20:8080/v1" id="guided-own-url-${i}">`)}
+      ${_gField(`guided-own-key-${i}`, 'Key', 'Only if the server asks for one. Most servers on your own machines do not: leave it empty.', `<input class="input" type="password" autocomplete="off" placeholder="if it needs one" id="guided-own-key-${i}">`)}
+      ${_gField(`guided-own-name-${i}`, 'Its name', 'What it is called in your lists, e.g. My model at the office. Empty: "My model at" its address.', `<input class="input" autocomplete="off" placeholder="optional" id="guided-own-name-${i}">`)}
+      <button class="btn btn-xs btn-blue" onclick="guidedOwnConnect(${i})">Connect and test</button></div>
+    <span class="status-line" id="guided-own-st-${i}"></span>
     <div class="toolbar" id="guided-own-models-${i}"></div></div>`, { id: 'guided-own', label: 'Advanced — a model you already run, by its address' });
 }
+
+const _gField = (id, label, info, input) => `<div class="field"><label class="input-label" for="${id}">${label}${infoBtn(info)}</label>${input}</div>`;
 
 function _guidedKeyRow(s, i) {
   if (!s.providers.length) return `<div class="guided-step"><div class="guided-step-title">✎ ${escHtml(s.label)}</div><div class="guided-muted">${escHtml(s.note || 'No provider serves this yet.')}</div></div>`;
   const first = s.providers.find(x => x.hasKey) || s.providers[0];
   const opts = s.providers.map(x => `<option value="${escHtml(x.id)}"${x === first ? ' selected' : ''}>${escHtml(x.label)}${x.hasKey ? ' — key already here' : ''}</option>`).join('');
   return `<div class="guided-step" id="guided-key-${i}" data-role="${escHtml(s.role)}"><div class="guided-step-title">🔑 ${escHtml(s.label)} <span class="guided-muted">— ${escHtml(s.why)}</span></div>
-    <div class="toolbar guided-key">
-      <select class="input" onchange="guidedKeyProvider(${i})">${opts}</select>
+    <div class="form-row guided-key">
+      ${_gField(`guided-key-prov-${i}`, 'Provider', 'The company whose models you would use for this. "Get a key" opens the page where it makes one; they bill you for what is used.', `<select class="input" id="guided-key-prov-${i}" onchange="guidedKeyProvider(${i})">${opts}</select>`)}
       <a class="btn btn-xs" target="_blank" rel="noopener" id="guided-key-link-${i}">Get a key ↗</a>
-      <input class="input" type="password" autocomplete="off" placeholder="Paste the key here" id="guided-key-in-${i}">
-      <button class="btn btn-xs btn-blue" onclick="guidedKeyTest(${i})">Save and test</button>
-      <span class="status-line" id="guided-st-${i}"></span></div>
+      ${_gField(`guided-key-in-${i}`, 'Key', 'Paste the key the provider gave you. It is saved on this machine (as under Field → API keys), then tested by listing the provider\'s models.', `<input class="input" type="password" autocomplete="off" placeholder="Paste the key here" id="guided-key-in-${i}">`)}
+      <button class="btn btn-xs btn-blue" onclick="guidedKeyTest(${i})">Save and test</button></div>
+    <span class="status-line" id="guided-st-${i}"></span>
     <div class="toolbar" id="guided-key-models-${i}"></div></div>`;
 }
 
@@ -93,7 +95,7 @@ async function guidedKeyTest(i) {
     const role = row.dataset.role, box = document.getElementById(`guided-key-models-${i}`);
     box.innerHTML = role === 'chat'
       ? `<select class="input" id="guided-key-model-${i}">${r.models.map(m => `<option>${escHtml(m)}</option>`).join('')}</select>
-         <button class="btn btn-xs btn-green" onclick="guidedUseModel(${jsArg(provider)}, document.getElementById('guided-key-model-${i}').value, ${i})">Use it for DOCA's agent</button>`
+         <button class="btn btn-xs btn-green" onclick="guidedUseModel(${jsArg(provider)}, document.getElementById('guided-key-model-${i}').value, ${i})">Use it for the agent</button>`
       : `<span class="guided-muted">Choose its model in ${escHtml(_GUIDED_WHERE[role] || 'Field → Models')}.</span>`;
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
@@ -120,7 +122,7 @@ async function guidedUseModel(provider, model, i) {
   try {
     const r = await apiFetch('/api/harness/doca/config', { method: 'POST', body: { provider, model } });
     // A local model's own pace (harness/provider-pace.js): said here, where it was chosen.
-    setStatus(st, `✓ DOCA's agent now uses ${model}${r.paceText ? ` — it ${r.paceText}` : ''}`, 'ok');
+    setStatus(st, `✓ The agent now uses ${model}${r.paceText ? ` — it ${r.paceText}` : ''}`, 'ok');
     setTimeout(() => { if (document.getElementById('guided-plan')) guidedLoad(); }, 1500);   // Set-up then says it has a model
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
@@ -153,7 +155,7 @@ async function guidedOwnConnect(i) {
     const moved = baseUrl !== typedUrl ? ` (at ${baseUrl})` : '';
     setStatus(st, `✓ It answers${moved} — ${t.models.length} model${t.models.length === 1 ? '' : 's'}${t.existing ? `, kept as "${name}" as before` : `, saved as "${name}"`}`, 'ok');
     document.getElementById(`guided-own-models-${i}`).innerHTML = `<select class="input" id="guided-own-model-${i}">${t.models.map(m => `<option>${escHtml(m)}</option>`).join('')}</select>
-      <button class="btn btn-xs btn-green" onclick="guidedUseModel(${jsArg(name)}, document.getElementById('guided-own-model-${i}').value, 'own-${i}')">Use it for DOCA's agent</button>`;
+      <button class="btn btn-xs btn-green" onclick="guidedUseModel(${jsArg(name)}, document.getElementById('guided-own-model-${i}').value, 'own-${i}')">Use it for the agent</button>`;
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 
