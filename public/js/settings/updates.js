@@ -280,20 +280,18 @@ async function versionsLoad() {
   }
   const opts = _versions.versions.map(v =>
     `<option value="${escHtml(v.tag)}"${v.current ? ' selected' : ''}${v.compatible ? '' : ' disabled'}>${escHtml(_versionLabel(v))}</option>`).join('');
-  box.innerHTML = `
+  box.innerHTML = advancedFold(`
     <div class="field" style="margin-bottom:0">
-      <label class="input-label" for="versions-select" style="display:block">Version</label>
+      <label class="input-label" for="versions-select" style="display:block">Version${infoBtn('Run an earlier or later version kept on this machine. Every version reads the same data. A switch waits for running work, and a version that does not answer within 90 s is switched back on its own. Switching asks for your password.')}</label>
       <div style="display:flex;gap:8px;align-items:center">
         <select class="input flex1" id="versions-select" style="min-width:0">${opts}</select>
-        <button class="btn btn-xs" onclick="versionsNotes()" title="What the selected version added or fixed">ⓘ</button>
+        <button class="btn btn-xs" onclick="versionsNotes()" title="What the selected version added or fixed">What changed</button>
         <button class="btn btn-xs btn-teal" id="versions-use-btn" onclick="versionsUse()" title="Switch to the selected version">Switch</button>
       </div>
     </div>
     <span class="status-line" id="versions-status"></span>
-    <p style="font-size:11px;color:var(--muted);margin:0">
-      Every version reads the same data. A version that does not answer within 90 s after a switch is
-      switched back on its own. If the dashboard will not load at all: ${_versionsRescue(_versions.platform)}
-    </p>`;
+    <details class="desc page-about"><summary>If the panel will not load at all</summary>${_versionsRescue(_versions.platform)}</details>`,
+    { id: 'versions', label: 'Advanced — run another version', count: 1 });
   const st = document.getElementById('versions-status');
   if (!_versions.versions.length) {
     document.getElementById('versions-use-btn').disabled = true;

@@ -722,17 +722,15 @@
           <span class="status-line" id="theme-status" style="margin-top:10px"></span>
         </div>
         <div class="card">
-          <div class="card-title">Navigation Visibility</div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Show or hide tabs in the navigation bar. Saved as you toggle.</p>
+          <div class="card-title" data-info="Turn a page off to hide it from the navigation on this screen only; it keeps working, and Settings always shows. Every page shows by default. Saved as you toggle.">Pages in the navigation</div>
+          <p class="desc" style="margin-bottom:10px">Show or hide pages in the navigation bar, on this screen.</p>
           <div id="settings-tabs-list"><div class="placeholder pulse">Loading…</div></div>
           <span class="status-line" id="settings-status" style="margin-top:10px"></span>
         </div>
         <div class="card">
-          <div class="card-title">Sidebar &amp; System Stats</div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
-            Choose which system stats appear in the sidebar and which sidebar sections are visible.
-            Changes are saved instantly and apply on the next status refresh.
-          </p>
+          <div class="card-title" data-info="System and GPU stats are the readings the hub collects for the sidebar (for every screen); sidebar sections are what this screen shows in its left column. Saved as you toggle; the sidebar changes at its next refresh, within a few seconds.">Sidebar &amp; System Stats</div>
+          <p class="desc" style="margin-bottom:10px">Which readings and sections the sidebar shows.</p>
+
           <div id="settings-stats-list"><div class="placeholder pulse">Loading…</div></div>
           <span class="status-line" id="stats-settings-status" style="margin-top:10px"></span>
         </div>
@@ -753,17 +751,16 @@
             Start at Boot
             <button class="btn btn-xs" onclick="startupLoad()" title="Re-check the boot service">↺</button>
           </div>
-          <p id="startup-about" style="font-size:11px;color:var(--muted);margin-bottom:14px">
-            Install DOCA as a systemd service so the panel comes back on its own after a reboot —
+          <p class="desc" style="margin-bottom:6px">Bring the panel back by itself after this machine restarts.</p>
+          <details class="desc page-about" style="margin-bottom:12px"><summary>What this is</summary><span id="startup-about">Install it as a systemd service so the panel comes back on its own after a reboot —
             and so <code>⟳ Restart</code> above is handled by a supervisor instead of a detached
-            child process. Same thing as running <code>./run.sh enable</code> on the host.
-          </p>
+            child process. Same thing as running <code>./run.sh enable</code> on the host.</span></details>
           <div class="settings-tab-row">
             <label class="skill-toggle">
               <input type="checkbox" id="startup-toggle" onchange="startupToggle(this)">
               <span class="skill-toggle-track"></span>
             </label>
-            <span class="settings-tab-label">Start DOCA when this machine boots</span>
+            <span class="settings-tab-label" data-info="On: the panel starts by itself when this machine starts (or, on Windows and macOS, when you sign in). Off: after a restart nobody starts it until you do. Changing it may ask for this machine's password.">Start <span data-brand="product">DOCA</span> when this machine boots</span>
           </div>
           <span class="status-line" id="startup-status" style="margin-top:10px"></span>
           <pre id="startup-log" class="code-out" style="display:none;max-height:min(35vh,260px);overflow:auto;font-size:11px;margin-top:8px"></pre>
