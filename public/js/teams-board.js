@@ -90,7 +90,7 @@ async function teamsBoardDraw(page, id) {
       <p class="desc">Every task counts the same. A running task's bar is the steps its specialist used of its budget; it reaches 100% only when its contract holds.
         Started ${escHtml(_tpWhen(t.createdAt))}${t.endedAt ? ` · ended ${escHtml(_tpWhen(t.endedAt))}` : ''}.</p>
       <label class="tm-keep"><input type="checkbox" class="switch"${t.loop?.on ? ' checked' : ''}${t.stoppedAt ? ' disabled' : ''} onchange="hcTeamKeepGoing(${jsArg(t.id)}, this.checked)">
-        Keep going — try a failed task again until every contract holds <small>(${t.loop?.rounds || 0} of ${t.maxRounds} rounds used)</small></label>
+        Keep going <small>(${t.loop?.rounds || 0} of ${t.maxRounds} rounds used)</small>${infoBtn(`When on, a task that failed is tried again, round after round, until every task's contract — what "done" means for it — holds, or ${t.maxRounds} rounds are used. Off: a failed task stays failed until someone acts.`)}</label>
     </div>
     <h2 class="tp-h">The plan</h2>
     <div class="tb-lanes">${_tbLanes(t.tasks).map((lane, i) => `<section class="tb-lane" aria-label="Stage ${i + 1}"><div class="tb-lane-h">${i === 0 ? 'First' : `Then (${i + 1})`}${lane.length > 1 ? ' · side by side' : ''}</div>${lane.map(x => _tbTask(x, d)).join('')}</section>`).join('<div class="tb-arrow" aria-hidden="true">→</div>')}</div>

@@ -28,7 +28,7 @@ function _harnessRungHtml(id, preset = {}) {
   return `
     <div class="hcfg-rung" data-rung>
       <div class="hcfg-rung-head">
-        <span class="hcfg-rung-n"></span>
+        <span class="hcfg-rung-n"></span>${infoBtn('This step\'s provider and model, set the same way as the model above. Leave the model box blank to use the same model at this provider.')}
         <button class="btn btn-xs" onclick="harnessFallbackRemove(this, ${jsArg(id)})"
                 title="Remove this fallback">✕</button>
       </div>
@@ -48,13 +48,11 @@ function _harnessRungHtml(id, preset = {}) {
         <input class="input flex1" data-role="model" value="${escHtml(preset.model || '')}"
                placeholder="model id — blank uses the one above" oninput="harnessRungProbe(this)">
       </div>
-      <label class="harness-hint">Context window (tokens)
+      <label class="harness-hint">Context window (tokens)${infoBtn('How much text this fallback model can read at once, as its server allows. 0 (the default) means unknown: it never borrows the main model\'s number. The check counts text and tool tokens plus the reply, not pictures.')}
         <input class="input" type="number" min="0" step="1000" data-role="context-window"
                value="${escHtml(String(Number(preset.contextWindow) > 0 ? preset.contextWindow : 0))}"
                onchange="harnessRungOllamaHint(this)">
       </label>
-      <div class="harness-hint">This fallback's served limit. 0 means unknown; it never inherits the primary model's window.
-        The check estimates text and tool tokens plus the reply cap; it does not measure image tokens.</div>
       <div class="harness-hint hcfg-rung-verdict" data-role="verdict"></div>
       <div class="harness-hint" data-role="ctxhint" style="color:var(--amber)"></div>
     </div>`;

@@ -22,9 +22,9 @@ async function hcSkillDraft() {
   catch (e) { document.getElementById('hc-learn-note').textContent = `✗ ${e.message}`; return; }
   document.getElementById('hc-learn-note').textContent = 'A draft — read it, change what is wrong, then save. Nothing is written until you do; the agents load it when a task matches its description.';
   document.getElementById('hc-learn-body').innerHTML = `
-    <div class="input-label">Name</div><input class="input" id="hc-learn-name" value="${escHtml(d.name)}">
-    <div class="input-label" style="margin-top:8px">When to use it</div><input class="input" id="hc-learn-desc" value="${escHtml(d.description)}">
-    <div class="input-label" style="margin-top:8px">Instructions</div><textarea class="input" id="hc-learn-text" rows="16" style="font-family:var(--font-mono);font-size:12px">${escHtml(d.body)}</textarea>
+    <div class="input-label">Name${infoBtn('The skill\'s name: lower-case words joined by dashes, for example deploy-the-site. Saving never replaces a skill of the same name without asking.')}</div><input class="input" id="hc-learn-name" value="${escHtml(d.name)}">
+    <div class="input-label" style="margin-top:8px">When to use it${infoBtn('One or two sentences on the kind of task this is for. The agents read only this to decide whether to open the skill, so name the task the way you would ask for it.')}</div><input class="input" id="hc-learn-desc" value="${escHtml(d.description)}">
+    <div class="input-label" style="margin-top:8px">Instructions${infoBtn('The steps the agent follows once it opens the skill, written as for a colleague: what to do, in what order, and what worked.')}</div><textarea class="input" id="hc-learn-text" rows="16" style="font-family:var(--font-mono);font-size:12px">${escHtml(d.body)}</textarea>
     <div class="toolbar" style="margin-top:10px;gap:8px"><button class="btn btn-sm btn-blue" onclick="hcSkillSave()">Save the skill</button><span class="status-line" id="hc-learn-status"></span></div>`;
 }
 

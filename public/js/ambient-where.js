@@ -46,8 +46,8 @@ function ambientWhereChoices() {
   return `<div class="amb-where">
     <div class="amb-muted">Where is this screen? The weather needs a place.</div>
     <button class="amb-button" onclick="ambientUseLocation(this)">◎ Use this device's location</button>
-    <form class="amb-town" onsubmit="ambientTypeTown(event)"><input class="input amb-town-in" name="town" placeholder="Type a town" autocomplete="address-level2" aria-label="Town">
-      <button class="amb-button" type="submit">Set</button></form>
+    <form class="amb-town info-row" onsubmit="ambientTypeTown(event)"><input class="input amb-town-in" name="town" placeholder="Type a town" autocomplete="address-level2" aria-label="Town">
+      <button class="amb-button" type="submit">Set</button>${infoBtn('The town this screen is in, for the weather. It is checked when you press Set and kept for this screen only; ◎ above uses the device\'s own position instead.')}</form>
     <div class="amb-muted amb-where-why">${AMB_WHERE.why ? `Not now: ${escHtml(AMB_WHERE.why)}${AMB_WHERE.why.includes('not allowed') ? ' — allow it in the browser’s or the app’s settings, or type a town.' : '.'}` : ''}</div>
   </div>`;
 }

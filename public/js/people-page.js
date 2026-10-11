@@ -68,10 +68,10 @@ async function peopleNewOpen(mode = 'page') {
   ov.innerHTML = `<div class="modal pc-new" role="dialog" aria-label="New conversation"><div class="modal-title">New conversation</div>
     <div class="pc-tabs" role="tablist"><button type="button" class="active" data-kind="people">People</button>${may.channel ? '<button type="button" data-kind="channel">Channel</button>' : ''}</div>
     <div class="pc-new-people">${dir.length ? '<div class="pc-new-who"></div>' : '<div class="placeholder">Nobody else is here yet.</div>'}
-      <input class="input pc-new-name" placeholder="Group name (for three or more)" hidden></div>
-    <div class="pc-new-channel" hidden><input class="input pc-new-cname" placeholder="Channel name, e.g. general">
-      <input class="input pc-new-topic" placeholder="What it is for (optional)">
-      ${may.channel === 'org' ? `<select class="input pc-new-aud"><option value="org">Everyone in the organisation</option><option value="team">My team (everyone below me)</option></select>` : '<p class="desc">For your team: you and everyone below you in the organisation.</p>'}</div>
+      <div class="pc-new-name-row info-row pc-inline" hidden><input class="input pc-new-name" placeholder="Group name (for three or more)" aria-label="Group name">${infoBtn('A name for a conversation with three or more people, shown in everyone\'s list. Empty: their names.')}</div></div>
+    <div class="pc-new-channel" hidden><div class="info-row pc-inline"><input class="input pc-new-cname" placeholder="Channel name, e.g. general" aria-label="Channel name">${infoBtn('The channel\'s name, for example general: a room for a whole group, which people join and leave.')}</div>
+      <div class="info-row pc-inline"><input class="input pc-new-topic" placeholder="What it is for (optional)" aria-label="What it is for">${infoBtn('Optional: a line saying what the channel is for, shown under its name.')}</div>
+      ${may.channel === 'org' ? `<div class="info-row pc-inline"><select class="input pc-new-aud" aria-label="Who it is for"><option value="org">Everyone in the organisation</option><option value="team">My team (everyone below me)</option></select>${infoBtn('Who the channel is for: everyone in the organisation, or your team — you and everyone below you.')}</div>` : '<p class="desc">For your team: you and everyone below you in the organisation.</p>'}</div>
     <div class="modal-actions"><span class="status-line pc-new-status"></span><button type="button" class="btn" data-x>Cancel</button><button type="button" class="btn btn-primary" data-go>Start</button></div></div>`;
   document.body.append(ov);
   const close = () => { ov.remove(); release(); };
@@ -87,7 +87,7 @@ async function peopleNewOpen(mode = 'page') {
   const who = dir.length ? peoplePick($('.pc-new-who'), { label: 'Who', placeholder: 'To: type a name',
     people: dir.map(p => ({ id: p.id, name: p.name, may: p.may, why: 'Your level does not start a conversation with them',
       sub: [[p.title, p.team].filter(Boolean).join(' · ') || p.levelName, p.atPanel ? 'at the panel now' : ''].filter(Boolean).join(' · ') })),
-    onChange: v => { $('.pc-new-name').hidden = v.people.length < 2; } }) : null;
+    onChange: v => { $('.pc-new-name-row').hidden = v.people.length < 2; } }) : null;
   const picked = () => who?.value().people || [];
   setTimeout(() => who?.input.focus(), 30);
   $('[data-go]').onclick = async () => {

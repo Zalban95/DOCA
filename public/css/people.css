@@ -192,3 +192,6 @@ body.people-docked #chat-fab { display: none; }
   .pc-acts { top: -18px; }
   .pc-card-facts { grid-template-columns: 80px 1fr; }
 }
+/* A field and its ⓘ on one line (the new-conversation form); its explanation opens under both (system.css .info-row). */
+.pc-inline:not([hidden]) { display: flex; align-items: center; gap: 4px; }
+.pc-inline > .input { flex: 1; min-width: 0; }

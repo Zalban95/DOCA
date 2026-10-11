@@ -23,8 +23,8 @@ async function archiveInit() {
   const shown = items.filter(i => !filter || i.kind === filter);
   // One page header (des 9), then the list in a card; nothing put away is the one empty state (des 10).
   page.innerHTML = pageHeadHtml({ title: 'Archive', sub: 'What was put away rather than deleted — restore brings it back as it was.',
-    actions: `<select class="input" style="width:auto" aria-label="Show" onchange="document.getElementById('tab-archive').dataset.filter=this.value;archiveInit()">
-        <option value="">everything (${items.length})</option>${Object.entries(ARCHIVE_KINDS).map(([k, l]) => `<option value="${k}" ${filter === k ? 'selected' : ''}>${l}s (${items.filter(i => i.kind === k).length})</option>`).join('')}</select>` })
+    actions: `<span class="info-row" style="display:flex;align-items:center;justify-content:flex-end;max-width:min(420px,100%)"><select class="input" style="width:auto" aria-label="Show" onchange="document.getElementById('tab-archive').dataset.filter=this.value;archiveInit()">
+        <option value="">everything (${items.length})</option>${Object.entries(ARCHIVE_KINDS).map(([k, l]) => `<option value="${k}" ${filter === k ? 'selected' : ''}>${l}s (${items.filter(i => i.kind === k).length})</option>`).join('')}</select>${infoBtn('Which kind of thing put away to list: conversations, missions, teams, projects, computers or browsers. Everything by default; the numbers say how many of each.')}</span>` })
     + (shown.length ? '<div class="card">' : '')
     + `${shown.map(i => `<div class="disk-row row3"><span class="disk-label" style="min-width:130px">${ARCHIVE_KINDS[i.kind]}</span>
       <span class="disk-path"><b>${escHtml(i.title)}</b>${i.detail ? ` · ${escHtml(i.detail)}` : ''} · put away ${escHtml(new Date(i.archivedAt).toLocaleString())}</span>

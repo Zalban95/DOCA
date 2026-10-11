@@ -12,18 +12,18 @@ const PJS = { opts: { caseSensitive: false, wholeWord: false, regex: false }, la
 function pjSearchRender(body) {
   body.innerHTML = `
     <div class="pj-search">
-      <div class="pj-search-row">
-        <input class="input" id="pjs-q" placeholder="Search" onkeydown="if(event.key==='Enter')pjSearchRun()">
+      <div class="pj-search-row info-row">
+        <input class="input" id="pjs-q" placeholder="Search" aria-label="Search" onkeydown="if(event.key==='Enter')pjSearchRun()">${infoBtn('Text to find in every file of the project; Enter searches. Aa matches upper and lower case exactly, ab whole words only, .* reads it as a regular expression (a pattern).')}
         <button class="btn btn-xs pj-opt${PJS.opts.caseSensitive ? ' on' : ''}" data-opt="caseSensitive" title="Match case" onclick="pjSearchOpt(this)">Aa</button>
         <button class="btn btn-xs pj-opt${PJS.opts.wholeWord ? ' on' : ''}" data-opt="wholeWord" title="Whole word" onclick="pjSearchOpt(this)">ab</button>
         <button class="btn btn-xs pj-opt${PJS.opts.regex ? ' on' : ''}" data-opt="regex" title="Regular expression" onclick="pjSearchOpt(this)">.*</button>
       </div>
-      <div class="pj-search-row">
-        <input class="input" id="pjs-r" placeholder="Replace" onkeydown="if(event.key==='Enter')pjReplacePreview()">
+      <div class="pj-search-row info-row">
+        <input class="input" id="pjs-r" placeholder="Replace" aria-label="Replace with" onkeydown="if(event.key==='Enter')pjReplacePreview()">${infoBtn('What to put in place of each match. Preview lists every change first; nothing is written until you confirm it there.')}
         <button class="btn btn-xs" onclick="pjReplacePreview()" title="Show every change first">Preview</button>
       </div>
-      <input class="input" id="pjs-inc" placeholder="Files to include (e.g. *.kt, src/**)">
-      <input class="input" id="pjs-exc" placeholder="Files to exclude">
+      ${advancedFold(`<div class="pj-search-row info-row"><input class="input" id="pjs-inc" placeholder="Files to include (e.g. *.kt, src/**)" aria-label="Files to include" data-default="" data-label="Files to include">${infoBtn('Search only files whose path matches, comma-separated: *.kt is every Kotlin file, src/** everything under src. Empty (the default): every file.')}</div>
+      <div class="pj-search-row info-row"><input class="input" id="pjs-exc" placeholder="Files to exclude" aria-label="Files to exclude" data-default="" data-label="Files to exclude">${infoBtn('Leave out files whose path matches, written the same way. Empty (the default): nothing left out beyond what the project ignores.')}</div>`, { id: 'pj-search-files', label: 'Advanced — which files' })}
       <div class="pj-search-summary" id="pjs-sum"></div>
       <div class="pj-results" id="pjs-results"></div>
     </div>`;

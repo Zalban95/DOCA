@@ -23,7 +23,11 @@ async function pjEnvSection(body) {
 
   const py = v.runtimes.find(r => r.id === 'python');
   const python = el('div', { className: 'pj-env-py' }, 'margin:6px 0');
-  python.appendChild(el('div', { className: 'pj-meta', textContent: 'Python for this project' }));
+  const pyHead = el('div', { className: 'pj-meta', textContent: 'Python for this project' });
+  pyHead.insertAdjacentHTML('beforeend', infoBtn(`Which Python this project's commands and the agent use. "Machine" is the one installed on this machine; a project venv keeps the packages it installs to this project alone. ${v.chosen.kind === 'venv'
+    ? 'Now: the commands run with this venv first on PATH, and the agent is told to use it.'
+    : v.local.venvs.length ? 'Now: the project has a venv but runs with the machine\'s Python.' : 'Now: packages installed for this project go into the machine\'s Python.'}`));
+  python.appendChild(pyHead);
   const sel = el('select', { className: 'input' }, 'width:100%');
   sel.appendChild(new Option(`Machine${py?.version ? ` — ${py.version}` : ''}`, 'machine'));
   for (const venv of v.local.venvs) sel.appendChild(new Option(`Project venv ${venv.dir}${venv.version ? ` — ${venv.version}` : ''}${venv.python ? '' : ' (broken: no python inside)'}`, venv.dir));
@@ -33,9 +37,6 @@ async function pjEnvSection(body) {
     catch (e) { appAlert(e.message); }
   };
   python.appendChild(sel);
-  python.appendChild(el('div', { className: 'pj-meta', style: 'white-space:normal', textContent: v.chosen.kind === 'venv'
-    ? 'The project\'s commands run with this venv first on PATH, and the agent is told to use it.'
-    : v.local.venvs.length ? 'The project has a venv but runs with the machine\'s Python.' : 'Packages installed for this project go into the machine\'s Python. A venv keeps them to the project.' }));
   box.appendChild(python);
 
   const actions = el('div', {}, 'display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 10px');

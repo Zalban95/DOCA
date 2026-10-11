@@ -323,3 +323,8 @@ html[data-hosted] .harness-add-row { display: none; }
 .info-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .info-pop { margin: 4px 0 8px; padding: 8px 10px; border-left: 2px solid var(--accent); background: var(--raised, transparent);
   color: var(--text); font-size: 12.5px; line-height: 1.45; text-transform: none; letter-spacing: 0; font-weight: 400; max-width: 560px; }
+/* A row of fields named only by their placeholders (a filter bar, an add row): each ⓘ follows its field and opens on a
+   line of its own under the whole row. */
+.info-row { flex-wrap: wrap; }
+.info-row > .info-pop { flex-basis: 100%; order: 99; max-width: none; margin: 2px 0 4px; }
+.info-pop { white-space: normal; }   /* inside a line that does not wrap (a label, a meta line) it still does */

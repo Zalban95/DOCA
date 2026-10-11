@@ -5,7 +5,7 @@
    System → Logs. Its page is made here: index.html is at its line ceiling. */
 const CHRON = { f: { q: '', source: '', person: '', device: '', agent: '', state: '', since: 'week' }, picked: null, off: null, data: null };
 const CHRON_SINCE = { hour: ['the last hour', 3600e3], day: ['the last day', 86400e3], week: ['the last week', 7 * 86400e3], month: ['the last 30 days', 30 * 86400e3], all: ['all kept', 0] };
-const CHRON_SOURCES = { turn: 'Turns', mission: 'Missions', job: 'Device jobs', hub: 'What the hub did on its own', call: 'Calls, stage by stage', machines: 'Machines: busy, idle, started outside DOCA', log: 'Harness log (since the last start)' };
+const CHRON_SOURCES = { turn: 'Turns', mission: 'Missions', job: 'Device jobs', hub: 'What the hub did on its own', call: 'Calls, stage by stage', get machines() { return `Machines: busy, idle, started outside ${typeof BRAND !== 'undefined' && BRAND?.product || 'the hub'}`; }, log: 'Harness log (since the last start)' };
 const chronLines = s => s === 'log' || s === 'hub' || s === 'call' || s === 'machines';   // sources that are lines, not runs
 
 function chronicleTab(shown) {
@@ -25,10 +25,13 @@ function chronicleInit() {
   if (!page.dataset.drawn) {
     page.dataset.drawn = '1';
     page.innerHTML = `<div class="chron-bar"><span class="chron-title">Chronicle</span>
-        <span class="chron-hint">Everything that happened, and the story of each piece of work: what ran, why, what it cost, what failed.
-          ${typeof authHasRight !== 'function' || authHasRight('host') ? 'What is kept, and for how long: <a href="#" onclick="nav(\'settings\');settingsSubNav(\'system\');return false">Settings → System → Logs</a>.' : ''}</span>
-        <button class="btn btn-xs" onclick="chronLoad()" title="Read again">↻</button></div>
-      <div class="chron-filters" id="chron-filters"></div>
+        <span class="chron-hint">Everything that happened; pick one to read its story.</span>
+        <button class="btn btn-xs" onclick="chronLoad()" title="Read again">↻</button>
+          <details class="desc page-about" style="flex-basis:100%;font-size:11px"><summary>What this is</summary>Each turn, mission and device job, and the story of
+          each piece of work: what ran, why, what it cost, what failed. Filter by where it came from, who, which device or agent,
+          how it ended and when.
+          ${typeof authHasRight !== 'function' || authHasRight('host') ? 'What is kept, and for how long: <a href="#" onclick="nav(\'settings\');settingsSubNav(\'system\');return false">Settings → System → Logs</a>.' : ''}</details></div>
+      <div class="chron-filters info-row" id="chron-filters"></div>
       <div class="chron-totals" id="chron-totals"></div>
       <div class="chron-body"><div class="chron-list" id="chron-list"><div class="chron-empty">Loading…</div></div><div class="chron-story" id="chron-story"></div></div>`;
   }
@@ -60,20 +63,31 @@ async function chronLoad() {
     : emptyStateHtml({ title: 'Nothing in this range', text: 'Nothing happened here, or nothing that is still kept. Widen the range or clear a filter.' }));
 }
 
+/** Each filter's name and ⓘ (lib/field-info.js). */
+const CHRON_INFO = {
+  q: ['Search', 'Words to find in what is listed: titles, outcomes, agents and devices. Empty shows everything.'],
+  source: ['Source', 'What kind of record to list: turns (one answer of an agent), missions (a specialist\'s errand), jobs a device asked for, or — for an admin — what the hub did on its own, calls, machines and the harness log. Every source by default.'],
+  person: ['Person', 'Only the work done for one person. Everyone by default; you only ever see what you may open.'],
+  device: ['Device', 'Only the work a given device — a phone, a watch, a browser — asked for. Every device by default.'],
+  agent: ['Agent', 'Only the work of one agent: your Orchestrator, a work chat or a kind of specialist. Every agent by default.'],
+  state: ['Outcome', 'Only work that ended a given way — done, failed, stopped, still running — or, for log lines, of one level. Every one by default.'],
+  since: ['When', 'How far back to look. The last week by default; "all kept" goes back as far as records are kept.'],
+};
+
 function chronOpt(value, label, cur) { return `<option value="${escHtml(value)}" ${value === cur ? 'selected' : ''}>${escHtml(label)}</option>`; }
 
 function chronFiltersDraw(fc) {
   const el = document.getElementById('chron-filters'), f = CHRON.f;
   if (!el) return;
-  const sel = (key, all, items) => `<select class="input" onchange="chronSet('${key}', this.value)">${chronOpt('', all, f[key])}${items.join('')}</select>`;
+  const sel = (key, all, items) => `<select class="input" aria-label="${escHtml(CHRON_INFO[key][0])}" onchange="chronSet('${key}', this.value)">${chronOpt('', all, f[key])}${items.join('')}</select>${infoBtn(CHRON_INFO[key][1])}`;
   const focused = document.activeElement?.id === 'chron-q';
-  el.innerHTML = `<input class="input" id="chron-q" placeholder="Search titles, outcomes, agents, devices…" value="${escHtml(f.q)}" oninput="chronSearch(this.value)">
+  el.innerHTML = `<input class="input" id="chron-q" placeholder="Search titles, outcomes, agents, devices…" value="${escHtml(f.q)}" aria-label="${CHRON_INFO.q[0]}" oninput="chronSearch(this.value)">${infoBtn(CHRON_INFO.q[1])}
     ${sel('source', 'every source', (fc.sources || Object.keys(CHRON_SOURCES)).map(s => chronOpt(s, CHRON_SOURCES[s] || s, f.source)))}
     ${chronLines(f.source) && f.source !== 'hub' ? '' : sel('person', 'everyone', (fc.people || []).map(p => chronOpt(p.id, p.name, f.person)))}
     ${chronLines(f.source) ? '' : sel('device', 'every device', (fc.devices || []).map(d => chronOpt(d.id, d.name, f.device)))}
     ${chronLines(f.source) ? '' : sel('agent', 'every agent', (fc.agents || []).map(a => chronOpt(a.id, a.label, f.agent)))}
     ${sel('state', chronLines(f.source) ? 'every level' : 'every outcome', (fc.states || []).map(s => chronOpt(s, s, f.state)))}
-    <select class="input" onchange="chronSet('since', this.value)">${Object.entries(CHRON_SINCE).map(([k, [l]]) => chronOpt(k, l, f.since)).join('')}</select>`;
+    <select class="input" aria-label="${CHRON_INFO.since[0]}" onchange="chronSet('since', this.value)">${Object.entries(CHRON_SINCE).map(([k, [l]]) => chronOpt(k, l, f.since)).join('')}</select>${infoBtn(CHRON_INFO.since[1])}`;
   if (focused) { const q = document.getElementById('chron-q'); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
 }
 
