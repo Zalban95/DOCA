@@ -7,14 +7,15 @@ async function clientAppsRender() {
   let card = document.getElementById('client-apps-card');
   if (!card) { card = Object.assign(document.createElement('div'), { className: 'card', id: 'client-apps-card' }); panel.prepend(card); }
   let s;
-  try { s = await apiFetch('/api/clients/apps'); } catch (e) { card.innerHTML = `<div class="card-title">DOCA apps</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }
+  const brand = (typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA';
+  try { s = await apiFetch('/api/clients/apps'); } catch (e) { card.innerHTML = `<div class="card-title">${escHtml(brand)} apps</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }
   const host = typeof authHasRight === 'function' ? authHasRight('host') : true;
   const row = (id, a) => {
     const l = a.latest;
     return `<div class="tool-row" style="grid-template-columns:auto 1fr auto;align-items:center">
       <span class="tool-label">${escHtml(a.label)}</span>
       <span class="tool-note ca-note" style="white-space:normal">${l ? `<b>${escHtml(l.versionName)}</b> (${l.versionCode}) · ${(l.bytes / 1e6).toFixed(1)} MB · ${l.from === 'build' ? 'built here' : 'uploaded'} ${escHtml(new Date(l.at).toLocaleString())}` : 'No build kept yet.'}
-        ${host ? `<br>Source: <input class="input" id="ca-repo-${id}" data-path-pick="dir" value="${escHtml(a.repo)}" placeholder="the repository folder on this machine" style="width:min(360px,100%);margin-top:4px">
+        ${host ? `<br>Source ${infoBtn('The folder on this machine holding the app\'s source code (a git checkout). Pull & build updates it and builds the app from it here. Empty: build is off; an APK can still be uploaded.')} <input class="input" id="ca-repo-${id}" aria-label="Source folder" data-path-pick="dir" value="${escHtml(a.repo)}" placeholder="the repository folder on this machine" style="width:min(360px,100%);margin-top:4px">
           <button class="btn btn-xs" onclick="clientAppsRepo('${id}')">Save</button>` : ''}</span>
       <span class="tool-actions" style="flex-wrap:wrap;gap:4px">
         ${l ? `<a class="btn btn-xs btn-teal" href="/api/clients/apps/${id}/apk" download>⬇ APK</a>` : ''}
@@ -23,18 +24,19 @@ async function clientAppsRender() {
           <label class="btn btn-xs" title="Keep an APK built elsewhere">⬆ Upload<input type="file" accept=".apk" hidden onchange="clientAppsUpload('${id}', this.files[0])"></label>` : ''}
       </span></div>`;
   };
-  card.innerHTML = `<div class="card-title">DOCA apps</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">The newest DocaMobile and DocaWear this hub hands out. DocaMobile checks here and
+  card.innerHTML = `<div class="card-title">${escHtml(brand)} apps</div>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:6px">The phone and watch apps this hub hands out: download one here, or let the phone app update itself.</p>
+    <details class="desc page-about" style="margin:0 0 10px;font-size:11px"><summary>How updates work</summary>The newest DocaMobile and DocaWear this hub keeps. DocaMobile checks here and
       offers the update itself (Settings → Updates in the app). Build them here from their repositories, or upload an APK built elsewhere.
       An update installs only over an app signed with the same key: ${s.signing.kept ? `the hub signs with its key (${escHtml(s.signing.alias || '')}, ${escHtml(s.signing.sha256 || '')}).`
-        : '<b>the hub holds no signing key yet</b> — builds here use this machine\'s debug key.'}</p>
+        : '<b>the hub holds no signing key yet</b> — builds here use this machine\'s debug key.'}</details>
     ${Object.entries(s.apps).map(([id, a]) => row(id, a)).join('')}
     ${host ? advancedFold(`<div class="tool-row" style="grid-template-columns:auto 1fr auto;align-items:center">
-      <span class="tool-label">Signing key</span>
+      <span class="tool-label">Signing key ${infoBtn('The key file every app built here is signed with (.jks or .keystore), with its alias and two passwords. A phone installs an update only over an app signed with the same key, so keep the one the installed apps were made with. Without one, builds use this machine\'s debug key.')}</span>
       <span class="tool-note" style="white-space:normal;display:flex;flex-wrap:wrap;gap:4px">
-        <input class="input" id="ca-sign-alias" placeholder="alias (androiddebugkey)" style="width:150px" autocomplete="off">
-        <input class="input" id="ca-sign-store" type="password" placeholder="keystore password" style="width:150px" autocomplete="new-password">
-        <input class="input" id="ca-sign-key" type="password" placeholder="key password" style="width:150px" autocomplete="new-password"></span>
+        <input class="input" id="ca-sign-alias" aria-label="Key alias" placeholder="alias (androiddebugkey)" style="width:150px" autocomplete="off">
+        <input class="input" id="ca-sign-store" aria-label="Keystore password" type="password" placeholder="keystore password" style="width:150px" autocomplete="new-password">
+        <input class="input" id="ca-sign-key" aria-label="Key password" type="password" placeholder="key password" style="width:150px" autocomplete="new-password"></span>
       <span class="tool-actions"><label class="btn btn-xs" title="The keystore every build here is signed with (.jks or .keystore)">⬆ ${s.signing.kept ? 'Replace' : 'Upload'} key<input type="file" accept=".jks,.keystore,.p12" hidden onchange="clientAppsSigning(this.files[0], ${s.signing.kept})"></label></span></div>`, { id: 'client-apps-signing', label: 'Advanced — the signing key', changed: s.signing.kept ? 1 : 0 }) : ''}
     <pre id="client-apps-out" class="terminal" style="display:none;margin-top:8px;max-height:min(45vh,360px)"></pre>`;
 }

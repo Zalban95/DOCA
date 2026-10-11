@@ -60,10 +60,10 @@ function _vncDraw(page) {
         : `${k.opens === 'hub' ? `<button class="btn btn-xs" onclick="vmConsoleOpen(${jsArg(k.id.split(':')[0])}, ${jsArg(k.id.split(':').slice(1).join(':'))})">VNC</button>`
           : `<span class="vnc-pass" title="${escHtml(k.why || '')}">in a viewer</span>`}<button class="btn btn-xs" title="Keep it as a VNC screen" onclick="vncSaveDisplay(${jsArg(k.name)}, ${jsArg(k.host)}, ${k.port})">Save</button>`}</span></div>`).join('')
     : '<div class="placeholder">No running VM shows a VNC display, and no agents\' computer is running. They are listed here when they are, without being added.</div>';
-  page.querySelector('.vnc-agent').innerHTML = `<p class="vnc-note">Ask the agent to take control of one of these screens and it uses <code>vnc_look</code>
+  page.querySelector('.vnc-agent').innerHTML = `<details class="vnc-note desc page-about"><summary>How the agent uses these screens</summary>Ask the agent to take control of one of these screens and it uses <code>vnc_look</code>
       (a screenshot, read by the vision pass when it is on) and <code>vnc_input</code> (click, scroll, keys, text) under your approvals — asked in
       Manual mode. A specialist sent to test on one asks you before every action. The agent waits while you drive a screen, never types a password
-      DOCA keeps, and a person without the host right uses only the screens allotted to them (Settings → Users).</p>`;
+      DOCA keeps, and a person without the host right uses only the screens allotted to them (Settings → Users).</details>`;
 }
 
 /** The add or edit form, in the card. The password field is empty on edit: the hub never sends one back. */
@@ -72,12 +72,12 @@ function vncEdit(id) {
   const t = id ? VNC.data?.targets.find(x => x.id === id) : null;
   VNC.editing = id || 'new';
   page.querySelector('.vnc-form').innerHTML = `<div class="vnc-edit">
-      <label><span class="input-label">Name</span><input class="input" id="vnc-f-name" value="${escHtml(t?.name || '')}" placeholder="desk"></label>
-      <label><span class="input-label">Host</span><input class="input" id="vnc-f-host" value="${escHtml(t?.host || '')}" placeholder="192.168.1.20 or desk.local"></label>
-      <label><span class="input-label">Port</span><input class="input" id="vnc-f-port" type="number" min="1" max="65535" value="${t?.port || 5900}"></label>
-      <label><span class="input-label">Password</span><input class="input" id="vnc-f-pass" type="password" autocomplete="new-password"
+      <label><span class="input-label">Name${infoBtn('What this screen is called here, in Live and for the agent — any name you like, such as the machine it belongs to.')}</span><input class="input" id="vnc-f-name" value="${escHtml(t?.name || '')}" placeholder="desk"></label>
+      <label><span class="input-label">Host${infoBtn('The address of the machine whose screen you want: its IP address (like 192.168.1.20) or its name on your network (like desk.local). That machine needs a VNC server running.')}</span><input class="input" id="vnc-f-host" value="${escHtml(t?.host || '')}" placeholder="192.168.1.20 or desk.local"></label>
+      <label><span class="input-label">Port${infoBtn("The VNC server's port on that machine. Default 5900, which is display :0; display :1 is 5901, and so on.")}</span><input class="input" id="vnc-f-port" type="number" min="1" max="65535" value="${t?.port || 5900}"></label>
+      <label><span class="input-label">Password${infoBtn('The VNC password, if the server asks for one; empty if it asks for none. The hub keeps it and signs in itself — it is never shown again or sent to a browser. On edit, leave it empty to keep the one already kept.')}</span><input class="input" id="vnc-f-pass" type="password" autocomplete="new-password"
         placeholder="${t?.hasPassword ? 'kept — leave empty to keep it' : 'none, or the VNC password'}"></label>
-      ${t?.hasPassword ? '<label class="vnc-forget"><input type="checkbox" id="vnc-f-forget"> forget the kept password</label>' : ''}
+      ${t?.hasPassword ? `<label class="vnc-forget"><input type="checkbox" id="vnc-f-forget"> forget the kept password ${infoBtn('Tick and Save to throw away the kept password, for a server that no longer asks for one. Typing a new password replaces it instead.')}</label>` : ''}
       <span class="vnc-edit-acts"><button class="btn btn-xs btn-blue" onclick="vncSave()">Save</button><button class="btn btn-xs" onclick="vncEditClose()">Cancel</button></span>
     </div>`;
   page.querySelector('#vnc-f-name').focus();

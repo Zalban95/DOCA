@@ -19,9 +19,30 @@ async function harnessLoad() {
     _harnesses   = data.harnesses || [];
     _harnessDflt = data.default;
     _harnessRender();
+    _harnessAddRowTidy();
   } catch (e) {
     list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
+}
+
+/** "Add your own agent" is for someone who has one: it goes under Advanced, each of its boxes with its ⓘ. Once. */
+const _HARNESS_ADD_INFO = {
+  'harness-new-label': 'The name this agent is listed under here, for example "My Agent". Only a label: nothing else reads it.',
+  'harness-new-cmd': 'The command that starts the program in a terminal, for example my-agent. It is typed when you open the agent on the Harness page, so the program must already be installed on this machine.',
+  'harness-new-install': 'Optional: a command that installs the program, run when you press its install button. Leave it empty if it is already installed.',
+};
+function _harnessAddRowTidy() {
+  const row = document.querySelector('#tab-controls .harness-add-row');
+  if (!row || row.closest('details.adv-fold')) return;
+  row.classList.add('info-row');
+  for (const [id, text] of Object.entries(_HARNESS_ADD_INFO)) {
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.dataset.default = '';
+    el.dataset.label = el.placeholder.split(/ —| \(/)[0];
+    el.insertAdjacentHTML('afterend', infoBtn(text));
+  }
+  advancedFold(row, { id: 'harness-add', label: 'Advanced — add your own agent' });
 }
 
 /**

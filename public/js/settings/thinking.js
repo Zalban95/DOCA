@@ -11,10 +11,9 @@ async function thinkingCardRender(panel) {
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'thinking-card' });
   const said = { auto: 'Auto', off: 'Off', low: 'On — low', medium: 'On — medium', high: 'On — high' };
   const row = m => `<div class="thinking-row">
-      <label for="thinking-${m.id}">${escHtml(m.label)}</label>
+      <div><label for="thinking-${m.id}">${escHtml(m.label)}${infoBtn(`${m.hint} Auto: as this mode always did. Off: answers sooner and costs less. On: thinks first, at the level chosen. Saved as soon as it is changed.`)}</label></div>
       <select class="input" id="thinking-${m.id}" data-thinking="${m.id}" onchange="thinkingSave()">
-        ${t.choices.map(c => `<option value="${c}" ${c === m.value ? 'selected' : ''}>${said[c] || c}</option>`).join('')}</select>
-      <span class="thinking-hint">${escHtml(m.hint)}</span></div>`;
+        ${t.choices.map(c => `<option value="${c}" ${c === m.value ? 'selected' : ''}>${said[c] || c}</option>`).join('')}</select></div>`;
   const typed = t.modes.filter(m => !['liveCall', 'deepCall', 'ambient', 'device'].includes(m.id));
   const spoken = t.modes.filter(m => ['liveCall', 'deepCall', 'ambient', 'device'].includes(m.id));
   const providers = t.providers.length ? `<table class="data-table" style="width:100%;font-size:11px;margin-top:6px">
@@ -22,8 +21,7 @@ async function thinkingCardRender(panel) {
       ${t.providers.map(p => `<tr><td>${escHtml(p.label)}</td><td>${escHtml(p.says || p.dialect)}</td><td>${escHtml(p.source)}</td></tr>`).join('')}</tbody></table>`
     : '<p class="thinking-hint">No provider with a key yet.</p>';
   card.innerHTML = `<div class="card-title">Thinking</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Whether the agent thinks before it answers, by the kind of conversation.
-      Off answers sooner and costs less; on is for work that needs care. Auto keeps what each mode did before.</p>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Whether the agent thinks before it answers, by the kind of conversation.</p>
     <div class="thinking-group">Typed</div>${typed.map(row).join('')}
     <div class="thinking-group">Spoken</div>${spoken.map(row).join('')}
     <span class="status-line" id="thinking-status"></span>

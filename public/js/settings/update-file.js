@@ -29,16 +29,17 @@ async function updateFileDraw() {
     ? `<span style="color:var(--red)">${escHtml(s.file.tag)} from a file could not be switched to: ${escHtml(s.file.error)}</span>`
     : `<strong>${escHtml(s.file.tag)}</strong> from a file is staged${s.waiting ? ` — waiting for running work before switching: ${escHtml(s.waiting.on.join('; ') || 'nothing now')}` : ''}.`);
   if (s?.image) lines.push('This hive runs an image: its host installs an update file with <code>deploy/hive.sh update &lt;name&gt; --file &lt;file&gt;</code>.');
-  el.innerHTML = `<div class="card-title" style="font-size:13px;margin-bottom:4px">Install from a file</div>
-    <p class="desc">For a hive with no way to the update channel: the update file for a version (<code>doca-update-X.Y.Z.dupd</code>) from whoever supplies DOCA, on a USB stick or a share. It is checked against the project's release key before anything is unpacked, and switched to once nothing runs; if the new version does not answer within 90 s, DOCA goes back by itself.</p>
-    ${lines.length ? `<div class="update-info">${lines.join('<br>')}</div>` : ''}
+  const body = `<p class="desc">For a hive with no way to the update channel: a signed update file carried here on a USB stick or a share.</p>
+    <label class="input-label" for="update-file-input">Update file${infoBtn('The update file for a version (doca-update-X.Y.Z.dupd) from whoever supplies the program. It is checked against the project\'s release key before anything is unpacked, and switched to once nothing runs; if the new version does not answer within 90 s, the old one comes back by itself. Installing asks for your password.')}</label>
     <div class="form-row"><input type="file" id="update-file-input" accept=".dupd" class="input" style="width:auto"></div>
-    <label style="display:inline-flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="update-file-older"> Go back to this version (when the file is older than the version running)</label>
+    <label style="display:inline-flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" id="update-file-older" data-default="false" data-label="Go back to this version"> Go back to this version</label>${infoBtn('Off (the default), a file older than the version running is refused. On: install it anyway, going back to that older version.')}
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
       <button class="btn btn-sm" onclick="updateFileInstall()">Install from a file</button>
       ${s?.file && !s.file.error ? '<button class="btn btn-sm" onclick="updateFileCancel()">Call it off</button>' : ''}
     </div>
     <span class="status-line" id="update-file-status"></span>`;
+  // What waits stays in sight; the form itself is for a hive cut off from updates, folded.
+  el.innerHTML = `${lines.length ? `<div class="update-info">${lines.join('<br>')}</div>` : ''}${advancedFold(body, { id: 'update-file', label: 'Advanced — install from a file' })}`;
 }
 
 async function updateFileInstall() {

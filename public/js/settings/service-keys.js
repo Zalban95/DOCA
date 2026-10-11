@@ -13,19 +13,20 @@ async function serviceKeysRender() {
   try { d = await apiFetch('/api/connectors/services/all'); } catch (e) { el.innerHTML = `<div class="placeholder">${escHtml(e.message)}</div>`; return; }
   try { skills = (await apiFetch('/api/harness/skills')).skills || []; } catch { /* the skill box lists none */ }
   el.innerHTML = `<div class="card-title">API services</div>
-    <p class="desc" style="margin-bottom:8px">A service with an API key — a 3D generator, a home server, anything with a REST API. Paste its key once: the hub adds it only to
-      requests for that address and the agent never sees it. With its actions set up, the agent uses it by name (<code>service</code>) and the hub follows long jobs and keeps their files.</p>
+    <p class="desc" style="margin-bottom:8px">Any other service with an API key — a 3D generator, a home server, anything with a REST API. Paste its key once; the agent never sees it.</p>
+    <details class="desc page-about" style="margin:0 0 8px;font-size:11px"><summary>How it works</summary>The hub adds the key only to requests for that service's address, so
+      the agent can use it without reading it. With its actions set up (under Advanced), the agent uses it by name (<code>service</code>) and the hub follows long jobs and keeps their files.</details>
     <div id="service-drafts-slot"></div>
     <div id="svc-rows">${serviceRowsHtml(d.services, d.jobs)}</div>
     ${serviceAddBoxHtml('services')}
     <div class="svc-form-head" id="sk-head"></div>
-    <div class="toolbar svc-form-row" style="gap:6px;margin-top:4px;flex-wrap:wrap">
-      <input class="input" id="sk-name" placeholder="name (hyper3d)" style="width:130px">
-      <input class="input" id="sk-origin" placeholder="address (https://api.example.com)" style="flex:1;min-width:190px">
+    <div class="toolbar svc-form-row" style="gap:6px;margin-top:4px;flex-wrap:wrap;align-items:flex-end">
+      <label class="svc-field" style="width:130px"><span class="field-label">Name ${infoBtn('A short name you choose (hyper3d). The agent and the list use it to tell this service apart.')}</span><input class="input" id="sk-name" placeholder="hyper3d"></label>
+      <label class="svc-field" style="flex:1;min-width:190px"><span class="field-label">Address ${infoBtn("Where the service's API answers (https://api.example.com). The key is only ever sent to this address.")}</span><input class="input" id="sk-origin" placeholder="https://api.example.com"></label>
       ${serviceKeyBoxesHtml()}
-      <input class="input" id="sk-note" placeholder="what it is for (the agent reads this)" style="flex:1;min-width:180px"></div>
+      <label class="svc-field" style="flex:1;min-width:180px"><span class="field-label">What it is for ${infoBtn('A sentence the agent reads to know when to use this service (makes 3D models from a picture). Optional, but it helps the agent pick it.')}</span><input class="input" id="sk-note" placeholder="the agent reads this"></label></div>
     ${advancedFold(`${serviceAuthFieldsHtml()}
-      <label class="desc" for="sk-actions" style="display:block;margin-top:8px">Actions — its OpenAPI document (JSON or YAML; a whole one, or only its <code>paths</code>). A long job carries <code>x-doca-job</code>.</label>
+      <label class="desc" for="sk-actions" style="display:block;margin-top:8px"><span class="field-label">Actions ${infoBtn('What the service can do, as its OpenAPI document (JSON or YAML; a whole one, or only its paths) — usually found in its documentation. With it the agent calls each action by name; a long job carries x-doca-job so the hub follows it. Empty: the agent reaches the service with plain requests (api_call).')}</span></label>
       <textarea class="input" id="sk-actions" data-default="" data-label="Actions (OpenAPI)" rows="6" spellcheck="false" style="width:100%;font-family:var(--font-mono);font-size:11px" placeholder="paths:\n  /items:\n    get:\n      operationId: listItems"></textarea>
       <div class="toolbar" style="gap:6px;flex-wrap:wrap;margin-top:4px"><button class="btn btn-xs" onclick="serviceReadActions()">Read the actions</button><span id="sk-actions-said" class="desc"></span></div>
       ${serviceSkillHtml(skills)}`,

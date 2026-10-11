@@ -206,8 +206,11 @@ function _hcSessionInfo(s) {
     ${p ? `<strong>${escHtml(p.title)}</strong><ol>${p.steps.map((x, i) => `<li>${escHtml(x)} <small>· ${escHtml(p.progress?.[i + 1] || 'queued')}</small></li>`).join('')}</ol><p>${escHtml(p.note || '')}</p>` : '<p>Draft here, or ask this agent to plan the work.</p>'}
     ${p?.state === 'proposed' && !s.archivedAt ? `<div class="hc-plan-actions"><button class="btn btn-xs btn-green" onclick="hcPlanAction('approve',${p.revision})">Approve revision ${p.revision}</button><button class="btn btn-xs" onclick="hcPlanAction('reject',${p.revision})">Reject</button></div><small>Approving starts the work in this chat.</small>` : ''}
     ${!s.archivedAt ? `<details><summary>${p ? 'Edit as a new draft' : 'Create draft'}</summary>
+      <div class="input-label">Title${infoBtn('A short name for the plan, shown above its steps and on the approval card.')}</div>
       <input class="input" id="hc-plan-title" aria-label="Plan title" placeholder="Plan title" value="${escHtml(p?.title || '')}">
+      <div class="input-label">Steps${infoBtn('What will be done, one step per line, in order. The agent marks each step as it goes.')}</div>
       <textarea class="input" id="hc-plan-steps" aria-label="Plan steps" rows="4" placeholder="One step per line">${escHtml((p?.steps || []).join('\n'))}</textarea>
+      <div class="input-label">Notes${infoBtn('Optional: the scope, decisions already made, or how you will know it is done. Shown under the steps.')}</div>
       <textarea class="input" id="hc-plan-note" aria-label="Plan notes" rows="2" placeholder="Scope, decisions or acceptance criteria">${escHtml(p?.note || '')}</textarea>
       <button class="btn btn-xs" onclick="hcPlanDraft()">Save draft</button></details>
       ${p && p.state !== 'proposed' ? '<button class="btn btn-xs" onclick="hcPlanAction(\'propose\')">Propose for review</button>' : ''}` : ''}

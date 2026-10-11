@@ -40,8 +40,8 @@ async function homeLoad() {
   HOME.stale = !!d.offline;
   const homes = d.homes || [];
   const pickHtml = homes.length > 1 ? `<select class="input home-pick" aria-label="Which home" onchange="homePick(this.value)">${homes.map(h =>
-    `<option value="${escHtml(h.id)}"${h.id === d.home ? ' selected' : ''}>${escHtml(h.name)}${h.kind === 'node' && !h.online ? ' — away' : ''}</option>`).join('')}</select>` : '';
-  const bar = `<div class="home-bar"><span class="home-title">Home</span>${pickHtml}<span class="home-place">${escHtml(d.place || (homes.length === 1 && d.kind === 'node' ? d.homeName : '') || '')}</span>
+    `<option value="${escHtml(h.id)}"${h.id === d.home ? ' selected' : ''}>${escHtml(h.name)}${h.kind === 'node' && !h.online ? ' — away' : ''}</option>`).join('')}</select>${infoBtn('Which home this page shows, when more than one Home Assistant is connected. "Away" is a home node that is not answering now.')}` : '';
+  const bar = `<div class="home-bar info-row"><span class="home-title">Home</span>${pickHtml}<span class="home-place">${escHtml(d.place || (homes.length === 1 && d.kind === 'node' ? d.homeName : '') || '')}</span>
     <span class="home-dot ${d.connected ? 'on' : ''}" title="${d.connected ? `Connected to Home Assistant${d.kind === 'node' ? ` through the home node ${escHtml(d.homeName)}` : ''}` : 'Not connected'}"></span>
     <button class="btn btn-xs" onclick="homeLoad()" title="Read it all again">⟳</button>
     <button class="btn btn-xs" onclick="soloOpen('home')" title="In a window of its own — a wall tablet">⧉</button></div>`;
@@ -67,15 +67,15 @@ async function homeLoad() {
 
 function _homeSetup() {
   return `<div class="home-empty"><h3>Connect Home Assistant</h3>
-    <p>DOCA draws your home from Home Assistant, which keeps talking to the devices themselves.</p>
+    <p>This page draws your home from Home Assistant, which keeps talking to the devices themselves.</p>
     <ol><li>In Home Assistant, open your profile → Security → <b>Long-lived access tokens</b> and create one.</li>
       <li>In <b>Field → Connectors → Keys for services</b>, add a key named <b>home-assistant</b> with Home Assistant's address
         (for example http://homeassistant.local:8123) and paste the token.</li>
       <li>Come back here. The token stays on the hub; this page never sees it.</li></ol>
-    <p><b>Or through a home node</b> — when this hub is not on the home's network (a hosted hive), or the token should not leave
+    <details class="desc page-about"><summary>Or through a home node</summary> When this hub is not on the home's network (a hosted hive), or the token should not leave
       the house: on a machine there that stays on (a mini PC, a Pi, a NAS), pair <code>doca-client</code> with role "phone", run
       <code>doca-client home setup</code> (it asks Home Assistant's address and token and keeps them there), then
-      <code>doca-client run</code> and accept its offer once in the MCP tab. The node dials this hub; nothing at home is opened.</p>
+      <code>doca-client run</code> and accept its offer once in the MCP tab. The node dials this hub; nothing at home is opened.</details>
     <button class="btn btn-sm btn-blue" onclick="nav('connectors')">Keys for services</button></div>`;
 }
 

@@ -27,7 +27,7 @@ function workstreamFoldersDraw() {
     ${where.map(r => `<div class="ws-f-row"><span class="ws-f-path" title="${escHtml(r.path)}">${escHtml(r.name ? `${r.name} — ${r.path}` : r.path)}</span><span class="ws-f-from">${escHtml(r.wide ? 'where it is installed' : WS_FROM[r.from] || r.from)}</span></div>`).join('') || '<div class="placeholder">Nothing watched yet.</div>'}
     <div class="ws-f-sub">Your folders <span class="desc">(a relative one is read against the install: ".." is the folder it is installed in)</span></div>
     ${setting.map((e, i) => `<div class="ws-f-row"><span class="ws-f-path">${escHtml(e)}</span><button class="btn btn-xs" onclick="_wsfRemove(${i})" title="Stop watching it">Remove</button></div>`).join('') || '<div class="placeholder">None.</div>'}
-    <div class="ws-f-add"><input class="input flex1" id="ws-f-new" data-path-pick="dir" placeholder="/path/to/folder" onkeydown="if(event.key==='Enter')_wsfAdd()"><button class="btn btn-xs btn-primary" onclick="_wsfAdd()">Watch</button></div>`;
+    <div class="ws-f-add info-row"><input class="input flex1" id="ws-f-new" data-path-pick="dir" placeholder="/path/to/folder" aria-label="Folder to watch" onkeydown="if(event.key==='Enter')_wsfAdd()"><button class="btn btn-xs btn-primary" onclick="_wsfAdd()">Watch</button>${infoBtn('A folder whose changes this page shows as they happen, whoever makes them. A relative path is read against where it is installed: ".." is the folder it is installed in. Watch adds it to your folders above.')}</div>`;
 }
 
 async function _wsfSave(list) {

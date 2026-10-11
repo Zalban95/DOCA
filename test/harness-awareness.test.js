@@ -784,7 +784,7 @@ test('a saved fallback window survives being opened and saved again', () => {
 
   const source = [
     src.match(/const HARNESS_MAX_FALLBACKS = \d+;/)[0],
-    helper('escHtml'), helper('jsArg'),
+    helper('escHtml'), helper('jsArg'), 'const infoBtn = () => \'\';',   // the ⓘ (lib/field-info.js) draws nothing here
     from('_harnessProviderOpts'), from('_harnessRungHtml'), from('_fallbacksRead'),
     from('_harnessFallbacksMount'),
   ].join('\n');

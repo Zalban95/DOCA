@@ -23,18 +23,18 @@ async function liveCallRender() {
       a phone's microphone and a desk's hear a room differently. ${mine ? 'Set here.' : "Now: the hive's."} From the next call.</p>
     <div style="display:flex;flex-direction:column;gap:10px">
       ${liveCallRow('Pause before sending', `<input class="input" id="lc-silence" type="number" min="0.3" max="10" step="0.1" value="${(c.silenceMs || 2000) / 1000}" style="width:90px"> s`,
-        'Shorter answers sooner; longer lets you think mid-sentence.')}
+        'How long you must stay quiet before what you said is sent. Shorter: answers come sooner. Longer: you can pause to think mid-sentence without being cut off. Default: 2 seconds.')}
       ${liveCallRow('Microphone threshold', `<input type="range" id="lc-sens" min="1" max="60" step="1" value="${c.sensitivity || 15}" style="width:180px"
           oninput="document.getElementById('lc-sens-val').textContent=this.value"><span id="lc-sens-val" style="font-size:11px;min-width:22px">${c.sensitivity || 15}</span>`,
-        'Lower hears quieter voices — and more of the room.')}
+        'How loud a sound must be to count as you speaking. Lower hears quieter voices, but also more of the room\'s noise. Use Test the microphone to see where your voice lands. Default: 15.')}
       ${liveCallRow('Language you speak', `<select class="input" id="lc-lang" style="width:auto">${LIVE_CALL_LANGS.map(([k, l]) => `<option value="${k}" ${String(c.language || '') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`,
-        'Told to the transcriber, which otherwise guesses — and on a short phrase in a noisy room can guess wrong.')}
+        'The language you speak in calls, told to the transcriber, which otherwise guesses — and on a short phrase in a noisy room can guess wrong. Default: your usual language, from what you write and say.')}
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button class="btn btn-sm" id="lc-test" onclick="liveCallMeter()">🎤 Test the microphone</button>
         <div style="position:relative;width:240px;height:10px;background:var(--raised);border:1px solid var(--border2)">
           <div id="lc-level" style="height:100%;width:0;background:var(--green)"></div>
           <div id="lc-mark" style="position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--accent)"></div></div>
-        <span style="font-size:11px;color:var(--muted)">Speak: the bar should pass the mark; silence should stay under it.</span>
+        ${infoBtn('Listens for ten seconds and shows how loud the microphone hears you. Speak: the bar should pass the mark (the threshold above); silence should stay under it.')}
       </div>
       <div class="toolbar" style="gap:6px">
         <button class="btn btn-sm btn-blue" onclick="liveCallSave()">Save for this screen</button>
@@ -52,7 +52,7 @@ async function liveCallRender() {
   if (ex) panel.append(Object.assign(document.createElement('div'), { className: 'card', id: 'call-experiments-card', innerHTML: `<div class="card-title">Call experiments</div>
     <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Developer mode — for every screen; what each measures and costs is on Settings → Developer.</div>
     ${ex.map(x => `<label style="display:flex;gap:6px;align-items:center;font-size:12px"><input type="checkbox" ${x.on ? 'checked' : ''}
-      onchange="liveCallExperiment(${jsArg(x.id)}, this.checked)"> ${escHtml(x.label)}</label>`).join('')}` }));
+      onchange="liveCallExperiment(${jsArg(x.id)}, this.checked)"> ${escHtml(x.label)}${infoBtn(typeof experimentGist === 'function' ? experimentGist(x.docText) : '')}</label>`).join('')}` }));
 }
 
 // The language a call's words are in (`call.language`, modules/call-language.js): empty is the person's usual one.
@@ -61,7 +61,7 @@ const LIVE_CALL_LANGS = [['', 'Mine as usual (from what I write and say)'], ['en
   ['ar', 'العربية'], ['hi', 'हिन्दी'], ['zh', '中文'], ['ja', '日本語'], ['ko', '한국어']];
 
 const liveCallRow = (label, input, hint) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-    <label style="font-size:11px;color:var(--muted);width:150px;flex-shrink:0">${label}</label>${input}<span style="font-size:11px;color:var(--muted)">${hint}</span></div>`;
+    <label style="font-size:11px;color:var(--muted);width:170px;flex-shrink:0">${label}${infoBtn(hint)}</label>${input}</div>`;
 
 /** The realtime speech model: what a call uses when one is set (modules/realtime). The form is the owner's. */
 function liveCallRealtimeHtml(rt, owner) {
@@ -69,18 +69,18 @@ function liveCallRealtimeHtml(rt, owner) {
   const s = rt.settings || {}, v = k => escHtml(s[k] ?? '');
   const state = rt.available ? `<span style="color:var(--green)">On: ${escHtml(rt.protocol)} · ${escHtml(rt.model)}. The 🎙 Live button uses it.</span>`
     : `<span style="color:var(--muted)">Off${rt.experiment ? ': set a model' : ': switch on "Live calls with a realtime speech model" above'} — calls use the speech services above.</span>`;
-  const f = (id, label, input) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px;flex-shrink:0">${label}</label>${input}</div>`;
+  const f = (id, label, input, info) => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:170px;flex-shrink:0">${label}${infoBtn(info)}</label>${input}</div>`;
   return `<div style="display:flex;flex-direction:column;gap:8px">
     <div class="card-title">Realtime speech model</div>
     <div style="font-size:11px;color:var(--muted)">A model that hears and speaks directly, without text in between — quicker, and you can talk over it. It is a voice in front of the hive:
       anything real it hands to your conversation as an ordinary turn, with your approvals. The hub holds the key. ${state}</div>
-    ${owner ? `${f('rt-protocol', 'Protocol', `<select class="input" id="rt-protocol" style="width:auto">${['openai', 'gemini'].map(p => `<option value="${p}" ${s.protocol === p ? 'selected' : ''}>${p === 'openai' ? 'OpenAI Realtime (OpenAI, Azure, local servers)' : 'Gemini Live (Google)'}</option>`).join('')}</select>`)}
-    ${f('rt-provider', 'Provider (its key)', `<input class="input" id="rt-provider" value="${v('provider')}" placeholder="openai, google, or one from API Keys" style="width:240px">`)}
-    ${f('rt-model', 'Model', `<input class="input" id="rt-model" value="${v('model')}" placeholder="gpt-realtime / a Gemini Live model" style="width:240px">`)}
-    ${f('rt-voice', 'Voice', `<input class="input" id="rt-voice" value="${v('voice')}" placeholder="the service's default" style="width:160px">`)}
-    ${advancedFold(`<div style="display:flex;flex-direction:column;gap:8px">${f('rt-url', 'Address (optional)', `<input class="input" id="rt-url" data-default="" data-label="Address" value="${v('url')}" placeholder="wss://… — Azure, or a local server such as ws://127.0.0.1:8765/v1/realtime" style="flex:1;min-width:220px">`)}
-    ${f('rt-dialect', 'OpenAI session shape', `<select class="input" id="rt-dialect" data-default="ga" data-label="OpenAI session shape" style="width:auto"><option value="ga" ${s.dialect !== 'beta' ? 'selected' : ''}>current</option><option value="beta" ${s.dialect === 'beta' ? 'selected' : ''}>beta (older servers)</option></select>`)}
-    ${f('rt-wait', 'Wait for the hive', `<input class="input" id="rt-wait" type="number" min="3" max="120" data-default="20" data-label="Wait for the hive" value="${v('waitSec') || 20}" style="width:80px"> s, then it carries on in the background`)}</div>`,
+    ${owner ? `${f('rt-protocol', 'Protocol', `<select class="input" id="rt-protocol" style="width:auto">${['openai', 'gemini'].map(p => `<option value="${p}" ${s.protocol === p ? 'selected' : ''}>${p === 'openai' ? 'OpenAI Realtime (OpenAI, Azure, local servers)' : 'Gemini Live (Google)'}</option>`).join('')}</select>`, 'The way the hub talks to the realtime service: OpenAI\'s (also Azure and local servers that copy it) or Google\'s Gemini Live.')}
+    ${f('rt-provider', 'Provider (its key)', `<input class="input" id="rt-provider" value="${v('provider')}" placeholder="openai, google, or one from API Keys" style="width:240px">`, 'Which provider\'s key (Field → API keys) the hub uses to reach the service. The key stays on the hub.')}
+    ${f('rt-model', 'Model', `<input class="input" id="rt-model" value="${v('model')}" placeholder="gpt-realtime / a Gemini Live model" style="width:240px">`, 'The realtime model\'s name, as the provider spells it. Empty: no realtime model, so calls use the speech services above.')}
+    ${f('rt-voice', 'Voice', `<input class="input" id="rt-voice" value="${v('voice')}" placeholder="the service's default" style="width:160px">`, 'Which of the model\'s voices speaks. Empty: the service\'s default.')}
+    ${advancedFold(`<div style="display:flex;flex-direction:column;gap:8px">${f('rt-url', 'Address (optional)', `<input class="input" id="rt-url" data-default="" data-label="Address" value="${v('url')}" placeholder="wss://… — Azure, or a local server such as ws://127.0.0.1:8765/v1/realtime" style="flex:1;min-width:220px">`, 'Only for Azure or a server on your own machines: its WebSocket address. Empty: the provider\'s own address.')}
+    ${f('rt-dialect', 'OpenAI session shape', `<select class="input" id="rt-dialect" data-default="ga" data-label="OpenAI session shape" style="width:auto"><option value="ga" ${s.dialect !== 'beta' ? 'selected' : ''}>current</option><option value="beta" ${s.dialect === 'beta' ? 'selected' : ''}>beta (older servers)</option></select>`, 'Which version of OpenAI\'s session format to send. Current fits OpenAI today; beta is for older servers that still expect it. Default: current.')}
+    ${f('rt-wait', 'Wait for the hive', `<input class="input" id="rt-wait" type="number" min="3" max="120" data-default="20" data-label="Wait for the hive" value="${v('waitSec') || 20}" style="width:80px"> s`, 'How long the voice waits for the hive\'s answer before saying it is still working; the work then carries on in the background and is said when it ends. 3 to 120 seconds. Default: 20.')}</div>`,
       { id: 'realtime', label: 'Advanced — address, session shape, waiting' })}
     <div class="toolbar"><button class="btn btn-sm btn-blue" onclick="liveCallRealtimeSave()">Save the realtime model</button><span class="status-line" id="rt-status"></span></div>` : ''}
   </div>`;

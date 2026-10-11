@@ -18,11 +18,13 @@ async function yourPanelCard() {
   const scopes = ['person', 'screen', ...(r.host ? ['install'] : [])];
   const scale = r.layers.person?.style?.fontScale || 1, density = r.layers.person?.style?.density || 'normal';
   card.innerHTML = `<div class="card-title">Your panel</div>
-    <div style="font-size:12px;color:var(--muted);margin-bottom:10px">How the panel is laid out is yours: ask the agent — "put Workstream first", "hide Models",
-      "make me a page with the Workstream and the Harness", "bigger text" — or change it here. It is kept as your data, never as a change to DOCA, so it stays through every update.</div>
+    <p class="desc" style="margin-bottom:6px">How the panel is laid out is yours: change it here, or ask the agent ("put Workstream first", "bigger text").</p>
+    <details class="desc page-about" style="margin-bottom:10px"><summary>What this is</summary>Ask the agent — "put Workstream first", "hide Models",
+      "make me a page with the Workstream and the Harness", "bigger text" — or change it here. It is kept as your data, never as a change to the program, so it stays through every update.
+      Each layer below lists its changes, with Undo and Reset; ⤓ downloads your layout as a file and ⤒ loads one.</details>
     <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:10px;font-size:12px">
-      <label>Text size <select class="input" onchange="yourPanelStyle({fontScale: Number(this.value)})">${[0.9, 1, 1.15, 1.3, 1.5].map(v => `<option value="${v}" ${v === scale ? 'selected' : ''}>${Math.round(v * 100)}%</option>`).join('')}</select></label>
-      <label>Spacing <select class="input" onchange="yourPanelStyle({density: this.value})">${['compact', 'normal', 'roomy'].map(v => `<option ${v === density ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
+      <label>Text size${infoBtn('How big the text is on every device of yours. 100% (the default) is the panel as shipped. Saved at once; Undo below brings back the last.')} <select class="input" onchange="yourPanelStyle({fontScale: Number(this.value)})">${[0.9, 1, 1.15, 1.3, 1.5].map(v => `<option value="${v}" ${v === scale ? 'selected' : ''}>${Math.round(v * 100)}%</option>`).join('')}</select></label>
+      <label>Spacing${infoBtn('How much room between things: compact fits more on a screen, roomy is easier to tap. Normal is the default. On every device of yours, saved at once.')} <select class="input" onchange="yourPanelStyle({density: this.value})">${['compact', 'normal', 'roomy'].map(v => `<option ${v === density ? 'selected' : ''}>${v}</option>`).join('')}</select></label>
     </div>
     ${scopes.map(s => `<div class="settings-tab-row" style="align-items:flex-start;gap:10px;padding:6px 0;border-top:1px solid var(--border)">
       <div style="flex:1;min-width:0"><b>${_YP_NAMES[s][0]}</b> <span style="color:var(--muted);font-size:11px">— ${_YP_NAMES[s][1]}</span>

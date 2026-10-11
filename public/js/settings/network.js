@@ -8,19 +8,18 @@ async function networkCard() {
   let card = document.getElementById('network-card');
   if (!card) { card = Object.assign(document.createElement('div'), { className: 'card form-help-skip', id: 'network-card' }); const caps = document.getElementById('host-caps-card'); if (caps) caps.after(card); else panel.prepend(card); }
   const opt = (v, label, hint) => `<label style="display:flex;gap:8px;align-items:flex-start;font-size:12px;margin:6px 0"><input type="radio" name="net-listen" value="${v}" ${s.saved === v ? 'checked' : ''} ${s.env ? 'disabled' : ''}>
-    <span><b>${label}</b><br><span style="color:var(--muted);font-size:11px">${hint}</span></span></label>`;
+    <span><b>${label}</b>${infoBtn(hint)}</span></label>`;
   card.innerHTML = `<div class="card-title">Network — who can reach this hub</div>
     ${s.env ? `<p style="font-size:11px;color:var(--amber)">Set by DOCA_LISTEN=${escHtml(s.env)} in the environment, which wins over this setting.</p>` : ''}
-    ${opt('tailnet', 'Tailscale and this machine', 'The default: every device on your tailnet, nothing else.')}
+    ${opt('tailnet', 'Tailscale and this machine', 'The default: this machine and every device on your Tailscale network (tailnet), nothing else. Tailscale is a private network between your own devices.')}
     ${opt('lan', 'Tailscale and the local network', 'Also phones and computers on the same Wi-Fi or LAN — pairing works without Tailscale. Managing the machine from there stays off unless allowed below.')}
     ${opt('local', 'This machine only', 'Reach it through tailscale serve or an SSH tunnel.')}
     ${opt('all', 'Every network', 'Every interface, the internet included if the machine is exposed. Only behind a firewall or proxy you control.')}
     ${advancedFold(`<label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:4px"><input type="checkbox" id="net-lanadmin" data-default="false" data-label="Managing from outside Tailscale" ${s.lanAdmin ? 'checked' : ''}>
-      Allow managing the machine from outside Tailscale <span style="color:var(--muted);font-size:11px">(off: from the local network people read and chat; admin work stays on Tailscale or this machine)</span></label>
-    <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:10px">Inference services (Whisper, Kokoro, ComfyUI…) answer on
+      Allow managing the machine from outside Tailscale${infoBtn('Off (the default): from the local network people can read and chat, but admin work — the machine, users, devices — stays on Tailscale or this machine. On: admin work is allowed from the local network too.')}</label>
+    <label style="display:flex;gap:8px;align-items:center;font-size:12px;margin-top:10px">Inference services answer on${infoBtn('Where the model services this hub starts (Whisper, Kokoro, ComfyUI…) can be reached. They have no sign-in of their own, so the default is this machine only; the hub reaches them here either way. Takes effect from each one\'s next start.')}
       <select class="input" id="net-services" data-default="local" data-label="Inference services answer on" style="width:auto">${[['local', 'this machine only'], ['tailnet', 'this machine and Tailscale'], ['all', 'every network — no sign-in']]
-        .map(([v, l]) => `<option value="${v}" ${s.services === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <span style="color:var(--muted);font-size:11px">from each one's next start; the hub reaches them on this machine either way</span></label>`,
+        .map(([v, l]) => `<option value="${v}" ${s.services === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`,
       { id: 'network', label: 'Advanced — managing from outside, inference services' })}
     <div class="toolbar" style="margin-top:8px"><button class="btn btn-sm btn-blue" onclick="networkSave()">Save</button>
       <span class="status-line" id="net-status">Now: ${escHtml(s.listen)}</span></div>`;

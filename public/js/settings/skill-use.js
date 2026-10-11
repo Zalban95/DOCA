@@ -27,10 +27,10 @@ async function skillUseHead(box) {
   try { auto = !!(await apiFetch('/api/prefs'))?.skillSuggest?.autoAccept; } catch { /* drawn off */ }
   const brand = typeof convBrand === 'function' ? convBrand() : 'The hub';
   box.innerHTML = `<div class="skill-use-row">
-      <label>Show <select class="input" id="doca-skills-filter">
+      <label>Show${infoBtn('Narrows the list below to the skills used one way: attached, when it fits, or off. Only filters what is shown.')} <select class="input" id="doca-skills-filter">
         <option value="">All</option><option value="attached">Attached</option><option value="fits">When it fits</option><option value="off">Off</option></select></label>
-      <label class="switch-label" title="When a message names a skill by one of its trigger words. A project chat in Agent mode attaches them anyway; a chat's ⋯ may say otherwise.">
-        <input type="checkbox" id="doca-skills-auto" ${auto ? 'checked' : ''}> Attach skills ${escHtml(brand)} suggests without asking</label></div>`;
+      <label class="switch-label">
+        <input type="checkbox" id="doca-skills-auto" ${auto ? 'checked' : ''}> Attach skills ${escHtml(brand)} suggests without asking${infoBtn('When a message names a skill by one of its trigger words, it is suggested. On: it is attached to that turn without asking you. Off (the default): you are asked. A project chat in Agent mode attaches them anyway; a chat\'s ⋯ may say otherwise. Saved as soon as it is changed.')}</label></div>`;
   box.querySelector('#doca-skills-filter').onchange = () => docaSkillsLoad();
   box.querySelector('#doca-skills-auto').onchange = async e => {
     try { await apiFetch('/api/prefs', { method: 'POST', body: { skillSuggest: { autoAccept: e.target.checked } } }); } catch (err) { appAlert(err.message); }
@@ -50,12 +50,12 @@ function skillUseControls(s) {
   const def = s.byDefault || s;
   const modes = SKILL_MODES.map(([k, l]) => `<label><input type="checkbox" data-mode="${k}" ${s.modes?.includes(k) ? 'checked' : ''}> ${l}</label>`).join('');
   const trig = s.triggerSet || { triggers: [], made: true };
-  el.innerHTML = `<select class="input" data-use title="How the agent uses this skill">
-      ${SKILL_USES.map(([k, l]) => `<option value="${k}" ${s.use === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-    <span class="skill-use-modes" ${s.use === 'attached' ? '' : 'hidden'}>in ${modes}
-      <label title="Only in conversations working in a project or a worktree"><input type="checkbox" data-where ${s.where === 'project' ? 'checked' : ''}> only in project chats</label></span>
+  el.innerHTML = `<select class="input" data-use title="How the agent uses this skill" aria-label="How the agent uses this skill">
+      ${SKILL_USES.map(([k, l]) => `<option value="${k}" ${s.use === k ? 'selected' : ''}>${l}</option>`).join('')}</select>${infoBtn('How the agent uses this skill. When it fits: it sees the name and reads the skill when a request matches. Attached: it goes with every turn in the modes ticked. Off: the agent does not see it. Saved as soon as it is changed.')}
+    <span class="skill-use-modes" ${s.use === 'attached' ? '' : 'hidden'}>in${infoBtn('The conversation modes this skill is attached in: Agent (does the work), Plan (plans first), Ask (answers only), Debug (finds a fault).')} ${modes}
+      <label><input type="checkbox" data-where ${s.where === 'project' ? 'checked' : ''}> only in project chats${infoBtn('On: attached only in conversations working in a project or a worktree.')}</label></span>
     ${s.from === 'setting' ? `<button class="btn btn-xs" data-reset title="Back to the skill's own: ${escHtml(def.use === 'attached' ? `attached in ${def.modes.join(', ')}${def.where === 'project' ? ', project chats' : ''}` : 'when it fits')}">Reset</button>` : '<span class="muted">its own default</span>'}
-    <div class="skill-use-adv">${advancedFold(`<label class="muted">Triggers — words or short phrases, one per line, in any language${trig.made ? ' (none written: these are made from its name and description)' : ''}</label>
+    <div class="skill-use-adv">${advancedFold(`<label class="muted">Triggers${infoBtn(`Words or short phrases, one per line, in any language: a message using one suggests this skill.${trig.made ? ' None written yet: these are made from its name and description.' : ''} ✨ Suggest asks the model for more; nothing is kept until Save triggers.`)}</label>
       <textarea class="input" data-trig rows="3" style="width:100%" data-default="${escHtml((s.byDefault?.triggers?.length ? s.byDefault.triggers : trig.made ? trig.triggers : s.triggers).join('\n'))}">${escHtml(trig.triggers.join('\n'))}</textarea>
       <div style="display:flex;gap:6px;margin-top:4px"><button class="btn btn-xs" data-trig-save>Save triggers</button>
         <button class="btn btn-xs" data-trig-ai title="Ask the model once for more, in English and Italian; nothing is kept until you save">✨ Suggest</button></div>`,

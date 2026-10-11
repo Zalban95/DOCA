@@ -36,9 +36,9 @@ function _renderServicesGrid() {
 
   grid.innerHTML = _servicesDefs.map(svc => {
     const isVllm = svc.id === 'vllm';
-    const g      = svc.savedGpu || 'all';
+    const g      = svc.savedGpu === 'none' ? '' : (svc.savedGpu || 'all');   // 'none' is saved for No GPU
     const gpuOpts = ['0','1','all',''].map(v =>
-      `<option value="${v}"${g===v?' selected':''}>${v==='all'?'Both GPUs':v===''?'No GPU (CPU)':`GPU ${v}`}</option>`
+      `<option value="${v}"${g===v?' selected':''}>${v==='all'?'All GPUs':v===''?'No GPU (CPU)':`GPU ${v}`}</option>`
     ).join('');
     return `
     <div class="services-row" id="svc-row-${svc.id}">
@@ -52,17 +52,17 @@ function _renderServicesGrid() {
            href="http://localhost:${svc.port}" target="_blank">
           http://localhost:${svc.port}
         </a>
-        <button class="btn btn-xs tool-gear" title="Service settings"
+        <button class="btn btn-xs tool-gear" title="Service settings" aria-label="Service settings"
                 onclick="svcToggleConfig('${svc.id}')">⚙</button>
       </div>
       <div style="font-size:10px;color:var(--muted);margin:2px 0 6px">${svc.description}</div>
       <div class="m-life" id="life-line-service-${svc.id}"></div>
       <div class="services-controls" id="svc-config-${svc.id}" style="display:none">
-        <label class="services-ctrl-label">GPU</label>
+        <label class="services-ctrl-label">GPU${infoBtn(`Which graphics card this service runs on. All GPUs (the default) gives it every card; GPU 0 or GPU 1 just that one; No GPU runs it on the processor${svc.cpuImage ? ' with its CPU image' : ', which is slow or not possible for some services'}. Takes effect the next time you start it.`)}</label>
         <select class="input services-select" id="svc-gpu-${svc.id}" style="width:130px"
                 onchange="_svcSaveSettings('${svc.id}')">${gpuOpts}</select>
         ${isVllm ? `
-        <label class="services-ctrl-label">Model ID</label>
+        <label class="services-ctrl-label">Model ID${infoBtn('Which model vLLM loads and serves, by its Hugging Face name (like Qwen/Qwen2.5-7B-Instruct). It is downloaded into the Hugging Face cache the first time. Empty: the image\'s own default. Takes effect the next time you start it.')}</label>
         <input class="input services-model-input" id="svc-model-${svc.id}"
                placeholder="e.g. Qwen/Qwen2.5-7B-Instruct"
                value="${svc.savedModelId || ''}"
@@ -153,7 +153,7 @@ async function servicePullImage(id, asked = false) {
   const svc = _servicesDefs.find(s => s.id === id);
   if (!svc) return;
   if (!asked) return installAsk('service', id, `${svc.label}'s image`, () => servicePullImage(id, true), { verb: 'Download' });
-  const gpu   = document.getElementById(`svc-gpu-${id}`)?.value ?? (svc.savedGpu || 'all');
+  const gpu   = document.getElementById(`svc-gpu-${id}`)?.value ?? (svc.savedGpu === 'none' ? '' : (svc.savedGpu || 'all'));
   const image = gpu === '' && svc.cpuImage ? svc.cpuImage : svc.image;
   const out     = document.getElementById(`svc-out-${id}`);
   const pullBtn = document.getElementById(`svc-pull-${id}`);

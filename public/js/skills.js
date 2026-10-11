@@ -49,7 +49,7 @@ function renderSkills(skills) {
           <input type="checkbox" ${s.enabled ? 'checked' : ''}
                  onchange="toggleSkill(${jsArg(s.name)}, this.checked)">
           <span class="skill-toggle-track"></span>
-        </label>
+        </label>${infoBtn('On: OpenClaw loads this skill. Off: it stays installed but OpenClaw does not use it.')}
       </div>
       ${s.version ? `<div class="skill-card-ver">v${escHtml(s.version)}</div>` : ''}
       <div class="skill-card-desc">${escHtml(s.description || '—')}</div>

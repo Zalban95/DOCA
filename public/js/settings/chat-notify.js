@@ -28,9 +28,9 @@ async function chatNotifyCard() {
     </div>`).join('');
   card.innerHTML = `<div class="card-title">Hive chat on your devices</div>
     <p class="desc">Which messages from the hive chat reach you away from the panel. Yours alone. A conversation you muted, your own messages and a device's quiet hours never notify.</p>
-    <div class="form-row" style="align-items:center;gap:8px"><label style="min-width:150px">Phone and watch</label>${sel('devices', r.devices, 'aria-label="Phone and watch" onchange="chatNotifySave({devices: this.value})"', 'mentions')}</div>
-    <div class="form-row" style="align-items:center;gap:8px"><label style="min-width:150px">Linked chats</label>${sel('chats', r.chats, 'aria-label="Linked chats" onchange="chatNotifySave({chats: this.value})"', 'mentions')}</div>
-    ${r.list.length ? advancedFold(rows, { label: 'Each device', id: 'chat-notify-each', changed: r.list.filter(d => d.when || d.content !== 'full').length })
+    <div class="form-row" style="align-items:center;gap:8px"><label style="min-width:150px">Phone and watch${infoBtn('Which hive-chat messages reach your phone and watch as notifications: every message, only direct messages and mentions of you (the default), or nothing. Saved at once.')}</label>${sel('devices', r.devices, 'aria-label="Phone and watch" onchange="chatNotifySave({devices: this.value})"', 'mentions')}</div>
+    <div class="form-row" style="align-items:center;gap:8px"><label style="min-width:150px">Linked chats${infoBtn('The same, for chats you linked under Settings → Channels (Telegram, Matrix, Slack, mail). Default: direct messages and mentions.')}</label>${sel('chats', r.chats, 'aria-label="Linked chats" onchange="chatNotifySave({chats: this.value})"', 'mentions')}</div>
+    ${r.list.length ? advancedFold(`<p class="desc">Per device: what reaches it (empty: as its kind above), and whether it gets the words or only "New message from …".</p>${rows}`, { label: 'Each device', id: 'chat-notify-each', changed: r.list.filter(d => d.when || d.content !== 'full').length })
       : '<p class="desc">No phone, watch or linked chat of yours yet: pair one under Field → API keys, or link a chat under Settings → Channels.</p>'}
     <div id="chat-notify-status" class="desc" role="status"></div>`;
 }

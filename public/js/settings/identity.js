@@ -11,14 +11,14 @@ async function identityRender(panel) {
   card.id = 'identity-card';
   card.innerHTML = `
     <div class="card-title">Who</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-      Two short pages the agent reads every turn. <strong>Persona</strong> is who it is and how it works with you —
+    <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Two short pages the agent reads every turn: who it is, and who you are.</p>
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:12px"><summary>What this is</summary>
+      <strong>Persona</strong> is who it is and how it works with you —
       it may refine it. <strong>Human</strong> is about you, in your words: how you like answers, what you are working on.
-      Markdown, in the data folder, so backups carry them; copy text in from another assistant's files if you have them.
-    </p>
-    <div class="field"><div class="input-label">Persona (persona.md)</div>
+      Markdown, in the data folder, so backups carry them; copy text in from another assistant's files if you have them.</details>
+    <div class="field"><div class="input-label">Persona (persona.md)${infoBtn('Who the agent is and how it works with you, in plain words. It reads this every turn and may refine it itself. Saved as persona.md in the data folder.')}</div>
       <textarea class="input" id="id-persona" rows="7" spellcheck="true"></textarea></div>
-    <div class="field"><div class="input-label">Human (human.md) — about you</div>
+    <div class="field"><div class="input-label">Human (human.md) — about you${infoBtn('About you, in your words: how you like answers, what you are working on, what to ask before doing. The agent reads it every turn. Saved as human.md in the data folder.')}</div>
       <textarea class="input" id="id-human" rows="7" spellcheck="true"
         placeholder="e.g. I build Android apps and a home lab. Short answers; ask before spending money; I read on my phone a lot."></textarea></div>
     <div class="toolbar"><button class="btn btn-sm btn-blue" onclick="identitySave()">Save</button>

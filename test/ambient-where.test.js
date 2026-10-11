@@ -73,7 +73,7 @@ test('a paired phone\'s reported location sample is its place when it names none
 function page(geo) {
   const saved = [];
   const ctx = { navigator: { geolocation: geo }, Promise, Date, Number, Math, JSON, String, encodeURIComponent,
-    escHtml: s => String(s), screenSave: async p => { saved.push(p); return {}; }, apiFetch: async () => ({}), AMB: { s: {} }, _ambLoad: () => {} };
+    escHtml: s => String(s), infoBtn: () => '', screenSave: async p => { saved.push(p); return {}; }, apiFetch: async () => ({}), AMB: { s: {} }, _ambLoad: () => {} };
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(path.join(__dirname, '../public/js/ambient-where.js'), 'utf8'), ctx);
   return { ctx, saved, run: src => vm.runInContext(src, ctx) };

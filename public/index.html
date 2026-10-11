@@ -125,11 +125,11 @@
           <button class="btn btn-xs" onclick="harnessLoad()" title="Re-check">↺</button>
           <span id="harness-default-label" style="font-size:10px;color:var(--muted);margin-left:auto"></span>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
-          The agent is what you talk to in the chat. DOCA has its own; you can also add others you use.
-          ● marks the one the chat panel and the <a href="#" onclick="nav('harness');return false">agent's page</a> use.
-          ⚙ chooses its model.
-        </p>
+        <p style="font-size:11px;color:var(--muted);margin:0 0 4px">The agent is what you talk to in the chat; ⚙ chooses its model.</p>
+        <details class="page-about" style="font-size:11px;margin:0 0 10px"><summary>What this is</summary>
+          <span data-brand-text="product">{} has its own agent; you can also add others you use (⬇ Add another agent).</span>
+          ● marks the one the chat panel and the <a href="#" onclick="nav('harness');return false">agent's page</a> use; Use makes another one that.
+        </details>
         <div id="harness-list"><div class="placeholder pulse">Looking for agents…</div></div>
         <div class="harness-add-row">
           <span class="harness-add-caret">+</span>
@@ -161,7 +161,7 @@
       <div class="toolbar">
         <div class="toolbar-left">
           <button class="btn btn-sm" onclick="clearLogs()">Clear</button>
-          <label class="log-autoscroll" title="Keep the newest line in view"><input type="checkbox" class="switch" id="scroll-btn" checked onchange="toggleScroll(this.checked)"> Autoscroll</label>
+          <label class="log-autoscroll" data-info="On (the default): the view follows the newest line as it arrives. Off: it stays where you scrolled, to read something older."><input type="checkbox" class="switch" id="scroll-btn" checked onchange="toggleScroll(this.checked)"> Autoscroll</label>
           <div class="log-src-row" id="log-sources"></div>
         </div>
         <div class="status-line" id="log-status"></div>
@@ -216,7 +216,7 @@
               <button class="btn btn-sm" onclick="fmDownloadSelected()" title="Download selected">⬇ Download</button>
             </div>
             <input class="input fm-path-input" id="fm-path-input"
-                   placeholder="/path/to/dir" onkeydown="fmGoPath(event)">
+                   placeholder="/path/to/dir" aria-label="Go to a folder" onkeydown="fmGoPath(event)"><span class="fm-path-info" data-info="Type the full path of a folder on this hub and press Enter to open it. Only the folders the panel is allowed to show open."></span>
           </div>
 
           <!-- Hidden file input for uploads -->
@@ -285,22 +285,19 @@
       <!-- Storage overview -->
       <div class="card">
         <div class="card-title" style="display:flex;align-items:center;gap:8px">
-          Storage
-          <button class="btn btn-xs" onclick="modelsLoadDisk(true)" title="Refresh">↺</button>
+          <span data-info="The folders where models are kept, how much space they take and how much is still free on each drive. Nothing to set here: ↺ measures again.">Storage</span>
+          <button class="btn btn-xs" onclick="modelsLoadDisk(true)" title="Measure again">↺</button>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:8px">
-          Model directories, their size on disk and the free space left on each drive.
-        </p>
         <div id="models-disk-strip"><div class="placeholder pulse">Checking disk space…</div></div>
       </div>
 
       <!-- Ollama Settings -->
       <div class="card">
-        <div class="card-title">Ollama Settings</div>
+        <div class="card-title" data-info="Ollama is a program that downloads and runs chat models on this machine. These settings say where to reach it.">Ollama — settings</div>
         <div class="models-settings-grid">
-          <span class="models-settings-label">API URL</span>
+          <span class="models-settings-label" data-info="The address Ollama answers on. Everything that lists, downloads or uses Ollama models asks this address. The default, http://127.0.0.1:11434, is Ollama on this same machine; change it only when Ollama runs elsewhere.">Address</span>
           <input id="models-ollama-url" class="input" value="http://127.0.0.1:11434">
-          <span class="models-settings-label">Models directory</span>
+          <span class="models-settings-label" data-info="Only tells the Storage card above which folder to measure. It does not move Ollama's models: Ollama itself decides where they go (its OLLAMA_MODELS setting). Empty (the default): the folder the running Ollama reports, else its usual one.">Models folder</span>
           <div style="display:flex;gap:6px;align-items:center">
             <input id="models-ollama-path" class="input" style="flex:1;min-width:0" placeholder="/path/to/ollama/models (optional)">
             <button class="btn btn-xs" title="Browse" onclick="fpOpen('models-ollama-path','dir')">📁</button>
@@ -319,12 +316,12 @@
 
       <!-- LLM Models (Ollama) -->
       <div class="card">
-        <div class="card-title">LLM Models — Ollama <span id="models-ollama-total" style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+        <div class="card-title"><span data-info="The chat models Ollama holds on this machine. Search finds models in Ollama's online library; Download fetches one by its name; Delete removes it from the disk.">Chat models — Ollama</span> <span id="models-ollama-total" style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
         <!-- Search online -->
         <div class="models-search-row">
           <input id="models-search-input" class="input" placeholder="Search Ollama library (e.g. llama, mistral)…"
                  style="flex:1" onkeydown="if(event.key==='Enter') modelsSearchOnline()">
-          <button class="btn btn-sm" onclick="modelsSearchOnline()">🔍 Search</button>
+          <button class="btn btn-sm" onclick="modelsSearchOnline()">🔍 Search</button><span class="info-slot" data-info="Words to look for in Ollama's online library, for example a model family such as qwen or llama. Press Enter or Search; nothing is downloaded until you choose one."></span>
         </div>
         <div id="models-search-results" style="display:none;margin-bottom:8px"></div>
         <!-- Pull row -->
@@ -332,7 +329,7 @@
           <input id="models-pull-input" class="input" placeholder="model name (e.g. llama3.2, qwen2.5:7b)"
                  style="max-width:300px"
                  onkeydown="if(event.key==='Enter') modelsPull()">
-          <button class="btn btn-sm btn-teal" onclick="modelsPull()">⬇ Pull</button>
+          <button class="btn btn-sm btn-teal" onclick="modelsPull()">⬇ Download</button><span class="info-slot" data-info="The exact name of an Ollama model, optionally with a size or variant after a colon (qwen2.5:7b). Download fetches it into Ollama on this machine; the progress shows below. Large models take many gigabytes."></span>
           <div class="models-pull-progress" id="models-pull-bar" style="display:none">
             <div class="models-pull-progress-bar" id="models-pull-bar-fill"></div>
           </div>
@@ -359,14 +356,14 @@
 
       <!-- HuggingFace Settings -->
       <div class="card">
-        <div class="card-title">HuggingFace Settings</div>
+        <div class="card-title" data-info="Hugging Face is a website that hosts models of every kind. These settings are used when this machine downloads from it.">Hugging Face — settings</div>
         <div class="models-settings-grid">
-          <span class="models-settings-label">Cache directory</span>
+          <span class="models-settings-label" data-info="The folder Hugging Face downloads go into, and the one listed below. Empty (the default): ~/.cache/huggingface/hub, Hugging Face's own usual folder. Change it to keep large downloads on another drive.">Download folder</span>
           <div style="display:flex;gap:6px;align-items:center">
             <input id="hf-cache-dir" class="input" style="flex:1;min-width:0" placeholder="~/.cache/huggingface/hub (default)">
             <button class="btn btn-xs" title="Browse" onclick="fpOpen('hf-cache-dir','dir')">📁</button>
           </div>
-          <span class="models-settings-label">HF Token</span>
+          <span class="models-settings-label" data-info="An access token from your Hugging Face account (it starts with hf_). Needed only for gated models, which ask you to accept their terms on the website first. Saved in a protected file on this machine and never shown again; empty means anonymous downloads.">Access token</span>
           <input id="hf-token" class="input" type="password" placeholder="hf_… (optional, for gated models)">
         </div>
         <div class="models-actions-row" style="margin-top:10px;display:flex;align-items:center;gap:10px">
@@ -382,12 +379,12 @@
 
       <!-- HuggingFace Models -->
       <div class="card">
-        <div class="card-title">HuggingFace Models <span id="hf-total" style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
+        <div class="card-title"><span data-info="Models and datasets already downloaded from Hugging Face on this machine. Search finds them on the website; Download fetches a whole repository into the download folder.">Hugging Face — downloaded</span> <span id="hf-total" style="font-size:10px;color:var(--muted);font-weight:400;text-transform:none;letter-spacing:0"></span></div>
         <!-- Search online -->
         <div class="models-search-row">
           <input id="hf-search-input" class="input" placeholder="Search HuggingFace Hub (e.g. llama, whisper, stable-diffusion)…"
                  style="flex:1" onkeydown="if(event.key==='Enter') hfSearch()">
-          <button class="btn btn-sm" onclick="hfSearch()">🔍 Search</button>
+          <button class="btn btn-sm" onclick="hfSearch()">🔍 Search</button><span class="info-slot" data-info="Words to look for on the Hugging Face website (a model, a task such as whisper). Press Enter or Search; nothing is downloaded until you choose one."></span>
         </div>
         <div id="hf-search-results" style="display:none;margin-bottom:8px"></div>
         <!-- Download row -->
@@ -395,7 +392,7 @@
           <input id="hf-dl-input" class="input" placeholder="repo id (e.g. meta-llama/Llama-3.2-1B)"
                  style="max-width:340px"
                  onkeydown="if(event.key==='Enter') hfDownload()">
-          <button class="btn btn-sm btn-teal" onclick="hfDownload()">⬇ Download</button>
+          <button class="btn btn-sm btn-teal" onclick="hfDownload()">⬇ Download</button><span class="info-slot" data-info="A repository's id as the website shows it, owner/name (meta-llama/Llama-3.2-1B). Download fetches every file of it into the download folder; gated ones need the access token above."></span>
           <div class="models-pull-progress" id="hf-pull-bar" style="display:none">
             <div class="models-pull-progress-bar" id="hf-pull-bar-fill"></div>
           </div>
@@ -424,36 +421,32 @@
       <!-- AI Tools (STT · TTS · Image) -->
       <div class="card">
         <div class="card-title" style="display:flex;align-items:center;gap:8px">
-          AI Tools — STT · TTS · Image
-          <button class="btn btn-xs" onclick="aiToolsLoad()" id="ai-tools-refresh-btn" title="Re-check">↺ Check</button>
+          <span data-info="Programs and services that turn speech into text, text into speech, or make pictures. Each is checked when the page opens; ⚙ on a row sets where it is and whether the agent may use it.">AI tools — speech and pictures</span>
+          <button class="btn btn-xs" onclick="aiToolsLoad()" id="ai-tools-refresh-btn" title="Check again">↺ Check</button>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin-bottom:10px">
-          Speech and image tools available to the agent — auto-checked on open.
-          Use ⚙ to set a custom binary path / API URL and toggle agent availability.
-        </p>
         <div id="ai-tools-list"><div class="placeholder pulse">Checking…</div></div>
         <pre id="ai-tools-out" class="terminal" style="display:none;margin-top:8px;max-height:min(45vh,360px)"></pre>
 
         <!-- Local model files per tool (Whisper, Kokoro, SD, ComfyUI) -->
         <details style="margin-top:12px" ontoggle="if(this.open) nlmInit()">
-          <summary style="cursor:pointer;font-size:11px;color:var(--muted)">Local model files (per tool)</summary>
+          <summary style="cursor:pointer;font-size:11px;color:var(--muted)">Model files for these tools</summary>
           <div style="margin-top:10px">
             <div class="models-settings-grid">
-              <span class="models-settings-label">Tool</span>
+              <span class="models-settings-label" data-info="Which tool's model files this section shows and saves: Whisper turns speech into text, Kokoro speaks, Stable Diffusion and ComfyUI make pictures. Each keeps its own settings.">Tool</span>
               <select id="nlm-tool" class="input" style="max-width:220px" onchange="nlmLoadSettings(); nlmLoadList()">
                 <option value="whisper">Whisper (STT)</option>
                 <option value="kokoro">Kokoro TTS</option>
                 <option value="stable-diffusion">Stable Diffusion</option>
                 <option value="comfyui">ComfyUI Models</option>
               </select>
-              <span class="models-settings-label">Models directory</span>
+              <span class="models-settings-label" data-info="The folder this tool's model files are in. The list below is read from it and Install puts new files there. Empty: the tool's usual folder (for Whisper ~/.cache/whisper, for Kokoro ~/kokoro).">Models folder</span>
               <div style="display:flex;gap:6px;align-items:center">
                 <input id="nlm-path" class="input" style="flex:1;min-width:0" placeholder="/path/to/models (optional)">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('nlm-path','dir')">📁</button>
               </div>
-              <span class="models-settings-label">API URL</span>
+              <span class="models-settings-label" data-info="The address this tool answers on, if it runs as a service. It is saved with the tool's settings for reference; the list of model files below does not use it. Empty by default.">Address</span>
               <input id="nlm-apiurl" class="input" placeholder="http://localhost:8000 (optional)">
-              <span class="models-settings-label">Config file</span>
+              <span class="models-settings-label" data-info="This tool's own configuration file, if it has one. Saved with its settings so ✏ opens it for editing here. Empty by default.">Config file</span>
               <div style="display:flex;gap:6px;align-items:center">
                 <input id="nlm-config-path" class="input" style="flex:1;min-width:0" placeholder="/path/to/config (optional)">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('nlm-config-path','file')">📁</button>
@@ -469,13 +462,13 @@
             <div class="models-search-row" style="margin-top:10px">
               <input id="nlm-search-input" class="input" placeholder="Search model catalog…"
                      style="flex:1" onkeydown="if(event.key==='Enter') nlmSearch()">
-              <button class="btn btn-sm" onclick="nlmSearch()">🔍 Search</button>
+              <button class="btn btn-sm" onclick="nlmSearch()">🔍 Search</button><span class="info-slot" data-info="Look through the models this tool is known to offer (a fixed list per tool), by name or description."></span>
             </div>
             <div id="nlm-search-results" style="display:none;margin-bottom:8px"></div>
             <div class="models-pull-row">
               <input id="nlm-install-input" class="input" placeholder="model name (e.g. base, large-v3)"
                      style="max-width:300px" onkeydown="if(event.key==='Enter') nlmInstall()">
-              <button class="btn btn-sm btn-teal" onclick="nlmInstall()">⬇ Install</button>
+              <button class="btn btn-sm btn-teal" onclick="nlmInstall()">⬇ Install</button><span class="info-slot" data-info="The name of one of this tool's models (for Whisper base or large-v3). Install downloads it into the models folder; the progress shows below."></span>
               <div class="models-pull-progress" id="nlm-pull-bar" style="display:none">
                 <div class="models-pull-progress-bar" id="nlm-pull-bar-fill"></div>
               </div>
@@ -500,23 +493,20 @@
       <!-- llama.cpp Servers -->
       <div class="card">
         <div class="card-title" style="display:flex;align-items:center;gap:10px">
-          llama.cpp Servers
+          <span data-info="llama.cpp is a fast program that runs one model file (a .gguf) as a server other programs can ask, in the same way as an online chat service (an address ending in /v1). Each instance here is one model on one port, started and stopped from this page.">llama.cpp servers</span>
           <span id="llama-server-badge" class="badge" style="display:none;font-size:9px"></span>
           <button class="btn btn-xs btn-blue" onclick="llamaAddInstance()">+ Add instance</button>
           <button class="btn btn-xs" onclick="llamaLoadList()" title="Refresh">↺</button>
         </div>
-        <p style="font-size:11px;color:var(--muted);margin:0 0 8px">
-          Managed <code>llama-server</code> processes. Each instance exposes an OpenAI-compatible API at <code>/v1</code> on the internal network.
-        </p>
         <div id="llamacpp-grid"><div class="placeholder pulse" style="padding:12px">Loading…</div></div>
       </div>
 
       <!-- Inference Services -->
       <div class="card">
         <div class="card-title">Inference Services</div>
-        <p style="font-size:11px;color:var(--muted);margin:0 0 8px">
-          Launch Docker-based inference backends. Services are named <code>doca-{id}</code> and auto-registered in Tool APIs on start.
-        </p>
+        <details class="desc page-about" style="margin:0 0 8px"><summary>Ready-made AI programs (speech, pictures, models) you start with one click.</summary>
+          Each runs in its own Docker container, named <code>doca-{id}</code>, on this machine only unless Settings → System → Network says more, and is registered in Tool APIs when it starts. ⚙ on a row chooses its graphics card.
+        </details>
         <div id="services-grid"><div class="placeholder pulse" style="padding:12px">Loading…</div></div>
       </div>
 
@@ -569,7 +559,7 @@
         <div class="toolbar" style="flex-wrap:wrap;row-gap:6px">
           <div class="card-title" style="margin-bottom:0">Images</div>
           <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;row-gap:6px">
-            <input id="docker-pull-input" class="input" placeholder="image:tag" style="width:min(200px,42vw)"
+            <span data-info="The name of an image to download, as Docker Hub or another registry writes it — like nginx:latest or ghcr.io/owner/app:1.0. Without a :tag, Docker takes latest."></span><input id="docker-pull-input" class="input" placeholder="image:tag" aria-label="Image to download" style="width:min(200px,42vw)"
                    onkeydown="if(event.key==='Enter') dockerPullImage()">
             <button class="btn btn-sm btn-teal" onclick="dockerPullImage()">⬇ Pull</button>
             <button class="btn btn-sm" onclick="dockerLoadImages()">↺ Refresh</button>
@@ -591,11 +581,11 @@
 
     <!-- ─── MCP SERVERS ─────────────────────────────────── -->
     <div id="tab-mcp" class="tab-page">
-      <div class="page-head"><div class="page-head-text"><h1 class="page-title">MCP servers</h1><p class="page-sub">Tools from other programs, offered to the DOCA harness while their server runs.</p></div>
+      <div class="page-head"><div class="page-head-text"><h1 class="page-title">MCP servers</h1><p class="page-sub" data-brand-text="product">Tools from other programs, offered to the {} agent while their server runs.</p></div>
         <div class="page-head-acts"><button class="btn btn-sm" onclick="mcpLoad()">↺ Refresh</button><button class="btn btn-sm btn-primary" onclick="mcpNew()">+ Add server</button></div></div>
       <details class="desc page-about" style="margin-bottom:10px"><summary>What MCP servers are</summary>
         Model Context Protocol servers. A running server's tools are offered to the
-        <strong>DOCA harness</strong> alongside its built-in ones, named
+        <strong>agent</strong> alongside its built-in ones, named
         <code>mcp__server__tool</code>, and each can be switched off in the harness ⚙ panel.
         Only running servers contribute tools, and nothing is started unless you say so.
         Servers are grouped by the machine they act on: this host, or a paired client — and once
@@ -609,14 +599,14 @@
 
         <div id="mcp-form" style="display:none">
           <div class="card mt8">
-            <div class="card-title">MCP Server</div>
+            <div class="card-title">MCP server</div>
             <div class="row">
               <div class="field flex1">
-                <div class="input-label">Name</div>
+                <div class="input-label" data-info="A short name you choose for this server (github, files). Its tools reach the agent as mcp__name__tool, so keep it short; letters and digits read best.">Name</div>
                 <input id="mcp-name" class="input" placeholder="github">
               </div>
               <div class="field">
-                <div class="input-label">Transport</div>
+                <div class="input-label" data-info="How the server is reached. A command (stdio): a program this machine starts and talks to directly — most servers you install are this. A URL (http): a server that is already running somewhere and answers at a web address.">How it is reached</div>
                 <select id="mcp-transport" class="input" onchange="mcpTransportChange()">
                   <option value="stdio">stdio (a command)</option>
                   <option value="http">http (a URL)</option>
@@ -625,37 +615,37 @@
             </div>
             <div id="mcp-stdio-fields">
               <div class="field">
-                <div class="input-label">Command</div>
+                <div class="input-label" data-info="The program that starts the server, as you would type it first in a terminal: npx, uvx, python or a full path. The server's own instructions name it.">Command</div>
                 <input id="mcp-command" class="input" placeholder="npx">
               </div>
               <div class="field">
-                <div class="input-label">Arguments — one per line</div>
+                <div class="input-label" data-info="What follows the command, one item per line, exactly as the server's instructions give them (often the package name and a folder it may use).">Arguments — one per line</div>
                 <textarea id="mcp-args" class="input" rows="3" placeholder="-y&#10;@modelcontextprotocol/server-filesystem&#10;/home/me/projects"></textarea>
               </div>
               <div class="field">
-                <div class="input-label">Environment — KEY=VALUE, one per line</div>
+                <div class="input-label" data-info="Settings handed to the program as environment variables, one NAME=value per line — often a key the server needs (GITHUB_TOKEN=…). Kept with the server; the panel shows the values as dots afterwards. Empty by default.">Environment — KEY=VALUE, one per line</div>
                 <textarea id="mcp-env" class="input" rows="2" placeholder="GITHUB_TOKEN=ghp_…"></textarea>
               </div>
               <div class="field">
-                <div class="input-label">Working directory <span style="opacity:.6">— optional</span></div>
+                <div class="input-label" data-info="The folder the program starts in, for a server that reads files relative to where it runs. Empty (the default): the hub's own folder.">Working folder <span style="opacity:.6">— optional</span></div>
                 <input id="mcp-cwd" class="input" placeholder="leave empty for DOCA's own">
               </div>
             </div>
             <div id="mcp-http-fields" style="display:none">
               <div class="field">
-                <div class="input-label">URL</div>
+                <div class="input-label" data-info="The server's web address, as its instructions give it (often ending in /mcp).">URL</div>
                 <input id="mcp-url" class="input" placeholder="https://example.com/mcp">
               </div>
               <div class="row">
                 <div class="field flex1">
-                  <div class="input-label">Runs on</div>
+                  <div class="input-label" data-info="Which machine the server's tools act on. This hub (the default), or a paired client — another computer or phone — so the agent knows the tools reach that machine and not this one.">Runs on</div>
                   <select id="mcp-origin-kind" class="input" onchange="mcpOriginChange()">
-                    <option value="server">the DOCA host</option>
+                    <option value="server" data-brand-text="product">the {} hub</option>
                     <option value="client">a paired client</option>
                   </select>
                 </div>
                 <div class="field flex1" id="mcp-origin-device-field" style="display:none">
-                  <div class="input-label">Which client</div>
+                  <div class="input-label" data-info="The paired device the server runs on. Devices are paired under Field → API keys.">Which client</div>
                   <select id="mcp-origin-device" class="input"></select>
                 </div>
               </div>
@@ -664,13 +654,9 @@
                 confuse the two.
               </div>
               <div class="field">
-                <div class="input-label">Headers <span style="opacity:.6">— optional, one per line</span></div>
+                <div class="input-label" data-info="Lines sent with every request to this server, one Name: value per line — usually a key (Authorization: Bearer …). Kept with the server's definition; the panel shows the values as dots afterwards. Empty by default.">Headers <span style="opacity:.6">— optional, one per line</span></div>
                 <textarea id="mcp-headers" class="input" rows="2"
                   placeholder="Authorization: Bearer sk-…"></textarea>
-                <div class="input-label" style="opacity:.6;margin-top:4px">
-                  Sent with every request to this server. Kept with the definition, so treat it like the
-                  API keys on the Keys tab — anyone who can read this panel can read it.
-                </div>
               </div>
             </div>
             <div class="settings-tab-row">
@@ -678,7 +664,7 @@
                 <input type="checkbox" id="mcp-autostart">
                 <span class="skill-toggle-track"></span>
               </label>
-              <span class="settings-tab-label">Start this server when DOCA starts</span>
+              <span class="settings-tab-label" data-info="Starts this server every time the hub starts, so its tools are there without pressing Start. Off by default: a server added here does nothing until it is started."><span data-brand-text="product">Start this server when {} starts</span></span>
             </div>
             <div class="toolbar-right">
               <button class="btn btn-sm" onclick="mcpShowForm(false)">Cancel</button>
@@ -694,8 +680,8 @@
     <div id="tab-vms" class="tab-page">
       <div class="page-head"><div class="page-head-text"><h1 class="page-title">Virtual machines</h1><p class="page-sub">Guests on this machine, through whichever hypervisor is installed. <span class="status-line" id="vms-status"></span></p></div>
         <div class="page-head-acts"><button class="btn btn-sm" onclick="vmsLoad()">↺ Refresh</button></div></div>
-      <div class="desc" style="margin-bottom:10px">Through whichever hypervisor CLI is installed — libvirt/KVM (<code>virsh</code>) and VirtualBox
-        (<code>VBoxManage</code>). Stop asks the guest to shut down; Force off does not. Copy a display address into your own VNC or RDP viewer. Agents' computers are under <a href="#" onclick="nav('computers');return false">Computers</a>.</div>
+      <details class="desc page-about" style="margin-bottom:10px"><summary>What this page does</summary>A virtual machine is a whole computer running inside this one. This page lists them through whichever hypervisor program is installed — libvirt/KVM (<code>virsh</code>) and VirtualBox
+        (<code>VBoxManage</code>). Stop asks the guest to shut down; Force off does not. Copy a display address into your own VNC or RDP viewer. Agents' computers are under <a href="#" onclick="nav('computers');return false">Computers</a>.</details>
       <div class="scroll-y" style="flex:1">
         <div id="vms-list"><div class="placeholder pulse">Loading…</div></div>
       </div>
@@ -722,17 +708,15 @@
           <span class="status-line" id="theme-status" style="margin-top:10px"></span>
         </div>
         <div class="card">
-          <div class="card-title">Navigation Visibility</div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">Show or hide tabs in the navigation bar. Saved as you toggle.</p>
+          <div class="card-title" data-info="Turn a page off to hide it from the navigation on this screen only; it keeps working, and Settings always shows. Every page shows by default. Saved as you toggle.">Pages in the navigation</div>
+          <p class="desc" style="margin-bottom:10px">Show or hide pages in the navigation bar, on this screen.</p>
           <div id="settings-tabs-list"><div class="placeholder pulse">Loading…</div></div>
           <span class="status-line" id="settings-status" style="margin-top:10px"></span>
         </div>
         <div class="card">
-          <div class="card-title">Sidebar &amp; System Stats</div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
-            Choose which system stats appear in the sidebar and which sidebar sections are visible.
-            Changes are saved instantly and apply on the next status refresh.
-          </p>
+          <div class="card-title" data-info="System and GPU stats are the readings the hub collects for the sidebar (for every screen); sidebar sections are what this screen shows in its left column. Saved as you toggle; the sidebar changes at its next refresh, within a few seconds.">Sidebar &amp; System Stats</div>
+          <p class="desc" style="margin-bottom:10px">Which readings and sections the sidebar shows.</p>
+
           <div id="settings-stats-list"><div class="placeholder pulse">Loading…</div></div>
           <span class="status-line" id="stats-settings-status" style="margin-top:10px"></span>
         </div>
@@ -753,17 +737,16 @@
             Start at Boot
             <button class="btn btn-xs" onclick="startupLoad()" title="Re-check the boot service">↺</button>
           </div>
-          <p id="startup-about" style="font-size:11px;color:var(--muted);margin-bottom:14px">
-            Install DOCA as a systemd service so the panel comes back on its own after a reboot —
+          <p class="desc" style="margin-bottom:6px">Bring the panel back by itself after this machine restarts.</p>
+          <details class="desc page-about" style="margin-bottom:12px"><summary>What this is</summary><span id="startup-about">Install it as a systemd service so the panel comes back on its own after a reboot —
             and so <code>⟳ Restart</code> above is handled by a supervisor instead of a detached
-            child process. Same thing as running <code>./run.sh enable</code> on the host.
-          </p>
+            child process. Same thing as running <code>./run.sh enable</code> on the host.</span></details>
           <div class="settings-tab-row">
             <label class="skill-toggle">
               <input type="checkbox" id="startup-toggle" onchange="startupToggle(this)">
               <span class="skill-toggle-track"></span>
             </label>
-            <span class="settings-tab-label">Start DOCA when this machine boots</span>
+            <span class="settings-tab-label" data-info="On: the panel starts by itself when this machine starts (or, on Windows and macOS, when you sign in). Off: after a restart nobody starts it until you do. Changing it may ask for this machine's password.">Start <span data-brand="product">DOCA</span> when this machine boots</span>
           </div>
           <span class="status-line" id="startup-status" style="margin-top:10px"></span>
           <pre id="startup-log" class="code-out" style="display:none;max-height:min(35vh,260px);overflow:auto;font-size:11px;margin-top:8px"></pre>
@@ -777,25 +760,22 @@
           <!-- ── This server: Doca device tokens ── -->
           <div class="card">
             <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              <span id="dev-card-title">This server — devices</span>
+              <span id="dev-card-title">This server — devices</span><span data-info="Phones, watches, computers and programs that may talk to this hub. Each gets its own access, which you can take back on its own. Pairing is the easy way: the device scans or types a short code."></span>
               <button class="btn btn-xs btn-teal" id="dev-pair-btn"  onclick="devShowForm('pair')"  title="Show a pairing code a phone or watch can scan">⧉ Pair a device</button>
               <button class="btn btn-xs"          id="dev-issue-btn" onclick="devShowForm('issue')" title="Mint a token directly (advanced)">+ Issue token</button>
               <button class="btn btn-xs"          onclick="devicesLoad()" title="Refresh this list">↺</button><button class="btn btn-xs" id="dev-reload-btn" data-every="1" onclick="screensReloadAll(this)" title="Every signed-in page loads again — the apps' too; one being edited asks first">⟳ Reload every screen</button><span class="status-line" id="dev-reload-status"></span>
             </div>
-            <div class="input-label" id="dev-card-about" style="margin-bottom:8px">
-              Tokens for phones, watches and agents that talk to this server's <code>/api/v1</code>.
-              Each device gets its own scopes and can be revoked on its own.
-            </div>
+            <div class="desc" id="dev-card-about" style="margin-bottom:8px">Pair a phone, watch or computer so it can use this hub.</div>
 
             <!-- Pair: preferred. The code is single-use and short-lived. -->
             <div id="dev-pair-form" style="display:none">
               <div class="card mt8">
                 <div class="card-title">Pair a device</div>
                 <div class="row">
-                  <div class="field flex1"><div class="input-label">Device name</div><input id="dev-pair-name" class="input" placeholder="My phone"></div>
-                  <div class="field flex1"><div class="input-label">Role</div><select id="dev-pair-preset" class="input"></select></div><div class="field flex1" id="dev-pair-for-field" style="display:none"><div class="input-label">Whose</div><select id="dev-pair-for" class="input"></select></div>
+                  <div class="field flex1"><div class="input-label" data-info="A name you choose, to tell this device apart in the list below (Anna's phone). It can be changed later.">Device name</div><input id="dev-pair-name" class="input" placeholder="My phone"></div>
+                  <div class="field flex1"><div class="input-label" data-info="What kind of device this is, which decides what it may do here (its scopes, listed under the box). Choose what you are pairing: a phone or a computer with the app is phone, a watch is watch. Admin gives full control — only for something you trust completely.">Role</div><select id="dev-pair-preset" class="input"></select></div><div class="field flex1" id="dev-pair-for-field" style="display:none"><div class="input-label" data-info="Whose device it will be: yours (Mine), or another person's. It then acts as that person, within what their level allows.">Whose</div><select id="dev-pair-for" class="input"></select></div>
                 </div>
-                <div class="input-label" id="dev-pair-scopes" style="margin-bottom:8px"></div>
+                <div class="desc" id="dev-pair-scopes" style="margin-bottom:8px"></div>
                 <div class="toolbar-right">
                   <button class="btn btn-sm" onclick="devHideForms()">Cancel</button>
                   <button class="btn btn-sm btn-teal" onclick="devPairStart()">Show pairing code</button>
@@ -808,15 +788,12 @@
             <div id="dev-issue-form" style="display:none">
               <div class="card mt8">
                 <div class="card-title">Issue a token directly</div>
-                <div class="input-label" style="margin-bottom:8px">
-                  Prefer pairing where possible — a pairing code expires, a token does not.
-                  Use this for agents and headless clients that cannot scan anything.
-                </div>
+                <div class="input-label" style="margin-bottom:8px">For programs that cannot type a pairing code. A token lasts until you revoke it.</div>
                 <div class="row">
-                  <div class="field flex1"><div class="input-label">Device name</div><input id="dev-issue-name" class="input" placeholder="my-agent"></div>
-                  <div class="field flex1"><div class="input-label">Role</div><select id="dev-issue-preset" class="input"></select></div>
+                  <div class="field flex1"><div class="input-label" data-info="A name you choose for the program this token is for, to tell it apart in the list.">Device name</div><input id="dev-issue-name" class="input" placeholder="my-agent"></div>
+                  <div class="field flex1"><div class="input-label" data-info="What the program may do here (its scopes, listed under the box). Agent (the default) lets it act on your devices; Viewer only reads; Admin is full control.">Role</div><select id="dev-issue-preset" class="input"></select></div>
                 </div>
-                <div class="input-label" id="dev-issue-scopes" style="margin-bottom:8px"></div>
+                <div class="desc" id="dev-issue-scopes" style="margin-bottom:8px"></div>
                 <div class="toolbar-right">
                   <button class="btn btn-sm" onclick="devHideForms()">Cancel</button>
                   <button class="btn btn-sm btn-green" onclick="devIssue()">Issue token</button>
@@ -834,12 +811,8 @@
           <!-- ── External providers: chat-model endpoints; ＋ Add is the one "Add a service" box (settings/service-add.js) ── -->
           <div class="card mt8 host-only">
             <div class="card-title" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-              External providers
+              <span data-info="Where the chat models the agents talk to come from: an online service with a key (OpenAI, DeepSeek, Groq…) or a model server of your own (Ollama, llama.cpp, vLLM), anything that speaks the OpenAI-compatible way. Any other API with a key is added from the same box and kept under Field → Connectors → API services.">External providers — chat models</span>
               <button class="btn btn-xs btn-blue" onclick="keysAddToggle()">＋ Add</button>
-            </div>
-            <div class="input-label" style="margin-bottom:8px">
-              Chat models, hosted or local — any OpenAI-compatible server. Any other API with a key (a 3D generator, a home server) is added from
-              the same box and kept in Field → Connectors → API services. Nothing to do with the device tokens above.
             </div>
             <div id="providers-drafts"></div><div id="svc-add-providers-slot"></div>
             <div id="providers-checks"></div>
@@ -863,16 +836,16 @@
             <button class="skills-mode-btn" id="skills-mode-search" onclick="skillsSetMode('search')">Search online</button>
           </div>
           <div id="skills-installed-bar" class="skills-bar">
-            <input id="skill-input" class="input flex1" placeholder="skill name or repo (e.g. openai-whisper)" style="max-width:260px">
+            <input id="skill-input" class="input flex1" placeholder="skill name or repo (e.g. openai-whisper)" style="max-width:260px;min-width:170px"><span data-info="The name of a skill in OpenClaw's registry, or a repository, to install into OpenClaw's skills folder. Install adds it; Force installs it again over one already there."></span>
             <button class="btn btn-sm btn-blue" onclick="installSkill(false)">Install</button>
             <button class="btn btn-sm btn-amber" onclick="installSkill(true)">Force</button>
             <div style="flex:1"></div>
-            <input id="skill-filter" class="input" placeholder="Filter installed…" style="width:150px" oninput="filterSkills()">
+            <input id="skill-filter" class="input" placeholder="Filter installed…" style="width:150px" oninput="filterSkills()"><span data-info="Type to show only the installed skills whose name or description match. Only filters the list."></span>
             <button class="btn btn-sm" onclick="loadSkills()">↺</button>
           </div>
           <div id="skills-search-bar" class="skills-bar" style="display:none">
             <input id="skill-search-input" class="input flex1" placeholder="Search skills registry…" style="max-width:320px"
-                   onkeydown="if(event.key==='Enter') searchSkillsOnline()">
+                   onkeydown="if(event.key==='Enter') searchSkillsOnline()"><span data-info="Words to look for in OpenClaw's skills registry. The ticks narrow results to official, community or unknown authors; none ticked shows all."></span>
             <button class="btn btn-sm btn-blue" onclick="searchSkillsOnline()">Search</button>
             <div class="skills-flag-group">
               <label class="skills-flag"><input type="checkbox" id="flag-official"> <span class="badge badge-green" style="font-size:9px">Official</span></label>
@@ -907,24 +880,24 @@
           </div>
           <div id="snap-settings-body" style="display:none;padding-top:10px">
             <div class="snap-settings-grid">
-              <label class="snap-label-text">Snapshot dir</label>
+              <label class="snap-label-text" data-info="The folder where snapshots are kept. Default: ~/openclaw-snapshots.">Snapshot dir</label>
               <div class="snap-path-with-btn">
                 <input id="snap-dir" class="input flex1" placeholder="/path/to/snapshots">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-dir','dir')">📁</button>
               </div>
-              <label class="snap-label-text">Snapshot script</label>
+              <label class="snap-label-text" data-info="A shell script of yours that takes a snapshot. Optional: without one, the paths below are packed into a .tar.gz instead.">Snapshot script</label>
               <div class="snap-path-with-btn">
                 <input id="snap-script-create" class="input flex1" placeholder="/path/to/snapshot.sh">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-create','file')">📁</button>
                 <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-create')">✏</button>
               </div>
-              <label class="snap-label-text">Restore script</label>
+              <label class="snap-label-text" data-info="A shell script of yours that puts a snapshot back. Optional: without one, a .tar.gz snapshot is unpacked.">Restore script</label>
               <div class="snap-path-with-btn">
                 <input id="snap-script-restore" class="input flex1" placeholder="/path/to/restore.sh">
                 <button class="btn btn-xs" title="Browse" onclick="fpOpen('snap-script-restore','file')">📁</button>
                 <button class="btn btn-xs btn-blue" title="Edit script" onclick="snapEditScript('snap-script-restore')">✏</button>
               </div>
-              <label class="snap-label-text">Paths to include<br><small style="font-weight:400;opacity:.7">used by tar fallback &amp; passed to scripts</small></label>
+              <label class="snap-label-text" data-info="The folders and files a snapshot holds: packed into the .tar.gz when there is no snapshot script, and passed to your scripts when there is.">Paths to include</label>
               <div>
                 <div id="snap-paths-list" class="snap-paths-list"></div>
                 <button class="btn btn-xs" style="margin-top:6px" onclick="snapAddPath()">+ Add path</button>
@@ -939,7 +912,7 @@
         <div class="card">
           <div class="card-title">Create Snapshot</div>
           <div class="row">
-            <input id="snap-label" class="input flex1" placeholder="label (optional, e.g. before-groq-test)" style="max-width:300px">
+            <input id="snap-label" class="input flex1" placeholder="label (optional, e.g. before-groq-test)" style="max-width:300px"><span data-info="An optional name for this snapshot, so you can tell it apart later: passed to your snapshot script, or used as the file name. Empty: the date and time."></span>
             <button class="btn btn-amber" onclick="createSnapshot()">📷 Snapshot now</button>
           </div>
         </div>
@@ -1012,35 +985,35 @@
       <div class="settings-panel" id="sp-voice">
         <div class="card">
           <div class="card-title">Speech services — the hive's</div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:14px">
-            Shared by every screen and device: what turns speech into text and text into speech. Any OpenAI-compatible audio API works
-            (local Whisper/Kokoro, OpenAI, etc.). Unlike <strong>Paths</strong>, the
+          <p style="font-size:11px;color:var(--muted);margin-bottom:6px">What turns speech into text, and text into speech, for every screen and device.</p>
+          <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:14px">
+            <summary>What this is</summary>
+            Any OpenAI-compatible audio API works (local Whisper/Kokoro, OpenAI, etc.). Unlike <strong>Paths</strong>, the
             <code>DOCA_STT_URL</code> and <code>DOCA_TTS_URL</code> environment variables win over the
-            URLs saved here, so a deployment can pin them — if one is set, that is what voice calls use.
-          </p>
+            URLs saved here, so a deployment can pin them — if one is set, that is what voice calls use.</details>
           <div style="display:flex;flex-direction:column;gap:10px">
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT URL</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="The address of the speech-to-text service, which turns what you say into words (a local Whisper, or OpenAI). Default: http://localhost:8000.">STT URL</label>
               <input class="input" id="voice-stt-url" style="flex:1" placeholder="http://localhost:8000">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">STT Model</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="Which model that service uses to listen. Default: whisper-1.">STT Model</label>
               <input class="input" id="voice-stt-model" style="flex:1" placeholder="whisper-1">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS URL</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="The address of the text-to-speech service, which reads the answers aloud (a local Kokoro, or OpenAI). Default: http://localhost:8880.">TTS URL</label>
               <input class="input" id="voice-tts-url" style="flex:1" placeholder="http://localhost:8880">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Model</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="Which model that service speaks with. Default: kokoro.">TTS Model</label>
               <input class="input" id="voice-tts-model" style="flex:1" placeholder="kokoro">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Voice</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="The voice used by a screen that has not chosen one of its own (the Voice card above chooses per screen). Default: af_heart.">TTS Voice</label>
               <input class="input" id="voice-tts-voice" style="flex:1" placeholder="af_heart">
             </div>
             <div style="display:flex;gap:8px;align-items:center">
-              <label style="font-size:11px;color:var(--muted);width:80px;flex-shrink:0">TTS Speed</label>
+              <label style="font-size:11px;color:var(--muted);width:104px;flex-shrink:0" data-info="How fast that default voice talks, from 0.25 to 4. Default: 1.0, the normal pace.">TTS Speed</label>
               <input type="range" id="voice-tts-speed" min="0.25" max="4.0" step="0.05" value="1.0" style="flex:1"
                      oninput="document.getElementById('voice-tts-speed-val').textContent=this.value">
               <span id="voice-tts-speed-val" style="font-size:11px;color:var(--fg);min-width:32px;text-align:right">1.0</span>
@@ -1060,12 +1033,12 @@
             Paths
             <button class="btn btn-xs" onclick="pathsLoad()" title="Re-check what exists">↺</button>
           </div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-            Where DOCA looks for the stack, its config and the workspace. Leave a field empty to fall
+          <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Folders and files the hub works with. Restart after saving.</p>
+          <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:12px"><summary>What this is</summary>
+            Where the hub looks for the stack, its config and the workspace. Leave a field empty to fall
             back to its environment variable or the built-in default. Anything missing can be created
             here. Most of the dashboard reads these once at start-up, so use <code>⟳ Restart</code>
-            in <strong>General</strong> after saving.
-          </p>
+            in <strong>General</strong> after saving.</details>
           <div id="paths-list"><div class="placeholder pulse">Loading…</div></div>
           <div class="toolbar" style="margin-top:12px">
             <button class="btn btn-sm btn-blue" onclick="pathsSave()">Save</button>
@@ -1077,7 +1050,7 @@
             System Tools
             <button class="btn btn-xs" onclick="sysdepsRefresh()" id="sysdeps-refresh-btn" title="Re-check">↺ Check</button>
           </div>
-          <p style="font-size:11px;color:var(--muted);margin-bottom:12px">What this machine has for DOCA. Install runs the command for this system (hover the button to read it) as this machine's user; a password is asked only where it uses sudo.</p>
+          <div style="font-size:11px;color:var(--muted);margin-bottom:12px">Programs this machine has, or could install, for the hub.<details class="desc page-about"><summary>What this is</summary>Install runs the command for this system (hover the button to read it) as this machine's user; a password is asked only where it uses sudo.</details></div>
           <div id="sysdeps-list"><div class="placeholder pulse">Checking…</div></div>
           <pre id="sysdeps-out" class="terminal" style="display:none;margin-top:8px;max-height:min(45vh,360px)"></pre>
         </div>
@@ -1124,13 +1097,13 @@
      onclick="if(event.target===this) hcApprovalClose()">
   <div class="modal" style="max-width:560px" onclick="event.stopPropagation()">
     <div class="modal-title">What may run without asking</div>
-    <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
+    <p style="font-size:11px;color:var(--muted);margin:0 0 4px">In Manual the agent asks before it acts; what you always allow is listed below.</p><details class="desc page-about" style="font-size:11px;margin:0 0 10px"><summary>What this is</summary>
       In <strong>Manual</strong> the agent is stopped before each tool call that does something, and you
       answer it in the chat. Saying <em>always allow</em> puts the command type on this list — so
       <code>shell: git</code> stops being a question while <code>shell: rm</code> is still asked every time.
       A command that builds itself at run time can never join the list.
       Reading this panel's own state never asks. In <strong>Auto</strong> nothing is asked, except writing the files that govern the agent and — when the switch below is on — the first action after outside text.
-    </p>
+    </details>
     <div id="hc-approval-list" class="hc-memory"><div class="placeholder">Loading…</div></div>
     <div class="modal-actions">
       <button class="btn btn-sm" onclick="hcApprovalClose()">Close</button>
@@ -1147,12 +1120,12 @@
       those ship in the code and neither of you can edit them.
     </p>
     <div class="field">
-      <div class="input-label">Categories — one per line, <code>id: what belongs in it</code></div>
+      <div class="input-label" data-info="The drawers memory is filed in, one per line as id: what belongs in it. Every fact the agent remembers goes under one of them. ↺ Defaults brings back the shipped ones.">Categories — one per line, <code>id: what belongs in it</code></div>
       <textarea class="input" id="hc-rules-cats" rows="7" spellcheck="false"
                 style="width:100%;box-sizing:border-box"></textarea>
     </div>
     <div class="field">
-      <div class="input-label">Rules — one per line</div>
+      <div class="input-label" data-info="How the agent decides what is worth remembering and how to write it down, one rule per line. You and the agent may both change them; 🔍 Verify rules checks them for contradictions without changing anything.">Rules — one per line</div>
       <textarea class="input" id="hc-rules-list" rows="9" spellcheck="false"
                 style="width:100%;box-sizing:border-box"></textarea>
     </div>
@@ -1198,15 +1171,15 @@
 <div id="hc-agent-overlay" class="modal-overlay" style="display:none" onclick="hcAgentClose(event)">
   <div class="modal" style="max-width:680px" onclick="event.stopPropagation()">
     <div class="modal-title" id="hc-agent-title">Specialist</div>
-    <p style="font-size:11px;color:var(--muted);margin:0 0 10px">
+    <p style="font-size:11px;color:var(--muted);margin:0 0 4px">A helper for one kind of errand, written as a short text file.</p><details class="desc page-about" style="font-size:11px;margin:0 0 10px"><summary>What this is</summary>
       A specialist is its role plus a few <strong>kits</strong> (families of tools: files, code, shell, web,
       canvas, memory, devices…); a tool added to a kit later reaches it by itself. Markdown: a front matter
       (<code>name</code>, <code>description</code>, <code>kits</code>, optional <code>tools</code>, <code>model</code>),
       then the role. Claude Code subagent files import as they are. Changing settings, installing, dispatching
       and asking the person are never granted to a specialist.
-    </p>
+    </details>
     <div class="field">
-      <div class="input-label">Definition</div>
+      <div class="input-label" data-info="The specialist itself: a header between --- lines (name, description, kits, and optionally tools and model), then its role in plain words. The description is what the Orchestrator reads to decide when to send it.">Definition</div>
       <textarea class="input" id="hc-agent-json" rows="16" spellcheck="false"
                 style="width:100%;box-sizing:border-box;font-family:var(--font-mono);font-size:11px"></textarea>
     </div>
@@ -1374,15 +1347,15 @@
     </p>
     <div style="display:flex;flex-direction:column;gap:10px">
       <div style="display:flex;gap:8px;align-items:center">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">Name</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0" data-info="What the new container is called. Needed to save it as a configuration; for a one-off run, empty lets Docker make up a name.">Name</label>
         <input class="input" id="docker-run-name" style="flex:1" placeholder="my-container">
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">Ports</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0" data-info="Which ports of this machine reach the container, as this-machine:container pairs separated by commas — 8080:80 makes the container's port 80 answer at this machine's 8080. Empty: none are opened.">Ports</label>
         <input class="input" id="docker-run-ports" style="flex:1" placeholder="8080:80, 443:443">
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">GPU</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0" data-info="Whether the container may use a graphics card, needed by most AI images. None (CPU), the default, gives it none; GPU 0 or GPU 1 one card; All GPUs every card. Docker needs the NVIDIA Container Toolkit for this.">GPU</label>
         <select class="input" id="docker-run-gpu" style="width:140px">
           <option value="">None (CPU)</option>
           <option value="0">GPU 0</option>
@@ -1391,7 +1364,7 @@
         </select>
       </div>
       <div style="display:flex;gap:8px;align-items:center">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0">Restart</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0" data-info="What Docker does when the container stops or this machine restarts. unless-stopped (the default) starts it again unless you stopped it yourself; always starts it again every time; no leaves it stopped.">Restart</label>
         <select class="input" id="docker-run-restart" style="width:140px">
           <option value="no">no</option>
           <option value="unless-stopped" selected>unless-stopped</option>
@@ -1399,12 +1372,12 @@
         </select>
       </div>
       <div style="display:flex;gap:8px;align-items:flex-start">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;padding-top:6px">Env vars</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;padding-top:6px" data-info="Settings handed to the program inside, one KEY=VALUE per line — the image's own documentation says which it reads. Empty by default.">Env vars</label>
         <textarea class="input" id="docker-run-env" rows="2" style="flex:1;font-size:11px;resize:vertical"
                   placeholder="KEY=VALUE (one per line)"></textarea>
       </div>
       <div style="display:flex;gap:8px;align-items:flex-start">
-        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;padding-top:6px">Volumes</label>
+        <label style="font-size:11px;color:var(--muted);width:70px;flex-shrink:0;padding-top:6px" data-info="Folders of this machine the container may use, one per line as /folder/here:/folder/inside, so its files outlive the container. Empty by default: what it writes goes with it.">Volumes</label>
         <textarea class="input" id="docker-run-volumes" rows="2" style="flex:1;font-size:11px;resize:vertical"
                   placeholder="/host/path:/container/path (one per line)"></textarea>
       </div>
@@ -1432,7 +1405,7 @@
 <script src="js/lib/output.js"></script>
 <script src="js/lib/status.js"></script><script src="js/lib/fab-aside.js"></script>
 <script src="js/lib/format.js"></script>
-<script src="js/lib/presence.js"></script><script src="js/lib/live.js"></script><script src="js/lib/select-sheet.js"></script><script src="js/lib/choice-input.js"></script><script src="js/lib/model3d.js"></script><script src="js/lib/icons.js"></script><script src="js/lib/ui-parts.js"></script>
+<script src="js/lib/presence.js"></script><script src="js/lib/live.js"></script><script src="js/lib/select-sheet.js"></script><script src="js/lib/choice-input.js"></script><script src="js/lib/model3d.js"></script><script src="js/lib/icons.js"></script><script src="js/lib/ui-parts.js"></script><script src="js/lib/field-info.js"></script>
 <script src="js/lib/debounce.js"></script>
 <script src="js/lib/dialogs.js"></script><script src="js/lib/machine-ask.js"></script><script src="js/lib/undo.js"></script><script src="js/lib/people-pick.js"></script><script src="js/lib/page-reload.js"></script><script src="js/lib/install-ask.js"></script><script src="js/settings/leaf-fields.js"></script><script src="js/lib/machine-origin.js"></script><script src="js/lib/attention.js"></script><script src="js/lib/mic.js"></script><script src="js/lib/mic-keep.js"></script><script src="js/lib/screen.js"></script><script src="js/lib/licence.js"></script>
 <script src="js/lib/system-tools.js"></script>

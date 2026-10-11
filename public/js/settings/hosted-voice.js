@@ -11,17 +11,18 @@ function hostedVoiceFields(list, v) {
   if (!h) return '';
   const o = (v.engine === h.id && v.hosted) || {};
   const adv = h.advanced || [];
-  const field = (id, label, input) => `<label class="input-label" style="display:block;margin-top:6px">${label}</label>${input}`;
+  const field = (id, label, input, info) => `<label class="input-label" style="display:block;margin-top:6px">${label}${infoBtn(info)}</label>${input}`;
   return `<div id="hv-fields" style="margin-top:8px">
+    <div class="input-label">Model${infoBtn(`Which of ${h.label}'s speech models speaks. Models differ in quality, speed, price and whether they follow tone tags.`)}</div>
     <div class="toolbar" style="gap:6px;flex-wrap:wrap;justify-content:flex-start">
       <select class="input" id="hv-model" style="width:auto" title="Which of ${escHtml(h.label)}'s models">${h.models.map(m =>
         `<option value="${escHtml(m.id)}" ${m.id === (o.model || h.model) ? 'selected' : ''}>${escHtml(m.label)}</option>`).join('')}</select>
       ${list.voices.length ? '' : '<span style="font-size:11px;color:var(--muted)">No voices listed — is the key right?</span>'}
     </div>
     ${adv.length ? `<details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px">Advanced</summary>
-      ${adv.includes('style') ? field('hv-style', 'A direction in words, for every sentence', `<input class="input" id="hv-style" value="${escHtml(o.style || '')}" placeholder="warm and unhurried, a little playful" style="width:100%">`) : ''}
-      ${adv.includes('stability') ? field('hv-stability', 'Stability (0 more varied — 1 steadier)', `<input class="input" id="hv-stability" type="number" min="0" max="1" step="0.1" value="${escHtml(o.stability ?? '')}" style="width:100px">`) : ''}
-      ${adv.includes('language') ? field('hv-language', 'Language (empty: found from what it says)', `<input class="input" id="hv-language" value="${escHtml(o.language || '')}" placeholder="it, en-US…" style="width:120px">`) : ''}
+      ${adv.includes('style') ? field('hv-style', 'A direction in words, for every sentence', `<input class="input" id="hv-style" value="${escHtml(o.style || '')}" placeholder="warm and unhurried, a little playful" style="width:100%">`, 'How every sentence should sound, said in words and sent to the service with each one. Empty: no direction.') : ''}
+      ${adv.includes('stability') ? field('hv-stability', 'Stability (0 more varied — 1 steadier)', `<input class="input" id="hv-stability" type="number" min="0" max="1" step="0.1" value="${escHtml(o.stability ?? '')}" style="width:100px">`, 'From 0 (more varied, more expressive) to 1 (steadier, more even). Empty: the service\'s default.') : ''}
+      ${adv.includes('language') ? field('hv-language', 'Language (empty: found from what it says)', `<input class="input" id="hv-language" value="${escHtml(o.language || '')}" placeholder="it, en-US…" style="width:120px">`, 'The language code to speak in, like it or en-US. Empty: worked out from each sentence.') : ''}
     </details>` : ''}</div>`;
 }
 
@@ -46,9 +47,9 @@ function hostedVoiceSetup(list) {
       <div style="font-size:11px;color:var(--muted);margin:2px 0 4px">${escHtml(h.about)}</div>
       ${list.host ? `<div class="toolbar" style="gap:6px;flex-wrap:wrap;justify-content:flex-start">
         <a href="${escHtml(h.keyPage)}" target="_blank" rel="noopener" class="btn btn-xs">Get a key ↗</a>
-        <input class="input" type="password" autocomplete="off" id="hv-key-${escHtml(h.provider)}" placeholder="${h.hasKey ? 'a new key replaces it' : 'paste the key'}" style="width:200px;max-width:100%">
+        <input class="input" type="password" autocomplete="off" id="hv-key-${escHtml(h.provider)}" placeholder="${h.hasKey ? 'a new key replaces it' : 'paste the key'}" style="width:200px;max-width:100%">${infoBtn(`Your ${h.label} key, made on its own site (Get a key). Kept by the hub with the keys for services and never shown again; a new one replaces the old.`)}
         <button class="btn btn-xs btn-blue" onclick="hostedVoiceKeySave('${escHtml(h.provider)}')">Save the key</button>
-        <label style="font-size:11px"><input type="checkbox" id="hv-who-${escHtml(h.provider)}" ${h.who === 'everyone' ? 'checked' : ''}> everyone's screens may use it</label></div>` : ''}
+        <label style="font-size:11px"><input type="checkbox" id="hv-who-${escHtml(h.provider)}" ${h.who === 'everyone' ? 'checked' : ''}> everyone's screens may use it${infoBtn('Off: only admins\' screens may speak with this service. On: every person\'s screen may, on your account and at your cost.')}</label></div>` : ''}
     </div>`;
   return `<details id="hv-setup" style="margin-top:10px"><summary style="cursor:pointer;font-size:12px">A voice from a service — ElevenLabs, OpenAI, Cartesia, Google</summary>
     <p style="font-size:11px;color:var(--muted);margin:6px 0">The service speaks the answers instead of this machine: it costs what the service charges, and what is said goes to it.

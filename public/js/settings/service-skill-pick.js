@@ -10,12 +10,12 @@ let _svcSkills = [];
 function serviceSkillHtml(skills) {
   _svcSkills = skills || [];
   return `<div class="svc-skill">
-    <label class="svc-field svc-wide"><span>Its skill — when and why agents use it</span>
+    <label class="svc-field svc-wide"><span class="field-label">Its skill ${infoBtn('A skill is a written page of when and why the agents use this service, and the steps. Pick one already here, search for one, or let ✨ write one from the docs. Empty: no skill linked.')}</span>
       <select class="input" id="sk-skill" data-default="" data-label="Its skill"><option value="">no skill linked</option>${_svcSkills.map(s => `<option value="${escHtml(s.name)}">${escHtml(s.name)}</option>`).join('')}</select></label>
     <div class="toolbar" style="gap:6px;flex-wrap:wrap">
       <input class="input" id="sk-skill-q" placeholder="Search skills — here and in the public collections" style="flex:1;min-width:200px"
         onkeydown="if(event.key==='Enter'){event.preventDefault();serviceSkillSearch()}" oninput="serviceSkillLocal()">
-      <button class="btn btn-xs" onclick="serviceSkillSearch()">Search</button>
+      <button class="btn btn-xs" onclick="serviceSkillSearch()">Search</button>${infoBtn('Words to find a skill — among those here and in the public collections. Choosing one links it above.')}
       <button class="btn btn-xs" onclick="serviceAskSkill()" title="Opens the chat with the request; you send it">✨ Write one from the docs</button></div>
     <div id="sk-skill-hits" class="svc-skill-hits"></div></div>`;
 }

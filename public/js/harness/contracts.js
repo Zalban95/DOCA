@@ -26,10 +26,8 @@ async function harnessContractsMount(id) {
       <span class="tool-actions"><button class="btn btn-xs" title="The next request finds out again" onclick="harnessContractForget(${jsArg(id)}, ${jsArg(provider)})">Forget</button></span></div>`;
   }).join('');
   grid.querySelectorAll(':scope > .hcfg-contracts').forEach(e => e.remove());
-  grid.insertAdjacentHTML('beforeend', `<label class="hcfg-contracts">What providers accept</label>
-    <div class="hcfg-contracts">${rows || '<div class="tool-note">Nothing learned yet: every provider has taken requests as sent.</div>'}
-      <small class="harness-hint">Found out when a provider refused a request and the retry worked, and sent that way from then on.
-        Forget one when the provider changed (a new server version, a different model behind the same name).</small></div>`);
+  grid.insertAdjacentHTML('beforeend', `<label class="hcfg-contracts">What providers accept${infoBtn('Found out when a provider refused a request and the retry worked; requests are sent that way from then on. Forget one when the provider changed (a new server version, a different model behind the same name).')}</label>
+    <div class="hcfg-contracts">${rows || '<div class="tool-note">Nothing learned yet: every provider has taken requests as sent.</div>'}</div>`);
 }
 
 function harnessContractForget(id, provider) {

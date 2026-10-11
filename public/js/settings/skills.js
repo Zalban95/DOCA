@@ -11,10 +11,12 @@ async function skillsCardRender(panel) {
   card.id = 'doca-skills-card';
   card.innerHTML = `<div class="card-title" style="display:flex;align-items:center;gap:8px">Skills
       <button class="btn btn-xs" onclick="docaSkillsImport()" title="Copy skill folders (each with a SKILL.md) from a folder on this machine">⬆ Import</button></div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Procedures the agent loads when a task matches: it always sees each one's name and
+    <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Step-by-step procedures the agent follows when a task matches.</p>
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:10px"><summary>What this is</summary>It always sees each one's name and
       when to use it, and reads the rest only when needed. The agent keeps new ones as it learns them (on this machine).
-      A skill can also be attached to every turn in some modes, or switched off — below each one.</p>
-    <input class="input" id="doca-skills-q" placeholder="Search every skill on this machine — DOCA's and other harnesses'" style="width:100%;margin-bottom:8px"
+      A skill can also be attached to every turn in some modes, or switched off — below each one.</details>
+    <label class="input-label" for="doca-skills-q">Search${infoBtn('Finds skills on this machine by words — this hub\'s own and the ones other harnesses keep (Claude Code, Codex, Gemini CLI). Only searches; nothing changes.')}</label>
+    <input class="input" id="doca-skills-q" placeholder="Search every skill on this machine — this hub's and other harnesses'" style="width:100%;margin-bottom:8px"
       oninput="clearTimeout(window._docaSkillsQT); window._docaSkillsQT = setTimeout(docaSkillsSearch, 250)">
     <div id="doca-skills-results"></div>
     <div id="doca-skills-head"></div>
@@ -22,8 +24,8 @@ async function skillsCardRender(panel) {
     <div id="doca-skills-online"></div>
     <div class="card-title" style="margin-top:14px;display:flex;align-items:center;gap:8px">From other harnesses
       <button class="btn btn-xs" onclick="docaSkillsProject()" title="A project's .cursor/rules">Cursor rules…</button></div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Procedures kept by Claude Code (skills, plugin skills, commands), Codex (prompts)
-      and Gemini CLI (commands) on this machine. Importing copies them in as skills; the originals are not touched.</p>
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:10px"><summary>What this is</summary>Procedures kept by Claude Code (skills, plugin skills, commands), Codex (prompts)
+      and Gemini CLI (commands) on this machine. Importing copies them in as skills; the originals are not touched.</details>
     <div id="doca-skills-sources"><div class="placeholder pulse">Looking…</div></div>`;
   panel.appendChild(card);
   skillUseHead(document.getElementById('doca-skills-head')).then(() => docaSkillsLoad());   // filter, auto-accept (skill-use.js)

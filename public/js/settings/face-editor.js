@@ -5,16 +5,16 @@
 let _faceEdit = null;   // {face, timer}: the preview, while open
 
 const FACE_EDIT_FIELDS = [
-  { k: 'form', common: true, label: 'Form', type: 'select', options: [['poly', 'Polyhedron of light'], ['face', 'Eyes and mouth']] },
-  { k: 'dots', label: 'Points', type: 'range', min: 120, max: 1200, step: 20 },
-  { k: 'point', label: 'Point size', type: 'range', min: 0.4, max: 2.5, step: 0.05 },
-  { k: 'glow', label: 'Glow intensity', type: 'range', min: 0, max: 4, step: 0.05 },
-  { k: 'glowRadius', label: 'Glow radius', type: 'range', min: 0.5, max: 5, step: 0.05 },
-  { k: 'speed', label: 'Motion', type: 'range', min: 0.2, max: 2.5, step: 0.05 },
-  { k: 'accent', common: true, label: 'Colour', type: 'color', palette: true },
-  { k: 'field', label: 'Background points', type: 'color', palette: true },
-  { k: 'ask', label: 'Asking you', type: 'color', palette: true },
-  { k: 'concepts', common: true, label: 'Show concepts as they are said', type: 'check' },
+  { k: 'form', common: true, label: 'Form', info: 'What the face is drawn as: a turning shape of light points, or eyes and a mouth. Default: polyhedron.', type: 'select', options: [['poly', 'Polyhedron of light'], ['face', 'Eyes and mouth']] },
+  { k: 'dots', label: 'Points', info: 'How many points of light make up the face. More looks finer and costs a little more to draw.', type: 'range', min: 120, max: 1200, step: 20 },
+  { k: 'point', label: 'Point size', info: 'How big each point is.', type: 'range', min: 0.4, max: 2.5, step: 0.05 },
+  { k: 'glow', label: 'Glow intensity', info: 'How bright the glow around each point is. 0: no glow.', type: 'range', min: 0, max: 4, step: 0.05 },
+  { k: 'glowRadius', label: 'Glow radius', info: "How far each point's glow spreads; the point itself keeps its size.", type: 'range', min: 0.5, max: 5, step: 0.05 },
+  { k: 'speed', label: 'Motion', info: 'How fast the face moves and turns. Below 1 is calmer, above 1 livelier.', type: 'range', min: 0.2, max: 2.5, step: 0.05 },
+  { k: 'accent', common: true, label: 'Colour', info: "The face's main colour.", type: 'color', palette: true },
+  { k: 'field', label: 'Background points', info: 'The colour of the faint points around the face.', type: 'color', palette: true },
+  { k: 'ask', label: 'Asking you', info: 'The colour the face turns while it waits for your answer to a question.', type: 'color', palette: true },
+  { k: 'concepts', common: true, label: 'Show concepts as they are said', info: 'On: when a sentence names something the face knows (snow, a heart…), the points gather into its shape for a moment. Default: on.', type: 'check' },
 ];
 
 async function faceEditorRender(panel) {
@@ -27,8 +27,8 @@ async function faceEditorRender(panel) {
   const input = f => f.type === 'select' ? `<select class="input" data-face="${f.k}" style="width:auto">${f.options.map(([v, l]) => `<option value="${v}" ${val(f) === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`
     : f.type === 'check' ? `<input type="checkbox" data-face="${f.k}" ${val(f) !== false ? 'checked' : ''}>`
     : f.type === 'color' ? `<input type="color" data-face="${f.k}" data-palette="1" data-default="${shipped(f)}" data-label="${f.label}" value="${escHtml(val(f))}">`
-    : `<input type="range" data-face="${f.k}" data-default="${shipped(f)}" data-label="${f.label}" min=""${f.min}" max="${f.max}" step="${f.step}" value="${val(f)}" style="width:180px"><span class="face-edit-val" style="font-size:11px;min-width:36px">${val(f)}</span>`;
-  const row = f => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:140px">${f.label}</label>${input(f)}</div>`;
+    : `<input type="range" data-face="${f.k}" data-default="${shipped(f)}" data-label="${f.label}" min="${f.min}" max="${f.max}" step="${f.step}" value="${val(f)}" style="width:180px"><span class="face-edit-val" style="font-size:11px;min-width:36px">${val(f)}</span>`;
+  const row = f => `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><label style="font-size:11px;color:var(--muted);width:150px">${f.label}${infoBtn(f.info)}</label>${input(f)}</div>`;
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'face-editor-card' });
   card.innerHTML = `<div class="card-title">The face</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">How the face looks on this screen — the corner, assistant mode and the face page. Open the editor to see it change as you set it. Its palette is after protolab.tech.</p>

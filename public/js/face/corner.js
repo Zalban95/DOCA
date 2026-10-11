@@ -71,8 +71,7 @@ function faceSettingsRender() {
   row.id = 'face-settings';
   row.style.cssText = 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:12px';
   row.innerHTML = `<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" ${faceCornerOn() ? 'checked' : ''}
-      onchange="faceCornerToggle(this.checked)"> The face in the corner, on this screen</label>
-    <a href="/face" target="_blank" rel="noopener">Open the face full screen ↗</a>
-    <span style="color:var(--muted)">Dots that gather into a face when the hive is listening, thinking, working or asking you.</span>`;
+      onchange="faceCornerToggle(this.checked)"> The face in the corner, on this screen</label>${typeof infoBtn === 'function' ? infoBtn('A small circle of dots beside the chat button, on this screen only (off by default). The dots gather into a face when the hive is listening, thinking, working or asking you; a tap on it starts a spoken conversation.') : ''}
+    <a href="/face" target="_blank" rel="noopener">Open the face full screen ↗</a>`;
   status.before(row);
 }

@@ -11,13 +11,15 @@ async function featuresRender() {
   document.getElementById('features-card')?.remove();
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'features-card' });
   card.innerHTML = `<div class="card-title">Features</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">Everything DOCA can do, where it is and how it is switched on — the index the agents read
-      when they look for a way to do something. Nothing built is ever removed.</p>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:4px">Everything ${escHtml(typeof BRAND !== 'undefined' && BRAND?.product || 'DOCA')} can do, where it is and how it is switched on.</p>
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:8px"><summary>What this is</summary>The index the agents read
+      when they look for a way to do something. Nothing built is ever removed.</details>
+    <label class="input-label" for="features-find">Find${infoBtn('Type words to narrow the list to the features whose name, description or place match. Only filters what is shown; nothing changes.')}</label>
     <input type="search" class="input" id="features-find" placeholder="Find a feature…" oninput="featuresFilter(this.value)" style="width:100%;margin-bottom:8px">
     <div id="features-list" style="max-height:340px;overflow:auto"></div>
     <div class="card-title" style="margin-top:12px;font-size:13px">Alternatives kept beside their replacements</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:8px">How often each older or other way was used. One unused while what replaced it kept running
-      can be hidden from the default: it still works and the agents still find it.</p>
+    <details class="desc page-about" style="font-size:11px;color:var(--muted);margin-bottom:8px"><summary>What this is</summary>How often each older or other way was used. One unused while what replaced it kept running
+      can be hidden from the default: it still works and the agents still find it.</details>
     <div id="features-review" style="max-height:340px;overflow:auto">${featuresReviewHtml(_featuresData.review)}</div><div id="features-settings"></div>`;
   panel.append(card);
   leafFieldsDraw(document.getElementById('features-settings'), ['features.idleDays', 'features.replacementRuns'], { label: 'Advanced — when an alternative counts as unused', id: 'features-thresholds' });

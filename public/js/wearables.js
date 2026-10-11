@@ -3,7 +3,7 @@
 function devConsoleHtml(d) {
   if (!d.scopes?.includes('sensors:report')) return '<p class="input-label" style="text-transform:none;letter-spacing:0">No console: this device was not granted <code>sensors:report</code>.</p>';
   return `<details class="dev-console" open data-id="${escHtml(d.id)}" ontoggle="devConsoleToggle(this, ${jsArg(d.id)})">
-      <summary class="input-label" style="cursor:pointer">Console — motion, heading, crown, A/B/C</summary>
+      <summary class="input-label" style="cursor:pointer">Console — motion, heading, crown, A/B/C${infoBtn('The watch as a small remote: its tilt, heading, crown and buttons, live. While this is open the panel reads it once a second. Below: which devices receive it, and what each button does.')}</summary>
       <div class="dev-console-live" style="font-size:11px;margin:4px 0">…</div>
       <div class="dev-console-links" style="font-size:11px"></div>
       <div class="dev-console-buttons" style="font-size:11px;margin-top:6px"></div>
@@ -11,7 +11,7 @@ function devConsoleHtml(d) {
 }
 
 /** Settings → Wearables: one card per paired wearable (DocaWear on a watch), its console inside. */
-const DEV_WEARABLE = { watch: 'DocaWear', glasses: 'Glasses' };
+const DEV_WEARABLE = { watch: 'Watch', glasses: 'Glasses' };
 async function wearablesLoad() {
   const panel = document.getElementById('sp-wearables');
   if (!panel) return;
@@ -23,7 +23,7 @@ async function wearablesLoad() {
         <div class="provider-models"><code>${escHtml(d.id)}</code> · last seen ${d.lastSeenAt ? escHtml(new Date(d.lastSeenAt).toLocaleString()) : 'never'}</div>
         ${devConsoleHtml(d)}<div class="status-line" id="dev-status-${escHtml(d.id)}"></div>
       </div>`).join('')
-      : emptyStateHtml({ title: 'No wearable paired', text: 'Pair a watch from Field → API keys → Devices.', action: { label: 'Pair a watch', onclick: "nav('apikeys')" } });
+      : emptyStateHtml({ title: 'No wearable paired', text: 'A watch running the watch app shows up here once paired, with its buttons and movement as a remote. Pair one from Field → API keys → Devices.', action: { label: 'Pair a watch', onclick: "nav('apikeys')" } });
     panel.querySelectorAll('details.dev-console').forEach(el => devConsoleToggle(el, el.dataset.id));
   } catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">✗ ${escHtml(e.message)}</div></div>`; }
 }
@@ -38,9 +38,9 @@ async function devConsoleToggle(el, id) {
     const others = devices.filter(x => x.id !== id && !x.revokedAt);
     const box = (value, on, label) => `<label style="margin-right:10px"><input type="checkbox" value="${escHtml(value)}" ${on ? 'checked' : ''}
           onchange="devConsoleLinks(this.closest('details'), ${jsArg(id)})"> ${label}</label>`;
-    el.querySelector('.dev-console-links').innerHTML = `Send it to: ${others.map(x => box(x.id, c.links.includes(x.id), escHtml(x.name))).join('')}
+    el.querySelector('.dev-console-links').innerHTML = `Send it to${infoBtn('Which of your devices hear this watch\'s presses and movement. Tick "this host" to have the hub itself run the buttons\' commands. Nothing ticked: the console goes nowhere. Saved as you tick.')}: ${others.map(x => box(x.id, c.links.includes(x.id), escHtml(x.name))).join('')}
         ${box('host', c.host, '<b>this host</b> (runs the commands)')}
-      <br>As: <select onchange="devConsoleLinks(this.closest('details'), ${jsArg(id)})" class="input dev-console-mode" style="width:auto">
+      <br>As${infoBtn('Keys (the default): buttons A, B and C each send their macro below. Joystick: tilt and the crown become axes and the buttons are plain buttons, with no macros. Saved at once.')}: <select onchange="devConsoleLinks(this.closest('details'), ${jsArg(id)})" class="input dev-console-mode" style="width:auto">
         <option value="keys" ${c.mode === 'keys' ? 'selected' : ''}>keys — A/B/C run their macros</option>
         <option value="joystick" ${c.mode === 'joystick' ? 'selected' : ''}>joystick — tilt and crown are axes</option></select>
       <span style="opacity:.7">(the watch switches it too: tap its centre)</span>`;
@@ -79,16 +79,19 @@ async function devConsoleLinks(el, id) {
 const DEV_CONSOLE_BEHAVIOURS = { button: 'button — a press', momentary: 'momentary — on while held', toggle: 'toggle — on, then off' };
 function devConsoleButtonsHtml(id, buttons) {
   const row = k => `<tr data-k="${k}"><td><b>${k}</b></td>
-      <td><select class="input dcb-behaviour">${Object.entries(DEV_CONSOLE_BEHAVIOURS).map(([v, t]) =>
+      <td><select class="input dcb-behaviour" aria-label="${k} behaviour">${Object.entries(DEV_CONSOLE_BEHAVIOURS).map(([v, t]) =>
         `<option value="${v}" ${buttons[k].behaviour === v ? 'selected' : ''}>${t}</option>`).join('')}</select></td>
-      <td><input class="input dcb-label" maxlength="12" placeholder="${k}" value="${escHtml(buttons[k].label || '')}"></td>
-      <td><input class="input dcb-keys" placeholder="keys, e.g. ctrl+s" value="${escHtml(buttons[k].keys)}"></td>
-      <td><input class="input dcb-run" placeholder="command on this host" value="${escHtml(buttons[k].run)}"></td></tr>`;
-  return `<table style="width:100%;font-size:11px"><tr style="opacity:.7"><td></td><td>behaviour</td><td title="What the watch writes on the button">label ⓘ</td><td>keys → devices</td>
-      <td title="Runs only when this host is ticked above. Told DOCA_BUTTON and DOCA_BUTTON_STATE (on/off); a momentary button runs at the press (on) and when let go (off).">command → this host ⓘ</td></tr>
-      ${Object.keys(buttons).map(row).join('')}</table>
-    <button class="btn btn-sm" onclick="devConsoleButtonsSave(this.closest('details'), ${jsArg(id)})">Save buttons</button>
-    <span style="opacity:.7">Macros apply in keys mode; in joystick mode the buttons are plain buttons.</span>`;
+      <td><input class="input dcb-label" aria-label="${k} label" maxlength="12" placeholder="${k}" value="${escHtml(buttons[k].label || '')}"></td>
+      <td><input class="input dcb-keys" aria-label="${k} keys" placeholder="keys, e.g. ctrl+s" value="${escHtml(buttons[k].keys)}"></td>
+      <td><input class="input dcb-run" aria-label="${k} command" placeholder="command on this host" value="${escHtml(buttons[k].run)}"></td></tr>`;
+  return advancedFold(`<div class="scroll-x"><table style="width:100%;font-size:11px"><tr style="opacity:.7"><td></td>
+      <td>behaviour${infoBtn('Button: one press. Momentary: on while held, off when let go. Toggle: one press turns it on, the next off. On the watch A–C are held and D–E latch.')}</td>
+      <td>label${infoBtn('A few letters (up to 12) the watch writes on the button. Empty: its letter.')}</td>
+      <td>keys → devices${infoBtn('Keys the linked devices type at a press, e.g. ctrl+s. Only in keys mode.')}</td>
+      <td>command → this host${infoBtn('A command this hub runs at a press — only when "this host" is ticked above, and only in keys mode. It is told DOCA_BUTTON and DOCA_BUTTON_STATE (on/off); a momentary button runs at the press (on) and when let go (off).')}</td></tr>
+      ${Object.keys(buttons).map(row).join('')}</table></div>
+    <button class="btn btn-sm" onclick="devConsoleButtonsSave(this.closest('details'), ${jsArg(id)})">Save buttons</button>`,
+    { id: 'wear-buttons', label: 'Advanced — what each button does', count: Object.keys(buttons).length * 4 });
 }
 
 async function devConsoleButtonsSave(el, id) {

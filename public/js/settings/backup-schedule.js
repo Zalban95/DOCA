@@ -14,20 +14,17 @@ function _backupScheduleCard() {
   card.id = 'backup-schedule-card';
   card.innerHTML = `
     <div class="card-title">On a schedule</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
-      Scheduled backups are named <code>auto-…</code>, and only those are removed to keep the last few —
-      backups made by hand, uploaded, or made before a restore are never touched.
-    </p>
+    <p class="desc" style="margin-bottom:12px">Backups made by themselves, at a time you choose. Only these are ever removed to keep the last few — backups made by hand, uploaded, or made before a restore are never touched.</p>
     <div class="row form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
-      <div class="field"><div class="input-label">How often</div>
+      <div class="field"><div class="input-label">How often${infoBtn('Off (the default) makes none. Daily makes one every day at the time beside it; weekly one a week after the last. Scheduled backups are named auto-….')}</div>
         <select class="input" id="bsched-every" style="width:auto">
           <option value="off">Off</option><option value="daily">Daily</option><option value="weekly">Weekly</option>
         </select></div>
-      <div class="field"><div class="input-label">At</div>
+      <div class="field"><div class="input-label">At${infoBtn('The time of day, on this machine\'s clock, when a scheduled backup is made. Default 03:00.')}</div>
         <input class="input" type="time" id="bsched-at" style="width:auto"></div>
-      <div class="field"><div class="input-label">Keep the last</div>
+      <div class="field"><div class="input-label">Keep the last${infoBtn('How many scheduled backups to keep (1–365, default 7). When a new one is made, older auto-… backups beyond this number are deleted.')}</div>
         <input class="input" type="number" id="bsched-keep" min="1" max="365" step="1" style="width:90px"></div>
-      <div class="field"><button class="btn btn-sm btn-blue" onclick="backupScheduleSave()">Save</button></div>
+      <div class="field" style="flex:0 0 auto"><button class="btn btn-sm btn-blue" onclick="backupScheduleSave()">Save</button></div>
     </div>
     <div class="input-label" id="bsched-info" style="text-transform:none;letter-spacing:0;margin-top:4px"></div>
     <span class="status-line" id="bsched-status"></span>`;
@@ -81,30 +78,36 @@ function _backupRemoteCard() {
   card.id = 'backup-remote-card';
   card.innerHTML = `
     <div class="card-title">Off-site copy</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:12px">
+    <p class="desc" style="margin-bottom:6px">Also send each scheduled backup to cloud storage, so a lost machine is not a lost backup.</p>
+    <details class="desc page-about" style="margin-bottom:12px"><summary>What this is</summary>
       Each scheduled backup is also sent to a bucket on any S3-compatible store — AWS S3, Backblaze B2, Cloudflare R2,
       Hetzner, Wasabi, MinIO — and only the last few <code>auto-…</code> files are kept there. The keys stay on this machine.
-    </p>
-    <div class="row form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
-      <div class="field" style="flex:2;min-width:220px"><div class="input-label">Endpoint</div>
+      Backups made by hand are not sent.</details>
+    <div class="settings-tab-row">
+      <label class="skill-toggle"><input type="checkbox" id="bremote-on" aria-label="Send backups off-site"><span class="skill-toggle-track"></span></label>
+      <span class="settings-tab-label">Send backups off-site${infoBtn('When on (and saved), every scheduled backup is uploaded to the bucket below after it is made. Off by default. It needs a schedule above to send anything.')}</span>
+    </div>
+    <div class="row form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:8px">
+      <div class="field" style="flex:2 1 220px"><div class="input-label">Endpoint${infoBtn('The address of the storage service, as its provider gives it — for AWS e.g. https://s3.eu-central-1.amazonaws.com, for Backblaze B2 its S3 endpoint.')}</div>
         <input class="input" id="bremote-endpoint" placeholder="https://s3.eu-central-1.amazonaws.com"></div>
-      <div class="field"><div class="input-label">Bucket</div><input class="input" id="bremote-bucket" style="width:160px"></div>
+      <div class="field"><div class="input-label">Bucket${infoBtn('The name of the bucket (the storage folder you made at the provider) the backups go into.')}</div><input class="input" id="bremote-bucket"></div>
+    </div>
+    <div class="row form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:8px">
+      <div class="field"><div class="input-label">Access key id${infoBtn('The key pair\'s public half, made at the storage provider for this bucket. Once saved it is kept on this machine only and never shown again; leave empty to keep the saved one.')}</div><input class="input" id="bremote-akid" autocomplete="off"></div>
+      <div class="field"><div class="input-label">Secret${infoBtn('The key pair\'s secret half. Saved with the access key id, kept on this machine only, never shown again; leave empty to keep the saved one.')}</div><input class="input" type="password" id="bremote-secret" autocomplete="new-password"></div>
     </div>
     ${advancedFold(`<div class="row form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end">
-      <div class="field"><div class="input-label">Region</div><input class="input" id="bremote-region" data-default="us-east-1" data-label="Region" style="width:130px"></div>
-      <div class="field"><div class="input-label">Folder</div><input class="input" id="bremote-prefix" data-default="doca/" data-label="Folder" style="width:110px"></div>
-      <div class="field"><div class="input-label">Keep the last</div>
-        <input class="input" type="number" id="bremote-keep" data-default="14" data-label="Keep the last" min="1" max="365" step="1" style="width:90px"></div>
-      <label class="input-label" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0">
-        <input type="checkbox" id="bremote-enc" data-default="true" data-label="Only password-protected backups"> only password-protected backups</label></div>`,
+      <div class="field"><div class="input-label">Region${infoBtn('The storage region the bucket is in, used to sign each request. Default us-east-1; many non-AWS stores accept any value.')}</div><input class="input" id="bremote-region" data-default="us-east-1" data-label="Region"></div>
+      <div class="field"><div class="input-label">Folder${infoBtn('A folder (prefix) inside the bucket the backups are put under. Default doca/. Only auto-… files under it are ever removed.')}</div><input class="input" id="bremote-prefix" data-default="doca/" data-label="Folder"></div>
+      <div class="field"><div class="input-label">Keep the last${infoBtn('How many scheduled backups to keep in the bucket (1–365, default 14). Older auto-… files there are deleted after each upload.')}</div>
+        <input class="input" type="number" id="bremote-keep" data-default="14" data-label="Keep the last" min="1" max="365" step="1"></div></div>
+      <div class="settings-tab-row" style="margin-top:8px">
+        <label class="skill-toggle"><input type="checkbox" id="bremote-enc" data-default="true" data-label="Only password-protected backups" aria-label="Only password-protected backups"><span class="skill-toggle-track"></span></label>
+        <span class="settings-tab-label">Only password-protected backups${infoBtn('On by default: a backup that is not password-protected is not sent, so your keys never leave this machine readable. Turn off to send open backups too.')}</span></div>`,
       { id: 'backup-remote', label: 'Advanced — region, folder, how many, which backups' })}
-    <div class="row form-row" style="flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:8px">
-      <div class="field"><div class="input-label">Access key id</div><input class="input" id="bremote-akid" autocomplete="off" style="width:200px"></div>
-      <div class="field"><div class="input-label">Secret</div><input class="input" type="password" id="bremote-secret" autocomplete="new-password" style="width:220px"></div>
-      <label class="input-label" style="display:flex;gap:6px;align-items:center;text-transform:none;letter-spacing:0">
-        <input type="checkbox" id="bremote-on"> Send backups off-site</label>
-      <div class="field"><button class="btn btn-sm btn-blue" onclick="backupRemoteSave()">Save</button></div>
-      <div class="field"><button class="btn btn-sm" onclick="backupRemoteTest()">Test</button></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="btn btn-sm btn-blue" onclick="backupRemoteSave()">Save</button>
+      <button class="btn btn-sm" onclick="backupRemoteTest()" title="Write a small file to the bucket and remove it">Test</button>
     </div>
     <div class="input-label" id="bremote-info" style="text-transform:none;letter-spacing:0;margin-top:4px"></div>
     <span class="status-line" id="bremote-status"></span>`;
@@ -166,9 +169,10 @@ function backupMirrorRender(m) {
     ? `<span style="color:var(--red)">The last copy (${fmtDate(m.lastTriedAt)}) failed: ${escHtml(m.lastError)}</span>`
     : m.lastAt ? `Last copied: ${escHtml(m.lastName)}, ${fmtDate(m.lastAt)}.` : '';
   card.innerHTML = `<div class="card-title">A second copy</div>
-    <p class="desc">Every backup is also copied to this folder — another disk, or a network share mounted on this machine — keeping as many scheduled ones there as here. A copy that fails is said here and as a notice; the backup itself still counts.</p>
-    <div class="form-row"><label>Folder</label><input id="bmirror-dir" data-path-pick="dir" class="input flex1" value="${escHtml(m.dir || '')}" placeholder="/mnt/nas/doca-backups — empty: none"></div>
-    <div style="display:flex;gap:8px"><button class="btn btn-sm btn-blue" onclick="backupMirrorSave()">Save</button></div>
+    <p class="desc" style="margin-bottom:10px">Also copy every backup to another folder — another disk, or a network share mounted on this machine.</p>
+    <div class="field"><label class="input-label" for="bmirror-dir">Folder${infoBtn('Where the copies go. Empty (the default) means no second copy. It keeps as many scheduled backups there as here. A copy that fails is said here and as a notice; the backup itself still counts.')}</label>
+      <div style="display:flex;gap:8px;align-items:center"><input id="bmirror-dir" data-path-pick="dir" class="input flex1" style="min-width:0" value="${escHtml(m.dir || '')}" placeholder="/mnt/nas/doca-backups"></div></div>
+    <div style="display:flex;gap:8px;margin-top:10px"><button class="btn btn-sm btn-blue" onclick="backupMirrorSave()">Save</button></div>
     <div class="input-label" style="text-transform:none;letter-spacing:0;margin-top:4px">${when}</div>
     <span class="status-line" id="bmirror-status"></span>`;
 }

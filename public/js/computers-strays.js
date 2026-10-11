@@ -22,11 +22,13 @@ async function computersStraysLoad() {
       <button class="btn btn-xs" onclick="computersStrayArchive(${jsArg(s.name)})" title="Keep it as a computer in Agents → Archive: stopped, its files kept, lent again like any computer">Archive</button>
       <button class="btn btn-xs btn-red" onclick="computersStrayDelete(${jsArg(s.name)})" title="Remove the container; you choose whether its files go too">Delete</button></div>`).join('');
   box.innerHTML = `<div class="card pc-strays"><div class="card-title">Not DOCA's records</div>
-    <div class="desc">Computer containers on this machine that no computer here names — from a computer that failed to start, a record
-      that was lost, or another DOCA sharing this Docker. Nothing is done to them unless you choose.</div>
+    <details class="desc page-about"><summary>What these are</summary>Computer containers on this machine that no computer here names —
+      from a computer that failed to start, a record that was lost, or another DOCA sharing this Docker. Nothing is done to them unless
+      you choose.</details>
     ${rows || '<div class="pc-dim" style="padding:4px 0">None now.</div>'}
-    <label class="pc-dim pc-stray-policy">When the tidy-up finds a stopped one no install labels:
-      <select class="input" style="width:auto" onchange="computersStrayPolicy(this.value)">${d.choices.map(c => `<option value="${c}" ${c === d.policy ? 'selected' : ''}>${escHtml(COMPUTERS_STRAY_POLICY[c] || c)}</option>`).join('')}</select></label></div>`;
+    ${advancedFold(`<label class="pc-dim pc-stray-policy"><span>When the tidy-up finds a stopped one no install labels${infoBtn('What the regular tidy-up does with a stopped computer container that carries no install\'s label, so it cannot tell whose it is. Leave them (the default) does nothing; Archive keeps it as a stopped computer in Agents → Archive; Delete removes the container but keeps its files. Running ones and another install\'s are never touched.')}</span>
+      <select class="input" style="width:auto" data-default="leave" data-label="What the tidy-up does with them" onchange="computersStrayPolicy(this.value)">${d.choices.map(c => `<option value="${c}" ${c === d.policy ? 'selected' : ''}>${escHtml(COMPUTERS_STRAY_POLICY[c] || c)}</option>`).join('')}</select></label>`,
+      { id: 'computers-strays', label: 'Advanced — what the tidy-up does with them' })}</div>`;
 }
 
 async function computersStrayArchive(name) {

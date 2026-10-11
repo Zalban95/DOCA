@@ -12,12 +12,13 @@ function llamaHfCard() {
   if (!after) return;
   const card = Object.assign(document.createElement('div'), { className: 'card', id: 'llamacpp-hf-card' });
   card.innerHTML = `<div class="card-title">llama.cpp — From Hugging Face</div>
-    <p style="font-size:11px;color:var(--muted);margin:0 0 8px">A GGUF model from Hugging Face, run by a llama.cpp server here — for models Ollama cannot run
-      (their own chat template, files split in parts). It is downloaded, made a server above, and left off until you start it.</p>
+    <p style="font-size:11px;color:var(--muted);margin:0 0 8px">Download a model from Hugging Face and run it as a llama.cpp server above.</p>
+    <details class="desc page-about" style="margin:0 0 8px;font-size:11px"><summary>When to use this</summary>For models Ollama cannot run
+      (their own chat template, files split in parts). The files (GGUF, the format llama.cpp reads) are downloaded, made a server above, and left off until you start it.</details>
     <div class="models-search-row">
       <input id="lhf-q" class="input" placeholder="Search GGUF models, or type org/repo" style="flex:1"
              onkeydown="if(event.key==='Enter') llamaHfGo()">
-      <button class="btn btn-sm" onclick="llamaHfGo()">🔍 Find</button>
+      <button class="btn btn-sm" onclick="llamaHfGo()">🔍 Find</button>${infoBtn('Words to search Hugging Face for models in the GGUF format, or a repository typed whole as owner/name to open it at once. Nothing is downloaded until you choose a size and press Download.')}
     </div>
     <div id="lhf-results" style="margin-top:6px"></div>
     <div id="lhf-offer" style="margin-top:6px"></div>
@@ -55,22 +56,21 @@ async function llamaHfOpen(repo) {
   const best = o.quants.filter(q => q.fit.one).pop() || o.quants.filter(q => q.fit.fits).pop() || o.quants[0];
   const fitCls = f => (f.fits ? 'badge-green' : f.fits === false ? 'badge-red' : 'badge-amber');
   box.innerHTML = `<div class="input-label" style="margin:4px 0">${escHtml(o.repo)}${o.architecture ? ` · ${escHtml(o.architecture)}` : ''}${o.context ? ` · ${o.context.toLocaleString()} tokens of context` : ''}${o.licence ? ` · ${escHtml(o.licence)}` : ''}</div>
+    ${o.quants.length ? `<div class="input-label" style="margin:6px 0 2px">Size ${infoBtn('The same model packed smaller or larger (quantization: Q4 is small and a little less exact, Q8 large and close to the original). Each row says whether it fits this machine; the largest that fits on one graphics card is chosen for you.')}</div>` : ''}
     ${o.quants.length ? o.quants.map(q => `<label style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:5px 6px;border-bottom:1px solid var(--border);cursor:pointer;font-size:12px">
-        <input type="radio" name="lhf-quant" value="${escHtml(q.quant || q.file)}" ${q === best ? 'checked' : ''}>
+        <input type="radio" name="lhf-quant" aria-label="This size" value="${escHtml(q.quant || q.file)}" ${q === best ? 'checked' : ''}>
         <b style="min-width:90px">${escHtml(q.quant || q.file)}</b>
         <span style="color:var(--muted);min-width:110px">${_lhfGB(q.bytes)}${q.parts > 1 ? ` · ${q.parts} parts` : ''}</span>
         <span class="badge ${fitCls(q.fit)}" style="font-size:9px">${escHtml(q.fit.text)}</span></label>`).join('')
       : '<div class="placeholder" style="padding:8px">This repository has no GGUF files.</div>'}
-    ${o.mmproj ? `<label style="display:block;font-size:12px;margin-top:6px"><input type="checkbox" id="lhf-vision" checked> Also read pictures (its vision projector, ${_lhfGB(o.mmproj.bytes)})</label>` : ''}
-    <details style="margin-top:6px"><summary style="cursor:pointer;font-size:12px">Advanced</summary>
-      <div class="llamacpp-controls" style="margin-top:6px">
-        <label class="services-ctrl-label">Name</label><input class="input" id="lhf-name" placeholder="from the repository" style="width:180px">
-        <label class="services-ctrl-label">Ctx Size</label><input class="input" id="lhf-ctx" type="number" min="512" step="512" placeholder="estimated" style="width:110px">
-        <label class="services-ctrl-label">GPU Layers</label><input class="input" id="lhf-ngl" placeholder="estimated" title="A number, or auto" style="width:110px">
-        <label class="services-ctrl-label">Port</label><input class="input" id="lhf-port" type="number" min="1024" max="65535" placeholder="next free" style="width:100px">
+    ${o.mmproj ? `<label style="display:block;font-size:12px;margin-top:6px"><input type="checkbox" id="lhf-vision" checked> Also read pictures (its vision projector, ${_lhfGB(o.mmproj.bytes)})</label>${infoBtn('Downloads the extra file that lets this model look at pictures, and starts the server with it. Untick to save the space and memory if you only want text. On by default.')}` : ''}
+    ${advancedFold(`<div class="llamacpp-controls" style="margin-top:6px">
+        <label class="services-ctrl-label">Name ${infoBtn('What the server is called in the list above. Empty: the repository name and the size chosen.')}</label><input class="input" id="lhf-name" data-default="" data-label="Name" placeholder="from the repository" style="width:180px">
+        <label class="services-ctrl-label">Context size ${infoBtn('How many tokens (pieces of words) the model can hold at once. Empty: the model\'s own, lowered to what fits the memory beside it.')}</label><input class="input" id="lhf-ctx" data-default="" data-label="Context size" type="number" min="512" step="512" placeholder="estimated" style="width:110px">
+        <label class="services-ctrl-label">GPU layers ${infoBtn('How much of the model goes on the graphics card: a number of layers, or auto. Empty: all of them when the model fits on the card, else auto, where llama.cpp places them itself.')}</label><input class="input" id="lhf-ngl" data-default="" data-label="GPU layers" placeholder="estimated" style="width:110px">
+        <label class="services-ctrl-label">Port ${infoBtn('The number the new server listens on. Empty: the first free one from 11435.')}</label><input class="input" id="lhf-port" data-default="" data-label="Port" type="number" min="1024" max="65535" placeholder="next free" style="width:100px">
       </div>
-      <p style="font-size:11px;color:var(--muted);margin:4px 0 0">Files go to <code>${escHtml(o.folder)}</code> (setting <code>llamacpp.modelsDir</code>). The context and GPU layers are estimated from the files and this machine; --jinja is always on.</p>
-    </details>
+      <p style="font-size:11px;color:var(--muted);margin:4px 0 0">Files go to <code>${escHtml(o.folder)}</code> (setting <code>llamacpp.modelsDir</code>). The server always uses the model's own chat template (--jinja).</p>`, { id: 'llamacpp-hf', label: 'Advanced — name, context, GPU layers, port' })}
     ${o.llamaServer ? '' : '<p style="font-size:11px;margin-top:6px" class="status-line err">llama-server is not installed here: it downloads now and starts once it is (Settings → System → System tools).</p>'}
     <div class="toolbar" style="margin-top:8px"><button class="btn btn-sm btn-teal" id="lhf-go" onclick="llamaHfInstall()" ${o.quants.length ? '' : 'disabled'}>⬇ Download and make a server</button></div>`;
 }

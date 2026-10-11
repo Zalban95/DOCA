@@ -22,34 +22,29 @@ function _backupsCard() {
       <button class="btn btn-xs" onclick="document.getElementById('backup-upload').click()" title="Add a .dBac from another machine">⬆ Upload</button>
       <input type="file" id="backup-upload" accept=".dBac" hidden onchange="backupUpload(this)">
     </div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:12px" id="backup-summary">
+    <p class="desc" id="backup-summary" style="margin-bottom:6px">One file that holds everything this hive keeps, to download or to restore later.</p>
+    <details class="desc page-about" style="margin-bottom:12px"><summary>What this is</summary>
       Everything in one <code>.dBac</code> file: conversations, memory, devices, settings, API keys,
       specialist definitions and attachments. A restore checks every file before it replaces anything,
-      and backs up the current state first.
-    </p>
+      and backs up the current state first.</details>
     <div class="settings-tab-row">
       <label class="skill-toggle">
-        <input type="checkbox" id="backup-encrypt" onchange="backupEncrypt(this)">
+        <input type="checkbox" id="backup-encrypt" onchange="backupEncrypt(this)" aria-label="Protect backups with a password">
         <span class="skill-toggle-track"></span>
       </label>
-      <span class="settings-tab-label">Protect backups with a password (AES-256)</span>
+      <span class="settings-tab-label">Protect backups with a password${infoBtn('When on, every new backup is locked with a password (AES-256), so a copied file is useless without it. Off, a backup holds your keys and conversations readable by whoever has the file. Already-made backups stay as they are.')}</span>
     </div>
     <p id="backup-open-warning" style="display:none;font-size:11px;color:var(--amber);margin:6px 0 10px">
       Open backups carry every API key, token and private conversation in the clear. Whoever has
       the file has all of it — where it goes is your responsibility.
     </p>
     <div class="field" id="backup-password-row" style="margin-top:10px">
-      <label class="input-label" for="backup-password" style="display:block">Saved password</label>
+      <label class="input-label" for="backup-password" style="display:block">Saved password${infoBtn('Optional. With one saved, backups (and scheduled ones) are made without asking; without one you are asked each time, and scheduled backups cannot be made. It is kept in its own file on this machine and never shown again. The agent\'s file tools cannot read it; its shell runs as the same user and could. A lost password is a lost backup: nobody can open it without one.')}</label>
       <div style="display:flex;gap:8px;align-items:center">
         <input class="input flex1" type="password" id="backup-password" autocomplete="new-password" style="min-width:0">
         <button class="btn btn-xs" onclick="backupPasswordSave()">Save</button>
         <button class="btn btn-xs" id="backup-forget-btn" onclick="backupPasswordForget()">Forget</button>
       </div>
-      <p style="font-size:11px;color:var(--muted);margin:6px 0 0">
-        Optional — without one you are asked each time. Kept in its own file on this machine and never
-        shown again. The agent's file tools cannot read it; its shell runs as the same user and could.
-        A lost password is a lost backup: nobody can open it without one.
-      </p>
     </div>
     <span class="status-line" id="backup-status"></span>
     <div id="backup-list" style="margin-top:10px"></div>

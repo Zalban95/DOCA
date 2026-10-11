@@ -21,7 +21,7 @@ function _depsBlock() {
         <input type="checkbox" id="deps-toggle" onchange="depsToggle(this)">
         <span class="skill-toggle-track"></span>
       </label>
-      <span class="settings-tab-label">Check dependencies — packages behind, and security advisories</span>
+      <span class="settings-tab-label">Check dependencies${infoBtn('For whoever maintains this install. On: every update check also lists the program\'s own software packages that are out of date, and known security advisories for them. It only reports; it installs nothing. Off by default.')}</span>
     </div>
     <div id="deps-list"></div>`;
   card.appendChild(el);

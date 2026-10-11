@@ -63,7 +63,7 @@ async function convSkillsPop(anchor, sessionId, att, redraw) {
     <button class="btn btn-xs" data-rm="${escHtml(s.name)}" title="Detach it from this chat">×</button></div>`).join('');
   const pop = convPop(anchor, `<div class="conv-pop-title">Skills attached to this chat <span class="muted">(${escHtml(att?.mode || 'agent')} mode)</span></div>
     ${rows || '<div class="muted">None. A skill attached here goes with every turn of this chat.</div>'}
-    <input class="input conv-skill-q" placeholder="Search skills to attach…" style="width:100%;margin-top:8px">
+    <input class="input conv-skill-q" placeholder="Search skills to attach…" style="width:100%;margin-top:8px" aria-label="Search skills to attach">
     <div class="conv-skill-hits"></div>
     <div class="muted" style="margin-top:6px">Which skills go with each mode by default: Settings → Harness → Skills.</div>`);
   pop.querySelectorAll('[data-rm]').forEach(b => { b.onclick = () => { pop.remove(); _convSave(sessionId, { skills: { remove: [b.dataset.rm] } }, redraw); }; });
@@ -88,16 +88,16 @@ async function convMorePop(anchor, sessionId, redraw) {
   const c = v?.compact || null, mode = !c ? '' : c.off ? 'off' : 'own';
   const auto = v?.skillAuto === true ? 'on' : v?.skillAuto === false ? 'off' : '';
   const pop = convPop(anchor, `<div class="conv-pop-title">This chat</div>
-    <label class="conv-pop-field">Compaction
+    <label class="conv-pop-field"><span>Compaction${infoBtn('Folding: when a conversation grows long, its earlier messages are replaced by a short summary so it still fits what the model can read. "As the harness" (the default) uses the agent\'s own settings; "This chat\'s own" sets the two numbers below; "Never fold early" keeps every message as written, as far as the history limit allows.')}</span>
       <select class="input conv-c-mode"><option value="" ${mode === '' ? 'selected' : ''}>As the harness (Settings)</option>
         <option value="own" ${mode === 'own' ? 'selected' : ''}>This chat's own</option>
         <option value="off" ${mode === 'off' ? 'selected' : ''}>Never fold early</option></select></label>
     <div class="conv-c-own" ${mode === 'own' ? '' : 'hidden'}>
-      <label class="conv-pop-field">Fold at % of the window <input class="input conv-c-at" type="number" min="10" max="95" value="${c?.at || ''}" placeholder="60"></label>
-      <label class="conv-pop-field">or after messages <input class="input conv-c-after" type="number" min="8" max="2000" value="${c?.after || ''}" placeholder="40"></label></div>
+      <label class="conv-pop-field"><span>Fold at % of the window${infoBtn('Fold earlier messages once the conversation fills this share of what the model can read at once. Empty uses the agent\'s setting (60%).')}</span> <input class="input conv-c-at" type="number" min="10" max="95" value="${c?.at || ''}" placeholder="60"></label>
+      <label class="conv-pop-field"><span>or after messages${infoBtn('Fold earlier messages once there are this many, whichever comes first. Empty uses the agent\'s setting (40).')}</span> <input class="input conv-c-after" type="number" min="8" max="2000" value="${c?.after || ''}" placeholder="40"></label></div>
     <div class="conv-pop-actions"><button class="btn btn-xs conv-c-save">Save</button>
       <button class="btn btn-xs conv-c-now" title="Fold the earlier messages into this chat's summary now (/compact)">Compact now</button></div>
-    <label class="conv-pop-field" title="When a message names a skill by one of its trigger words">Skills ${escHtml(convBrand())} suggests
+    <label class="conv-pop-field" title="When a message names a skill by one of its trigger words"><span>Skills ${escHtml(convBrand())} suggests${infoBtn('A skill is a written how-to the agent follows. When your message names one by its trigger words, it is offered as a chip you tap, or attached at once. "As the default" attaches at once in a project chat in Agent mode, else follows Settings → Harness → Skills (off).')}</span>
       <select class="input conv-auto"><option value="" ${auto === '' ? 'selected' : ''}>As the default</option>
         <option value="on" ${auto === 'on' ? 'selected' : ''}>Attach without asking</option>
         <option value="off" ${auto === 'off' ? 'selected' : ''}>Ask with a chip</option></select></label>
