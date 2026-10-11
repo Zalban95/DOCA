@@ -68,3 +68,16 @@ test('the agent proposes a catalogue server by id; only the click adds it', asyn
   assert.equal(done.status, 'installed', JSON.stringify(done));
   assert.equal(require('../modules/mcp/registry').get('chrome-devtools').command, 'npx');
 });
+
+test('Home Assistant is added at the address that answers: this machine first, else its usual name', async () => {
+  const cat = require('../modules/mcp/catalog');
+  const http = require('node:http');
+  const srv = http.createServer((_q, r) => { r.statusCode = 401; r.end(); });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  const here = `http://127.0.0.1:${srv.address().port}/api/mcp`;
+  try {
+    assert.equal(await cat.nearest({ url: 'http://homeassistant.local:8123/api/mcp', near: [here] }), here, 'a 401 is an answer: it is there');
+    srv.close();
+    assert.equal(await cat.nearest({ url: 'http://homeassistant.local:8123/api/mcp', near: [here] }, { timeoutMs: 300 }), 'http://homeassistant.local:8123/api/mcp');
+  } finally { srv.close(); }
+});

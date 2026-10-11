@@ -26,8 +26,24 @@ const CATALOG = [
       + 'the entities you expose to Assist become tools — turn on and off, set lights and climate, read sensors, run scripts and scenes. '
       + 'Set its address in the MCP tab, and paste a long-lived access token (your Home Assistant profile → Security) as the key '
       + '"home-assistant" for that address in Field → Connectors → Keys for services.',
-    transport: 'http', url: 'http://homeassistant.local:8123/api/mcp', headers: {}, key: 'home-assistant', needs: [] },
+    transport: 'http', url: 'http://homeassistant.local:8123/api/mcp', headers: {}, key: 'home-assistant', needs: [],
+    // Home Assistant on this machine (a container on the host network) answers on localhost, and `homeassistant.local`
+    // often does not resolve here at all (2026-10-11): the first that answers is the address it is added with.
+    near: ['http://localhost:8123/api/mcp'] },
 ];
+
+/** The first of a server's addresses that answers at all (any HTTP status), else its default. */
+async function nearest(c, { timeoutMs = 1500 } = {}) {
+  for (const url of [...(c.near || []), c.url]) {
+    const answered = await new Promise(resolve => {
+      const req = require('http').get(url, { timeout: timeoutMs }, res => { res.resume(); resolve(true); });
+      req.on('timeout', () => { req.destroy(); resolve(false); });
+      req.on('error', () => resolve(false));
+    });
+    if (answered) return url;
+  }
+  return c.url;
+}
 
 const get = id => CATALOG.find(c => c.id === id) || null;
 
@@ -62,8 +78,8 @@ async function add(id) {
   if (c.transport !== 'http' && require('../hosted').on()) throw require('../hosted').refusal(`${c.label}, a command on the hub,`);   // hosted.js
   const done = await module.exports.setup(c);   // through exports, so a test can stand in for the download
   if (!done.ok) throw Object.assign(new Error(`Setting up ${c.label} failed (${(c.setup || []).join(' ')}):\n${done.log.trim().split('\n').slice(-6).join('\n')}`), { status: 500 });
-  if (c.transport === 'http') return require('./registry').upsert({ id: c.id, label: c.label, transport: 'http', url: c.url, headers: { ...c.headers }, ...(c.key ? { key: c.key } : {}), autostart: false });
+  if (c.transport === 'http') return require('./registry').upsert({ id: c.id, label: c.label, transport: 'http', url: await module.exports.nearest(c), headers: { ...c.headers }, ...(c.key ? { key: c.key } : {}), autostart: false });
   return require('./registry').upsert({ id: c.id, label: c.label, transport: 'stdio', command: c.command, args: c.args, autostart: false });
 }
 
-module.exports = { CATALOG, get, list, add, setup };
+module.exports = { CATALOG, get, list, add, setup, nearest };
