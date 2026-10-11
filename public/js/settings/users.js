@@ -24,16 +24,18 @@ const _levelName = id => _usersData.levels.find(l => l.id === id)?.name || id;
 function _usersPeopleCard() {
   const card = Object.assign(document.createElement('div'), { className: 'card' });
   card.innerHTML = `<div class="card-title">People${typeof peopleOrgOpen === 'function' ? ' <button type="button" class="btn btn-xs" style="float:right" onclick="peopleOrgOpen()">Organisation</button>' : ''}</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">Everyone who can sign in here, and their level. The agent acts for a person
+    <p class="desc" style="margin-bottom:10px">Everyone who can sign in here, and their level. The agent acts for a person
       with that person's level: what they may not do, the agent may not do for them.</p>`;
   const table = Object.assign(document.createElement('table'), { className: 'models-table' });
-  table.innerHTML = '<tr><th>Person</th><th>Level</th><th>Status</th><th>Signed in</th><th></th></tr>';
+  table.innerHTML = `<tr><th>Person</th><th>Level${infoBtn('What this person may do, and so what the agent may do for them. Changing it takes effect at once.')}</th><th>Status</th><th>Signed in${infoBtn('How many sessions (browsers or apps) they are signed in with now.')}</th><th></th></tr>`;
   for (const p of _usersData.users) {
     const tr = document.createElement('tr');
     const who = document.createElement('td');
     who.innerHTML = `${escHtml(p.name || p.email)}<br><small>${escHtml(p.email)}${p.mustChangePassword ? ' · must set a password' : ''}</small>`;
     const lvl = document.createElement('td');
     const sel = Object.assign(document.createElement('select'), { className: 'input' });
+    sel.setAttribute('aria-label', `Level of ${p.email}`);
+    sel.style.minWidth = '130px';
     for (const l of _usersData.levels) sel.appendChild(new Option(l.name, l.id, false, l.id === p.level));
     sel.onchange = () => _usersPatch(p.id, { level: sel.value });
     lvl.appendChild(sel);
@@ -52,11 +54,13 @@ function _usersPeopleCard() {
     tr.append(who, lvl, status, sess, act);
     table.appendChild(tr);
   }
-  card.appendChild(table);
-  const add = Object.assign(document.createElement('div'), { style: 'display:flex;gap:6px;flex-wrap:wrap;margin-top:10px' });
-  add.innerHTML = `<input class="input" id="users-new-email" placeholder="email" style="flex:2;min-width:160px">
-    <input class="input" id="users-new-name" placeholder="name" style="flex:1;min-width:100px">
-    <select class="input" id="users-new-level">${_usersData.levels.map(l => `<option value="${escHtml(l.id)}" ${l.id === 'member' ? 'selected' : ''}>${escHtml(l.name)}</option>`).join('')}</select>
+  // On a phone the table scrolls in its own box rather than squeezing the level to two letters.
+  card.appendChild(Object.assign(document.createElement('div'), { className: 'scroll-x' })).appendChild(table);
+  const add = Object.assign(document.createElement('div'), { className: 'form-row', style: 'margin-top:12px' });
+  add.innerHTML = `${_usersField('users-new-email', 'Email', 'What they sign in with. They get a one-time password, shown to you once, which they replace at their first sign-in.', '<input class="input" id="users-new-email" type="email" placeholder="name@example.com">')}
+    ${_usersField('users-new-name', 'Name', 'How they are shown in the panel and to others. Optional.', '<input class="input" id="users-new-name" placeholder="optional">')}
+    ${_usersField('users-new-level', 'Level', 'What they may do. Member (the default) talks to the agents and uses their own devices; an Admin runs the machine. You can change it later.',
+      `<select class="input" id="users-new-level">${_usersData.levels.map(l => `<option value="${escHtml(l.id)}" ${l.id === 'member' ? 'selected' : ''}>${escHtml(l.name)}</option>`).join('')}</select>`)}
     <button class="btn btn-xs btn-blue" onclick="usersAdd()">+ Add person</button>`;
   card.appendChild(add);
   if (typeof peopleExport === 'function') {   // the owner's alone (org): shown once /api/auth/me says so
@@ -88,8 +92,7 @@ function _usersLevelsCard() {
   const card = Object.assign(document.createElement('div'), { className: 'card' });
   card.innerHTML = `<div class="card-title" style="display:flex;align-items:center;gap:8px">Levels
       <button class="btn btn-xs" onclick="usersLevelEdit()">+ New level</button></div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">What a level lets a person do: its rights, the settings it may change, the tools the
-      agent may use for them, and whether those calls always ask. The four built-in levels cannot be changed; copy one to start a level of your own.</p>`;
+    <p class="desc" style="margin-bottom:10px">What a level lets a person do. The four built-in levels cannot be changed; copy one to start a level of your own.</p>`;
   for (const l of _usersData.levels) {
     const row = Object.assign(document.createElement('div'), { className: 'settings-tab-row' });
     const btn = Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: l.builtin ? `Copy ${l.name}` : `Edit ${l.name}` });
@@ -106,11 +109,12 @@ function _usersLevelsCard() {
 function _usersGrantsCard() {
   const card = Object.assign(document.createElement('div'), { className: 'card' });
   card.innerHTML = `<div class="card-title">Grants — exceptions to a level</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:10px">A grant gives one person, specialist or mission one thing their level does not:
+    <p class="desc" style="margin-bottom:6px">One thing a person or a specialist may have that their level does not give.</p>
+    <details class="desc page-about" style="margin-bottom:10px"><summary>What this is</summary>A grant gives one person, specialist or mission one thing their level does not:
       a tool (tool:shell:git), a call without asking (approve:shell:git), a setting (setting:models), a folder (path:/srv/x) or a resource
       (use:model:deepseek/*, use:service:vllm, use:device:&lt;id&gt; — another person's device, lent). Given by someone
       holding delegate, never beyond what they hold; the agent can give its own missions tool grants the same way. The rules — files that govern
-      the agent, asking people — are never grantable.</p>`;
+      the agent, asking people — are never grantable.</details>`;
   const who = id => _usersData.users.find(u => u.id === id)?.email || id;
   if (!(_usersData.grants || []).length) card.appendChild(Object.assign(document.createElement('div'), { className: 'placeholder', textContent: 'No grants.' }));
   for (const g of _usersData.grants || []) {
@@ -121,12 +125,13 @@ function _usersGrantsCard() {
       textContent: `${g.permission} → ${g.subject.kind} ${g.subject.kind === 'user' ? who(g.subject.id) : g.subject.id} · ${g.scope} · by ${g.by.kind === 'agent' ? 'an agent for ' : ''}${who(g.by.user || g.by.id)}${g.note ? ` · ${g.note}` : ''}` }));
     card.appendChild(row);
   }
-  const form = Object.assign(document.createElement('div'), { style: 'display:flex;gap:6px;flex-wrap:wrap;margin-top:10px' });
-  form.innerHTML = `<select class="input" id="grant-kind"><option value="user">person</option><option value="specialist">specialist type</option></select>
-    <select class="input" id="grant-user">${_usersData.users.map(u => `<option value="${escHtml(u.id)}">${escHtml(u.email)}</option>`).join('')}</select>
-    <input class="input" id="grant-spec" placeholder="specialist id (e.g. scribe)" style="display:none;min-width:140px">
-    <input class="input" id="grant-perm" placeholder="tool:shell:git" style="flex:1;min-width:160px">
-    <input class="input" id="grant-note" placeholder="why (kept with it)" style="flex:1;min-width:120px">
+  const form = Object.assign(document.createElement('div'), { className: 'form-row', style: 'margin-top:10px' });
+  form.innerHTML = `${_usersField('grant-kind', 'To', 'A person, or a specialist type (every mission of that specialist).', '<select class="input" id="grant-kind"><option value="user">person</option><option value="specialist">specialist type</option></select>')}
+    ${_usersField('grant-user', 'Who', 'The person, or the specialist\'s id (e.g. scribe), who gets it.',
+      `<select class="input" id="grant-user">${_usersData.users.map(u => `<option value="${escHtml(u.id)}">${escHtml(u.email)}</option>`).join('')}</select>
+      <input class="input" id="grant-spec" placeholder="specialist id (e.g. scribe)" style="display:none">`)}
+    ${_usersField('grant-perm', 'What', 'The one thing given, e.g. tool:shell:git (a tool), approve:shell:git (no asking for it), setting:models, path:/srv/x (a folder) or use:model:deepseek/* (a resource). You can only give what you hold yourself.', '<input class="input" id="grant-perm" placeholder="tool:shell:git">')}
+    ${_usersField('grant-note', 'Why', 'A note kept with the grant, so whoever reads it later knows why it was given. Optional.', '<input class="input" id="grant-note" placeholder="optional">')}
     <button class="btn btn-xs btn-blue" id="grant-give">Give</button>`;
   card.appendChild(form);
   const kind = form.querySelector('#grant-kind');
@@ -152,33 +157,32 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
   m.style.maxWidth = '640px';
   const boxes = _usersData.rights.map(r => `<label style="margin-right:10px"><input type="checkbox" data-right="${escHtml(r)}" ${l.rights.includes(r) ? 'checked' : ''}> ${escHtml(r)}</label>`).join('');
   m.innerHTML = `<div class="modal-title">${l.id ? `Level: ${escHtml(l.name)}` : 'New level'}</div>
-    <label class="harness-hint">Name</label><input class="input" id="lvl-name" value="${escHtml(l.name)}" style="width:100%">
-    <label class="harness-hint" style="margin-top:8px;display:block">Rights</label><div>${boxes}</div>
-    <small class="harness-hint">host is the machine itself (shell, files, Docker); delegate lets them make exceptions for others of their level or below.</small>
-    <label class="harness-hint" style="margin-top:8px;display:block">Approval</label>
+    <label class="input-label" for="lvl-name">Name${infoBtn('What the level is called, as people and the agents see it.')}</label><input class="input" id="lvl-name" value="${escHtml(l.name)}" style="width:100%">
+    <div class="input-label" style="margin-top:8px">Rights${infoBtn('read: see the panel · chat: talk to the agents · propose: decide the agents\' proposed settings · host: the machine itself (shell, files, Docker, services) · devices: pair and manage devices · users: manage people and levels · org: the owner\'s things (backups, updates, how the hub listens, exporting conversations) · delegate: give others of their level or below an exception (a grant). A level never gets more than the person making it holds.')}</div><div>${boxes}</div>
+    <label class="input-label" for="lvl-approval" style="margin-top:8px;display:block">Approval${infoBtn('Always ask (the default for a new level): every tool call the agent makes for them waits for a yes. Follow the panel\'s mode: their calls run as Auto or Manual says, like an admin\'s.')}</label>
     <select class="input" id="lvl-approval"><option value="ask" ${l.approval === 'ask' ? 'selected' : ''}>Always ask before a tool call</option>
       <option value="mode" ${l.approval === 'mode' ? 'selected' : ''}>Follow the panel's Auto / Manual mode</option></select>
-    <div class="input-label" style="margin-top:8px">How far its agents reach</div>
+    <div class="input-label" style="margin-top:8px">How far its agents reach${infoBtn('A ceiling on top of the tools: "create safely" keeps the agents to files, pages, the web and their own computers; "their own devices" adds the person\'s paired devices; "anything" includes this machine\'s command line and every device. As its tools allow: no extra ceiling.')}</div>
     <select class="input" id="lvl-reach"><option value="" ${!l.reach ? 'selected' : ''}>As its tools allow</option>
       <option value="create" ${l.reach === 'create' ? 'selected' : ''}>Create safely — files, pages, the web, the agents' own computers</option>
       <option value="own-devices" ${l.reach === 'own-devices' ? 'selected' : ''}>Create, and their own devices</option>
       <option value="anything" ${l.reach === 'anything' ? 'selected' : ''}>Anything — the hub machine and every device</option></select>
-    <div class="input-label" style="margin-top:8px">Whom they may message in the hive chat</div>
+    <div class="input-label" style="margin-top:8px">Whom they may message in the hive chat${infoBtn('Who people of this level may start a conversation with in the hive chat. By default it follows the rights: with chat, anyone in the organisation.')}</div>
     <select class="input" id="lvl-people"><option value="" ${!l.people ? 'selected' : ''}>As its rights say (chat: anyone in the organisation; otherwise only where added)</option>
       <option value="org" ${l.people === 'org' ? 'selected' : ''}>Anyone in the organisation</option>
       <option value="team" ${l.people === 'team' ? 'selected' : ''}>Their team only — their manager, peers and reports</option>
       <option value="added" ${l.people === 'added' ? 'selected' : ''}>Only where someone adds them (a guest)</option></select>
-    ${advancedFold(`<label class="harness-hint" style="margin-top:4px;display:block">Settings they may change (prefixes, one per line; * for all)</label>
+    ${advancedFold(`<label class="input-label" style="margin-top:4px;display:block">Settings they may change${infoBtn('Which settings people of this level may change or accept from the agent, as the start of their names, one per line (e.g. voice, ambient); * for all. Empty (the default): none.')}</label>
     <textarea class="input" id="lvl-settings" rows="3" style="width:100%" data-default="" data-label="Settings">${escHtml(l.settings.join('\n'))}</textarea>
-    <label class="harness-hint" style="margin-top:8px;display:block">Tools the agent may use for them — allowed / denied (one per line: shell, shell:git, read_file, mcp__*, *)</label>
+    <label class="input-label" style="margin-top:8px;display:block">Tools the agent may use for them — allowed / denied${infoBtn('One per line, e.g. shell, shell:git, read_file, mcp__*, or * for all. Left: allowed (default *). Right: denied, which wins over allowed (default none).')}</label>
     <div style="display:flex;gap:6px"><textarea class="input" id="lvl-allow" rows="4" style="flex:1" data-default="*" data-label="Tools allowed">${escHtml(l.tools.allow.join('\n'))}</textarea>
       <textarea class="input" id="lvl-deny" rows="4" style="flex:1" data-default="" data-label="Tools denied">${escHtml(l.tools.deny.join('\n'))}</textarea></div>
-    <div class="input-label" style="margin-top:8px">What its people's agents may use (comma-separated; * for all, deepseek/* a prefix; empty: as before — keys and accounts admins only)</div>
-    ${USERS_RESOURCE_KINDS.map(([k, label]) => `<div style="display:flex;gap:6px;align-items:center;margin-top:3px"><span class="harness-hint" style="width:110px">${label}</span>
-      <input class="input" data-resource="${k}" data-default="" data-label="${escHtml(label)}" style="flex:1" value="${escHtml((l.resources?.[k] || []).join(', '))}"></div>`).join('')}
-    <div class="input-label" style="margin-top:8px">What its people may give others, with delegate (one per line, e.g. use:model:*, tool:shell:git; empty: anything they hold)</div>
+    <div class="input-label" style="margin-top:8px">What its people's agents may use${infoBtn('Per kind, a comma-separated list: * for all, deepseek/* for everything starting so. Empty (the default): the usual rule — models and computers for everyone; keys, accounts and logins for admins only. A grant use:<kind>:<id> adds one for a person.')}</div>
+    ${USERS_RESOURCE_KINDS.map(([k, label]) => `<div style="display:flex;gap:6px;align-items:center;margin-top:3px"><label class="harness-hint" style="width:110px" for="lvl-res-${k}">${label}</label>
+      <input class="input" id="lvl-res-${k}" data-resource="${k}" data-default="" data-label="${escHtml(label)}" style="flex:1" value="${escHtml((l.resources?.[k] || []).join(', '))}"></div>`).join('')}
+    <div class="input-label" style="margin-top:8px">What its people may give others${infoBtn('Only with the delegate right: which grants they may give, one per line (e.g. use:model:*, tool:shell:git). Empty (the default): anything they hold themselves.')}</div>
     <textarea class="input" id="lvl-delegates" rows="2" style="width:100%" data-default="" data-label="May give others">${escHtml((l.delegates || []).join('\n'))}</textarea>
-    <div class="input-label" style="margin-top:8px">New devices they may approve (a new device waits until someone who may says yes)</div>
+    <div class="input-label" style="margin-top:8px">New devices they may approve${infoBtn('A newly paired device waits until someone allowed says yes. By default this follows the rights: with devices, anyone\'s; otherwise their own.')}</div>
     <select class="input" id="lvl-approve-devices" data-default="" data-label="New devices"><option value="" ${!l.approveDevices ? 'selected' : ''}>As its rights say (devices: anyone's; own devices: their own)</option>
       <option value="none" ${l.approveDevices === 'none' ? 'selected' : ''}>None — not even their own</option>
       <option value="own" ${l.approveDevices === 'own' ? 'selected' : ''}>Their own — one tap when it shows up</option>
@@ -205,6 +209,9 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
     catch (e) { m.querySelector('#lvl-status').textContent = e.message; }
   }));
 }
+
+/** A labelled field with its ⓘ. */
+const _usersField = (id, label, info, input) => `<div class="field"><label class="input-label" for="${id}">${label}${infoBtn(info)}</label>${input}</div>`;
 
 /** Resources a level allots (modules/auth/allot.js): kind and its label in the editor. */
 const USERS_RESOURCE_KINDS = [['model', 'Models'], ['provider', 'Providers'], ['key', 'Keys for services'], ['connector', 'Connected accounts'], ['login', 'Logins'], ['computer', 'Agents\' computers'], ['service', 'Inference services'], ['device', 'Others\' devices'], ['vnc', 'VNC screens'],
