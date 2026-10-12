@@ -15,6 +15,7 @@ async function fcMenuToggle() {
     ${item('focused', 'Focused', 'calm')}
     ${item('extended', 'Extended', 'everything')}
     <div class="fc-menu-sep"></div>
+    ${typeof castOpen === 'function' ? `<button type="button" role="menuitem" class="fc-menu-item" onclick="fcMenuClose();castOpen('ambient')"><span aria-hidden="true" style="width:18px;text-align:center">⎘</span><span>Cast to a screen</span></button>` : ''}
     <button type="button" role="menuitem" class="fc-menu-item" onclick="fcGo('settings')">${fcIcon('gear', 18)}<span>Settings</span></button>
     <button type="button" role="menuitem" class="fc-menu-item" onclick="fcSignOut()">${fcIcon('out', 18)}<span>Sign out</span></button>`;
   m.hidden = false;
