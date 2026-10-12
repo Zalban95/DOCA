@@ -86,8 +86,12 @@ under their approvals; one that changes the machine asks as it does today.
 3. **Networks and the phone as interface**: remembered networks, devices carried by the phone.
 4. **DocaWear**: presets on the wrist.
 
-## What waits for the owner
+## The owner's answers (2026-10-12)
 
-- **The view link** — a read-only, one-page, short-lived sign-in for a screen with no keyboard (S11, auth).
-- **`/api/v1` additions** — the controls catalogue and presets for devices, and a phone carrying a device (W3).
-- Optional: whether a cast target may be reached over the LAN listen mode (`network.listen lan`) for view links only.
+- **The view link — yes**, and wider: read-only, for any page, and for live views too — a VM's console or an agents'
+  computer working (view-only, never driven), and the panel's preview popups (a project being tested). Still one
+  target per link, short-lived, bound to its screen record, revoked by Stop or by revoking the screen, acting on nothing.
+- **`/api/v1` additions — yes** (the controls catalogue, presets, running a control, a phone carrying a device); the
+  work is organised as the phases above.
+- Open: whether a cast target is reached over the LAN listen mode for view links only — decided in phase 1 by what the
+  network allows, said in the cast's own words when it cannot reach the hub.
