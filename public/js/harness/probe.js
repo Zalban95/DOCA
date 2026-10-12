@@ -22,6 +22,7 @@ function harnessRungProbe(el) {
   const rung = el?.closest('[data-rung]');
   if (!rung) return;
   harnessRungOllamaHint(el);
+  harnessRungWindow(rung);   // what its server says its window is (context-find.js)
   clearTimeout(rung._probeTimer);
 
   const out      = rung.querySelector('[data-role=verdict]');

@@ -42,3 +42,29 @@ async function harnessContextFind(id, { onlyIfUnknown = false } = {}) {
     line.textContent = `Could not ask: ${e.message} `;
   }
 }
+
+/**
+ * A fallback rung's window, offered the same way (2026-10-12): a rung that declares none sends a long conversation to a
+ * model that cannot hold it, and a model whose server was set to a new context (Field → Models, the router's card)
+ * leaves a stale number here. What the server reports is said beside the rung's box, with "Use N"; never written by
+ * itself — Save is the decision.
+ */
+async function harnessRungWindow(rung) {
+  const field = rung?.querySelector('[data-role=context-window]');
+  const provider = (rung?.querySelector('[data-role=provider]')?.value || '').trim();
+  const model = (rung?.querySelector('[data-role=model]')?.value || '').trim();
+  if (!field || !provider || !model) return;
+  let line = rung.querySelector('[data-role=ctxfind]');
+  if (!line) { line = Object.assign(document.createElement('div'), { className: 'harness-hint' }); line.dataset.role = 'ctxfind'; field.closest('label').after(line); }
+  try {
+    const r = await apiFetch(`/api/harness/context-window?provider=${encodeURIComponent(provider)}&model=${encodeURIComponent(model)}`);
+    const declared = Number(field.value) || 0;
+    if (!r.tokens || declared === r.tokens) { line.textContent = ''; return; }
+    line.textContent = declared
+      ? `Its server now says ${r.tokens.toLocaleString()} tokens; this rung says ${declared.toLocaleString()}. `
+      : `Its server says ${r.tokens.toLocaleString()} tokens; with 0 here a conversation longer than that is still sent to it. `;
+    const use = Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-xs', textContent: `Use ${r.tokens}` });
+    use.addEventListener('click', () => { field.value = r.tokens; field.dispatchEvent(new Event('change')); line.textContent = ''; });
+    line.appendChild(use);
+  } catch { /* the probe says when the server cannot be reached */ }
+}
