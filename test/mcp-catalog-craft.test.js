@@ -30,7 +30,9 @@ test('an installed app is found on PATH and added as an ordinary stdio server, o
     const row = (await H.api(null, 'GET', '/api/mcp/catalog')).body.servers.find(s => s.id === 'gridcraft');
     assert.deepEqual(row.missing, []);
     const added = await require('../modules/mcp/catalog').add('gridcraft');
-    assert.equal(added.command || require('../modules/mcp/registry').get('gridcraft').command, exe);
+    // Windows' PATHEXT names the extension in capitals (.EXE); its paths ignore case.
+    const same = p => (process.platform === 'win32' ? p.toLowerCase() : p);
+    assert.equal(same(added.command || require('../modules/mcp/registry').get('gridcraft').command), same(exe));
     assert.deepEqual(require('../modules/mcp/registry').get('gridcraft').args, ['mcp']);
     assert.notEqual(require('../modules/mcp/registry').get('gridcraft').autostart, true, 'off until a person starts it');
   } finally { process.env.PATH = was; }
