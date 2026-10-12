@@ -16,14 +16,15 @@
  */
 
 /** The kinds of things the page draws, in the order an area shows them. */
-const DOMAINS = ['light', 'switch', 'fan', 'cover', 'climate', 'lock', 'media_player', 'alarm_control_panel', 'scene', 'script',
-  'camera', 'sensor', 'binary_sensor'];
+const DOMAINS = ['light', 'switch', 'fan', 'cover', 'climate', 'lock', 'media_player', 'remote', 'alarm_control_panel', 'scene', 'script',
+  'camera', 'sensor', 'binary_sensor', 'weather', 'person'];   // remote, weather, person since 3.49.0 (an owner's HA had them undrawn)
 
 // Attributes a tile reads, by name; anything not listed stays where HA is.
 const ATTRS = ['friendly_name', 'unit_of_measurement', 'device_class', 'brightness', 'color_mode', 'supported_color_modes',
   'current_temperature', 'temperature', 'target_temp_low', 'target_temp_high', 'min_temp', 'max_temp', 'target_temp_step',
   'hvac_mode', 'hvac_modes', 'hvac_action', 'current_position', 'percentage', 'media_title', 'media_artist', 'volume_level',
-  'is_volume_muted', 'code_format', 'supported_features', 'icon'];
+  'is_volume_muted', 'code_format', 'supported_features', 'icon',
+  'rgb_color', 'source', 'source_list', 'activity_list', 'current_activity', 'humidity', 'wind_speed', 'temperature_unit'];
 
 const ok = v => v === null || ['string', 'number', 'boolean'].includes(typeof v) || (Array.isArray(v) && v.length <= 20 && v.every(x => typeof x === 'string' || typeof x === 'number'));
 
@@ -47,10 +48,11 @@ const num = (lo, hi) => v => typeof v === 'number' && Number.isFinite(v) && v >=
 const oneOf = (...xs) => v => xs.includes(v);
 const str = max => v => typeof v === 'string' && v.length <= max;
 const bool = v => typeof v === 'boolean';
+const rgb = v => Array.isArray(v) && v.length === 3 && v.every(x => Number.isInteger(x) && x >= 0 && x <= 255);
 
 const ON_OFF = { turn_on: {}, turn_off: {}, toggle: {} };
 const ALLOW = {
-  light: { turn_on: { brightness_pct: num(0, 100), brightness: num(0, 255), color_temp_kelvin: num(1000, 12000) }, turn_off: {}, toggle: {} },
+  light: { turn_on: { brightness_pct: num(0, 100), brightness: num(0, 255), color_temp_kelvin: num(1000, 12000), rgb_color: rgb }, turn_off: {}, toggle: {} },
   switch: ON_OFF,
   fan: { ...ON_OFF, set_percentage: { percentage: num(0, 100) } },
   cover: { open_cover: {}, close_cover: {}, stop_cover: {}, set_cover_position: { position: num(0, 100) } },
@@ -58,7 +60,8 @@ const ALLOW = {
     set_hvac_mode: { hvac_mode: oneOf('off', 'heat', 'cool', 'heat_cool', 'auto', 'dry', 'fan_only') }, turn_on: {}, turn_off: {} },
   lock: { lock: {}, unlock: { code: str(40) } },
   media_player: { media_play: {}, media_pause: {}, media_play_pause: {}, media_stop: {}, media_next_track: {}, media_previous_track: {},
-    volume_set: { volume_level: num(0, 1) }, volume_mute: { is_volume_muted: bool }, turn_on: {}, turn_off: {} },
+    volume_set: { volume_level: num(0, 1) }, volume_mute: { is_volume_muted: bool }, volume_up: {}, volume_down: {}, select_source: { source: str(120) }, turn_on: {}, turn_off: {} },
+  remote: { turn_on: { activity: str(80) }, turn_off: {}, toggle: {} },
   scene: { turn_on: {} },
   script: { turn_on: {} },
   alarm_control_panel: { alarm_arm_home: { code: str(40) }, alarm_arm_away: { code: str(40) }, alarm_arm_night: { code: str(40) }, alarm_disarm: { code: str(40) } },

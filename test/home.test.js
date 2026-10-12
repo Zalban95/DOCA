@@ -19,6 +19,10 @@ const STATES = [
   { entity_id: 'camera.door', state: 'idle', attributes: { friendly_name: 'Door camera', access_token: 'CAMTOKEN', entity_picture: '/api/camera_proxy/camera.door?token=CAMTOKEN' } },
   { entity_id: 'switch.hidden', state: 'on', attributes: { friendly_name: 'Hidden' } },
   { entity_id: 'automation.night', state: 'on', attributes: { friendly_name: 'Night' } },
+  { entity_id: 'remote.tv', state: 'on', attributes: { friendly_name: 'TV remote', activity_list: ['Watch TV', 'Music'], current_activity: 'Watch TV' } },
+  { entity_id: 'weather.home', state: 'partlycloudy', attributes: { friendly_name: 'Home', temperature: 19, temperature_unit: '°C', humidity: 60 } },
+  { entity_id: 'person.someone', state: 'not_home', attributes: { friendly_name: 'Someone' } },
+  { entity_id: 'notify.mobile', state: 'unknown', attributes: { friendly_name: 'Phone' } },
 ];
 
 let server, origin;
@@ -137,6 +141,22 @@ test('HA\'s own settings changed (units, the place) are read again at once, not 
   assert.equal(r.body.place, 'Casa');
   assert.equal(r.body.units.temperature, '°F');
   ha.place = null; ha.temp = null;
+});
+
+test('a TV remote, the weather and a person are drawn; a light\'s colour, a source and an activity are calls it checks', async () => {
+  const r = await H.api(null, 'GET', '/api/home');
+  const tiles = Object.fromEntries(r.body.areas.flatMap(a => a.tiles).map(t => [t.id, t]));
+  assert.deepEqual(tiles['remote.tv'].attrs.activity_list, ['Watch TV', 'Music']);
+  assert.equal(tiles['weather.home'].attrs.humidity, 60);
+  assert.equal(tiles['person.someone'].state, 'not_home');
+  assert.ok(!tiles['notify.mobile'] && !('notify' in (r.body.notDrawn || {})), 'a way to send a message is not a device left undrawn');
+  const ok = async (domain, service, entity_id, data) => (await H.api(null, 'POST', '/api/home/call', { domain, service, entity_id, data })).status;
+  assert.equal(await ok('remote', 'turn_on', 'remote.tv', { activity: 'Music' }), 200);
+  assert.equal(await ok('light', 'turn_on', 'light.kitchen', { rgb_color: [255, 120, 0] }), 200);
+  assert.equal(await ok('light', 'turn_on', 'light.kitchen', { rgb_color: [300, 0, 0] }), 400, 'a colour out of range');
+  assert.equal(await ok('light', 'turn_on', 'light.kitchen', { rgb_color: 'red' }), 400);
+  assert.equal(await ok('remote', 'send_command', 'remote.tv', { command: 'x' }), 400, 'only what the list names');
+  assert.equal(await ok('weather', 'turn_on', 'weather.home', {}), 400, 'the weather is read, never acted on');
 });
 
 test('acting: a short list of services, one entity, only the data each takes', async () => {
