@@ -58,15 +58,23 @@ const model = {
     if (m.quick && person?.id && !require('../auth/allot').allowsModel(person, m)) m = { provider: s.provider, model: s.model, quick: false };
     if (!m.model) throw Object.assign(new Error('No vision model is set (Settings → Harness → Vision).'), { status: 409 });
     s = { ...s, provider: m.provider, model: m.model };
+    const F = require('./frame'), f = F.frame(png, sc().value('vision.maxSide'));   // positions back in the screen's pixels
+    png = f.png; question = F.ask(String(question).slice(0, 2000), f);
     const ep = require('../harness/providers').endpoint(s.provider);
-    const r = await fetch(`${ep.baseUrl}/chat/completions`, { method: 'POST', signal: AbortSignal.timeout(180000),
+    // A quick answer is asked without thinking (vision.quickThinking off), in the chat template's own words; a server
+    // that refuses the field is asked once more without it.
+    const noThink = m.quick && sc().value('vision.quickThinking') !== true;
+    const send = extra => fetch(`${ep.baseUrl}/chat/completions`, { method: 'POST', signal: AbortSignal.timeout(180000),
       headers: { 'Content-Type': 'application/json', ...(ep.apiKey ? { Authorization: `Bearer ${ep.apiKey}` } : {}) },
-      body: JSON.stringify({ model: s.model, stream: false, temperature: 0, messages: [{ role: 'system', content: SYSTEM },
-        { role: 'user', content: [{ type: 'text', text: String(question).slice(0, 2000) }, { type: 'image_url', image_url: { url: `data:image/png;base64,${png.toString('base64')}` } }] }] }) })
+      body: JSON.stringify({ model: s.model, stream: false, temperature: 0, ...extra, messages: [{ role: 'system', content: SYSTEM },
+        { role: 'user', content: [{ type: 'text', text: question }, { type: 'image_url', image_url: { url: `data:image/png;base64,${png.toString('base64')}` } }] }] }) })
       .catch(e => { throw Object.assign(new Error(`${ep.label}: cannot reach ${ep.baseUrl} (${e.message})`), { status: 502 }); });
+    let r = await send(noThink ? { chat_template_kwargs: { enable_thinking: false } } : {});
+    if (noThink && r.status === 400) r = await send({});
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw Object.assign(new Error(`${ep.label} / ${s.model}: ${j.error?.message || j.error || `HTTP ${r.status}`}`), { status: 502 });
-    return { text: String(j.choices?.[0]?.message?.content || '').trim() || '(the model said nothing)', points: [], by: m.quick ? `${m.model} — ${m.why}` : s.model };
+    const said = String(j.choices?.[0]?.message?.content || '').trim();
+    return { text: said ? F.back(said, f) : '(the model said nothing)', points: [], by: m.quick ? `${m.model} — ${m.why}` : s.model };
   },
 };
 

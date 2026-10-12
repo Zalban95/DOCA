@@ -69,3 +69,17 @@ test('the settings round-trip through the panel route, and a value it does not t
   assert.equal(r.body.settings.warmMain, false);
   assert.equal((await H.api(null, 'POST', '/api/vision', { quickWhen: 'sometimes' })).status, 400);
 });
+
+test('a screen is sent at a stated size and positions come back in its own pixels', () => {
+  const F = require('../modules/vision/frame'), png = require('../modules/machines/png');
+  const big = png.encode({ width: 2000, height: 800, rgb: Buffer.alloc(2000 * 800 * 3, 40) });
+  const f = F.frame(big, 1024);
+  assert.deepEqual([f.k, f.width, f.height], [2, 1000, 400]);
+  assert.match(F.ask('Where is OK?', f), /1000×400 pixels/);
+  const back = F.back('OK is at (120, 300); x = 10, y: 20', f);
+  assert.match(back, /\(240, 600\)/);
+  assert.match(back, /x = 20, y: 40/);
+  assert.match(back, /screen's own pixels, 2000×800/);
+  assert.equal(F.back('A login page.', f), 'A login page.', 'no position, no note');
+  assert.equal(F.frame(png.encode({ width: 400, height: 300, rgb: Buffer.alloc(400 * 300 * 3) }), 1024).k, 1, 'small enough is sent as it is');
+});
