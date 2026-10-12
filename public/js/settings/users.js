@@ -214,7 +214,7 @@ function usersLevelEdit(l = { id: '', name: '', rights: ['read', 'chat'], settin
 const _usersField = (id, label, info, input) => `<div class="field"><label class="input-label" for="${id}">${label}${infoBtn(info)}</label>${input}</div>`;
 
 /** Resources a level allots (modules/auth/allot.js): kind and its label in the editor. */
-const USERS_RESOURCE_KINDS = [['model', 'Models'], ['provider', 'Providers'], ['key', 'Keys for services'], ['connector', 'Connected accounts'], ['login', 'Logins'], ['computer', 'Agents\' computers'], ['service', 'Inference services'], ['device', 'Others\' devices'], ['vnc', 'VNC screens'],
+const USERS_RESOURCE_KINDS = [['model', 'Models'], ['provider', 'Providers'], ['key', 'Keys for services'], ['connector', 'Connected accounts'], ['login', 'Logins'], ['computer', 'Agents\' computers'], ['service', 'Inference services'], ['device', 'Others\' devices'], ['vnc', 'VNC screens'], ['account', 'Own accounts (Google, Microsoft 365)'],
   ['home', 'Home (light.*, climate.hall)']];
 
 // Its panel is made here rather than in index.html, which is at its line ceiling.

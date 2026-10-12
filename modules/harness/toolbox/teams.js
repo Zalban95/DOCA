@@ -77,7 +77,8 @@ module.exports = [
           const v = t.view(team);
           if (typeof ctx.show === 'function' && team.doc?.name) ctx.show({ name: team.doc.name, mime: 'text/markdown', kind: 'doc',
             bytes: Buffer.byteLength(require('../../teams/doc').render(team, v.tasks)), caption: `Team: ${team.title} — its board, written again at every change` });
-          return `Team ${team.id} made — the hub runs it from here. ${said(v)}\nTell the person what you set going; you are not waiting.`;
+          const manual = require('../manual-note').note(ctx.sessionId);
+          return `Team ${team.id} made — the hub runs it from here. ${said(v)}\nTell the person what you set going; you are not waiting.${manual ? `\nSay this to them too, in your words:${manual}` : ''}`;
         }
         if (a.action === 'status') {
           if (!a.team) {

@@ -37,6 +37,7 @@ Ordered by how much a person on a phone or a watch misses it:
 | 20 | Stop a team, keep it going, or put it away | `teams` | A device hears `agent.team` and draws the board; it stops one task's mission with `POST /harness/missions/{id}/stop`. Stopping the whole team, its keep-going switch and putting it away are the panel's until a route is asked for. |
 | 21 | Make a group or a channel, join or leave one, add people, rename, pin, mute, edit or delete a message in the hive chat | `people-manage` | A phone reads, writes, reacts and marks read in its person's conversations (`/people`); arranging them is the panel's until a route is asked for. |
 | 22 | Call someone, schedule, change or cancel a meeting | `meeting-schedule` | Calling a colleague or moving a meeting from the phone; a device lists its person's meetings and links (`GET /meetings`) and opens the Meetings page in its web view for the rest. |
+| 23 | Send or discard a drafted mail, undo what the assistant changed in my calendar or mail, correct which mails need me | `everyday-decide` | A draft waits for its person's Send and every change has an Undo; on a phone today they are asked of the agent ("send it", "undo that"). An app would draw the draft and the action log natively and press Send or Undo itself. |
 
 What is deliberately the panel's, with the reason beside each, is in the same file (`only`): the machine's
 administration, the owner's secrets, budgets and spending (S12, S14), signing in, people and levels, the panel's own
