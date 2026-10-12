@@ -28,7 +28,7 @@ const EXPERIMENTS = [
   { id: 'riskTiers', label: 'Ask only about what cannot be undone, in every mode', doc: 'risk-tiers.md', todo: 'H10.11', since: '2.296.0', measure: 'script' },
   { id: 'systemOne', label: 'A System 1 decision model for bounded decisions (Laya, or TypeSafe Jev)', doc: 'system-one.md', todo: 'H10.19', since: '2.317.0', measure: 'script' },
   { id: 'library', label: 'Library: the files on this machine, searched by meaning', doc: 'library.md', todo: 'H10.20', since: '2.336.0', measure: 'script' },
-  { id: 'alwaysFree', label: 'Always free: the main chat answers at once, the work happens behind', doc: 'always-free.md', todo: 'H10.21', since: '3.36.0', measure: 'script' },
+  { id: 'alwaysFree', label: 'Always free: the main chat answers at once, the work happens behind', doc: 'always-free.md', todo: 'H10.21', since: '3.37.0', measure: 'script' },
   { id: 'claimCheck', label: 'Catch an answer that claims what the turn never did', doc: 'claim-check.md', todo: 'B7c', since: '2.264.0', measure: 'manual' },
 ];
 const STALE_DAYS = 60;

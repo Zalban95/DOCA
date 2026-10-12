@@ -119,7 +119,7 @@ module.exports = [
   { id: 'adaptive-limits', licence: 'lab', name: 'Limits that follow the work', page: 'settings/experiments', flag: 'adaptiveLimits', state: 'experiment', settings: ['limits.maxStepsCeiling'], since: '2.295.0',
     use: 'A triage before each turn sets its thinking effort and step budget by the request, and a turn still advancing at its last step carries on up to a ceiling.',
     words: 'steps effort budget limit difficulty triage extend' },
-  { id: 'always-free', licence: 'lab', name: 'Always free: the main chat answers at once, the work happens behind', page: 'settings/experiments', flag: 'alwaysFree', state: 'experiment', since: '3.36.0',
+  { id: 'always-free', licence: 'lab', name: 'Always free: the main chat answers at once, the work happens behind', page: 'settings/experiments', flag: 'alwaysFree', state: 'experiment', since: '3.37.0',
     tools: ['background'], settings: ['work.parallel', 'work.localSlots'], uses: 'tool:background',
     use: 'The main chat hands every job to a work chat at once, with a line naming it, and the person adds to or cancels a running job\'s plan through it.',
     words: 'front background fork hand off living plan amend add step cancel step parallel jobs free orchestrator quick answer' },
