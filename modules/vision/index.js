@@ -31,6 +31,7 @@ const settings = () => ({
   backend: sc().value('vision.backend'), provider: sc().value('vision.provider'), model: sc().value('vision.model'),
   detectorUrl: sc().value('vision.detectorUrl'), detectorModel: sc().value('vision.detectorModel'), apiKey: sc().value('vision.apiKey'),
   ocrLang: sc().value('vision.ocrLang'),
+  locatorProvider: sc().value('vision.locatorProvider'), locatorModel: sc().value('vision.locatorModel'), locateWhen: sc().value('vision.locateWhen'), locatorPrompt: sc().value('vision.locatorPrompt'),
   quickProvider: sc().value('vision.quickProvider'), quickModel: sc().value('vision.quickModel'), quickWhen: sc().value('vision.quickWhen'), warmMain: sc().value('vision.warmMain'),
 });
 
@@ -187,7 +188,8 @@ const template = {
   },
 };
 
-const BACKENDS = { model, detector, text, template };
+const { locate, asksWhere } = require('./locate');
+const BACKENDS = { model, detector, text, template, locate };
 
 /** Which readers this hive can use now (template's Python is probed once). */
 async function available() {
@@ -207,13 +209,18 @@ async function read(png, question, { how = 'auto', template: tpl, person } = {})
   const allotted = !person?.id || require('../auth/allot').allowsModel(person, { provider: s.provider, model: s.model });
   const usable = id => BACKENDS[id]?.ready(s) && (id !== 'model' || allotted);
   if (tpl && how === 'auto') how = 'template';
+  // A question about where something is goes to the locator when there is one (vision.locateWhen where).
+  if (how === 'auto' && usable('locate') && sc().value('vision.locateWhen') !== 'asked' && asksWhere(question)) how = 'locate';
   if (how === 'auto') how = usable(s.backend) ? s.backend : (await available()).find(usable);
   if (how === 'model' && !allotted) throw Object.assign(new Error(require('../auth/allot').refusal(person, 'model', `${s.provider}/${s.model}`)), { status: 403 });
   const b = BACKENDS[how];
   if (!b) throw Object.assign(new Error(`No reader "${how}" — ${Object.keys(BACKENDS).join(', ')}, or none is set up (Settings → Harness → Vision).`), { status: 400 });
   if (how !== 'template' && !b.ready(s)) throw Object.assign(new Error(`${b.label} is not set up here (Settings → Harness → Vision).`), { status: 409 });
   require('../features/usage').count(`vision:${how}`);   // which reader is still used (features/review.js)
-  return { how, ...(await b.read(png, question, s, { template: tpl, person })) };
+  const got = { how, ...(await b.read(png, question, s, { template: tpl, person })) };
+  // The locator found nothing to point at: the general model is asked instead, when there is one.
+  if (got.none && how === 'locate' && usable('model')) return { how: 'model', ...(await BACKENDS.model.read(png, question, s, { person })), by: `${got.by} found nothing; then a vision model` };
+  return got;
 }
 
 /** What the agent reads. */

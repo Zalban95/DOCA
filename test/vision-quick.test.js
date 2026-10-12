@@ -83,3 +83,35 @@ test('a screen is sent at a stated size and positions come back in its own pixel
   assert.equal(F.back('A login page.', f), 'A login page.', 'no position, no note');
   assert.equal(F.frame(png.encode({ width: 400, height: 300, rgb: Buffer.alloc(400 * 300 * 3) }), 1024).k, 1, 'small enough is sent as it is');
 });
+
+test('the locator: where-questions go to it, its point comes back in screen pixels, a miss falls back to the vision model', async () => {
+  const http = require('node:http'), png = require('../modules/machines/png');
+  let said = 'Click(100, 50)';
+  const asked = [];
+  const srv = http.createServer((req, res) => {
+    let b = ''; req.on('data', d => { b += d; }); req.on('end', () => {
+      const j = JSON.parse(b); asked.push(j.model);
+      res.setHeader('Content-Type', 'application/json');
+      res.end(JSON.stringify({ choices: [{ message: { content: j.model === 'locator-x' ? said : 'A blue OK button, centre (100, 50).' } }] }));
+    });
+  });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  const u2 = require('../modules/utils'), prefs = u2.loadPrefs();
+  u2.savePrefs({ ...prefs, providers: { ...(prefs.providers || {}) },
+    vision: { provider: 'stubvl', model: 'general-x', locatorProvider: 'stubvl', locatorModel: 'locator-x', quickModel: '' } });
+  require('../modules/provider-keys').set('stubvl', { baseUrl: `http://127.0.0.1:${srv.address().port}/v1`, apiKey: '', api: 'openai-chat-completions', models: [] });
+  const vision = require('../modules/vision'), L = require('../modules/vision/locate');
+  const shot = png.encode({ width: 2000, height: 1000, rgb: Buffer.alloc(2000 * 1000 * 3, 30) });
+  try {
+    const r = await vision.read(shot, 'Where is the OK button?');
+    assert.equal(r.how, 'locate');
+    assert.deepEqual(r.points, [{ label: 'the OK button', x: 200, y: 100 }], 'scaled by the frame (2000 px shrunk by 2)');
+    assert.equal((await vision.read(shot, 'What does this dialog say?')).how, 'model', 'not a where-question: the general reader');
+    said = 'I cannot see it.';
+    const miss = await vision.read(shot, 'Where is the OK button?');
+    assert.equal(miss.how, 'model', 'nothing to point at: the vision model is asked');
+    assert.match(miss.by, /found nothing/);
+    assert.deepEqual([L.what('Where is the Sign in button?'), L.what('click Save')], ['the Sign in button', 'Save']);
+    assert.deepEqual([L.pointOf('[12, 34]'), L.pointOf('x = 5, y: 6'), L.pointOf('no')], [{ x: 12, y: 34 }, { x: 5, y: 6 }, null]);
+  } finally { srv.close(); }
+});

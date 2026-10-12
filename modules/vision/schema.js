@@ -13,6 +13,11 @@ module.exports = { is: 'travels', home: 'hive', note: 'how a computer\'s screen 
       quickModel: { type: 'string', default: '', hint: 'A smaller model that reads images, used while the vision model is not loaded on its server (see when). Empty: none.' },
       quickWhen: { type: 'string', default: 'cold', hint: 'When the quick model answers: cold — while the vision model is not in memory on its own server; always; or never.' },
       quickThinking: { type: 'boolean', default: false, hint: 'Let the quick vision model think before answering: better positions, many seconds slower. Off, it answers what is on the screen in about a second.' },
+      // A model trained to point at things on screens (vision/locate.js; asked 2026-10-12).
+      locatorProvider: { type: 'string', default: '', hint: 'The provider serving the locator. Empty: the vision model\'s own provider.' },
+      locatorModel: { type: 'string', default: '', hint: 'A model trained to point at things on screens (GUI grounding), asked "where is …" and answering a point. Empty: none.' },
+      locatorPrompt: { type: 'string', default: 'Localize an element on the GUI image according to my instructions and output a click position as Click(x, y) with x num pixels from the left edge and y num pixels from the top edge. Instruction: {what}', hint: 'What the locator is asked, {what} standing for the thing to find. Each such model is trained on its own instruction: its model card says which.' },
+      locateWhen: { type: 'string', default: 'where', hint: 'where — a question asking where something is (or where to click) goes to the locator; asked — only when the agent asks for it (how: locate).' },
       maxSide: { type: 'number', min: 256, max: 8192, default: 1024, hint: 'A screen is shrunk by a whole factor until its longer side is at most this many pixels before a vision model reads it; positions come back in the screen\'s own pixels.' },
       warmMain: { type: 'boolean', default: true, hint: 'When the quick model answers, wake the vision model in the background so the next look is its.' },
       detectorUrl: { type: 'string', default: 'http://127.0.0.1:9001', hint: 'Roboflow Inference: the local server (Settings → Services) or https://detect.roboflow.com.' },
