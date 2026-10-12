@@ -1,5 +1,7 @@
 # Experiment: the face follows a voice call
 
+**Graduated 2026-10-12 (3.41.0)**: on for every call, the flag removed (the owner: "the face following the voice works great"; used daily on the panel, the face and Ambient since 2.193.0).
+
 **Flag:** `experiments.faceVoice` (Settings → Developer), off by default. **TODO:** H8.2. **Since:** 2.193.0.
 
 ## Hypothesis

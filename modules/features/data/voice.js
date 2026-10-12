@@ -31,7 +31,7 @@ module.exports = [
     use: 'Speak while the agent speaks: it pauses, and real words end the answer at what was heard.', words: 'interrupt barge pause' },
   { id: 'barge-in', licence: 'lab', name: 'Talk over the agent while it works', page: 'settings/experiments', flag: 'bargeIn', state: 'experiment', since: '2.192.0',
     use: 'In a call, speech while a turn works is sent to it and the interrupted answer\'s sentences are dropped.', words: 'interrupt call' },
-  { id: 'face-voice', licence: 'lab', name: 'The face follows a voice call', page: 'settings/experiments', flag: 'faceVoice', state: 'experiment', since: '2.193.0',
+  { id: 'face-voice', licence: 'voice', name: 'The face follows a voice call', state: 'on', since: '2.193.0', graduated: '3.41.0',
     use: 'The corner face is driven by the call\'s own audio — speaking with the agent\'s voice, listening with the microphone.', words: 'face animation audio' },
   { id: 'wake-word', licence: 'lab', name: 'Start a call by saying its name', page: 'settings/experiments', flag: 'wakeWord', state: 'experiment', since: '2.210.0',
     settings: ['call.wakeWord'],

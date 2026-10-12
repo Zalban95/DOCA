@@ -150,6 +150,7 @@ const MIGRATIONS = [
     describe: 'licence grace given (keys/licence-grace.json)',
     run() { return require('./license/grace').adopt() === 'given'; } }] },
   { id: '3.4-tool-tiers-graduated', note: 'tools are sent by tier for everyone now (harness.config.doca.toolsLoading); the experiment\'s switch is gone', steps: [drop('experiments.toolTiers')] },
+  { id: '3.41-face-voice-graduated', note: 'the face follows every voice call now; the experiment\'s switch is gone', steps: [drop('experiments.faceVoice')] },
 ];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);

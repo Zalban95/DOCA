@@ -88,7 +88,7 @@ test('talking over the voice pauses it; words stop it where the person stopped l
   }
 });
 
-test('with faceVoice on, the face speaks with the voice and listens to the person', () => {
+test('the face speaks with the voice and listens to the person (faceVoice, graduated 3.41.0)', () => {
   const { s, sandbox } = load();
   const seen = [];
   sandbox.faceCornerVoice = (state, level) => seen.push([state, Math.round(level * 100) / 100]);
