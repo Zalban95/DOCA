@@ -7,7 +7,8 @@
  */
 const vision = require('./index');
 const KEYS = { backend: /^(model|detector|text|template)$/, provider: /^[\w.-]{0,60}$/, model: /^[\w.:/@-]{0,120}$/,
-  detectorUrl: /^(https?:\/\/\S{3,300})?$/, detectorModel: /^[\w.-]{0,80}(\/\d{1,4})?$/, apiKey: /^[\w-]{0,80}$/, ocrLang: /^[a-z_+]{2,60}$/ };
+  detectorUrl: /^(https?:\/\/\S{3,300})?$/, detectorModel: /^[\w.-]{0,80}(\/\d{1,4})?$/, apiKey: /^[\w-]{0,80}$/, ocrLang: /^[a-z_+]{2,60}$/,
+  quickProvider: /^[\w.-]{0,60}$/, quickModel: /^[\w.:/@-]{0,120}$/, quickWhen: /^(cold|always|never)$/ };
 const { MASK } = require('../secrets-mask');
 
 const view = async () => {
@@ -25,6 +26,7 @@ function mount(app) {
       if (!re.test(b[k].trim())) return res.status(400).json({ error: `${k}: not a value this takes.` });
       next[k] = b[k].trim();
     }
+    if (typeof b.warmMain === 'boolean') next.warmMain = b.warmMain;
     savePrefs({ ...prefs, vision: next });
     res.json(await view());
   });

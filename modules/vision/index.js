@@ -31,6 +31,7 @@ const settings = () => ({
   backend: sc().value('vision.backend'), provider: sc().value('vision.provider'), model: sc().value('vision.model'),
   detectorUrl: sc().value('vision.detectorUrl'), detectorModel: sc().value('vision.detectorModel'), apiKey: sc().value('vision.apiKey'),
   ocrLang: sc().value('vision.ocrLang'),
+  quickProvider: sc().value('vision.quickProvider'), quickModel: sc().value('vision.quickModel'), quickWhen: sc().value('vision.quickWhen'), warmMain: sc().value('vision.warmMain'),
 });
 
 const run = (bin, args, opts = {}) => new Promise(resolve => execFile(bin, args, { timeout: 60000, maxBuffer: 16 << 20, windowsHide: true, ...opts },
@@ -49,8 +50,14 @@ function wanted(question) {
 
 const model = {
   label: 'a vision model',
-  ready: s => !!s.model,
-  async read(png, question, s) {
+  ready: s => !!(s.model || sc().value('vision.quickModel')),
+  async read(png, question, s, { person } = {}) {
+    // The main model, or the quick one while the main is not loaded (pick.js); a quick model not allotted to the
+    // person is not used for them (S13).
+    let m = await require('./pick').pick(s);
+    if (m.quick && person?.id && !require('../auth/allot').allowsModel(person, m)) m = { provider: s.provider, model: s.model, quick: false };
+    if (!m.model) throw Object.assign(new Error('No vision model is set (Settings → Harness → Vision).'), { status: 409 });
+    s = { ...s, provider: m.provider, model: m.model };
     const ep = require('../harness/providers').endpoint(s.provider);
     const r = await fetch(`${ep.baseUrl}/chat/completions`, { method: 'POST', signal: AbortSignal.timeout(180000),
       headers: { 'Content-Type': 'application/json', ...(ep.apiKey ? { Authorization: `Bearer ${ep.apiKey}` } : {}) },
@@ -59,7 +66,7 @@ const model = {
       .catch(e => { throw Object.assign(new Error(`${ep.label}: cannot reach ${ep.baseUrl} (${e.message})`), { status: 502 }); });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw Object.assign(new Error(`${ep.label} / ${s.model}: ${j.error?.message || j.error || `HTTP ${r.status}`}`), { status: 502 });
-    return { text: String(j.choices?.[0]?.message?.content || '').trim() || '(the model said nothing)', points: [] };
+    return { text: String(j.choices?.[0]?.message?.content || '').trim() || '(the model said nothing)', points: [], by: m.quick ? `${m.model} — ${m.why}` : s.model };
   },
 };
 
@@ -198,13 +205,13 @@ async function read(png, question, { how = 'auto', template: tpl, person } = {})
   if (!b) throw Object.assign(new Error(`No reader "${how}" — ${Object.keys(BACKENDS).join(', ')}, or none is set up (Settings → Harness → Vision).`), { status: 400 });
   if (how !== 'template' && !b.ready(s)) throw Object.assign(new Error(`${b.label} is not set up here (Settings → Harness → Vision).`), { status: 409 });
   require('../features/usage').count(`vision:${how}`);   // which reader is still used (features/review.js)
-  return { how, ...(await b.read(png, question, s, { template: tpl })) };
+  return { how, ...(await b.read(png, question, s, { template: tpl, person })) };
 }
 
 /** What the agent reads. */
 function say(r) {
   const pts = r.points.map(p => `- ${p.label} at ${p.x},${p.y}${p.score != null ? ` (${Math.round(p.score * 100)}%)` : ''}`).join('\n');
-  return [`[read by ${BACKENDS[r.how]?.label || r.how}]`, r.text, pts].filter(Boolean).join('\n');
+  return [`[read by ${BACKENDS[r.how]?.label || r.how}${r.by ? ` (${r.by})` : ''}]`, r.text, pts].filter(Boolean).join('\n');
 }
 
 module.exports = { BACKENDS, SYSTEM, settings, available, anyReady, read, say, wanted, tsvWords, findPhrases, linesOf };

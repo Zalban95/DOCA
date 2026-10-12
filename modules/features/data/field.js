@@ -92,7 +92,7 @@ module.exports = [
   { id: 'research-docs', licence: 'core', name: 'Reading documentation out of context', tools: ['research_docs'],
     use: 'Someone else\'s documentation read by a model with no tools, and only its report handed back.', words: 'docs research read safely' },
   { id: 'vision-pass', licence: 'lab', name: 'Looking at a computer\'s screen', page: 'settings/harness', tools: ['computer_look'], flag: 'visionPass', state: 'experiment',
-    settings: ['vision.backend', 'vision.model'], since: '2.197.0', uses: 'tool:computer_look',
+    settings: ['vision.backend', 'vision.model', 'vision.quickModel', 'vision.quickWhen'], since: '2.197.0', uses: 'tool:computer_look',
     use: 'A vision model answers a question about a computer\'s screen with what is visible and where to click.', words: 'vision screenshot ocr see',
     routes: ['/api/vision*'] },
   { id: 'library', licence: 'lab', name: 'Library: your files searched by meaning', page: 'models', tools: ['library_search'], flag: 'library', state: 'experiment',

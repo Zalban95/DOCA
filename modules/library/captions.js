@@ -15,18 +15,18 @@ const SYSTEM = 'You write one short plain caption for a picture from someone\'s 
 
 const sc = () => require('../settings-schema');
 function ready() {
-  return sc().value('library.captions') === true && !!sc().value('vision.model');
+  return sc().value('library.captions') === true && !!(sc().value('vision.model') || sc().value('vision.quickModel'));
 }
 /** Why captions are not written, for the section; null when they are. */
 function why() {
   if (sc().value('library.captions') !== true) return 'off';
-  if (!sc().value('vision.model')) return 'no vision model is set (Settings → Harness → Vision)';
+  if (!sc().value('vision.model') && !sc().value('vision.quickModel')) return 'no vision model is set (Settings → Harness → Vision)';
   return null;
 }
 
 /** One line for a JPEG; throws with the provider's words. */
 async function caption(jpeg, signal) {
-  const provider = sc().value('vision.provider'), model = sc().value('vision.model');
+  const { provider, model } = await require('../vision/pick').pick();   // the quick model while the main is not loaded
   const ep = require('../harness/providers').endpoint(provider);
   const r = await fetch(`${ep.baseUrl}/chat/completions`, { method: 'POST', signal: signal || AbortSignal.timeout(180000),
     headers: { 'Content-Type': 'application/json', ...(ep.apiKey ? { Authorization: `Bearer ${ep.apiKey}` } : {}) },
