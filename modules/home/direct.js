@@ -42,6 +42,11 @@ function onEvent(ev) {
     if (tile) live.changed('home', id, 'state', { tile, home: ID });
     return;
   }
+  // HA's own settings changed (units, the place's name): read them again, so the page never shows yesterday's.
+  if (ev?.event_type === 'core_config_updated') {
+    S.link?.cmd('get_config').then(c => { if (c) { S.config = c; live.changed('home', null, 'layout', { home: ID }); } }).catch(() => {});
+    return;
+  }
   if (/_registry_updated$/.test(ev?.event_type || '')) { clearTimeout(S.regTimer); S.regTimer = setTimeout(() => registries().then(() => live.changed('home', null, 'layout', { home: ID })).catch(() => {}), 1000); }
 }
 
@@ -69,7 +74,7 @@ async function ensure() {
       S.states = new Map((states || []).map(s => [s.entity_id, s]));
       await registries();
       await c.cmd('subscribe_events', { event_type: 'state_changed' });
-      for (const t of ['area_registry_updated', 'entity_registry_updated', 'device_registry_updated']) await c.cmd('subscribe_events', { event_type: t }).catch(() => {});
+      for (const t of ['area_registry_updated', 'entity_registry_updated', 'device_registry_updated', 'core_config_updated']) await c.cmd('subscribe_events', { event_type: t }).catch(() => {});
     } catch (e) { S.link = null; c.close(); throw e; }
     S.error = null;
     if (!S.sweep) { S.sweep = setInterval(sweep, 15000); S.sweep.unref?.(); }
