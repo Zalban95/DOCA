@@ -1703,7 +1703,7 @@ else may join (404 as if absent), an admin included.
 | GET, POST | `/people/notify` | `harness:chat` | which hive-chat messages reach the person's devices and linked chats, and how (§23.3) |
 | POST | `/schedules/:id/state` | `harness:chat` | on / paused; never on for an `agent` device |
 | GET | `/face`, `/face/stream` | `harness:sessions` | what the hive is doing (§23.2) |
-| GET | `/clients/android/:app`, `/clients/android/:app/apk` | any | the newest build of DocaMobile or DocaWear this hub keeps: `versionCode`, `versionName`, `sha256`, `bytes`, `url`; update when `versionCode` is higher than yours, and check the download's sha256 |
+| GET | `/clients/android/:app`, `/clients/android/:app/apk` | any | the newest build of DocaMobile (`docamobile`), DocaWear (`docawear`) or DocaWear's watch face (`docawear-face`) this hub keeps: `versionCode`, `versionName`, `sha256`, `bytes`, `url`; update when `versionCode` is higher than yours, and check the download's sha256. The watch face also carries `validationToken`, which Watch Face Push requires with the APK (DocaWear hands both to `WatchFacePushManager`) |
 | GET | `/agent/devices` | `agent` | devices with effective profiles |
 | POST / GET / DELETE | `/agent/prompts[/:id]` | `agent` | raise / list / cancel |
 | POST | `/agent/prompts/:id/outcome` | `agent` | resolve a pending selection |

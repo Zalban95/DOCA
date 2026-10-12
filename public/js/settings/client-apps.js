@@ -1,4 +1,4 @@
-/* Field → API keys → DOCA apps (modules/client-apps): the newest DocaMobile and DocaWear APKs this hub keeps — to
+/* Field → API keys → DOCA apps (modules/client-apps): the newest DocaMobile, DocaWear and DocaWear face APKs this hub keeps — to
    download, to upload, or to build right here from their repositories — and the key they are signed with. A phone's
    DocaMobile checks /api/v1/clients/android/docamobile and offers (or installs) what is newer than itself. */
 async function clientAppsRender() {
@@ -15,19 +15,20 @@ async function clientAppsRender() {
     return `<div class="tool-row" style="grid-template-columns:auto 1fr auto;align-items:center">
       <span class="tool-label">${escHtml(a.label)}</span>
       <span class="tool-note ca-note" style="white-space:normal">${l ? `<b>${escHtml(l.versionName)}</b> (${l.versionCode}) · ${(l.bytes / 1e6).toFixed(1)} MB · ${l.from === 'build' ? 'built here' : 'uploaded'} ${escHtml(new Date(l.at).toLocaleString())}` : 'No build kept yet.'}
-        ${host ? `<br>Source ${infoBtn('The folder on this machine holding the app\'s source code (a git checkout). Pull & build updates it and builds the app from it here. Empty: build is off; an APK can still be uploaded.')} <input class="input" id="ca-repo-${id}" aria-label="Source folder" data-path-pick="dir" value="${escHtml(a.repo)}" placeholder="the repository folder on this machine" style="width:min(360px,100%);margin-top:4px">
+        ${host ? `<br>Source ${infoBtn('The folder on this machine holding the app\'s source code (a git checkout). Pull & build updates it and builds the app from it here. Empty: build is off; an APK can still be uploaded.')} <input class="input" id="ca-repo-${id}" aria-label="Source folder" data-path-pick="dir" value="${escHtml(a.repo)}" placeholder="${a.repoFrom ? escHtml(`${s.apps[a.repoOf]?.label || ''}'s: ${a.repoFrom}`) : 'the repository folder on this machine'}" style="width:min(360px,100%);margin-top:4px">
           <button class="btn btn-xs" onclick="clientAppsRepo('${id}')">Save</button>` : ''}</span>
       <span class="tool-actions" style="flex-wrap:wrap;gap:4px">
         ${l ? `<a class="btn btn-xs btn-teal" href="/api/clients/apps/${id}/apk" download>⬇ APK</a>` : ''}
-        ${l && host ? `<button class="btn btn-xs" onclick="clientAppsLink('${id}')" title="A link that needs no sign-in, for 10 minutes — to open on a phone">🔗 Link</button>` : ''}
-        ${host ? `<button class="btn btn-xs" ${a.repo ? '' : 'disabled title="Say where its repository is"'} onclick="clientAppsBuild('${id}', true)" title="git pull, build, keep">⟳ Pull &amp; build</button>
-          <label class="btn btn-xs" title="Keep an APK built elsewhere">⬆ Upload<input type="file" accept=".apk" hidden onchange="clientAppsUpload('${id}', this.files[0])"></label>` : ''}
+        ${l && host && !a.needsToken ? `<button class="btn btn-xs" onclick="clientAppsLink('${id}')" title="A link that needs no sign-in, for 10 minutes — to open on a phone">🔗 Link</button>` : ''}
+        ${host ? `<button class="btn btn-xs" ${a.repo || a.repoFrom ? '' : 'disabled title="Say where its repository is"'} onclick="clientAppsBuild('${id}', true)" title="git pull, build, keep">⟳ Pull &amp; build</button>
+          <label class="btn btn-xs" title="Keep an APK built elsewhere">⬆ Upload<input type="file" accept=".apk" hidden onchange="clientAppsUpload('${id}', this.files[0], ${a.needsToken ? 'true' : 'false'})"></label>` : ''}
       </span></div>`;
   };
   card.innerHTML = `<div class="card-title">${escHtml(brand)} apps</div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:6px">The phone and watch apps this hub hands out: download one here, or let the phone app update itself.</p>
     <details class="desc page-about" style="margin:0 0 10px;font-size:11px"><summary>How updates work</summary>The newest DocaMobile and DocaWear this hub keeps. DocaMobile checks here and
-      offers the update itself (Settings → Updates in the app). Build them here from their repositories, or upload an APK built elsewhere.
+      offers the update itself (Settings → Updates in the app). The DocaWear face is built from DocaWear's repository with its
+      Watch Face Push token; DocaMobile's Settings → Watch puts it on a Wear OS 6 watch. Build them here from their repositories, or upload an APK built elsewhere.
       An update installs only over an app signed with the same key: ${s.signing.kept ? `the hub signs with its key (${escHtml(s.signing.alias || '')}, ${escHtml(s.signing.sha256 || '')}).`
         : '<b>the hub holds no signing key yet</b> — builds here use this machine\'s debug key.'}</details>
     ${Object.entries(s.apps).map(([id, a]) => row(id, a)).join('')}
@@ -57,10 +58,17 @@ async function clientAppsBuild(id, pull) {
   clientAppsRender().then(() => { const o = document.getElementById('client-apps-out'); if (o && out) { o.style.display = 'block'; o.textContent = out.textContent; } });
 }
 
-async function clientAppsUpload(id, file) {
+async function clientAppsUpload(id, file, needsToken) {
   if (!file) return;
+  // The watch face is kept only with its Watch Face Push token, which the validator printed for this very APK.
+  if (needsToken) return appPrompt('The watch face\'s validation token (what the Watch Face Push validator printed for this APK and tech.honlab.doca):',
+    t => { if (t && t.trim()) clientAppsSend(id, file, { 'X-Validation-Token': t.trim() }); });
+  clientAppsSend(id, file, {});
+}
+
+async function clientAppsSend(id, file, extra) {
   try {
-    const r = await fetch(`/api/clients/apps/${id}`, { method: 'POST', body: file, headers: { 'Content-Type': 'application/octet-stream', 'Sec-Fetch-Site': 'same-origin' } });
+    const r = await fetch(`/api/clients/apps/${id}`, { method: 'POST', body: file, headers: { 'Content-Type': 'application/octet-stream', 'Sec-Fetch-Site': 'same-origin', ...extra } });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
   } catch (e) { return appAlert(e.message); }

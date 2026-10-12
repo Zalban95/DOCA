@@ -27,8 +27,8 @@ function run(cmd, args, opts, say) {
 
 async function build(app, { pull = false } = {}, say = () => {}) {
   const a = apps.known(app);
-  const repo = apps.settings().apps[app].repo;
-  if (!repo) throw Object.assign(new Error(`Say where ${a.label}'s repository is first (Settings → DOCA apps).`), { status: 409 });
+  const repo = apps.repoFor(app);
+  if (!repo) throw Object.assign(new Error(`Say where ${a.repoOf ? apps.known(a.repoOf).label : a.label}'s repository is first (Settings → DOCA apps).`), { status: 409 });
   if (_running) throw Object.assign(new Error(`${_running} is building; one at a time.`), { status: 409 });
   _running = a.label;
   try {
@@ -53,9 +53,12 @@ async function build(app, { pull = false } = {}, say = () => {}) {
     if (!fs.existsSync(out)) throw new Error(`The build said it worked, but ${a.apk} is not there.`);
     // What the build file says, for when the APK cannot be read (aapt2 missing from the SDK).
     let given = {};
-    try { const g = fs.readFileSync(path.join(repo, 'app', 'build.gradle.kts'), 'utf8');
+    try { const g = fs.readFileSync(path.join(repo, a.buildFile || 'app/build.gradle.kts'), 'utf8');
       given = { versionCode: (/versionCode\s*=\s*(\d+)/.exec(g) || [])[1], versionName: (/versionName\s*=\s*"([^"]+)"/.exec(g) || [])[1] }; } catch { /* none */ }
-    const meta = apps.keep(app, fs.readFileSync(out), { from: 'build', force: true, given });
+    // The watch face's Watch Face Push token, which its build writes beside the APK (DocaWear's :watchface).
+    const validationToken = a.token ? (() => { try { return fs.readFileSync(path.join(repo, a.token), 'utf8').trim(); } catch { return ''; } })() : undefined;
+    if (a.token && !validationToken) throw new Error(`The build made no validation token (${a.token}): the repository's :watchface is older than Watch Face Push.`);
+    const meta = apps.keep(app, fs.readFileSync(out), { from: 'build', force: true, given, validationToken });
     say(`✓ ${a.label} ${meta.versionName} (${meta.versionCode}) kept — devices that check will offer it.\n`);
     return meta;
   } finally { _running = null; }
