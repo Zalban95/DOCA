@@ -115,7 +115,7 @@ function message(e, who = 'The person') {
  * ended under REOPEN_MS ago reopens for it. Refused for a job a person stopped or one long finished.
  * @returns {'reading'|'started'|'queued'}
  */
-function tell(id, e, who) {
+function tell(id, e, who, asker = null) {
   const organization = require('./organization'), agent = require('./agent');
   const s = organization.session(id), job = s.job || {};
   if (['stopped', 'dropped'].includes(job.state)) throw error(`"${s.title}" is ${job.state}: restart it first (work_chats restart), or start a new job.`);
@@ -123,8 +123,8 @@ function tell(id, e, who) {
   if (ended && Date.now() - Date.parse(job.at || s.updatedAt || 0) > REOPEN_MS)
     throw error(`"${s.title}" finished more than ${REOPEN_MS / 60e3} minutes ago: start a new job for this instead.`);
   const text = message(e, who);
-  if (ended) { organization.start(id, text, memory.mainSession().id); markRead(id, e.id); return 'started'; }
-  const r = agent.send({ sessionId: id, message: text, client: { name: 'Delegated by Orchestrator', kind: 'agent' } }, { onRead: () => markRead(id, e.id) });
+  if (ended) { organization.start(id, text, memory.mainSession().id, { asker }); markRead(id, e.id); return 'started'; }
+  const r = agent.send({ sessionId: id, message: text, client: { name: 'Delegated by Orchestrator', kind: 'agent', ...(asker?.id ? { askedBy: asker } : {}) } }, { onRead: () => markRead(id, e.id) });
   if (r.queued) return 'queued';
   r.catch?.(() => { /* the runner records failure and reports it upward */ });
   markRead(id, e.id);

@@ -133,9 +133,10 @@ function handOff({ session, message, from, reply, say, step, person = null, spok
     + 'Check what was done rather than trusting the summary, carry the job to the end, and report with work_chats.';
   organization.start(chat.id, task, session.id);
   say({ type: 'handoff', step, sessionId: chat.id, title: chat.title, from: session.id });   // `from`: a call open there follows it
-  if (spoken) return 'That is a longer job, so it carries on in a work chat. I will tell you when it is done.';
+  const manual = require('../manual-note').note(session.id, { spoken });   // Manual: the price, and Auto offered
+  if (spoken) return 'That is a longer job, so it carries on in a work chat. I will tell you when it is done.' + manual;
   return `This is turning into a longer job, so it carries on in the work chat **${chat.title}** — I'm free in the meantime, `
-    + 'and I will tell you when it reports.';
+    + 'and I will tell you when it reports.' + manual;
 }
 
 module.exports = { isWork, isQuick, handOff, doneSince, limitFor, counter, step, callLine, COORD, LOOK, QUICK, SMALL_STEPS, LARGE_STEPS };

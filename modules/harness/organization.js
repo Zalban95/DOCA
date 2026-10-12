@@ -179,7 +179,7 @@ function create({ title, planning = false, kind = 'work', mode = null, fields = 
 }
 
 /** `attachments` go with the task as the person's files did; `origin` is where a forked job came from (fork.js). */
-function start(id, message, from, { attachments = [], origin = null } = {}) {
+function start(id, message, from, { attachments = [], origin = null, asker = null } = {}) {
   const s = session(id);
   if (s.archivedAt) throw error('Recall this archived conversation before continuing.');
   const agent = require('./agent');
@@ -191,7 +191,7 @@ function start(id, message, from, { attachments = [], origin = null } = {}) {
   if (!busy) memory.updateSession(id, { job: { state: 'working', since: new Date().toISOString(), autoTurns: 0, idleTurns: 0, ...(origin ? { origin } : {}) } });
   // All entry points use the same runner and lock, including direct intervention.
   const r = agent.send({ sessionId: id, message: short(message, 20000), ...(attachments.length ? { attachments } : {}),
-    client: { name: 'Delegated by ' + (memory.getSession(from)?.title || 'Orchestrator'), kind: 'agent' } });
+    client: { name: 'Delegated by ' + (memory.getSession(from)?.title || 'Orchestrator'), kind: 'agent', ...(asker?.id ? { askedBy: asker } : {}) } });
   if (r.queued) return { sessionId: id, state: 'queued', note: 'It is working: it reads this before its next step.' };
   r.catch(() => { /* the runner records failure and reports it upward */ });
   return { sessionId: id, state: 'running' };
