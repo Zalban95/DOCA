@@ -13,7 +13,7 @@ const board = require('./board');
 const look = {
   mission: id => require('../agents/missions').get(id),
   session: id => require('../harness/memory').getSession(id),
-  budget: agentId => require('../agents/registry').get(agentId)?.maxSteps || 30,
+  budget: agentId => (require('./outside').isOutside(agentId) ? null : require('../agents/registry').get(agentId)?.maxSteps || 30),   // an outside CLI has no step budget: its plan says how far
 };
 const views = team => board.tasks(team, look);
 /** Work chats doing a team's task: the live feed's conversation changes are looked at only for these. */
@@ -36,7 +36,7 @@ function brief(team, t) {
   const others = team.tasks.filter(x => x.id !== t.id).map(x => `${x.id} "${x.title}" (${x.agent})`).join('; ');
   return [`## Your team\nYou are task ${t.id} of team "${team.title}" (${team.id}).${team.goal ? ` The team's goal: ${team.goal}` : ''}`,
     t.contract?.done ? `Your task is done when ${t.contract.done}${t.contract.check ? ' — the hub checks it when you finish' : ''}.` : '',
-    others ? `Your teammates: ${others}. If you find something they need (a path, a decision, a pitfall), post it with team_note — short, and only what helps them.` : '',
+    others && !require('./outside').isOutside(t.agent) ? `Your teammates: ${others}. If you find something they need (a path, a decision, a pitfall), post it with team_note — short, and only what helps them.` : others ? `Your teammates: ${others}.` : '',
   ].filter(Boolean).join('\n');
 }
 
@@ -51,6 +51,13 @@ async function dispatch(team, t) {
     delivered.length || chats.length ? `## What the tasks before yours delivered\n${[require('../agents/after').handed(delivered), ...chats].filter(Boolean).join('\n\n')}` : '',
   ].filter(Boolean).join('\n\n');
   try {
+    if (require('./outside').isOutside(t.agent)) {   // an outside harness in its own computer, on a branch of its own (harness-teams/)
+      if (!require('../harness-teams').room()) return;   // teams.outside.maxWorkers already at work: queued, dispatched when one ends
+      const m = await require('../harness-teams').dispatch(team, t, { context });
+      t.missionId = m.id;
+      t.startedAt = new Date().toISOString();
+      return;
+    }
     const { fields, place } = await require('./place').forTask(team, t);
     if (place) t.place = place;
     const where = place ? `\n\n## Where you work\n${place.worktree ? `In the project's git worktree ${place.worktree.path}, on the branch ${place.worktree.branch} — your own, so teammates working at the same time do not touch your files. Commit your work there; merging it back is the person's call.`

@@ -25,7 +25,6 @@
  * happened.
  */
 const crypto = require('crypto');
-
 const store = require('../store');
 const agent = require('../harness/agent');
 const memory = require('../harness/memory');
@@ -33,9 +32,8 @@ const registry = require('./registry');
 
 const INDEX = 'agents/missions';
 const MAX_INDEX = 200;
-/** A mission's own event log, one per mission, so concurrent ones never race. */
-// A real path in the data dir. `store.appendJsonl` takes a file path, not a
-// store name, so the old `agents/mission-<id>` landed in the repo checkout.
+/** A mission's own event log, one per mission, so concurrent ones never race — a real path in the data dir
+ *  (`store.appendJsonl` takes a file path, not a store name: `agents/mission-<id>` once landed in the checkout). */
 const logFor = id => require('path').join(store.dir('agents'), `mission-${id}.jsonl`);
 
 /* ── Index ────────────────────────────────────────────── */
@@ -50,6 +48,8 @@ function saveIndex(rows) {
 }
 
 function get(id) { return loadIndex().find(m => m.id === id) || null; }
+/** A mission row made elsewhere — an outside harness's worker on a team (harness-teams/): listed, announced, stopped like any. */
+function insert(row) { saveIndex([...loadIndex(), row]); return row; }
 
 /**
  * The missions worth drawing. Archived ones are out unless asked for.
@@ -299,7 +299,7 @@ function dispatch({ agentId, task, context, by, chainId, plan, computer = null, 
     // it has bothered to write one.
     ...(plan ? { plan: normalizePlan(plan), planAt: new Date().toISOString() } : {}),
   };
-  saveIndex([...loadIndex(), row]);
+  insert(row);
   announce(row);
 
   const message = context
@@ -490,6 +490,6 @@ function block({ sessionId, completed = notices(sessionId) } = {}) {
 
 function _reset() { store.writeJson(INDEX, { missions: [] }); }
 
-module.exports = { announce, dispatch, recover, resume, archive, get, list, running, events, record, block, patch, notices, acknowledgeNotices,
+module.exports = { announce, dispatch, insert, recover, resume, archive, get, list, running, events, record, block, patch, notices, acknowledgeNotices,
   setPlan, planProgress, normalizePlan, forSession, profileOf,
   PLAN_MAX_ITEMS, PLAN_TITLE_MAX, PLAN_STATES, _reset };

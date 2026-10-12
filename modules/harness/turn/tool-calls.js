@@ -33,11 +33,11 @@ function byPerson({ client, isMission, profile, sessionId }) {
  * The person whose message an automatic turn read (deep test B, r15): a message queued for a working conversation is
  * read by whatever turn runs next, and when that was the supervisor's — no person on it — "make Chronicle first" became
  * a proposal although the person asked for exactly that. A queued message carries its author (inbox.js `client`), so
- * the settings and the panel layout they asked for (`asked: true`) are still theirs to decide: those two tools run as
+ * the settings, the panel layout and the outside harness they asked for (`asked: true`) are still theirs to decide: those tools run as
  * that person, within that person's level and every guard they check. Never for a mission or a specialist, and only
  * after their message was read in this turn.
  */
-const ASKED_TOOLS = new Set(['settings_propose', 'panel_layout']);
+const ASKED_TOOLS = new Set(['settings_propose', 'panel_layout', 'team']);   // team: an outside harness the person named (teams/outside.js)
 function askerOf(read, { client, isMission, profile }) {
   if (isMission || client?.user?.id) return null;
   if (profile && profile.level !== 'orchestrator' && profile.level !== 'work') return null;

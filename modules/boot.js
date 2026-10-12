@@ -9,7 +9,9 @@
 function afterListen({ certs = null, mode } = {}) {
   require('./panel-running').mark({ port: require('./paths').PORT });   // the token CLI asks whether a panel reads this data folder
   require('./harness/runs').recoverTurns();           // turns the last process was running ended with it — closed first, before anything carries on
-  require('./agents/carry-on').carryOn(require('./agents/missions').recover());   // specialists a restart cut off: carried on (V10)
+  const stuck = require('./agents/missions').recover();
+  require('./agents/carry-on').carryOn(stuck.filter(m => !m.outside));   // specialists a restart cut off: carried on (V10)
+  require('./harness-teams').recover(stuck.filter(m => m.outside));       // an outside harness's CLI is not followed across one: ended, its branch kept
   require('./agents/after').listen();                 // errands waiting on other missions' results start when those are done
   require('./teams').listen();                        // teams carry on: each task starts when the ones it comes after are done (teams/)
   require('./harness/workview').recover();            // work chats likewise, told to the devices

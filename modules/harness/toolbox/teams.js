@@ -23,12 +23,16 @@ module.exports = [
     description: 'Run a team: several errands for specialists at once, some waiting on others, each with a contract — the hub '
       + 'dispatches each task when the tasks it comes after are done, checks its contract when it finishes, and keeps a '
       + 'living document of the board. create makes one (title, goal, tasks); status reads one; stop ends every task; '
-      + 'keep_going on tries failed tasks again until every contract holds or its rounds run out. You do not dispatch a '
-      + 'team\'s tasks yourself, and you are not blocked: carry on, and read status when you need it.',
+      + 'keep_going on tries failed tasks again until every contract holds or its rounds run out; merge merges a task\'s branch into '
+      + 'the project\'s current branch. You do not dispatch a team\'s tasks yourself, and you are not blocked: carry on, and read status when you need it. '
+      + 'Only when the person names an outside harness in their request (Claude Code, Codex, dsh, Gemini CLI …) may a task\'s agent be '
+      + '"harness:<id>" — with asked: true — and it then works in a computer of its own on a branch of the project.',
     parameters: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['create', 'status', 'stop', 'keep_going'] },
+        action: { type: 'string', enum: ['create', 'status', 'stop', 'keep_going', 'merge'] },
+        asked: { type: 'boolean', description: 'create: true only when the person named the outside harness in their own words — "use Claude Code", "5 Claude on Opus", "with dsh". Never on your own initiative.' },
+        task: { type: 'string', description: 'merge: the task whose branch goes into the project\'s current branch.' },
         team: { type: 'string', description: 'status, stop, keep_going: the team id (status without one lists your teams).' },
         title: { type: 'string', description: 'create: a short name, e.g. "Landing page".' },
         goal: { type: 'string', description: 'create: what the whole team delivers, in a sentence.' },
@@ -43,7 +47,9 @@ module.exports = [
             properties: {
               id: { type: 'string', description: 'Short id, e.g. "design" (default t1, t2…).' },
               title: { type: 'string', description: 'One short line for the board.' },
-              agent: { type: 'string', description: 'The specialist\'s id from your prompt — or "work" for a work chat (the Orchestrator only).' },
+              agent: { type: 'string', description: 'The specialist\'s id from your prompt — or "work" for a work chat (the Orchestrator only), or "harness:<catalog id>" (harness:claude, harness:codex, harness:dsh, harness:gemini) only when the person named that harness.' },
+              model: { type: 'string', description: 'For a harness: that CLI\'s own model id, e.g. opus (dsh takes none).' },
+              count: { type: 'integer', description: 'Several alike (1–8), e.g. 5 for "five Claude Code": made into tasks <id>-1 … <id>-N sharing the plan.' },
               task: { type: 'string', description: 'The errand in full, for somebody who was not in this conversation.' },
               after: { type: 'array', items: { type: 'string' }, description: 'Ids of the tasks it needs finished first.' },
               done: { type: 'string', description: 'Its contract: "done when …", in a sentence.' },
@@ -66,7 +72,8 @@ module.exports = [
       const mine = id => { const team = t.get(id); if (!team || !require('../organization').canManage(ctx.sessionId, team.by)) throw Object.assign(new Error(`No team called "${id}" in your reporting line.`), { status: 404 }); return team; };
       try {
         if (a.action === 'create') {
-          const team = await t.create(a, { by: ctx.sessionId, keepGoing: a.keep_going === true, maxRounds: a.max_rounds ?? null });
+          const team = await t.create(a, { by: ctx.sessionId, keepGoing: a.keep_going === true, maxRounds: a.max_rounds ?? null,
+            asked: a.asked === true && !!ctx.byPerson, person: ctx.user || null });   // an outside harness: only the person's own ask (teams/outside.js)
           const v = t.view(team);
           if (typeof ctx.show === 'function' && team.doc?.name) ctx.show({ name: team.doc.name, mime: 'text/markdown', kind: 'doc',
             bytes: Buffer.byteLength(require('../../teams/doc').render(team, v.tasks)), caption: `Team: ${team.title} — its board, written again at every change` });
@@ -81,7 +88,14 @@ module.exports = [
         }
         if (a.action === 'stop') { mine(a.team); return `Stopped. ${said(await t.stop(a.team, { why: 'stopped by its leader' }))}`; }
         if (a.action === 'keep_going') { mine(a.team); return said(await t.keepGoing(a.team, a.on !== false)); }
-        return 'Error: action is create, status, stop or keep_going.';
+        if (a.action === 'merge') {
+          const v = t.view(mine(a.team));
+          const task = v.tasks.find(x => x.id === a.task);
+          if (!task?.place?.branch || !v.project) return `Error: task ${a.task || '(none)'} of ${v.id} has no branch of its own to merge.`;
+          const r = await require('../../harness-teams/branches').merge(v.project.root, task.place.branch, { by: 'the team\'s leader' });
+          return `Merged ${r.merged} into ${r.into}: ${r.head}.`;
+        }
+        return 'Error: action is create, status, stop, keep_going or merge.';
       } catch (e) { return `Error: ${e.message}`; }
     },
   },

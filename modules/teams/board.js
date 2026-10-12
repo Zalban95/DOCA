@@ -51,6 +51,7 @@ function task(t, { look, byId = new Map() } = {}) {
     const m = look.mission(t.missionId);
     if (!m) return { ...base, state: 'failed', percent: 0, why: 'its mission is gone' };
     ran = m.state === 'done' ? 'finished' : m.state; step = m.steps || 0; budget = look.budget(t.agent); why = m.error || null;
+    if (!budget && Array.isArray(m.plan) && m.plan.length) progress = m.plan.filter(i => i.state === 'done').length / m.plan.length;   // no step budget: its plan
   } else {
     const s = look.session(t.sessionId);
     if (!s) return { ...base, state: 'failed', percent: 0, why: 'its work chat is gone' };

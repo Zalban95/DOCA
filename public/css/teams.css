@@ -88,6 +88,12 @@ html[data-skin="points"] .tm-h { font-family: var(--font-mono); text-transform: 
 .pj-teams-body .desc { margin: 0 4px; font-size: 11px; }
 .agent-fold-body .tmm-card { margin-top: 4px; }
 html[data-skin="points"] .pj-teams-fold > summary { font-family: var(--font-mono); }
+/* Projects → Team branches (projects/team-branches.js) */
+.pj-tb-row { display: grid; gap: 2px; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--card, transparent); min-width: 0; }
+.pj-tb-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pj-tb-head code { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pj-tb-meta, .pj-tb-subj { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pj-tb-acts { display: flex; gap: 6px; justify-content: flex-end; margin-top: 2px; }
 
 @media (max-width: 640px) {
   .tm-task { grid-template-columns: 10px minmax(0, 1fr) 44px 34px; gap: 6px; }

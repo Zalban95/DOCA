@@ -1,0 +1,1 @@
+{ "name": "doca-harness-stub", "version": "1.0.0", "private": true, "description": "A stand-in for an outside harness CLI (test/harness-teams.test.js)", "bin": { "stubcli": "cli.js" } }
