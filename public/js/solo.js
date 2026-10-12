@@ -25,6 +25,10 @@ function soloStart() {
 
 /** A cast screen (a view link, cast/): its one page, nothing to go back to — the hub refuses the rest anyway. */
 async function _soloCastLock(bar) {
+  if (new URLSearchParams(location.search).get('cast') === '1') {   // opened by a view link: locked before anything is asked
+    document.body.classList.add('cast-view');
+    bar.querySelector('button[title^="Back"]')?.remove();
+  }
   let me = null;
   try { me = await apiFetch('/api/auth/me'); } catch { return; }
   if (!me?.view) return;
