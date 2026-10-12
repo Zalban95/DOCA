@@ -94,6 +94,8 @@ function close() {
   S.states.clear();
 }
 
+const BOOKKEEPING = new Set(['sun', 'zone', 'conversation', 'tts', 'stt', 'wake_word', 'todo', 'event', 'update', 'tag', 'image', 'ai_task']);
+
 /** Whether an entity is on the page at all: a kind it draws, not kept off by HA's registry. */
 const shown = id => DOMAINS.includes(id.split('.')[0]) && !hiddenByRegistry(S.reg.get(id));
 
@@ -113,10 +115,17 @@ async function snapshot() {
     if (!groups.has(area)) groups.set(area, []);
     groups.get(area).push(tile);
   }
+  // What HA has that the page does not draw yet, by kind (counts only): said, never silently missing. Not devices:
+  // HA's own bookkeeping kinds are left out of the count.
+  const notDrawn = {};
+  for (const [id] of S.states) {
+    const d = id.split('.')[0];
+    if (!DOMAINS.includes(d) && !BOOKKEEPING.has(d) && !hiddenByRegistry(S.reg.get(id))) notDrawn[d] = (notDrawn[d] || 0) + 1;
+  }
   const order = t => DOMAINS.indexOf(t.domain);
   const areas = [...groups].map(([id, tiles]) => ({ id: id || null, name: id ? S.areas.get(id) || id : 'Elsewhere', tiles: tiles.sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name)) }))
     .sort((a, b) => (!a.id) - (!b.id) || a.name.localeCompare(b.name));
-  return { connected: true, origin: k.origin, place: S.config?.location_name || null, version: S.version, units: S.config?.unit_system || null, areas };
+  return { connected: true, origin: k.origin, place: S.config?.location_name || null, version: S.version, units: S.config?.unit_system || null, areas, notDrawn };
 }
 
 /** A page holds the Home page open (or lets go): the connection stays while anyone holds it. */

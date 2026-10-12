@@ -109,6 +109,7 @@ test('with the key: areas from the registries, tiles only of what a tile needs, 
   const all = r.body.areas.flatMap(a => a.tiles.map(t => t.id));
   assert.ok(!all.includes('switch.hidden'), 'hidden in HA stays hidden');
   assert.ok(!all.includes('automation.night'), 'a kind the page does not draw');
+  assert.deepEqual(r.body.notDrawn, { automation: 1 }, 'a kind not drawn is counted for an admin, never silently missing; hidden ones are not');
   const text = JSON.stringify(r.body);
   for (const secret of [TOKEN, 'CAMTOKEN', 'SECRET']) assert.ok(!text.includes(secret), `${secret} reached the browser`);
 });
