@@ -71,6 +71,7 @@ async function _fcChatLoad() {
       else if (step.kind === 'tool-result') {
         const i = calls.findIndex(c => c.name === step.label);
         const call = i >= 0 ? calls.splice(i, 1)[0] : null;
+        if (['calendar', 'mail'].includes(step.label)) { box.append(_fcLater(fcEverydayFromResult(step.body))); continue; }   // the record as it is now (everyday.js)
         const card = call && fcCardFor(call.name, call.args, step.body);
         if (card) box.append(card);
       }
@@ -92,6 +93,14 @@ function _fcMsg(who, text, into = _fcChat?.box) {
   if (text) el.textContent = text;
   into?.append(el);
   return el;
+}
+
+/** A place for a card read back later (the person's accounts answer after the rows are drawn). */
+function _fcLater(p) {
+  const slot = document.createElement('div');
+  slot.className = 'fc-later';
+  p.then(card => { if (card) slot.replaceWith(card); else slot.remove(); }).catch(() => slot.remove());
+  return slot;
 }
 
 function _fcImgEl(img) {
@@ -147,7 +156,7 @@ function _fcTurnUi() {
     fold: (kind, body, name) => {
       if (kind === 'tool-call') { work?.remove(); work = Object.assign(document.createElement('div'), { className: 'fc-note fc-work', textContent: fcToolWords(name) }); c.box.append(work); work._call = { name, args: body }; _fcScroll(); return { setActive() {} }; }
       const call = work?._call; work?.remove(); work = null;
-      const card = call && fcCardFor(call.name, call.args, body);
+      const card = call && !['calendar', 'mail'].includes(call.name) && fcCardFor(call.name, call.args, body);
       if (card) { c.box.append(card); _fcScroll(); }
       return null;
     },
@@ -157,16 +166,23 @@ function _fcTurnUi() {
     error: msg => { typing?.remove(); typing = null; const n = Object.assign(document.createElement('div'), { className: 'fc-note fc-err', textContent: msg }); c.box.append(n); },
     userAdded: evt => _fcMsg('me', _fcPlain(evt.text)),
   });
+  // The person's own calendar and mail: a card from the record the tool wrote (everyday.js), not from its words.
+  const onEvent = evt => {
+    if (evt.type !== 'everyday') return sink.onEvent(evt);
+    work?.remove(); work = null;
+    const card = fcEverydayCard(evt);
+    if (card) { c.box.append(card); _fcScroll(); }
+  };
   const end = () => { typing?.remove(); work?.remove(); if (c.turn === turn) c.turn = null; if (state) state.textContent = 'Your conversation'; fcForget('/api/chat/history'); };
-  return { onEvent: sink.onEvent, onError: e => { sink.onError(e); end(); }, finish: () => { sink.finish(); end(); } };
+  return { onEvent, onError: e => { sink.onError(e); end(); }, finish: () => { sink.finish(); end(); } };
 }
 
 /** What a tool is doing, in words a person reads — never its arguments. */
 function fcToolWords(name = '') {
   if (/^connector_google/.test(name)) return 'Looking at your Google account…';
   if (/^connector_microsoft/.test(name)) return 'Looking at your Microsoft account…';
-  if (/^calendar_/.test(name)) return 'Checking your calendar…';
-  if (/^mail_/.test(name)) return 'Looking at your mail…';
+  if (/^calendar/.test(name)) return 'Checking your calendar…';
+  if (/^mail/.test(name)) return 'Looking at your mail…';
   const words = { remind: 'Setting a reminder…', web_search: 'Searching the web…', http_fetch: 'Reading a page…', memory_search: 'Remembering…',
     memory_write: 'Keeping that in mind…', canvas: 'Making a page…', work_chats: 'Handing it on…', show_media: 'Showing you something…', today: 'Looking at your day…' };
   return words[name] || 'Working on it…';

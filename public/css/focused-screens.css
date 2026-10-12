@@ -154,6 +154,15 @@
 .fc-acct { width: 36px; height: 36px; border-radius: 10px; background: var(--raised); border: 1px solid var(--fc-line); display: grid; place-items: center; font-weight: 600; color: var(--bright); flex: none; }
 .fc-row > .fc-acct + .fc-row-b + .fc-pt { margin-top: 14px; }
 
+/* The person's own calendar and mail (focused/everyday.js, mail.js) */
+.fc-undone { opacity: .7; }
+.fc-edit { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+#focused .fc-edit .fc-field { height: 44px; font-size: 14px; }
+#focused .fc-edit .fc-area { height: auto; min-height: 120px; padding: 12px 16px; resize: vertical; line-height: 1.45; }
+.fc-mail-h { margin: 6px 0 2px; }
+.fc-mail-read { margin-top: 10px; }
+#fc-mail-drafts .fc-result { margin-top: 12px; max-width: none; }
+
 /* Share */
 .fc-sheet-back { position: fixed; inset: 0; z-index: 65; background: rgba(0,0,0,.45); display: grid; place-items: center; padding: 16px; }
 .fc-sheet { width: min(480px, 100%); padding: 22px 24px; display: flex; flex-direction: column; gap: 12px; }
@@ -175,6 +184,8 @@
   .fc-strip-lab { display: none; }
   .fc-home .fc-strip-slot { position: sticky; bottom: 8px; z-index: 2; }
   .fc-days.fc-phone-only { display: flex !important; }
+  .fc-agenda > .fc-phone-only { flex: 1 1 100%; }
+  .fc-focus-mail .fc-days { display: none !important; }
   .fc-conv { padding: 0 16px 12px; }
   .fc-conv-head { margin: 0 -16px; padding: 4px 8px 10px; }
   .fc-me { max-width: 85%; padding: 12px 16px; }

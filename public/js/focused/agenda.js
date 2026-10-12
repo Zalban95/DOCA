@@ -1,6 +1,7 @@
 /* Calendar and Mail at a glance: what needs the person first (the agents' questions, notices, a reminder), the week
    from today with what the assistant set tinted and a clash outlined in amber, and mail today (focused/mail.js).
-   The week is the calendars this person may see (GET /api/ambient/week — the same rule as Ambient's day). */
+   The week is the calendars this person may see and their own accounts (GET /api/ambient/week — Ambient's rule), with
+   what the assistant added marked from the action log. */
 async function fcAgendaRender(el, focus = 'calendar') {
   el.innerHTML = `
     <div class="fc-agenda fc-focus-${focus}">
@@ -11,27 +12,14 @@ async function fcAgendaRender(el, focus = 'calendar') {
       <section class="fc-card fc-pad fc-ag-mail" id="fc-ag-mail"><div class="fc-head"><span class="fc-lab">Mail today</span><span class="fc-muted fc-small" id="fc-mail-src"></span></div><div id="fc-mail"></div></section>
     </div>`;
   fcMailSection(document.getElementById('fc-mail'));
-  const [day, week, set] = await Promise.all([fcToday(), fcWeek(), _fcSetTitles()]);
+  const [day, week] = await Promise.all([fcToday(), fcWeek()]);
   if (!document.getElementById('fc-week')) return;
-  const n = await fcNeedsRows(document.getElementById('fc-ag-needs'), day, { limit: 8 });
+  const n = await fcNeedsRows(document.getElementById('fc-ag-needs'), day, { limit: 8, mail: false });   // mail has its own section below
   document.getElementById('fc-ag-needs-lab').textContent = n ? `Needs you · ${n}` : 'Needs you';
-  fcBellCount(n);
-  _fcWeek(document.getElementById('fc-week'), week, set);
+  _fcWeek(document.getElementById('fc-week'), week);
   _fcDays(document.getElementById('fc-days'), week);
   const src = document.getElementById('fc-week-src');
   if (src) src.textContent = (week.sources || []).map(s => ({ google: 'Google Calendar', microsoft: 'Microsoft 365' }[s] || s)).join(' · ');
-  if (focus === 'mail' && window.matchMedia('(max-width: 720px)').matches) document.getElementById('fc-ag-mail')?.scrollIntoView({ block: 'start' });
-}
-
-/** The titles of events the assistant added in this conversation: tinted "set by" in the week. */
-async function _fcSetTitles() {
-  const h = await fcHistory().catch(() => ({}));
-  const out = new Set();
-  for (const m of h.messages || []) for (const s of m.working || []) {
-    if (s.kind !== 'tool-call' || !/calendar|^connector_/.test(s.label || '')) continue;
-    try { const a = JSON.parse(s.body || '{}'); const t = a.body?.summary || a.body?.subject || a.summary || a.title; if (t && (/^calendar_/.test(s.label) || /POST/.test(a.method || ''))) out.add(String(t).toLowerCase()); } catch { /* not JSON */ }
-  }
-  return out;
 }
 
 function _fcWeekDays(week) {
@@ -39,7 +27,7 @@ function _fcWeekDays(week) {
   return Array.from({ length: week.days || 7 }, (_, i) => new Date(from.getTime() + i * 86400000));
 }
 
-function _fcWeek(box, week, set) {
+function _fcWeek(box, week) {
   if (!box) return;
   if (week.none || !week.events) {
     box.innerHTML = `<div class="fc-row-empty fc-muted fc-small">${escHtml(week.none || 'No calendar to show.')}</div>`;
@@ -51,7 +39,7 @@ function _fcWeek(box, week, set) {
     const clash = new Set();
     evs.forEach((a, i) => evs.slice(i + 1).forEach(b => { if (!a.allDay && !b.allDay && Date.parse(b.start) < Date.parse(a.end) && Date.parse(a.start) < Date.parse(b.end)) { clash.add(a); clash.add(b); } }));
     return `<div class="fc-col"><div class="fc-dh${fcSameDay(d, today) ? ' on' : ''}">${escHtml(fcDay(d))} <b>${d.getDate()}</b></div>
-      ${evs.map(e => { const mine = set.has(String(e.title).toLowerCase());
+      ${evs.map(e => { const mine = !!e.setByAssistant;   // from the action log (ambient/calendar.js week)
         return `<div class="fc-ev${mine ? ' set' : ''}${clash.has(e) ? ' clash' : ''}"><div class="fc-mono fc-ev-t">${escHtml(fcTime(e.start, e.allDay))}</div><span class="${mine ? 'fc-bright' : ''}">${escHtml(e.title)}</span>${e.where ? `<div class="fc-muted fc-ev-w">${escHtml(e.where)}</div>` : ''}${mine ? `<div><span class="fc-tag">set by ${escHtml(product)}</span></div>` : ''}${clash.has(e) ? '<div><span class="fc-tag a">overlaps</span></div>' : ''}</div>`; }).join('')}</div>`;
   }).join('');
 }

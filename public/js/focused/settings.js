@@ -57,20 +57,30 @@ async function fcSetWake(btn) {
   catch (e) { btn.setAttribute('aria-checked', String(!on)); appAlert(`Not kept: ${e.message}`); }
 }
 
+/** Your accounts (modules/accounts): the person's own Google and Microsoft 365, each as it stands, and Connect —
+ *  the same route as Field → Connectors → Your accounts, which "More" opens for reading times, rules and the log. */
 async function _fcSetAccounts(box, host) {
-  if (!host) {
-    const day = await fcToday();
-    box.innerHTML = `<p class="fc-muted fc-small">${day.calendar?.none ? 'Calendars and mail are connected by whoever runs this hub. Ask them to connect one and open it to you.' : 'A calendar is shared with you by whoever runs this hub.'}</p>`;
-    return;
-  }
-  const list = await apiFetch('/api/connectors').then(r => r.connectors || []).catch(() => []);
-  const rows = list.filter(c => ['google', 'microsoft'].includes(c.id) || c.connected);
+  const d = await apiFetch('/api/accounts').catch(() => ({ accounts: [], providers: [] }));
   const mark = { google: 'G', microsoft: 'M' };
-  box.innerHTML = (rows.length ? rows : [{ id: 'google', label: 'Google' }, { id: 'microsoft', label: 'Microsoft 365' }]).map(c => `<div class="fc-row">
-      <span class="fc-acct" aria-hidden="true">${escHtml(mark[c.id] || String(c.label || c.id)[0].toUpperCase())}</span>
-      <div class="fc-row-b"><div class="fc-bright">${escHtml(c.label || c.id)}</div><div class="fc-muted fc-small">${escHtml(c.connected ? (c.account || 'Connected') : 'Not connected')}</div></div>
-      ${c.connected ? '<span class="fc-pt" aria-hidden="true"></span><span class="fc-small fc-accent">Connected</span>' : ''}
-      <button type="button" class="fc-btn fc-sm" onclick="fcPeek('connectors')">${c.connected ? 'Manage' : 'Connect'}</button></div>`).join('');
+  const ready = (d.providers || []).filter(p => p.ready && p.allowed);
+  box.innerHTML = `${(d.accounts || []).map(a => `<div class="fc-row">
+      <span class="fc-acct" aria-hidden="true">${escHtml(mark[a.provider] || String(a.providerLabel || a.provider)[0].toUpperCase())}</span>
+      <div class="fc-row-b"><div class="fc-bright">${escHtml(a.label || a.providerLabel)}</div><div class="fc-muted fc-small">${escHtml([a.account, a.access === 'read' ? 'read only' : 'calendar and mail'].filter(Boolean).join(' · '))}</div></div>
+      ${a.connected ? '<span class="fc-pt" aria-hidden="true"></span><span class="fc-small fc-accent">Connected</span>' : '<span class="fc-pt a" aria-hidden="true"></span><span class="fc-small">Sign in again</span>'}</div>`).join('')
+    || '<p class="fc-muted fc-small">Connect your own calendar and mail: what needs you shows first, and every change the assistant makes has an Undo.</p>'}
+    <div class="fc-acts">${ready.map(p => `<button type="button" class="fc-btn fc-sm" data-connect="${escHtml(p.id)}">Connect ${escHtml(p.label)}</button>`).join('')}
+      <button type="button" class="fc-btn fc-sm fc-q" onclick="fcPeekAccounts()">More: reading times, rules, what was changed</button></div>
+    ${ready.length ? '' : `<p class="fc-muted fc-small">${host ? 'Set up Google or Microsoft 365 once for this hub first (Field → Connectors), then connect your account here.' : 'Whoever runs this hub sets up Google or Microsoft 365 first; then you connect your own account here.'}</p>`}`;
+  box.querySelectorAll('[data-connect]').forEach(b => { b.onclick = async () => {
+    try { const r = await apiFetch('/api/accounts/connect', { method: 'POST', body: { provider: b.dataset.connect, access: 'full' } }); window.open(r.url, '_blank', 'noopener'); }
+    catch (e) { appAlert(`Could not start: ${e.message}`); }
+  }; });
+}
+
+/** Field → Connectors → Your accounts, for this moment (the "Focused" pill comes back). */
+function fcPeekAccounts() {
+  fcPeek('connectors');
+  setTimeout(() => document.getElementById('accounts-card')?.scrollIntoView({ block: 'start' }), 600);
 }
 
 async function _fcSetNotices(box) {

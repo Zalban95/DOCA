@@ -71,7 +71,7 @@ function _fcHomeNext(box, cal, me) {
   const next = (cal?.events || []).filter(e => !e.end || Date.parse(e.end) > now).slice(0, 3);
   if (next.length) {
     box.innerHTML = next.map(e => `<div class="fc-row"><span class="fc-mono fc-bright fc-row-t">${escHtml(fcSameDay(new Date(e.start), new Date()) ? fcTime(e.start, e.allDay) : fcDay(new Date(e.start)))}</span>
-      <div class="fc-row-b"><div class="fc-bright">${escHtml(e.title)}</div><div class="fc-muted fc-small">${escHtml([fcSameDay(new Date(e.start), new Date()) ? '' : fcTime(e.start, e.allDay), e.where].filter(Boolean).join(' · ') || ' ')}</div></div></div>`).join('');
+      <div class="fc-row-b"><div class="fc-bright">${escHtml(e.title)}</div><div class="fc-muted fc-small">${escHtml([fcSameDay(new Date(e.start), new Date()) ? '' : fcTime(e.start, e.allDay), e.where].filter(Boolean).join(' · ') || ' ')}${e.setByAssistant ? ` <span class="fc-tag">set by ${escHtml(fcProduct())}</span>` : ''}</div></div></div>`).join('');
     return;
   }
   box.innerHTML = cal?.none
@@ -84,7 +84,7 @@ function _fcHomeNext(box, cal, me) {
  * What needs the person, calmly: the notices kept for them (a reminder, a note from the agents — each with Done), and
  * the questions waiting (answered in the cards at the side, as anywhere in the panel). Returns how many.
  */
-async function fcNeedsRows(box, day, { limit = 4 } = {}) {
+async function fcNeedsRows(box, day, { limit = 4, mail: withMail = true } = {}) {
   if (!box) return 0;
   const notices = await fcGet('/api/notices', 10000).then(r => r.notices || []).catch(() => []);
   const asks = fcNeedsYou(day).filter(n => n.kind === 'ask' || n.kind === 'propose' || n.kind === 'failed');
@@ -94,10 +94,18 @@ async function fcNeedsRows(box, day, { limit = 4 } = {}) {
     ...notices.slice(0, limit).map(n => `<div class="fc-row"><span class="fc-pt a" aria-hidden="true"></span><div class="fc-row-b"><div class="fc-bright">${escHtml(n.title || 'A note for you')}</div>${n.text ? `<div class="fc-muted fc-small">${escHtml(n.text)}</div>` : ''}</div>
       <button type="button" class="fc-btn fc-sm" onclick="fcNoticeDone(${jsArg(n.id)}, this)">Done</button></div>`),
   ];
-  const mail = typeof fcMailSummary === 'function' ? await fcMailSummary() : null;
-  if (mail?.handled) rows.push(`<div class="fc-row"><span class="fc-pt q" aria-hidden="true"></span><div class="fc-muted fc-small fc-row-b">${escHtml(mail.handled)}</div></div>`);
+  // The person's own mail (accounts/): what the reading says needs them, one action each — the draft waiting, or a look.
+  const mail = withMail && typeof fcMailNeeds === 'function' ? await fcMailNeeds().catch(() => null) : null;
+  for (const x of (mail?.needs || []).slice(0, limit)) {
+    const drafted = x.draftId && mail.drafts.some(d => d.id === x.draftId);
+    rows.push(`<div class="fc-row"><span class="fc-pt a" aria-hidden="true"></span><div class="fc-row-b"><div class="fc-bright">${escHtml(x.from?.name || x.from?.address || 'Someone')} <span class="fc-muted fc-small">· ${escHtml(x.subject || '')}</span></div>
+      <div class="fc-muted fc-small">${escHtml(drafted ? 'A reply is drafted for you to check.' : (x.why || x.snippet || ''))}</div></div>
+      <button type="button" class="fc-btn fc-sm" onclick="fcGo('mail')">${drafted ? 'Review' : 'Open'}</button></div>`);
+  }
+  const summary = withMail && typeof fcMailSummary === 'function' ? await fcMailSummary() : null;
+  if (summary?.handled) rows.push(`<div class="fc-row"><span class="fc-pt q" aria-hidden="true"></span><div class="fc-muted fc-small fc-row-b">${escHtml(summary.handled)}</div></div>`);
   box.innerHTML = rows.length ? rows.join('') : '<div class="fc-row-empty fc-muted fc-small">Nothing needs you right now.</div>';
-  return asks.length + notices.length;
+  return asks.length + notices.length + (mail?.needs?.length || 0);
 }
 
 /** A notice the person has read: put away (POST /api/notices/:id/seen). */
