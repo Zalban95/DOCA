@@ -49,7 +49,8 @@ async function getJson(path, what) {
 }
 
 const quantOf = p => (QUANT_IN_NAME.exec(p.split('/').pop()) || [])[1]?.toUpperCase() || null;
-const isMmproj = p => /^mmproj/i.test(p.split('/').pop());
+// A vision projector: mmproj-… as most repositories name it, or <model>.mmproj-… (mradermacher's, 2026-10-12).
+const isMmproj = p => /(^|[._-])mmproj[._-]/i.test(p.split('/').pop());
 const shardBase = p => p.replace(SHARD, '');
 
 /** The repository's GGUF files: {path, size, sha256}. */
@@ -112,4 +113,4 @@ async function search(q) {
 /** The address a file is fetched from: the Hub's own `resolve` route for this repository, nothing else. */
 const fileUrl = (repo, path) => `${ENDPOINT()}/${repo}/resolve/main/${path.split('/').map(encodeURIComponent).join('/')}`;
 
-module.exports = { parse, offer, resolve, search, files, fileUrl, headers, quantOf, ENDPOINT, REPO };
+module.exports = { parse, offer, resolve, search, files, fileUrl, headers, quantOf, isMmproj, ENDPOINT, REPO };

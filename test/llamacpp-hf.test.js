@@ -158,3 +158,9 @@ test('an accepted proposal does exactly what the button does; a failed one says 
   assert.equal(out.status, 'failed');
   assert.match(out.error, /has no IQ1_S/);
 });
+
+test('a projector is found by its name wherever the repository puts "mmproj" in it', () => {
+  const { isMmproj } = require('../modules/llamacpp-hf/hub');
+  for (const yes of ['mmproj-F16.gguf', 'mmproj-Tiny-BF16.gguf', 'Holo1.5-7B.mmproj-f16.gguf', 'Holo1.5-7B.mmproj-Q8_0.gguf', 'dir/Model_mmproj_f16.gguf']) assert.ok(isMmproj(yes), yes);
+  for (const no of ['Holo1.5-7B.Q4_K_M.gguf', 'mmprojector-notes.txt', 'Tiny-Q8_0.gguf']) assert.ok(!isMmproj(no), no);
+});
