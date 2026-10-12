@@ -30,6 +30,8 @@ const CATALOG = [
     // Home Assistant on this machine (a container on the host network) answers on localhost, and `homeassistant.local`
     // often does not resolve here at all (2026-10-11): the first that answers is the address it is added with.
     near: ['http://localhost:8123/api/mcp'] },
+  // Suggested, never default: open-source creative apps, each its own server (catalog-craft.js).
+  ...require('./catalog-craft').ROWS,
 ];
 
 /** The first of a server's addresses that answers at all (any HTTP status), else its default. */
@@ -52,7 +54,7 @@ function list() {
   const have = new Set(require('./registry').load().map(s => s.id));
   const { which } = require('../shell');
   return CATALOG.map(c => ({ id: c.id, label: c.label, about: c.about, transport: c.transport || 'stdio', command: c.transport === 'http' ? c.url : [c.command, ...c.args].join(' '),
-    added: have.has(c.id), missing: c.needs.filter(n => !which(n)) }));
+    added: have.has(c.id), missing: c.present ? (c.present() ? [] : [c.missingWhat]) : c.needs.filter(n => !which(n)), ...(c.kit ? { kit: c.kit } : {}), ...(c.installable ? { installable: true } : {}) }));
 }
 
 /** A step a server needs once before it can start (Playwright's browser), run the way the server itself is. */
