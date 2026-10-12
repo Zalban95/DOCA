@@ -11,6 +11,7 @@ function faceCornerVoice(state, level) {
   _faceVoiceUntil = Date.now() + 1500;
   if (typeof assistantVoice === 'function') assistantVoice(state, Math.max(0, Math.min(1, level)));
   if (typeof ambientVoice === 'function') ambientVoice(state, Math.max(0, Math.min(1, level)));
+  if (typeof focusedVoice === 'function') focusedVoice(state, Math.max(0, Math.min(1, level)));   // the Focused view's points (focused/dots.js)
   if (!_faceCorner?.face?.level) return;
   _faceCorner.face.set(state);
   _faceCorner.face.level(Math.max(0, Math.min(1, level)));

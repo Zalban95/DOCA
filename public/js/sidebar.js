@@ -3,6 +3,7 @@
    ═══════════════════════════════════════════════════════ */
 
 async function pollStatus() {
+  if (typeof focusedQuiet === 'function' && focusedQuiet()) return;   // the Focused view shows none of it (focused/boot.js)
   try {
     const data = await apiFetch('/api/status');
     document.getElementById('dot').className = 'dot on';
