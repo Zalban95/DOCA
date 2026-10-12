@@ -11,7 +11,6 @@ module.exports = { is: 'travels', home: 'hive', note: 'experiments switched on (
       library: { type: 'boolean', default: false, hint: 'The Library: the folders chosen under library are indexed by meaning — documents, pictures, sound and video — and searched from Files and by library_search.' },
       bargeIn: { type: 'boolean', default: false, hint: 'In a voice call, speaking while the agent works or talks is sent at once, and what it was about to say is dropped.' },
       realtimeVoice: { type: 'boolean', default: false, hint: 'A live call speaks with a realtime speech model (realtime.*) in place of speech-to-text, a turn and text-to-speech; the model hands real work to the hive.' },
-      faceVoice: { type: 'boolean', default: false, hint: 'In a voice call, the corner face moves its mouth with the agent\'s voice and listens when you speak.' },
       wakeWord: { type: 'boolean', default: false, hint: 'A screen showing the corner face listens for the wake word (call.wakeWord) and starts a call when it hears it.' },
       wakeModel: { type: 'boolean', default: false, hint: 'Where a model trained for the wake word is kept (Field → Models → Wake words), a listening screen hears the word with it, on the screen itself, instead of sending sound to speech-to-text.' },
       packRegistry: { type: 'boolean', default: false, hint: 'This hub lists the packs a host published to hubs holding a registry token, and can fetch from other hubs\' registries.' },

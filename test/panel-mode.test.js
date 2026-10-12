@@ -85,10 +85,10 @@ test('the migration keeps an admin\'s existing screens on Extended, once; a memb
   assert.equal(require('../modules/screens/panel-mode').resolve(mine.id, member.user, 'member').mode, 'focused');
   assert.equal(screens.layer(chose.id).panelMode, 'focused', 'a choice already made is kept');
   assert.equal(require('../modules/screens/panel-mode').markExisting(), 0, 'nothing left to mark');
-  const row = require('../modules/migrations').MIGRATIONS.find(m => m.id === '3.38-panel-mode-existing');
+  const row = require('../modules/migrations').MIGRATIONS.find(m => m.id === '3.42-panel-mode-existing');
   assert.ok(row, 'the migration is listed');
   // A new prefs file is born having had it: a new install's screens start by role.
-  assert.ok(require('../modules/migrations').stamp({}).migrations.applied.includes('3.38-panel-mode-existing'));
+  assert.ok(require('../modules/migrations').stamp({}).migrations.applied.includes('3.42-panel-mode-existing'));
 });
 
 test('Extended still has every page: Focused only hides the panel while it shows', () => {

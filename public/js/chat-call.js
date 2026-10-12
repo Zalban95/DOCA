@@ -105,7 +105,7 @@ async function _callStart({ assistant, ambient = false }) {
   }
 
   // Assistant mode always drives the face by voice: there the face is the conversation (docs/experiments/face-voice.md).
-  try { const ex = (await screenLoad(true)).experiments || {}; _callBargeIn = !!ex.bargeIn; _callFaceVoice = !!ex.faceVoice || assistant; _callAssistant = assistant; }
+  try { const ex = (await screenLoad(true)).experiments || {}; _callBargeIn = !!ex.bargeIn; _callFaceVoice = true; /* graduated 3.41.0: the face always follows the call */ _callAssistant = assistant; }
   catch { _callBargeIn = false; _callFaceVoice = assistant; _callAssistant = assistant; }
   // Ambient's: started by its page, or by the wake word while the Ambient page shows.
   _callAmbient = assistant && (ambient || (typeof currentTab !== 'undefined' && currentTab === 'ambient'));

@@ -150,9 +150,10 @@ const MIGRATIONS = [
     describe: 'licence grace given (keys/licence-grace.json)',
     run() { return require('./license/grace').adopt() === 'given'; } }] },
   { id: '3.4-tool-tiers-graduated', note: 'tools are sent by tier for everyone now (harness.config.doca.toolsLoading); the experiment\'s switch is gone', steps: [drop('experiments.toolTiers')] },
-  // 3.38: Focused and Extended (screens/panel-mode.js). A new screen starts by its person's role; an admin's screens
+  { id: '3.41-face-voice-graduated', note: 'the face follows every voice call now; the experiment\'s switch is gone', steps: [drop('experiments.faceVoice')] },
+  // 3.42: Focused and Extended (screens/panel-mode.js). A new screen starts by its person's role; an admin's screens
   // that existed before keep the whole panel they showed. A member's go by role, to Focused — one tap switches back.
-  { id: '3.38-panel-mode-existing', note: 'admins\' screens that existed before the Focused view keep the whole panel (Extended); members start in Focused, one tap switches', steps: [{
+  { id: '3.42-panel-mode-existing', note: 'admins\' screens that existed before the Focused view keep the whole panel (Extended); members start in Focused, one tap switches', steps: [{
     describe: 'panelMode = extended on every existing screen of someone holding host',
     run() { return require('./screens/panel-mode').markExisting() > 0; } }] },
 ];

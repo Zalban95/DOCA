@@ -10,7 +10,7 @@
  * this screen → its person (theirs on every device) → the hive's prefs. A screen nobody chose for takes the default
  * of its person's role: someone holding host (an admin, the owner) starts in Extended, everyone else in Focused.
  * A screen that existed before this was built and belongs to someone holding host (an admin, the owner — or no one, a
- * screen from before accounts) keeps Extended (migration `3.38-panel-mode-existing`, markExisting()); a member's goes by
+ * screen from before accounts) keeps Extended (migration `3.42-panel-mode-existing`, markExisting()); a member's goes by
  * role, to Focused, and switches back in one tap (the owner's decision, 2026-10-12).
  *
  * Never proposable: what a person sees of the machine is their own click, not the agent's suggestion.
