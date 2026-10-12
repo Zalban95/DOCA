@@ -14,6 +14,10 @@
  * `--flag riskTiers` once with that experiment off and once on (`--flag riskTiers=on` only on), developer mode on in the
  * sandbox only; together,
  * every model × off/on. Each run is saved as usual; a table of passes, tokens and steps per run is printed last.
+ *
+ * `--follow [seconds]` (with --orchestrator): each case waits — 600 s at most, or the seconds given — for the work chats
+ * it handed work to, and counts their tools, steps and tokens with its own; it records when the first word came
+ * (`firstMs`) and when the last work chat ended (`resultMs`), and which lane the front took (evals/follow.js).
  */
 const args = process.argv.slice(2);
 const json = args.includes('--json');
@@ -36,6 +40,7 @@ const say = (o, line) => console.log(json ? JSON.stringify(o) : line);
 const opt = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
 const models = (opt('--models') || '').split(',').map(x => x.trim()).filter(Boolean);
 const [flag, only] = String(opt('--flag') || '').split('=');   // --flag riskTiers, or riskTiers=on / =off for one run
+const follow = args.includes('--follow') ? (/^\d+$/.test(opt('--follow') || '') ? Number(opt('--follow')) : true) : false;
 
 /** Point the sandbox's harness at one model (`provider/model`) and the flag on or off; returns its label. */
 function configure(model, on) {
@@ -71,7 +76,7 @@ async function compare() {
   for (const { model, on } of combos) {
     const label = `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}`;
     say({ run: label }, `\n== ${label}`);
-    const argv = [__filename, id, '--json', ...(args.includes('--orchestrator') ? ['--orchestrator'] : []), ...(model ? ['--models', model] : []), ...(flag ? ['--flag', `${flag}=${on ? 'on' : 'off'}`] : [])];
+    const argv = [__filename, id, '--json', ...(args.includes('--orchestrator') ? ['--orchestrator'] : []), ...(follow ? ['--follow', ...(follow === true ? [] : [String(follow)])] : []), ...(model ? ['--models', model] : []), ...(flag ? ['--flag', `${flag}=${on ? 'on' : 'off'}`] : [])];
     const child = require('child_process').spawn(process.execPath, argv, { env: ENV_BEFORE, stdio: ['ignore', 'pipe', 'inherit'] });
     let buf = '', row = null;
     child.stdout.on('data', d => {
@@ -98,21 +103,28 @@ function summary(r) {
     d.tokens += c.tokens || 0; d.steps += c.steps || 0; d.ms += c.ms || 0;
   }
   const sum = k => cases.reduce((n, c) => n + (c[k] || 0), 0);
+  const median = k => { const v = cases.map(c => c[k]).filter(x => x != null).sort((a, b) => a - b); return v.length ? v[Math.floor(v.length / 2)] : null; };
+  const labelled = cases.filter(c => c.expectedLane);
   return { passed: r?.passed, total: r?.total, tokens: r?.tokens, steps: sum('steps'), ms: sum('ms'),
-    tokensIn: sum('tokensIn'), tokensCached: sum('tokensCached'), tokensOut: sum('tokensOut'), children: sum('children'), byDifficulty };
+    tokensIn: sum('tokensIn'), tokensCached: sum('tokensCached'), tokensOut: sum('tokensOut'), children: sum('children'), byDifficulty,
+    // --follow: the work behind the front, and the front's own numbers (docs/experiments/always-free.md)
+    childSteps: sum('childSteps'), childTokens: sum('childTokens'), firstMsMedian: median('firstMs'), resultMsMedian: median('resultMs'),
+    lanes: labelled.length ? { right: labelled.filter(c => c.lane === c.expectedLane).length, of: labelled.length } : null };
 }
 
 /** A case's measured numbers, as the JSON line carries them (evals/run.js spent()). */
 const numbers = c => ({ tokensIn: c.tokensIn ?? null, tokensCached: c.tokensCached ?? null, tokensOut: c.tokensOut ?? null,
-  stepMax: c.stepMax ?? null, toolsSent: c.toolsSent ?? null, firstMs: c.firstMs ?? null, ms: c.ms ?? null, children: c.children ?? 0, tools: c.tools });
+  stepMax: c.stepMax ?? null, toolsSent: c.toolsSent ?? null, firstMs: c.firstMs ?? null, ms: c.ms ?? null, children: c.children ?? 0, tools: c.tools,
+  lane: c.lane ?? null, expectedLane: c.expectedLane ?? null, resultMs: c.resultMs ?? null, childTools: c.childTools ?? null,
+  childSteps: c.childSteps ?? null, childTokens: c.childTokens ?? null, followed: c.followed ?? null });
 
 let last = null;   // the result of the latest run, for the comparison
 const once = async () => {
   const p = require('../modules/harness/agent').params();
   if (!p.model) { say({ error: 'no model' }, 'No model is configured for the DOCA harness on this machine, so nothing can be evaluated.'); return 1; }
-  const result = await require('../modules/evals/run').runSet(valid, { previous, as: args.includes('--orchestrator') ? 'orchestrator' : null,
+  const result = await require('../modules/evals/run').runSet(valid, { previous, as: args.includes('--orchestrator') ? 'orchestrator' : null, follow,
     onCase: (c, i, n) => say({ case: c.id, i, n, pass: c.pass, steps: c.steps, tokens: c.tokens, ...numbers(c), why: c.checks.filter(x => !x.pass).map(x => x.why) },
-      `${c.pass ? 'PASS' : 'FAIL'} ${i}/${n} ${c.id} — ${c.steps ?? '?'} steps, ${c.tokens ?? '?'} tokens${c.tokensIn != null ? ` (in ${c.tokensIn}, cached ${c.tokensCached ?? '?'}, out ${c.tokensOut ?? '?'}; largest step ${c.stepMax})` : ''}, first output ${c.firstMs ?? '?'} ms, ${((c.ms || 0) / 1000).toFixed(1)} s${c.children ? `, ${c.children} work chat${c.children > 1 ? 's' : ''}` : ''}${c.pass ? '' : `\n     ${c.checks.filter(x => !x.pass).map(x => x.why).join('\n     ')}`}`) });
+      `${c.pass ? 'PASS' : 'FAIL'} ${i}/${n} ${c.id} — ${c.steps ?? '?'} steps, ${c.tokens ?? '?'} tokens${c.tokensIn != null ? ` (in ${c.tokensIn}, cached ${c.tokensCached ?? '?'}, out ${c.tokensOut ?? '?'}; largest step ${c.stepMax})` : ''}, first output ${c.firstMs ?? '?'} ms, ${((c.ms || 0) / 1000).toFixed(1)} s${c.children ? `, ${c.children} work chat${c.children > 1 ? 's' : ''}` : ''}${c.lane ? `, lane ${c.lane}${c.expectedLane && c.expectedLane !== c.lane ? ` (expected ${c.expectedLane})` : ''}` : ''}${c.followed ? `; behind: ${c.childSteps} steps, ${c.childTokens} tokens, result at ${c.resultMs ?? '?'} ms${c.followed === 'timed out' ? ' (timed out)' : ''}` : ''}${c.pass ? '' : `\n     ${c.checks.filter(x => !x.pass).map(x => x.why).join('\n     ')}`}`) });
   last = result;
   const file = require('../modules/evals/store').saveResult(result, require('path').join(realDataDir, 'evals'));
   say({ result: { ...result, file } }, `\n${result.passed}/${result.total} passed on ${result.model}, ${result.tokens} tokens`

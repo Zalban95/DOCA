@@ -1,0 +1,496 @@
+{
+  "id": "front",
+  "title": "The front: what stays in the main chat, and what goes behind",
+  "description": "Experiment alwaysFree (docs/experiments/always-free.md): each case is labelled with the lane the main chat should take — talk, look, do-now (one quick visible action), job (a work chat, before any model when it is clear) or amend (a running job's plan, through background) — and checks the lane, how many work chats it started, its own steps and, for clear jobs, how soon the first word came. Run it with the Orchestrator and following the hand-offs, flag off and on: npm run eval -- front --orchestrator --follow --flag alwaysFree. Amend cases say a job first (setup) in the same conversation. Cases hold on any machine; a job's work chat really runs, in the sandbox.",
+  "cases": [
+    {
+      "id": "talk-hello",
+      "lane": "talk",
+      "difficulty": "small",
+      "prompt": "Hi! Just say hello back.",
+      "checks": [
+        {
+          "lane": "talk"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "maxSteps": 1
+        }
+      ]
+    },
+    {
+      "id": "talk-what-can-you-do",
+      "lane": "talk",
+      "difficulty": "small",
+      "prompt": "In two sentences, what can you do for me?",
+      "checks": [
+        {
+          "lane": "talk"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "maxSteps": 2
+        }
+      ]
+    },
+    {
+      "id": "talk-thanks",
+      "lane": "talk",
+      "difficulty": "small",
+      "prompt": "Thanks, that's all for now.",
+      "checks": [
+        {
+          "lane": "talk"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "maxSteps": 1
+        }
+      ]
+    },
+    {
+      "id": "talk-arithmetic",
+      "lane": "talk",
+      "difficulty": "small",
+      "prompt": "What is 17 × 23?",
+      "checks": [
+        {
+          "lane": "talk"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "contains": "391"
+        }
+      ]
+    },
+    {
+      "id": "talk-explain",
+      "lane": "talk",
+      "difficulty": "small",
+      "prompt": "Explain in three sentences what a work chat is here.",
+      "checks": [
+        {
+          "lane": "talk"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "maxSteps": 2
+        }
+      ]
+    },
+    {
+      "id": "look-gpu",
+      "lane": "look",
+      "difficulty": "small",
+      "prompt": "Is the GPU busy right now, and with what?",
+      "checks": [
+        {
+          "lane": "look"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "tool": "system_status"
+        }
+      ]
+    },
+    {
+      "id": "look-day",
+      "lane": "look",
+      "difficulty": "small",
+      "prompt": "What's on my calendar today, and will it rain?",
+      "checks": [
+        {
+          "lane": "look"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "tool": "today"
+        }
+      ]
+    },
+    {
+      "id": "look-devices",
+      "lane": "look",
+      "difficulty": "small",
+      "prompt": "Which of my devices are connected right now?",
+      "checks": [
+        {
+          "lane": "look"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "tool": "doca_clients"
+        }
+      ]
+    },
+    {
+      "id": "look-memory",
+      "lane": "look",
+      "difficulty": "small",
+      "prompt": "What do you remember about my office router?",
+      "checks": [
+        {
+          "lane": "look"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "anyTool": [
+            "memory_search",
+            "memory_list"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "look-settings",
+      "lane": "look",
+      "difficulty": "small",
+      "prompt": "What is the voice of this screen set to?",
+      "checks": [
+        {
+          "lane": "look"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "tool": "settings_read"
+        }
+      ]
+    },
+    {
+      "id": "do-remind",
+      "lane": "do-now",
+      "difficulty": "small",
+      "prompt": "Remind me to call Anna in 20 minutes.",
+      "checks": [
+        {
+          "lane": "do-now"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "tool": "remind"
+        },
+        {
+          "maxSteps": 3
+        }
+      ]
+    },
+    {
+      "id": "do-remember",
+      "lane": "do-now",
+      "difficulty": "small",
+      "prompt": "Remember that the office router is at 192.168.1.1.",
+      "checks": [
+        {
+          "lane": "do-now"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "tool": "memory_write"
+        },
+        {
+          "maxSteps": 3
+        }
+      ]
+    },
+    {
+      "id": "do-theme",
+      "lane": "do-now",
+      "difficulty": "small",
+      "prompt": "Switch my panel to the dark theme, please.",
+      "checks": [
+        {
+          "lane": "do-now"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "anyTool": [
+            "settings_propose",
+            "panel_layout"
+          ]
+        },
+        {
+          "maxSteps": 3
+        }
+      ]
+    },
+    {
+      "id": "do-text-size",
+      "lane": "do-now",
+      "difficulty": "small",
+      "prompt": "Make the text in my panel a bit bigger.",
+      "checks": [
+        {
+          "lane": "do-now"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "tool": "panel_layout"
+        },
+        {
+          "maxSteps": 3
+        }
+      ]
+    },
+    {
+      "id": "do-screen",
+      "lane": "do-now",
+      "difficulty": "small",
+      "prompt": "Show the Workstream on this screen.",
+      "checks": [
+        {
+          "lane": "do-now"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "tool": "screen"
+        },
+        {
+          "maxSteps": 3
+        }
+      ]
+    },
+    {
+      "id": "do-remind-spoken",
+      "lane": "do-now",
+      "difficulty": "small",
+      "prompt": "Remind me at six to stretch.",
+      "client": "call",
+      "checks": [
+        {
+          "lane": "do-now"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "tool": "remind"
+        },
+        {
+          "maxSteps": 3
+        }
+      ]
+    },
+    {
+      "id": "job-build",
+      "lane": "job",
+      "difficulty": "large",
+      "prompt": "Build a small landing page app in the workspace from scratch, with a contact form and every page, and test it end to end.",
+      "checks": [
+        {
+          "lane": "job"
+        },
+        {
+          "minChildren": 1
+        },
+        {
+          "maxSteps": 1
+        },
+        {
+          "maxFirstMs": 1000
+        }
+      ]
+    },
+    {
+      "id": "job-steps",
+      "lane": "job",
+      "difficulty": "medium",
+      "prompt": "1. Make a folder called demo in the workspace\n2. Write hello.py in it that prints hello\n3. Run it and tell me what it printed",
+      "checks": [
+        {
+          "lane": "job"
+        },
+        {
+          "minChildren": 1
+        },
+        {
+          "maxSteps": 1
+        }
+      ]
+    },
+    {
+      "id": "job-think",
+      "lane": "job",
+      "difficulty": "medium",
+      "prompt": "Think it through carefully: look at my workspace folder and propose a better structure for my projects.",
+      "checks": [
+        {
+          "lane": "job"
+        },
+        {
+          "minChildren": 1
+        },
+        {
+          "maxSteps": 1
+        }
+      ]
+    },
+    {
+      "id": "job-docker",
+      "lane": "job",
+      "difficulty": "medium",
+      "prompt": "Can you clean up the old docker images on this machine?",
+      "checks": [
+        {
+          "lane": "job"
+        },
+        {
+          "minChildren": 1
+        },
+        {
+          "maxSteps": 2
+        }
+      ]
+    },
+    {
+      "id": "job-todos",
+      "lane": "job",
+      "difficulty": "medium",
+      "prompt": "Find every TODO in the workspace and write a summary of them into todos.md.",
+      "checks": [
+        {
+          "lane": "job"
+        },
+        {
+          "minChildren": 1
+        },
+        {
+          "maxSteps": 2
+        }
+      ]
+    },
+    {
+      "id": "job-research",
+      "lane": "job",
+      "difficulty": "large",
+      "prompt": "Research the three best open-source text-to-speech models that speak Italian and write a short comparison into tts.md in the workspace.",
+      "checks": [
+        {
+          "lane": "job"
+        },
+        {
+          "minChildren": 1
+        },
+        {
+          "maxSteps": 2
+        }
+      ]
+    },
+    {
+      "id": "job-spoken",
+      "lane": "job",
+      "difficulty": "medium",
+      "prompt": "Look into why my disk is filling up and tell me what takes the most room.",
+      "client": "call",
+      "checks": [
+        {
+          "lane": "job"
+        },
+        {
+          "minChildren": 1
+        },
+        {
+          "maxSteps": 2
+        }
+      ]
+    },
+    {
+      "id": "amend-add",
+      "lane": "amend",
+      "difficulty": "small",
+      "prompt": "Also make the header blue.",
+      "setup": [
+        "Build a small landing page app in the workspace from scratch, with a contact form and every page, and test it end to end."
+      ],
+      "checks": [
+        {
+          "lane": "amend"
+        },
+        {
+          "tool": "background"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "maxSteps": 3
+        }
+      ]
+    },
+    {
+      "id": "amend-cancel",
+      "lane": "amend",
+      "difficulty": "small",
+      "prompt": "Actually, skip the end-to-end tests.",
+      "setup": [
+        "Build a small landing page app in the workspace from scratch, with a contact form and every page, and test it end to end."
+      ],
+      "checks": [
+        {
+          "lane": "amend"
+        },
+        {
+          "tool": "background"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "maxSteps": 3
+        }
+      ]
+    },
+    {
+      "id": "amend-stop",
+      "lane": "amend",
+      "difficulty": "small",
+      "prompt": "Stop that job, I changed my mind.",
+      "setup": [
+        "Build a small landing page app in the workspace from scratch, with a contact form and every page, and test it end to end."
+      ],
+      "checks": [
+        {
+          "lane": "amend"
+        },
+        {
+          "tool": "background"
+        },
+        {
+          "maxChildren": 0
+        },
+        {
+          "maxSteps": 3
+        }
+      ]
+    }
+  ]
+}

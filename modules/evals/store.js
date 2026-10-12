@@ -14,6 +14,7 @@ const SHIPPED = path.join(__dirname, '..', '..', 'evals');
 const dir = (...p) => path.join(require('../store').DATA_DIR, 'evals', ...p);
 const ID = /^[a-z0-9][\w-]{0,60}$/i;
 const DIFFICULTY = ['small', 'medium', 'large'];
+const LANES = ['talk', 'look', 'do-now', 'job', 'amend'];   // what the front does with a request (evals/follow.js laneOf)
 /**
  * A stage sets the sandbox up before a set runs and takes it down after (`stage: "<name>"`): what the cases need to
  * exist — a stub API service, a stub MCP server, sample files, a paired phone — so a case measures which way the agent
@@ -47,14 +48,18 @@ function validate(set) {
     if (!Array.isArray(c.checks) || !c.checks.length) throw bad(`Case ${c.id} has no checks.`);
     if (c.mode && !['agent', 'plan', 'ask', 'debug'].includes(c.mode)) throw bad(`Case ${c.id}: mode is agent, plan, ask or debug.`);
     if (c.difficulty && !DIFFICULTY.includes(c.difficulty)) throw bad(`Case ${c.id}: difficulty is ${DIFFICULTY.join(', ')}.`);
-    if (c.client && !['phone', 'watch'].includes(c.client)) throw bad(`Case ${c.id}: client is phone or watch.`);
+    if (c.client && !['phone', 'watch', 'call'].includes(c.client)) throw bad(`Case ${c.id}: client is phone, watch or call.`);
+    if (c.lane && !LANES.includes(c.lane)) throw bad(`Case ${c.id}: lane is ${LANES.join(', ')}.`);
+    if (c.setup && (!Array.isArray(c.setup) || c.setup.some(x => typeof x !== 'string'))) throw bad(`Case ${c.id}: setup is a list of messages said first.`);
   }
   if (set.stage && !STAGES.includes(set.stage)) throw bad(`Stage is one of: ${STAGES.join(', ') || 'none shipped'}.`);
   // `difficulty` is a tag the checks ignore: measurements group by it (experiment adaptiveLimits).
   // `client` (a phone or a watch asking) used to be dropped here, so newcomer/phone-only asked from a desktop.
   return { id: set.id, title: String(set.title || set.id), description: String(set.description || ''), ...(set.stage ? { stage: set.stage } : {}),
     cases: set.cases.map(c => ({ id: c.id, prompt: String(c.prompt),
-      ...(c.mode ? { mode: c.mode } : {}), ...(c.difficulty ? { difficulty: c.difficulty } : {}), ...(c.client ? { client: c.client } : {}), checks: c.checks })) };
+      ...(c.mode ? { mode: c.mode } : {}), ...(c.difficulty ? { difficulty: c.difficulty } : {}), ...(c.client ? { client: c.client } : {}),
+      // `lane` labels what the front should do (evals/front.json); `as` and `setup` were dropped here, so run.js never saw them.
+      ...(c.lane ? { lane: c.lane } : {}), ...(c.as ? { as: c.as } : {}), ...(c.setup ? { setup: c.setup } : {}), checks: c.checks })) };
 }
 
 function save(set) {

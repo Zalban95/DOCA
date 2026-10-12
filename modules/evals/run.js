@@ -15,6 +15,8 @@ const CLIENT = { name: 'Evaluation', kind: 'browser', formFactor: 'desktop', scr
 const CLIENTS = {
   phone: { name: 'Evaluation phone', kind: 'phone', formFactor: 'phone', screen: { w: 412, h: 915 }, input: { touch: true, voice: true, text: true, camera: true } },
   watch: { name: 'Evaluation watch', kind: 'watch', formFactor: 'watch', screen: { w: 450, h: 450, shape: 'round' }, input: { touch: true, voice: true } },
+  // A spoken call from the phone (the chat's 🎙): a front turn under experiment alwaysFree whatever assistant.calls says.
+  call: { name: 'Evaluation call', kind: 'phone', formFactor: 'phone', mode: 'call', screen: { w: 412, h: 915 }, input: { touch: true, voice: true, text: true } },
 };
 
 /**
@@ -49,26 +51,34 @@ function outcomeOf(sessionId, r, error, seen = {}) {
  * chat does — a fresh one per case (the last put away, as Clear main chat does), so its hand-off to work chats is what
  * is measured; otherwise the case is a conversation of its own (a work chat), as before.
  */
-async function runCase(kase, setId, { as = null, person = null } = {}) {
+async function runCase(kase, setId, { as = null, person = null, follow = false } = {}) {
   const memory = require('../harness/memory');
   const s = (kase.as || as) === 'orchestrator' ? memory.resetMain()
     : memory.createSession(`Eval · ${setId} · ${kase.id}`, { activate: false });
   if (kase.mode && kase.mode !== 'agent') memory.updateSession(s.id, { mode: kase.mode });
+  const client = { ...(CLIENTS[kase.client] || CLIENT), ...(person ? { user: person } : {}) };
+  // What comes before the measured request (an amend needs a job running): said first, in the same conversation.
+  for (const message of kase.setup || []) await require('../harness/agent').turn({ message, sessionId: s.id, client }).catch(() => {});
+  const fromRow = memory.messages(s.id).length;
   let r = null, error = null;
   // When the first word, thought or tool call came: what a person waits before anything happens.
   const agent = require('../harness/agent'), began = Date.now(), seen = { since: new Date(began).toISOString() };
   const first = evt => { if (evt.sessionId === s.id && seen.firstMs == null && ['text', 'thinking', 'tool_call'].includes(evt.type)) seen.firstMs = Date.now() - began; };
   agent.events.on('event', first);
-  try { r = await agent.turn({ message: kase.prompt, sessionId: s.id, client: { ...(CLIENTS[kase.client] || CLIENT), ...(person ? { user: person } : {}) } }); }
+  try { r = await agent.turn({ message: kase.prompt, sessionId: s.id, client }); }
   catch (e) { error = e; }
   finally { agent.events.off('event', first); }
   const o = outcomeOf(s.id, r, error, seen);
+  const follow_ = require('./follow');
+  o.lane = follow_.laneOf(memory.messages(s.id).slice(fromRow), { children: o.children });
+  // --follow: wait for the work chats it started, and count what they did (follow.js).
+  if (follow) { Object.assign(o, await follow_.follow(s.id, { since: seen.since, began, ...(Number(follow) > 1 ? { ms: Number(follow) * 1000 } : {}) })); o.allTools = [...o.tools, ...o.childTools]; }
   const checks = await require('./check').evaluate(kase, o);
-  return { id: kase.id, prompt: kase.prompt, ...(kase.difficulty ? { difficulty: kase.difficulty } : {}), ...o, text: String(o.text).slice(0, 4000), checks, pass: checks.every(c => c.pass) };
+  return { id: kase.id, prompt: kase.prompt, ...(kase.difficulty ? { difficulty: kase.difficulty } : {}), ...(kase.lane ? { expectedLane: kase.lane } : {}), ...o, text: String(o.text).slice(0, 4000), checks, pass: checks.every(c => c.pass) };
 }
 
 /** Every case in order; `onCase(result, i, n)` after each. Returns the whole result, with regressions against `previous`. */
-async function runSet(set, { onCase = () => {}, previous = null, as = null } = {}) {
+async function runSet(set, { onCase = () => {}, previous = null, as = null, follow = false } = {}) {
   const p = require('../harness/agent').params();
   const startedAt = new Date().toISOString();
   const cases = [];
@@ -77,7 +87,7 @@ async function runSet(set, { onCase = () => {}, previous = null, as = null } = {
   const stage = set.stage ? await require(require('path').join(require('./store').SHIPPED, 'stages', `${set.stage}.js`)).setup() : null;
   try {
     for (let i = 0; i < set.cases.length; i++) {
-      const c = await runCase(set.cases[i], set.id, { as, person: stage?.person || null });
+      const c = await runCase(set.cases[i], set.id, { as, person: stage?.person || null, follow });
       cases.push(c);
       onCase(c, i + 1, set.cases.length);
     }
