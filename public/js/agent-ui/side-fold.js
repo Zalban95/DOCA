@@ -16,8 +16,7 @@ function agentFoldJobHtml(r) {
   const st = r.ended ? `${r.state}${r.unread ? ' · unread' : ''}` : r.state === 'queued' ? 'lined up' : r.state === 'waiting' ? 'waiting for its specialists'
     : r.plan?.at ? `step ${r.plan.at} of ${r.plan.total}: ${r.plan.text}` : 'working';
   const added = r.added?.length ? `<small class="agent-fold-changed">${r.added.map(a => `step ${a.step} ${a.action === 'add' ? 'added' : 'cancelled'} by you — not read yet`).join(' · ')}</small>` : '';
-  return `<div class="agent-fold-step" data-state="${r.ended ? (r.state === 'done' ? 'done' : 'blocked') : 'running'}"><span>${r.ended ? (r.state === 'done' ? '✓' : '⚠') : '●'}</span>
-    <a href="#" data-open-job="${escHtml(r.id)}">${escHtml(r.title)}</a> <small style="color:var(--muted)">${escHtml(st)}</small>${added}</div>`;
+  return `<div class="agent-fold-step" data-state="${r.ended ? (r.state === 'done' ? 'done' : 'blocked') : 'running'}"><span>${r.ended ? (r.state === 'done' ? '✓' : '⚠') : '●'}</span> <a href="#" data-open-job="${escHtml(r.id)}">${escHtml(r.title)}</a> <small style="color:var(--muted)">${escHtml(st)}</small>${added}</div>`;
 }
 
 /** A plan's flagged change: the person's edits its worker has not read yet (modules/harness/living-plan.js). */
