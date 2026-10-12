@@ -105,6 +105,8 @@ function _homeTile(t) {
       if (t.domain === 'light' && (a.supported_color_modes || []).some(m => m !== 'onoff'))
         body += `<input type="range" class="home-range" min="1" max="100" value="${a.brightness ? Math.round(a.brightness / 2.55) : 0}" aria-label="Brightness"
           onclick="event.stopPropagation()" onpointerdown="HOME.busy='${t.id}'" onchange="HOME.busy=null;homeCall('${t.id}','turn_on',{brightness_pct:+this.value})">`;
+      if (t.domain === 'light' && !off && (a.supported_color_modes || []).some(m => ['hs', 'rgb', 'rgbw', 'rgbww', 'xy'].includes(m)))
+        body += _homeColour(t);
       if (t.domain === 'fan' && a.percentage !== undefined)
         body += `<input type="range" class="home-range" min="0" max="100" step="10" value="${+a.percentage || 0}" aria-label="Speed"
           onclick="event.stopPropagation()" onpointerdown="HOME.busy='${t.id}'" onchange="HOME.busy=null;homeCall('${t.id}','set_percentage',{percentage:+this.value})">`;
@@ -129,7 +131,20 @@ function _homeTile(t) {
       break;
     case 'media_player':
       body = `<div class="home-state">${escHtml(a.media_title ? `${a.media_title}${a.media_artist ? ` — ${a.media_artist}` : ''}` : t.state)}</div>
-        <div class="home-acts">${_homeBtn(t, 'media_previous_track', '⏮')}${_homeBtn(t, 'media_play_pause', t.state === 'playing' ? '⏸' : '▶')}${_homeBtn(t, 'media_next_track', '⏭')}</div>`;
+        <div class="home-acts">${_homeBtn(t, 'media_previous_track', '⏮')}${_homeBtn(t, 'media_play_pause', t.state === 'playing' ? '⏸' : '▶')}${_homeBtn(t, 'media_next_track', '⏭')}${_homeBtn(t, 'volume_down', '−')}${_homeBtn(t, 'volume_up', '+')}</div>
+        ${_homePick(t, 'select_source', 'source', a.source_list, a.source, 'Source')}`;
+      if (!off) tap = t.state === 'off' ? `onclick="homeCall('${t.id}','turn_on')"` : '';
+      break;
+    case 'remote':
+      if (!off) tap = `onclick="homeCall('${t.id}','toggle')"`;
+      body = `<div class="home-state">${escHtml(a.current_activity || t.state)}</div>${_homePick(t, 'turn_on', 'activity', a.activity_list, a.current_activity, 'Activity')}`;
+      break;
+    case 'weather':
+      body = `<div class="home-value">${escHtml(String(a.temperature ?? '—'))}<small>${escHtml(a.temperature_unit || '°')}</small></div>
+        <div class="home-state">${escHtml(String(t.state).replace(/[-_]/g, ' '))}${a.humidity != null ? ` · ${+a.humidity}%` : ''}</div>`;
+      break;
+    case 'person':
+      body = `<div class="home-state">${escHtml(t.state === 'home' ? 'home' : t.state === 'not_home' ? 'away' : t.state)}</div>`;
       break;
     case 'scene': case 'script':
       tap = `onclick="homeCall('${t.id}','turn_on')"`;
@@ -143,6 +158,20 @@ function _homeTile(t) {
   }
   return `<div class="home-tile home-${t.domain}${_homeOn(t) ? ' on' : ''}${off ? ' off' : ''}${tap ? ' tap' : ''}" ${_homeAttr('entity', t.id)} ${tap}
     title="${escHtml(t.id)}"><div class="home-name">${escHtml(t.name)}</div>${body}</div>`;
+}
+
+/** A colour for a light that takes one: the picker sends rgb_color. */
+function _homeColour(t) {
+  const c = t.attrs.rgb_color, hex = Array.isArray(c) ? '#' + c.map(x => (+x).toString(16).padStart(2, '0')).join('') : '#ffffff';
+  return `<input type="color" class="home-colour" value="${hex}" aria-label="Colour" onclick="event.stopPropagation()" onpointerdown="HOME.busy='${t.id}'"
+    onchange="HOME.busy=null;homeCall('${t.id}','turn_on',{rgb_color:[1,3,5].map(i=>parseInt(this.value.slice(i,i+2),16))})">`;
+}
+
+/** A list of the choices an entity offers (a TV's sources, a remote's activities), choosing one calls `service`. */
+function _homePick(t, service, field, list, now, label) {
+  if (!Array.isArray(list) || !list.length) return '';
+  return `<select class="input home-choice" aria-label="${label}" onclick="event.stopPropagation()"
+    onchange="homeCall('${t.id}','${service}',{${field}:this.value})">${now ? '' : `<option value="">${label}…</option>`}${list.map(x => `<option${x === now ? ' selected' : ''}>${escHtml(x)}</option>`).join('')}</select>`;
 }
 
 // A binary sensor in words its kind uses: a door is open or closed, motion detected or clear.

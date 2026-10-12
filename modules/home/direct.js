@@ -99,7 +99,7 @@ function close() {
   S.states.clear();
 }
 
-const BOOKKEEPING = new Set(['sun', 'zone', 'conversation', 'tts', 'stt', 'wake_word', 'todo', 'event', 'update', 'tag', 'image', 'ai_task']);
+const BOOKKEEPING = new Set(['notify', 'sun', 'zone', 'conversation', 'tts', 'stt', 'wake_word', 'todo', 'event', 'update', 'tag', 'image', 'ai_task']);
 
 /** Whether an entity is on the page at all: a kind it draws, not kept off by HA's registry. */
 const shown = id => DOMAINS.includes(id.split('.')[0]) && !hiddenByRegistry(S.reg.get(id));

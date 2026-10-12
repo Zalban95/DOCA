@@ -40,6 +40,8 @@
 .home-act:hover { border-color: var(--accent); }
 .home-act.warn { color: var(--amber); }
 .home-range { width: 100%; margin-top: auto; accent-color: var(--accent); }
+.home-colour { width: 100%; height: 28px; margin-top: 6px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: none; cursor: pointer; }
+.home-choice { width: 100%; margin-top: 6px; font-size: 12px; }
 .home-camera { grid-column: span 2; }
 .home-cam { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: var(--radius, 4px); background: var(--dim); }
 .home-cam.gone { visibility: hidden; }
