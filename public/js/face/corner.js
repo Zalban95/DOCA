@@ -25,6 +25,15 @@ function faceCornerTap() {
   if (typeof toggleChat === 'function') toggleChat(true);
 }
 
+/** Where this screen keeps the circle: above the chat button (the default), beside it, or at the bottom's centre. */
+const FACE_PLACES = { above: 'Above the chat button', beside: 'Beside the chat button', center: 'At the bottom, in the middle' };
+function faceCornerPlace() { try { const p = localStorage.getItem('doca.face.place'); return FACE_PLACES[p] ? p : 'above'; } catch { return 'above'; } }
+function faceCornerPlaceSet(p) {
+  try { localStorage.setItem('doca.face.place', p); } catch { /* a private window: this session only */ }
+  if (_faceCorner?.el) _faceCorner.el.dataset.place = faceCornerPlace();
+  if (typeof fabAsideSoon === 'function') fabAsideSoon();
+}
+
 function faceCornerOn() { try { return localStorage.getItem('doca.face.corner') === '1'; } catch { return false; } }
 
 async function faceCornerApply() {
@@ -40,6 +49,7 @@ async function faceCornerApply() {
   const el = document.createElement('button');
   el.id = 'face-corner';
   el.className = 'face-corner';
+  el.dataset.place = faceCornerPlace();
   el.type = 'button';
   el.title = 'Talk to the hive — during a call, show or hide the chat';
   el.onclick = faceCornerTap;
@@ -72,7 +82,8 @@ function faceSettingsRender() {
   row.id = 'face-settings';
   row.style.cssText = 'display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:12px';
   row.innerHTML = `<label style="display:flex;align-items:center;gap:6px"><input type="checkbox" ${faceCornerOn() ? 'checked' : ''}
-      onchange="faceCornerToggle(this.checked)"> The face in the corner, on this screen</label>${typeof infoBtn === 'function' ? infoBtn('A small circle of dots beside the chat button, on this screen only (off by default). The dots gather into a face when the hive is listening, thinking, working or asking you; a tap on it starts a spoken conversation.') : ''}
+      onchange="faceCornerToggle(this.checked)"> The face in the corner, on this screen</label>
+    <select class="input" style="width:auto" title="Where the face sits on this screen" onchange="faceCornerPlaceSet(this.value)">${Object.entries(FACE_PLACES).map(([id, l]) => `<option value="${id}"${id === faceCornerPlace() ? ' selected' : ''}>${l}</option>`).join('')}</select>${typeof infoBtn === 'function' ? infoBtn('A small circle of dots beside the chat button, on this screen only (off by default). The dots gather into a face when the hive is listening, thinking, working or asking you; a tap on it starts a spoken conversation.') : ''}
     <a href="/face" target="_blank" rel="noopener">Open the face full screen ↗</a>`;
   status.before(row);
 }
