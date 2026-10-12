@@ -29,7 +29,11 @@ function mark(raw, key) { raw.prepare('INSERT OR IGNORE INTO meta (key, value) V
 /** Pull a key's old file in, once, inside one write-locked transaction (another process may be doing the same). */
 function importOnce(raw, key, file, kind) {
   if (imported(raw, key)) return;
-  raw.exec('BEGIN IMMEDIATE');
+  // An async transaction elsewhere (db.tx over this same handle, e.g. usage.js's import) may be open across an await:
+  // a BEGIN here would throw "cannot start a transaction within a transaction" (found 2026-10-12, an eval's second
+  // case reading a new conversation right after the first). Joining it is as safe — it commits or rolls back whole.
+  const own = !raw.isTransaction;
+  if (own) raw.exec('BEGIN IMMEDIATE');
   try {
     if (!imported(raw, key)) {
       if (kind === 'doc') {
@@ -41,8 +45,8 @@ function importOnce(raw, key, file, kind) {
       }
       mark(raw, key);
     }
-    raw.exec('COMMIT');
-  } catch (e) { raw.exec('ROLLBACK'); throw e; }
+    if (own) raw.exec('COMMIT');
+  } catch (e) { if (own) raw.exec('ROLLBACK'); throw e; }
 }
 
 const docFile = key => require('path').join(store.DATA_DIR, `${key}.json`);
