@@ -284,6 +284,8 @@ function update(id, patch) {
   // A browser put away (screens/archive.js) or seen (its sign-in session at work: it has no token to touch lastSeenAt).
   if (patch.archivedAt !== undefined) { if (patch.archivedAt) rec.archivedAt = patch.archivedAt; else delete rec.archivedAt; }
   if (patch.lastSeenAt !== undefined) rec.lastSeenAt = patch.lastSeenAt;
+  // A screen showing a cast (cast/): what it shows, from whom, and whether it is kept there (null ends it).
+  if (patch.cast !== undefined) { if (patch.cast) rec.cast = patch.cast; else delete rec.cast; }
   persist();
   return publicView(rec);
 }

@@ -92,6 +92,11 @@ function gate(req, res, next) {
   }
   if (!who) return deny(req, res, 401, 'unauthenticated', 'Sign in to use the panel.');
   req.auth = who;
+  // A cast screen (a view link, cast/): one page, read-only, as the person who cast it — only what that page reads,
+  // the calls that say it is looking, and nothing else (the owner's yes of 2026-10-12, docs/design/cast-and-devices.md).
+  const viewing = require('../cast/views').pageOf(who.session.cap);
+  if (viewing && !require('../cast/views').allows(viewing, method, p))
+    return deny(req, res, 403, 'view_only', 'This screen shows one page, read-only: it was cast here and cannot do this.');
 
   if (who.user.mustChangePassword && !/^\/api\/auth\/(me|password|logout)$/.test(p) && isApi(p))
     return deny(req, res, 403, 'password_change_required', 'Choose a new password before anything else.');
@@ -113,9 +118,10 @@ function gate(req, res, next) {
     return deny(req, res, 403, 'outside_tailnet', 'From the local network, managing this machine is off: use Tailscale or the machine itself — or an admin allows it in Settings → System → Network.');
   // A session a device opened stops at what the device's scopes allow; the
   // person's password lifts it to their role (routes.js, step-up).
-  if (right !== 'signed' && who.session.cap && !who.session.cap.includes(right))
+  if (right !== 'signed' && who.session.cap && !viewing && !who.session.cap.includes(right))
     return deny(req, res, 401, 'step_up_required', 'This device can look and chat. For this, confirm your password.');
-  if (rights.STEP_UP.has(right) && !credentials.steppedUp(who.session))
+  // A cast screen only reads its page (above), so the recent sign-in a host's reads ask for is the caster's at casting.
+  if (rights.STEP_UP.has(right) && !viewing && !credentials.steppedUp(who.session))
     return deny(req, res, 401, 'step_up_required', 'Confirm your password to continue — it has been a while since you signed in.');
 
   if (CHANGES.has(method)) {
@@ -151,6 +157,7 @@ function upgradeAllowed(req, right) {
   if (authStore.userCount() === 0) return null;
   const who = credentials.resolve(req);
   if (!who || !rights.can(who.role, right)) return null;
+  if (require('../cast/views').pageOf(who.session.cap)) return null;   // a cast screen opens no socket: no console, no terminal
   if (require('../network').limited(req, right)) return null;   // the machine's administration, from outside the tailnet (network.js)
   if (who.session.cap && !who.session.cap.includes(right)) return null;
   if (rights.STEP_UP.has(right) && !credentials.steppedUp(who.session)) return null;
