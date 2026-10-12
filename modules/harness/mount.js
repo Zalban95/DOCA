@@ -41,7 +41,8 @@ function mount(app) {
   require('../screens/routes').mount(app);   // a browser is a device: this screen's settings (screens/)
   require('../llamacpp-hf/routes').mount(app);   // a llama.cpp server from a GGUF on Hugging Face (llamacpp-hf/)
   require('../llamacpp-router/routes').mount(app);
-  require('./harness-life').mount(app);   // a harness switched off, or deleted (harness-life.js)   // a llama.cpp router's models, from its preset file (llamacpp-router/)
+  require('./harness-life').mount(app);
+  require('../cast/routes').mount(app);   // casting a page to a screen, and view links (cast/)   // a harness switched off, or deleted (harness-life.js)   // a llama.cpp router's models, from its preset file (llamacpp-router/)
   require('../guided/routes').mount(app);   // the set-up: what this machine bears, the questions, what they set up (guided/)
   require('../spending/routes').mount(app);   // Settings → Spending: what was spent, budgets, spending permissions (CONSTITUTION S12)
   require('../sharing').mount(app);   // offering what was learned to the project, if the owner allows (CONSTITUTION §0)

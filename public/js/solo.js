@@ -15,11 +15,22 @@ function soloStart() {
     <button class="btn btn-xs" onclick="soloFull()" title="Full screen (F)">⛶</button>
     <button class="btn btn-xs" onclick="location.href='/'" title="Back to the whole panel">✕</button>`;
   document.body.append(bar);
+  _soloCastLock(bar);
   let t = null;
   const wake = () => { bar.classList.add('awake'); clearTimeout(t); t = setTimeout(() => bar.classList.remove('awake'), 3000); };
   ['mousemove', 'touchstart', 'keydown'].forEach(e => document.addEventListener(e, wake, { passive: true }));
   document.addEventListener('keydown', e => { if ((e.key === 'f' || e.key === 'F') && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName || '') && !document.activeElement?.isContentEditable) soloFull(); });
   wake();
+}
+
+/** A cast screen (a view link, cast/): its one page, nothing to go back to — the hub refuses the rest anyway. */
+async function _soloCastLock(bar) {
+  let me = null;
+  try { me = await apiFetch('/api/auth/me'); } catch { return; }
+  if (!me?.view) return;
+  document.body.classList.add('cast-view');
+  bar.querySelector('button[title^="Back"]')?.remove();
+  if (me.view !== SOLO_PAGE && typeof NAV_TABS !== 'undefined' && NAV_TABS.includes(me.view)) nav(me.view);
 }
 
 function soloFull() {

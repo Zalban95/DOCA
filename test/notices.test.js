@@ -105,10 +105,11 @@ test('tell_device falls back to the panel and ask_device asks at the panel when 
 
 test('a notice with an end (a call ringing) is no longer listed after it', () => {
   const notices = require('../modules/notices');
-  const { notice } = notices.post({ personId: null, title: 'Someone is calling', forMs: 50 });
+  // A minute to live, and the clock moved past it: 50 ms raced a slow runner (Windows CI, 2026-10-12).
+  const { notice } = notices.post({ personId: null, title: 'Someone is calling', forMs: 60000 });
   assert.ok(notice.until);
   assert.ok(notices.list(null, true).some(n => n.id === notice.id));
-  const later = Date.now() + 60;
+  const later = Date.now() + 61000;
   const real = Date.now; Date.now = () => later;
   try { assert.ok(!notices.list(null, true).some(n => n.id === notice.id)); } finally { Date.now = real; }
 });

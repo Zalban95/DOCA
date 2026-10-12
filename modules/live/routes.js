@@ -41,7 +41,11 @@ function stream(req, res) {
   const send = o => { try { res.write(`data: ${JSON.stringify(o)}\n\n`); } catch { /* gone */ } };
   const mine = new Set();   // this screen's folders, as watch.set() last held them
   const own = req.auth?.session?.screen || null;   // this browser's screen: a page sent to it is for it alone
+  // A cast screen (cast/views.js) hears only what its one page draws: never a conversation, a notice or a question.
+  const viewing = require('../cast/views').pageOf(req.auth?.session?.cap);
+  const VIEW_TOPICS = new Set(['screen', 'home', 'workstream']);
   const on = change => {
+    if (viewing && !VIEW_TOPICS.has(change.topic)) return;
     if (change.topic === 'files') { if (host && mine.has(change.id)) send(change); return; }
     // `screen`: a page sent to one screen is for it alone; "reload" goes to every page of its person (an admin's: all).
     if (change.topic === 'screen') { if (change.what === 'reload' ? !change.personId || change.personId === person?.id : own && change.id === own) send(change); return; }

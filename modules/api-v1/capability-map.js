@@ -97,6 +97,13 @@ const PERSON = [
   { id: 'home-hold', does: 'keep the Home page live while it is shown', panel: ['POST /api/home/hold'],
     only: 'a panel page holding the hub\'s connection to Home Assistant open; a device\'s own home will hear changes on its event stream' },
 
+  // ── Casting (cast/; docs/design/cast-and-devices.md) ──
+  { id: 'cast', does: 'send a page to one of my screens, keep it there or stop it, and make a view link for a screen that cannot sign in',
+    panel: ['GET /api/cast/targets', 'POST /api/cast/show', 'POST /api/cast/stop', 'POST /api/cast/links'],
+    gap: 24, why: 'the Cast button is the panel page\'s in a phone\'s web view today; a phone casting by itself (to a TV on its own Wi-Fi) is phase 2 of the design' },
+  { id: 'cast-open', does: 'open a view link on a screen that cannot sign in', panel: ['GET /api/cast/open/:code'],
+    only: 'a TV\'s or a monitor\'s browser opening its one link: it is a screen of the hive only once it has' },
+
   // ── Meetings (meetings/) ──
   { id: 'meetings', does: 'see my meetings and join one', panel: ['GET /api/meetings', 'GET /api/meetings/:id'], v1: ['GET /meetings'],
     note: 'a device lists them with each link and opens the room in its web view (/meet/<id>); native call screens come later' },

@@ -417,6 +417,26 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **The presence heartbeat says which page a screen shows** (`page`, `solo`; sent on every page change too), bound to the browser's screen record (made on the first beat if `/api/screen` has not yet), and the Devices list (Field → API keys) says per browser what it shows. **An admin sends a page to a screen** there (`POST /api/screens/:id/show {page, solo}`, host): the live feed's `screen` topic, delivered only to that screen's own pages, which open it.
 - **The agent's way to the screens is `screen {list | show | propose}`** (TODO B6b, audit aw 8; `harness/toolbox/screens.js`, kit devices): `list` the screens (browser records) with the page each showed in its last minute — a host's turn every screen, anyone else's their own; `show` sends a page through the same `showing.show()`, to "this" screen, an id or a name, a page from `NAV_TABS` (a machine page, `HOST_TABS`, is not sent to a screen whose person lacks host); `propose` only reads that screen's proposable settings (`screen-proposals.readable`) and points at `settings_propose {screen}` — one way per job, and the look and layout stay `panel_layout`'s. Not in `approval.FREE` (showing acts, so it is asked in Manual), in `registry.NEVER` (a page appearing on a person's screen from unwatched work), coordinating rather than work for the hand-off. `test/screen-tool.test.js`.
 
+### Casting a page to a screen, and view links (since 3.50.0, `modules/cast`, `public/js/cast.js`; docs/design/cast-and-devices.md)
+- **⎘ Cast** (the header on a desk, first in the ☰ drawer on a phone) puts a page on another screen of the person's —
+  any browser signed in, an admin's any — shown alone (`/?view=`) in that screen's own layout, so a monitor gets the
+  desk's shape whatever cast it; 🔒 Keep marks it kept (`cast` on the screen record) so it stays when the phone goes;
+  Stop ends it. `GET /api/cast/targets`, `POST /api/cast/show|stop`, right `chat`, one's own screens (a host's: any).
+- **A view link** (the owner's yes of 2026-10-12, S11) is for a screen that cannot sign in — a TV's browser, a mini PC
+  on a monitor: `POST /api/cast/links {page}` gives a one-time code good for ten minutes (with each address the hub
+  answers on and its QR code); opening `GET /api/cast/open/:code` (public) makes a screen record of its own and a
+  session whose only right is `view:<page>`, as the caster. **A view session reads only what its page reads**
+  (`cast/views.js`: the page's own routes, a few every page asks — me, branding, the screen, the live feed — and the
+  calls that say it is looking: presence, the Workstream's and Home's hold), as the caster's role and without the
+  12-hour step-up (it only reads); everything else is 403 `view_only` (the gate) — no chat history, notices, people,
+  prefs, files, no change, and **no socket** (`upgradeAllowed`: no console, terminal, call or meeting): machines are seen
+  as Live's pictures. Its live feed carries only `screen`, `home` and `workstream`. `/api/auth/me` says `view`, and the
+  page alone drops its way back to the panel. Stop (or revoking the screen in Devices) signs it out. Castable: Live,
+  the Workstream, Ambient, Home, the agents' computers, Chronicle, the face. `test/cast.test.js` opens each through a
+  view link in a real browser and fails on a script error, so a page that starts reading something new is caught.
+- Not yet (the design's phases): a TV on the phone's own Wi-Fi with the page served through the phone (DocaMobile),
+  remembered networks, devices in groups with controls, watch presets.
+
 ### The Workstream: the agents' work as it happens (since 2.229.0, `modules/workstream`, `public/js/workstream.js`; Agents → Workstream; TODO H10.9)
 - **Seen, not reported.** While a Workstream page is shown it holds the hub's **sentinel** (`POST /api/workstream/hold {screen, on}`; the last page to let go — or to close its live stream, `screen-closed` — stops it): the projects' roots, their conversations' worktrees, the workspace and any folder an agent's `write_file` lands in, watched (one recursive `fs.watch` per root on macOS and Windows; on Linux each folder by hand, skipping `.git`, `node_modules`, build output, virtual environments and DOCA's data, at most 4000) and copied when it starts (text files to 256 KB, 4000 files, 40 MB), so a file's first edit diffs. A change is a line diff (`workstream/diff.js`, Myers with a ceiling) against the last text seen, else git's HEAD, else marked "first seen"; a file born after the start is "new".
 - **Activity** from `agent.events` for every conversation on every device: thinking and answers gathered every 300 ms, commands as typed (`$ npm test`; a file by its path; else a tool's argument names, never a secret's), the first line of each result. Both go out on the live feed's `workstream` topic only to pages holding it (host). The page: chips of the files touched (+N −M), the newest edit on the stage with its hunks in green and red (click a chip to keep it, ⟳ to follow again), and the activity lower right, white on black in every theme, fading into the file behind. ⧉ Work in the floating chat opens it in a window of its own (`/?view=workstream`).

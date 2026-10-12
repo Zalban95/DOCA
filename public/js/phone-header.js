@@ -14,6 +14,7 @@ function phoneActsRender() {
     b.onclick = () => { if (typeof closeSidebar === 'function') closeSidebar(); fn(); };
     row.append(b);
   };
+  add('⎘ Cast', 'Put this page on another screen of yours, and keep it there', typeof castOpen === 'function' ? () => castOpen() : null);
   add('This page alone', 'Open this page by itself — for a screen of its own', typeof soloOpen === 'function' ? soloOpen : null);
   add('Open on another device', 'QR codes to this hub', typeof hubLinksOpen === 'function' ? hubLinksOpen : null);
   if (row.children.length) side.prepend(row);

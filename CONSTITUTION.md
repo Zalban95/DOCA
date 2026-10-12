@@ -130,6 +130,9 @@ words.)*
   requirements hold, and reported then. (2026-10-07)
 - **V11 Stop means stop, visibly.** A person's Stop ends that work and the control to do it is in view; closing
   finished work sets nothing off; work that stopped for any reason is reported, with restart or drop. (2026-10-06)
+- **V12 Mechanical first.** Whatever can be done reliably by code is done by code — never handed to an agent: a rule,
+  a count, a state, a move, an undo costs no tokens, no wait, and gives the same answer every time; agents spend their
+  effort only where judgement is needed. (2026-10-12)
 - **V7 Innovate, and find the drawbacks.** New approaches give DOCA its edge; each one has its drawbacks found
   before it counts — behind a flag, written up, measured (§5 W9). (2026-10-04)
 
@@ -192,6 +195,9 @@ words.)*
 - **P22 Clients update themselves.** Updating a phone, watch or desktop client needs no developer steps — it
   updates by itself, or with one tap; a hub change a client should follow is carried into that client in the same
   piece of work, or filed in its repository. (2026-10-05/06)
+- **P23 Native for everyday.** Where a person's everyday tools (mail, calendar, notes, files, the home) are simpler or
+  richer built into the platform than driven through an integration, the platform has them natively, kept
+  interchangeable with the outside service behind them. (2026-10-12)
 
 ## 4. Safety and authority
 

@@ -50,6 +50,7 @@ const COVERAGE = {
   chronicle: { v1: ['/harness', '/jobs/{id}'], note: 'a device reads its conversations, missions and jobs there; reading them all back as one story is the panel\'s page' },
   branding: { panel: 'public, and read by clients as it is (GET /api/branding)' },
   auth: { panel: 'a person signing in to the panel; a device pairs instead (/devices)' },
+  cast: { panel: 'casting a page to a screen: the panel\'s Cast button, in a phone\'s web view too, until a phone casts by itself (docs/design/cast-and-devices.md, phase 2)' },
   licence: { panel: 'which features this hive may run, and renewing its licence: the owner\'s, at the panel (license/)' },
   // The machine and DOCA itself.
   ...Object.fromEntries(['status', 'action', 'stack', 'logs', 'stats', 'configs', 'prefs', 'config-favorites', 'fm-favorites', 'paths', 'keys', 'skills',

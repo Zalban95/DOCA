@@ -141,6 +141,8 @@ const TABLE = [
   R(GET, '/api/live/stream', 'read'),                           // every page live: changes this viewer may open (live/routes.js)
   R(ANY, '/api/live/watch', 'host'),
   R(ANY, '/api/screens/.*', 'host'),
+  R(GET, '/api/cast/open/[^/]+', 'public'),                    // a screen that cannot sign in opening its view link: once, ten minutes (cast/links.js)
+  R(ANY, '/api/cast/(targets|show|stop|links)', 'chat'),       // casting to one's own screens (a host's: any); what a view shows is cast/views.js
   R(ANY, '/api/archive(/.*)?', 'chat'),
   R(GET, '/api/admin/overview', 'host'),                       // Hub → Admin: the hive's state and what waits for an admin (admin/)
   R(GET, '/api/chronicle(/.*)?', 'read'),                      // what happened: each row the viewer's own unless host (chronicle/)
