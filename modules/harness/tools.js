@@ -36,6 +36,8 @@ const TOOLS = [
   ...require('./toolbox/hub'),
   ...require('./toolbox/devices'),
   ...require('./toolbox/day'),
+  ...require('./toolbox/calendar'),   // the person's own calendar and mail (accounts/)
+  ...require('./toolbox/mail'),
   ...require('./toolbox/web'),
   ...require('./toolbox/services'),
   ...require('./toolbox/canvas'),
