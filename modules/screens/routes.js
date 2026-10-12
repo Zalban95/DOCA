@@ -28,7 +28,7 @@ function mount(app) {
       // The switches that change how a call behaves on a screen: any person's screen needs them, not only the owner's.
       const ex = require('../experiments');
       res.json({ id: d.id, name: d.name, kind: d.kind, ...screens.effective(d.id, req.auth.user.id), keys: screens.screenKeys(),
-        experiments: Object.fromEntries(['bargeIn', 'faceVoice', 'wakeWord', 'wakeModel'].map(id => [id, ex.on(id)])) });
+        experiments: { ...Object.fromEntries(['bargeIn', 'wakeWord', 'wakeModel'].map(id => [id, ex.on(id)])), faceVoice: true } });   // faceVoice graduated (3.41.0): on for every call
     } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   // A device's own notifications (its profile: questions, haptics, quiet hours), for its page — the device's

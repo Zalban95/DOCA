@@ -13,7 +13,7 @@ async function liveCallRender() {
   try { s = await screenLoad(true); } catch { return; }
   const c = s.settings?.call || {}, mine = s.from?.call === 'device';
   let ex = null;
-  try { const d = await apiFetch('/api/experiments'); ex = d.developer ? d.experiments.filter(x => ['realtimeVoice', 'bargeIn', 'faceVoice', 'wakeWord'].includes(x.id)) : null; }
+  try { const d = await apiFetch('/api/experiments'); ex = d.developer ? d.experiments.filter(x => ['realtimeVoice', 'bargeIn', 'wakeWord'].includes(x.id)) : null; }
   catch { /* not the owner: no switches */ }
   let rt = null;
   try { rt = await apiFetch('/api/realtime'); } catch { /* without chat */ }
