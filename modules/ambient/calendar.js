@@ -39,11 +39,18 @@ async function between(ids, own, from, to, max = 15) {
     } catch (e) { errors.push(`${id}: ${e.message}`); }
   }
   for (const rec of own) {
-    try { events.push(...(await require('../accounts/adapter').of(rec).calendar.events(rec, { from: from.toISOString(), to: to.toISOString(), max })).map(e => ({ title: e.title, start: e.start, end: e.end, allDay: e.allDay, where: e.where, from: rec.account || rec.provider }))); }
+    try { events.push(...(await require('../accounts/adapter').of(rec).calendar.events(rec, { from: from.toISOString(), to: to.toISOString(), max })).map(e => ({ id: e.id, title: e.title, start: e.start, end: e.end, allDay: e.allDay, where: e.where, from: rec.account || rec.provider }))); }
     catch (e) { errors.push(`${rec.account || rec.provider}: ${e.message}`); }
   }
   events.sort((a, b) => String(a.start).localeCompare(String(b.start)));
   return { events, errors };
+}
+
+/** What the assistant added and nobody undid, from the person's action log (accounts/actions.js): `setByAssistant`. */
+function markSet(person, events) {
+  if (!person?.id) return events;
+  const set = new Set(require('../accounts/actions').list(person.id, { domain: 'calendar', limit: 500 }).filter(a => a.act === 'calendar.create' && !a.undoneBy).map(a => a.target?.id));
+  return events.map(e => (e.id && set.has(e.id) ? { ...e, setByAssistant: true } : e));
 }
 
 /** Events from now until the end of tomorrow, or {none: why}. */
@@ -51,12 +58,12 @@ async function today(person) {
   const ids = usable(person), own = ownOf(person);
   if (!ids.length && !own.length) return { events: [], none: NONE };
   const key = `${person?.id || ''}:${ids.join(',')}:${own.map(a => a.id).join(',')}`, now = Date.now();
-  if (_cache.key === key && now - _cache.at < KEEP_MS) return _cache.value;
+  if (_cache.key === key && now - _cache.at < KEEP_MS) return { ..._cache.value, events: markSet(person, _cache.value.events) };
   const from = new Date(); from.setHours(0, 0, 0, 0);
   const { events, errors } = await between(ids, own, from, new Date(from.getTime() + 2 * 86400000));
   const value = { events: events.filter(e => !e.end || new Date(e.end).getTime() > now).slice(0, 12), errors };
   _cache = { at: now, key, value };
-  return value;
+  return { ...value, events: markSet(person, value.events) };   // marked after the cache: an Undo shows at once
 }
 
 /** The week from today (Ambient's rule and calendars, `days` days): what a whole week of calendars looks like. Kept two minutes. */
@@ -66,12 +73,12 @@ async function week(person, days = 7) {
   const n = Math.max(1, Math.min(14, Number(days) || 7));
   if (!ids.length && !own.length) return { events: [], days: n, none: NONE, sources: [] };
   const key = `${person?.id || ''}:${ids.join(',')}:${own.map(a => a.id).join(',')}:${n}`, now = Date.now();
-  if (_weekCache.key === key && now - _weekCache.at < KEEP_MS) return _weekCache.value;
+  if (_weekCache.key === key && now - _weekCache.at < KEEP_MS) return { ..._weekCache.value, events: markSet(person, _weekCache.value.events) };
   const from = new Date(); from.setHours(0, 0, 0, 0);
   const { events, errors } = await between(ids, own, from, new Date(from.getTime() + n * 86400000), 60);
   const value = { events, errors, days: n, from: from.toISOString(), sources: [...ids, ...own.map(a => a.provider)] };
   _weekCache = { at: now, key, value };
-  return value;
+  return { ...value, events: markSet(person, events) };
 }
 
 module.exports = { today, week, usable };
