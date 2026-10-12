@@ -78,3 +78,16 @@ test('the feed is an SSE stream a signed-in person can open; a viewer cannot', a
   const page = await fetch(`${H.base}/face`, { headers: { Cookie: H.owner.cookie }, redirect: 'manual' });
   assert.equal(page.headers.get('location'), '/face.html');
 });
+
+test('a question with no conversation never throws on a member\'s face; their own reads as asking', async () => {
+  const member = await H.signIn('member', 'face-asked@test.local');
+  const person = { id: member.user.id, role: 'member' };
+  const approval = require('../modules/harness/approval');
+  const other = approval.ask({ tool: 'list_dir', keys: ['list_dir'], summary: 'nobody\'s' }, {});
+  try {
+    assert.equal(face.viewFor(person).state, 'idle', 'a question outside any conversation is not theirs');
+    const own = approval.ask({ tool: 'list_dir', keys: ['list_dir'], level: true, summary: 'theirs', personId: person.id }, {});
+    try { assert.equal(face.viewFor(person).state, 'asking'); }
+    finally { approval.decide(own.id, 'deny'); await own.answer; }
+  } finally { approval.decide(other.id, 'deny'); await other.answer; }
+});
