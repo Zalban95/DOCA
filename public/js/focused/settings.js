@@ -60,7 +60,7 @@ async function fcSetWake(btn) {
 /** Your accounts (modules/accounts): the person's own Google and Microsoft 365, each as it stands, and Connect —
  *  the same route as Field → Connectors → Your accounts, which "More" opens for reading times, rules and the log. */
 async function _fcSetAccounts(box, host) {
-  const d = await apiFetch('/api/accounts').catch(() => ({ accounts: [], providers: [] }));
+  const d = fcAccountsOn() ? await apiFetch('/api/accounts').catch(() => ({ accounts: [], providers: [] })) : { accounts: [], providers: [] };
   const mark = { google: 'G', microsoft: 'M' };
   const ready = (d.providers || []).filter(p => p.ready && p.allowed);
   box.innerHTML = `${(d.accounts || []).map(a => `<div class="fc-row">

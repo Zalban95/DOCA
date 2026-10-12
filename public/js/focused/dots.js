@@ -26,7 +26,7 @@ function fcDots(host, size = 160) {
     // Held in its form, as Ambient holds its galaxy (`c: 1` in every state): a button reads as the shape, not as noise.
     const steady = Object.fromEntries(Object.keys(FACE_STATES).map(k => [k, { ...(spec.states?.[k] || {}), c: 1 }]));
     rec.face = faceMount(canvas, { ...spec, dots, hud: false, grain: false, clear: true, vignette: false, settle: false, states: steady });
-    if (!_fcDotsFeed && typeof faceFeed === 'function') _fcDotsFeed = faceFeed(s => { if (Date.now() > _fcVoiceUntil) _fcDots.forEach(d => d.face.set(s.state, s.detail)); });
+    if (!_fcDotsFeed && typeof faceFeed === 'function' && fcHas('face')) _fcDotsFeed = faceFeed(s => { if (Date.now() > _fcVoiceUntil) _fcDots.forEach(d => d.face.set(s.state, s.detail)); });
   });
   return { stop() {
     rec.stopped = true; rec.face.stop(); _fcDots.delete(rec);

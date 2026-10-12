@@ -5,7 +5,12 @@
 const _fcCache = new Map();   // url → {at, p}
 
 /** GET `url`, the same answer for `ms` (a failed read is not kept). */
+// A feature this install's licence leaves out answers 404 (lib/licence.js): it is not asked at all (CI's core smoke).
+const fcHas = id => typeof licenceFeatureOn !== 'function' || licenceFeatureOn(id);
+const fcAccountsOn = () => fcHas('everyday-accounts');
+
 function fcGet(url, ms = 20000) {
+  if (url.startsWith('/api/accounts') && !fcAccountsOn()) return Promise.reject(Object.assign(new Error('Not in this licence.'), { status: 404 }));
   const c = _fcCache.get(url);
   if (c && Date.now() - c.at < ms) return c.p;
   const p = apiFetch(url).catch(e => { _fcCache.delete(url); throw e; });
