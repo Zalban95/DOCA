@@ -27,7 +27,7 @@ function mount(app) {
       if (!re.test(b[k].trim())) return res.status(400).json({ error: `${k}: not a value this takes.` });
       next[k] = b[k].trim();
     }
-    if (typeof b.warmMain === 'boolean') next.warmMain = b.warmMain;
+    for (const k of ['warmMain', 'thinking', 'quickThinking']) if (typeof b[k] === 'boolean') next[k] = b[k];
     savePrefs({ ...prefs, vision: next });
     res.json(await view());
   });

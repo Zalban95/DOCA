@@ -115,3 +115,25 @@ test('the locator: where-questions go to it, its point comes back in screen pixe
     assert.deepEqual([L.pointOf('[12, 34]'), L.pointOf('x = 5, y: 6'), L.pointOf('no')], [{ x: 12, y: 34 }, { x: 5, y: 6 }, null]);
   } finally { srv.close(); }
 });
+
+test('a quick model or a locator that cannot be reached hands over to the vision model, saying so', async () => {
+  const http = require('node:http'), png = require('../modules/machines/png');
+  const srv = http.createServer((req, res) => { let b = ''; req.on('data', d => { b += d; }); req.on('end', () => {
+    res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify({ choices: [{ message: { content: 'A dialog with OK at (10, 20).' } }] })); }); });
+  await new Promise(r => srv.listen(0, '127.0.0.1', r));
+  const pk = require('../modules/provider-keys'), u2 = require('../modules/utils');
+  pk.set('mainvl', { baseUrl: `http://127.0.0.1:${srv.address().port}/v1`, apiKey: '', api: 'openai-chat-completions', models: [] });
+  pk.set('gonevl', { baseUrl: 'http://127.0.0.1:9/v1', apiKey: '', api: 'openai-chat-completions', models: [] });
+  u2.savePrefs({ ...u2.loadPrefs(), vision: { provider: 'mainvl', model: 'main-x', quickProvider: 'gonevl', quickModel: 'quick-x', quickWhen: 'always', locatorProvider: 'gonevl', locatorModel: 'loc-x' } });
+  require('../modules/vision/pick')._reset();
+  const vision = require('../modules/vision');
+  const shot = png.encode({ width: 400, height: 300, rgb: Buffer.alloc(400 * 300 * 3, 30) });
+  try {
+    const q = await vision.read(shot, 'What does this say?');
+    assert.match(q.text, /A dialog/);
+    assert.match(q.by, /quick-x could not be reached; then main-x/);
+    const l = await vision.read(shot, 'Where is OK?');
+    assert.equal(l.how, 'model');
+    assert.match(l.by, /locator could not be reached/);
+  } finally { srv.close(); }
+});

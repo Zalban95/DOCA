@@ -32,7 +32,7 @@ const settings = () => ({
   detectorUrl: sc().value('vision.detectorUrl'), detectorModel: sc().value('vision.detectorModel'), apiKey: sc().value('vision.apiKey'),
   ocrLang: sc().value('vision.ocrLang'),
   locatorProvider: sc().value('vision.locatorProvider'), locatorModel: sc().value('vision.locatorModel'), locateWhen: sc().value('vision.locateWhen'), locatorPrompt: sc().value('vision.locatorPrompt'),
-  quickProvider: sc().value('vision.quickProvider'), quickModel: sc().value('vision.quickModel'), quickWhen: sc().value('vision.quickWhen'), warmMain: sc().value('vision.warmMain'),
+  quickProvider: sc().value('vision.quickProvider'), quickModel: sc().value('vision.quickModel'), quickWhen: sc().value('vision.quickWhen'), warmMain: sc().value('vision.warmMain'), thinking: sc().value('vision.thinking'), quickThinking: sc().value('vision.quickThinking'),
 });
 
 const run = (bin, args, opts = {}) => new Promise(resolve => execFile(bin, args, { timeout: 60000, maxBuffer: 16 << 20, windowsHide: true, ...opts },
@@ -52,10 +52,11 @@ function wanted(question) {
 const model = {
   label: 'a vision model',
   ready: s => !!(s.model || sc().value('vision.quickModel')),
-  async read(png, question, s, { person } = {}) {
+  async read(png, question, s, { person, noQuick } = {}) {
     // The main model, or the quick one while the main is not loaded (pick.js); a quick model not allotted to the
     // person is not used for them (S13).
-    let m = await require('./pick').pick(s);
+    const png0 = png, question0 = question, main0 = s, main = { provider: s.provider, model: s.model };
+    let m = noQuick ? { ...main, quick: false } : await require('./pick').pick(s);
     if (m.quick && person?.id && !require('../auth/allot').allowsModel(person, m)) m = { provider: s.provider, model: s.model, quick: false };
     if (!m.model) throw Object.assign(new Error('No vision model is set (Settings → Harness → Vision).'), { status: 409 });
     s = { ...s, provider: m.provider, model: m.model };
@@ -64,13 +65,19 @@ const model = {
     const ep = require('../harness/providers').endpoint(s.provider);
     // A quick answer is asked without thinking (vision.quickThinking off), in the chat template's own words; a server
     // that refuses the field is asked once more without it.
-    const noThink = m.quick && sc().value('vision.quickThinking') !== true;
+    const noThink = m.quick ? sc().value('vision.quickThinking') !== true : sc().value('vision.thinking') === false;
     const send = extra => fetch(`${ep.baseUrl}/chat/completions`, { method: 'POST', signal: AbortSignal.timeout(180000),
       headers: { 'Content-Type': 'application/json', ...(ep.apiKey ? { Authorization: `Bearer ${ep.apiKey}` } : {}) },
       body: JSON.stringify({ model: s.model, stream: false, temperature: 0, ...extra, messages: [{ role: 'system', content: SYSTEM },
         { role: 'user', content: [{ type: 'text', text: question }, { type: 'image_url', image_url: { url: `data:image/png;base64,${png.toString('base64')}` } }] }] }) })
       .catch(e => { throw Object.assign(new Error(`${ep.label}: cannot reach ${ep.baseUrl} (${e.message})`), { status: 502 }); });
-    let r = await send(noThink ? { chat_template_kwargs: { enable_thinking: false } } : {});
+    let r;
+    try { r = await send(noThink ? { chat_template_kwargs: { enable_thinking: false } } : {}); }
+    catch (e) {
+      // The quick model's server is not there (stopped, not yet back after a restart): the vision model reads instead.
+      if (!m.quick || !main.model) throw e;
+      return { ...(await model.read(png0, question0, { ...main0 }, { person, noQuick: true })), by: `${s.model} could not be reached; then ${main.model}` };
+    }
     if (noThink && r.status === 400) r = await send({});
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw Object.assign(new Error(`${ep.label} / ${s.model}: ${j.error?.message || j.error || `HTTP ${r.status}`}`), { status: 502 });
@@ -217,7 +224,13 @@ async function read(png, question, { how = 'auto', template: tpl, person } = {})
   if (!b) throw Object.assign(new Error(`No reader "${how}" — ${Object.keys(BACKENDS).join(', ')}, or none is set up (Settings → Harness → Vision).`), { status: 400 });
   if (how !== 'template' && !b.ready(s)) throw Object.assign(new Error(`${b.label} is not set up here (Settings → Harness → Vision).`), { status: 409 });
   require('../features/usage').count(`vision:${how}`);   // which reader is still used (features/review.js)
-  const got = { how, ...(await b.read(png, question, s, { template: tpl, person })) };
+  let got;
+  try { got = { how, ...(await b.read(png, question, s, { template: tpl, person })) }; }
+  catch (e) {
+    // The locator's server is not there: the vision model is asked instead, when there is one.
+    if (how !== 'locate' || e.status !== 502 || !usable('model')) throw e;
+    return { how: 'model', ...(await BACKENDS.model.read(png, question, s, { person })), by: `the locator could not be reached; then a vision model` };
+  }
   // The locator found nothing to point at: the general model is asked instead, when there is one.
   if (got.none && how === 'locate' && usable('model')) return { how: 'model', ...(await BACKENDS.model.read(png, question, s, { person })), by: `${got.by} found nothing; then a vision model` };
   return got;
