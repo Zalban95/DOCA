@@ -89,7 +89,7 @@ test('text: Tesseract\'s words found as a quoted phrase on one line, with the ce
 
 test('the readers are listed, and an unknown one is refused by name', async () => {
   const vision = require('../modules/vision');
-  assert.deepEqual(Object.keys(vision.BACKENDS), ['model', 'detector', 'text', 'template']);
+  assert.deepEqual(Object.keys(vision.BACKENDS), ['model', 'detector', 'text', 'template', 'locate']);
   await assert.rejects(vision.read(Buffer.from('x'), 'q', { how: 'telepathy' }), /No reader "telepathy"/);
   await assert.rejects(vision.read(Buffer.from('x'), 'q', { how: 'template' }), /needs `template`/);
 });

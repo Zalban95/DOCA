@@ -42,6 +42,11 @@ function onEvent(ev) {
     if (tile) live.changed('home', id, 'state', { tile, home: ID });
     return;
   }
+  // HA's own settings changed (units, the place's name): read them again, so the page never shows yesterday's.
+  if (ev?.event_type === 'core_config_updated') {
+    S.link?.cmd('get_config').then(c => { if (c) { S.config = c; live.changed('home', null, 'layout', { home: ID }); } }).catch(() => {});
+    return;
+  }
   if (/_registry_updated$/.test(ev?.event_type || '')) { clearTimeout(S.regTimer); S.regTimer = setTimeout(() => registries().then(() => live.changed('home', null, 'layout', { home: ID })).catch(() => {}), 1000); }
 }
 
@@ -69,7 +74,7 @@ async function ensure() {
       S.states = new Map((states || []).map(s => [s.entity_id, s]));
       await registries();
       await c.cmd('subscribe_events', { event_type: 'state_changed' });
-      for (const t of ['area_registry_updated', 'entity_registry_updated', 'device_registry_updated']) await c.cmd('subscribe_events', { event_type: t }).catch(() => {});
+      for (const t of ['area_registry_updated', 'entity_registry_updated', 'device_registry_updated', 'core_config_updated']) await c.cmd('subscribe_events', { event_type: t }).catch(() => {});
     } catch (e) { S.link = null; c.close(); throw e; }
     S.error = null;
     if (!S.sweep) { S.sweep = setInterval(sweep, 15000); S.sweep.unref?.(); }
@@ -94,6 +99,8 @@ function close() {
   S.states.clear();
 }
 
+const BOOKKEEPING = new Set(['sun', 'zone', 'conversation', 'tts', 'stt', 'wake_word', 'todo', 'event', 'update', 'tag', 'image', 'ai_task']);
+
 /** Whether an entity is on the page at all: a kind it draws, not kept off by HA's registry. */
 const shown = id => DOMAINS.includes(id.split('.')[0]) && !hiddenByRegistry(S.reg.get(id));
 
@@ -113,10 +120,17 @@ async function snapshot() {
     if (!groups.has(area)) groups.set(area, []);
     groups.get(area).push(tile);
   }
+  // What HA has that the page does not draw yet, by kind (counts only): said, never silently missing. Not devices:
+  // HA's own bookkeeping kinds are left out of the count.
+  const notDrawn = {};
+  for (const [id] of S.states) {
+    const d = id.split('.')[0];
+    if (!DOMAINS.includes(d) && !BOOKKEEPING.has(d) && !hiddenByRegistry(S.reg.get(id))) notDrawn[d] = (notDrawn[d] || 0) + 1;
+  }
   const order = t => DOMAINS.indexOf(t.domain);
   const areas = [...groups].map(([id, tiles]) => ({ id: id || null, name: id ? S.areas.get(id) || id : 'Elsewhere', tiles: tiles.sort((a, b) => order(a) - order(b) || a.name.localeCompare(b.name)) }))
     .sort((a, b) => (!a.id) - (!b.id) || a.name.localeCompare(b.name));
-  return { connected: true, origin: k.origin, place: S.config?.location_name || null, version: S.version, units: S.config?.unit_system || null, areas };
+  return { connected: true, origin: k.origin, place: S.config?.location_name || null, version: S.version, units: S.config?.unit_system || null, areas, notDrawn };
 }
 
 /** A page holds the Home page open (or lets go): the connection stays while anyone holds it. */

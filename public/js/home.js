@@ -62,7 +62,15 @@ async function homeLoad() {
   if (!d.areas.length) { page.innerHTML = bar + '<div class="home-empty"><h3>Nothing to show</h3><p>Home Assistant has no lights, switches, climate, covers, locks, sensors or cameras this account may see.</p></div>'; return; }
   for (const a of d.areas) for (const t of a.tiles) HOME.tiles.set(t.id, t);
   page.innerHTML = bar + `<div class="home-areas">${d.areas.map(a => `<section class="home-area"><h3>${escHtml(a.name)}</h3>
-    <div class="home-tiles">${a.tiles.map(_homeTile).join('')}</div></section>`).join('')}</div>`;
+    <div class="home-tiles">${a.tiles.map(_homeTile).join('')}</div></section>`).join('')}</div>${_homeNotDrawn(d.notDrawn)}`;
+}
+
+/** What Home Assistant has that this page does not draw yet (an admin's view): said, so nothing is silently missing. */
+function _homeNotDrawn(n) {
+  const kinds = Object.entries(n || {}).sort((a, b) => b[1] - a[1]);
+  if (!kinds.length) return '';
+  return `<p class="desc" style="margin:14px 2px 0">Not drawn here yet: ${kinds.map(([k, c]) => `${escHtml(k.replace(/_/g, ' '))} ${c}`).join(', ')}.
+    Home Assistant still controls them, and so does the agent through its Home Assistant server.</p>`;
 }
 
 function _homeSetup() {

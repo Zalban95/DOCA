@@ -39,7 +39,7 @@ test.before(async () => {
       if (m.type === 'auth') return m.access_token === TOKEN ? send({ type: 'auth_ok', ha_version: '2026.10.0' }) : send({ type: 'auth_invalid', message: 'Invalid access token or password' });
       const ok = result => send({ id: m.id, type: 'result', success: true, result });
       if (m.type === 'get_states') return ok(STATES);
-      if (m.type === 'get_config') return ok({ location_name: 'Test House', unit_system: { temperature: '°C' } });
+      if (m.type === 'get_config') return ok({ location_name: ha.place || 'Test House', unit_system: { temperature: ha.temp || '°C' } });
       if (m.type === 'config/area_registry/list') return ok([{ area_id: 'kitchen', name: 'Kitchen' }, { area_id: 'hall', name: 'Hall' }]);
       if (m.type === 'config/device_registry/list') return ok([{ id: 'dev1', area_id: 'kitchen' }]);
       if (m.type === 'config/entity_registry/list') return ok([{ entity_id: 'light.kitchen', area_id: 'kitchen' }, { entity_id: 'sensor.kitchen_temp', device_id: 'dev1' },
@@ -109,6 +109,7 @@ test('with the key: areas from the registries, tiles only of what a tile needs, 
   const all = r.body.areas.flatMap(a => a.tiles.map(t => t.id));
   assert.ok(!all.includes('switch.hidden'), 'hidden in HA stays hidden');
   assert.ok(!all.includes('automation.night'), 'a kind the page does not draw');
+  assert.deepEqual(r.body.notDrawn, { automation: 1 }, 'a kind not drawn is counted for an admin, never silently missing; hidden ones are not');
   const text = JSON.stringify(r.body);
   for (const secret of [TOKEN, 'CAMTOKEN', 'SECRET']) assert.ok(!text.includes(secret), `${secret} reached the browser`);
 });
@@ -124,6 +125,18 @@ test('a change in HA reaches a page holding Home, as the entity\'s new tile', as
   assert.equal(c.tile.attrs.brightness, 128);
   assert.equal((await H.api(null, 'POST', '/api/home/hold', { screen: 'not-mine', on: true })).status, 404);
   s.close();
+});
+
+test('HA\'s own settings changed (units, the place) are read again at once, not at the next connection', async () => {
+  await H.api(null, 'GET', '/api/home');
+  ha.place = 'Casa'; ha.temp = '°F';
+  const s = [...ha.sockets][0];
+  s.send(JSON.stringify({ id: s.sub, type: 'event', event: { event_type: 'core_config_updated', data: {} } }));
+  let r;
+  for (let i = 0; i < 40 && (r = await H.api(null, 'GET', '/api/home')).body.place !== 'Casa'; i++) await H.sleep(50);
+  assert.equal(r.body.place, 'Casa');
+  assert.equal(r.body.units.temperature, '°F');
+  ha.place = null; ha.temp = null;
 });
 
 test('acting: a short list of services, one entity, only the data each takes', async () => {

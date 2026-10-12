@@ -92,7 +92,7 @@ module.exports = [
     parameters: { type: 'object', properties: {
       target: { type: 'string', description: 'The VNC target\'s name or id.' },
       question: { type: 'string', description: 'Optional: what to find or read on it, e.g. "where is the Start button?".' },
-      how: { type: 'string', enum: ['auto', 'model', 'text', 'detector', 'template'], description: 'Which reader, when there is a question; auto is the owner\'s choice.' },
+      how: { type: 'string', enum: ['auto', 'model', 'locate', 'text', 'detector', 'template'], description: 'Which reader, when there is a question; auto is the owner\'s choice.' },
     }, required: ['target'] },
     run: look,
   },

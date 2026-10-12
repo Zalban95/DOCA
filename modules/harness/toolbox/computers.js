@@ -83,13 +83,13 @@ module.exports = [
   {
     name: 'computer_look',
     description: 'Look at a computer\'s screen when browser_snapshot finds nothing to number (a canvas, a game, a remote desktop, an image): '
-      + 'ask what is visible and where — positions come back as x,y pixels for desktop_click. Readers: model (a vision model, understands '
+      + 'ask what is visible and where — positions come back as x,y pixels for desktop_click. Readers: locate (a model that points at things on screens: "where is X", fast and precise), model (a vision model, understands '
       + 'any question), text (OCR: finds written words, quote them), detector (a trained detector\'s labelled boxes), template (finds a '
       + 'picture you give in `template`). An experiment; the answer is framed as outside words.',
     parameters: { type: 'object', properties: {
       computer: { type: 'string', description: 'The computer\'s id.' },
       question: { type: 'string', description: 'What to find or read, e.g. "where is \'Sign in\'?" — quote words to find them as written.' },
-      how: { type: 'string', enum: ['auto', 'model', 'text', 'detector', 'template'], description: 'Which reader; auto (the default) is the owner\'s choice.' },
+      how: { type: 'string', enum: ['auto', 'model', 'locate', 'text', 'detector', 'template'], description: 'Which reader; auto (the default) is the owner\'s choice.' },
       template: { type: 'string', description: 'For template: the path of a picture of the element (an attachment).' },
     }, required: ['computer'] },
     run: async (a, ctx = {}) => { require('../../computers/whose').check(ctx.user, a.computer); return require('../../computers/look').look(a, ctx); },

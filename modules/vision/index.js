@@ -31,6 +31,8 @@ const settings = () => ({
   backend: sc().value('vision.backend'), provider: sc().value('vision.provider'), model: sc().value('vision.model'),
   detectorUrl: sc().value('vision.detectorUrl'), detectorModel: sc().value('vision.detectorModel'), apiKey: sc().value('vision.apiKey'),
   ocrLang: sc().value('vision.ocrLang'),
+  locatorProvider: sc().value('vision.locatorProvider'), locatorModel: sc().value('vision.locatorModel'), locateWhen: sc().value('vision.locateWhen'), locatorPrompt: sc().value('vision.locatorPrompt'),
+  quickProvider: sc().value('vision.quickProvider'), quickModel: sc().value('vision.quickModel'), quickWhen: sc().value('vision.quickWhen'), warmMain: sc().value('vision.warmMain'),
 });
 
 const run = (bin, args, opts = {}) => new Promise(resolve => execFile(bin, args, { timeout: 60000, maxBuffer: 16 << 20, windowsHide: true, ...opts },
@@ -49,17 +51,31 @@ function wanted(question) {
 
 const model = {
   label: 'a vision model',
-  ready: s => !!s.model,
-  async read(png, question, s) {
+  ready: s => !!(s.model || sc().value('vision.quickModel')),
+  async read(png, question, s, { person } = {}) {
+    // The main model, or the quick one while the main is not loaded (pick.js); a quick model not allotted to the
+    // person is not used for them (S13).
+    let m = await require('./pick').pick(s);
+    if (m.quick && person?.id && !require('../auth/allot').allowsModel(person, m)) m = { provider: s.provider, model: s.model, quick: false };
+    if (!m.model) throw Object.assign(new Error('No vision model is set (Settings → Harness → Vision).'), { status: 409 });
+    s = { ...s, provider: m.provider, model: m.model };
+    const F = require('./frame'), f = F.frame(png, sc().value('vision.maxSide'));   // positions back in the screen's pixels
+    png = f.png; question = F.ask(String(question).slice(0, 2000), f);
     const ep = require('../harness/providers').endpoint(s.provider);
-    const r = await fetch(`${ep.baseUrl}/chat/completions`, { method: 'POST', signal: AbortSignal.timeout(180000),
+    // A quick answer is asked without thinking (vision.quickThinking off), in the chat template's own words; a server
+    // that refuses the field is asked once more without it.
+    const noThink = m.quick && sc().value('vision.quickThinking') !== true;
+    const send = extra => fetch(`${ep.baseUrl}/chat/completions`, { method: 'POST', signal: AbortSignal.timeout(180000),
       headers: { 'Content-Type': 'application/json', ...(ep.apiKey ? { Authorization: `Bearer ${ep.apiKey}` } : {}) },
-      body: JSON.stringify({ model: s.model, stream: false, temperature: 0, messages: [{ role: 'system', content: SYSTEM },
-        { role: 'user', content: [{ type: 'text', text: String(question).slice(0, 2000) }, { type: 'image_url', image_url: { url: `data:image/png;base64,${png.toString('base64')}` } }] }] }) })
+      body: JSON.stringify({ model: s.model, stream: false, temperature: 0, ...extra, messages: [{ role: 'system', content: SYSTEM },
+        { role: 'user', content: [{ type: 'text', text: question }, { type: 'image_url', image_url: { url: `data:image/png;base64,${png.toString('base64')}` } }] }] }) })
       .catch(e => { throw Object.assign(new Error(`${ep.label}: cannot reach ${ep.baseUrl} (${e.message})`), { status: 502 }); });
+    let r = await send(noThink ? { chat_template_kwargs: { enable_thinking: false } } : {});
+    if (noThink && r.status === 400) r = await send({});
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw Object.assign(new Error(`${ep.label} / ${s.model}: ${j.error?.message || j.error || `HTTP ${r.status}`}`), { status: 502 });
-    return { text: String(j.choices?.[0]?.message?.content || '').trim() || '(the model said nothing)', points: [] };
+    const said = String(j.choices?.[0]?.message?.content || '').trim();
+    return { text: said ? F.back(said, f) : '(the model said nothing)', points: [], by: m.quick ? `${m.model} — ${m.why}` : s.model };
   },
 };
 
@@ -172,7 +188,8 @@ const template = {
   },
 };
 
-const BACKENDS = { model, detector, text, template };
+const { locate, asksWhere } = require('./locate');
+const BACKENDS = { model, detector, text, template, locate };
 
 /** Which readers this hive can use now (template's Python is probed once). */
 async function available() {
@@ -192,19 +209,24 @@ async function read(png, question, { how = 'auto', template: tpl, person } = {})
   const allotted = !person?.id || require('../auth/allot').allowsModel(person, { provider: s.provider, model: s.model });
   const usable = id => BACKENDS[id]?.ready(s) && (id !== 'model' || allotted);
   if (tpl && how === 'auto') how = 'template';
+  // A question about where something is goes to the locator when there is one (vision.locateWhen where).
+  if (how === 'auto' && usable('locate') && sc().value('vision.locateWhen') !== 'asked' && asksWhere(question)) how = 'locate';
   if (how === 'auto') how = usable(s.backend) ? s.backend : (await available()).find(usable);
   if (how === 'model' && !allotted) throw Object.assign(new Error(require('../auth/allot').refusal(person, 'model', `${s.provider}/${s.model}`)), { status: 403 });
   const b = BACKENDS[how];
   if (!b) throw Object.assign(new Error(`No reader "${how}" — ${Object.keys(BACKENDS).join(', ')}, or none is set up (Settings → Harness → Vision).`), { status: 400 });
   if (how !== 'template' && !b.ready(s)) throw Object.assign(new Error(`${b.label} is not set up here (Settings → Harness → Vision).`), { status: 409 });
   require('../features/usage').count(`vision:${how}`);   // which reader is still used (features/review.js)
-  return { how, ...(await b.read(png, question, s, { template: tpl })) };
+  const got = { how, ...(await b.read(png, question, s, { template: tpl, person })) };
+  // The locator found nothing to point at: the general model is asked instead, when there is one.
+  if (got.none && how === 'locate' && usable('model')) return { how: 'model', ...(await BACKENDS.model.read(png, question, s, { person })), by: `${got.by} found nothing; then a vision model` };
+  return got;
 }
 
 /** What the agent reads. */
 function say(r) {
   const pts = r.points.map(p => `- ${p.label} at ${p.x},${p.y}${p.score != null ? ` (${Math.round(p.score * 100)}%)` : ''}`).join('\n');
-  return [`[read by ${BACKENDS[r.how]?.label || r.how}]`, r.text, pts].filter(Boolean).join('\n');
+  return [`[read by ${BACKENDS[r.how]?.label || r.how}${r.by ? ` (${r.by})` : ''}]`, r.text, pts].filter(Boolean).join('\n');
 }
 
 module.exports = { BACKENDS, SYSTEM, settings, available, anyReady, read, say, wanted, tsvWords, findPhrases, linesOf };

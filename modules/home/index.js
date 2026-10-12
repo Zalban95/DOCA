@@ -52,7 +52,9 @@ async function view(person, homeId) {
   const raw = h.kind === 'direct' ? await direct.snapshot() : await nodes.snapshot(nodes.list().find(n => n.id === h.id));
   const areas = (raw.areas || []).map(a => ({ ...a, tiles: a.tiles.filter(t => allowed(person, t.id, h.id)) })).filter(a => a.tiles.length);
   if (raw.setup && h.kind === 'direct') raw.setup.node = 'doca-client home setup';
-  return { ...raw, home: h.id, homeName: h.name, kind: h.kind, homes: list, areas };
+  // Which kinds are not drawn, an admin's to read (it is about the home, not one person's things).
+  const notDrawn = require('../auth/rights').can(person?.role, 'host') ? raw.notDrawn : undefined;
+  return { ...raw, home: h.id, homeName: h.name, kind: h.kind, homes: list, areas, notDrawn };
 }
 
 /** The home an entity is acted on in: {home, kind, has(id), send(msg), camera(id)}; throws when there is none or it is away. */
