@@ -70,14 +70,19 @@ test('the agent can never propose it: not settable, not a screen proposal', () =
   assert.ok(settings.refuse('panelMode', 'extended', { screen: 'this' }), 'and for one screen');
 });
 
-test('the migration marks every screen that existed as Extended, once, and never one that chose', async () => {
+test('the migration keeps an admin\'s existing screens on Extended, once; a member\'s go by role', async () => {
   const devices = require('../modules/api-v1/devices'), screens = require('../modules/screens');
-  const made = devices.create({ name: 'old browser', kind: 'browser', scopes: [] }).device;
-  const chose = devices.create({ name: 'chose', kind: 'browser', scopes: [] }).device;
+  const admin = await H.signIn('admin', 'mig-admin@test.local'), member = await H.signIn('member', 'mig-member@test.local');
+  const mk = (name, userId) => { const d = devices.create({ name, kind: 'browser', scopes: [] }).device; if (userId) devices.update(d.id, { userId }); return d; };
+  const theirs = mk('admin browser', admin.user.id), old = mk('before accounts'), mine = mk('member browser', member.user.id);
+  const chose = mk('chose', admin.user.id);
   screens.set(chose.id, { panelMode: 'focused' });
   const n = require('../modules/screens/panel-mode').markExisting();
-  assert.ok(n >= 1);
-  assert.equal(screens.layer(made.id).panelMode, 'extended');
+  assert.ok(n >= 2);
+  assert.equal(screens.layer(theirs.id).panelMode, 'extended', 'an admin keeps the panel they used');
+  assert.equal(screens.layer(old.id).panelMode, 'extended', 'a screen from before accounts was the owner\'s');
+  assert.equal(screens.layer(mine.id).panelMode, undefined, 'a member\'s goes by role');
+  assert.equal(require('../modules/screens/panel-mode').resolve(mine.id, member.user, 'member').mode, 'focused');
   assert.equal(screens.layer(chose.id).panelMode, 'focused', 'a choice already made is kept');
   assert.equal(require('../modules/screens/panel-mode').markExisting(), 0, 'nothing left to mark');
   const row = require('../modules/migrations').MIGRATIONS.find(m => m.id === '3.38-panel-mode-existing');
@@ -114,4 +119,21 @@ test('the week from today: the calendars this person may see, or why there are n
   assert.equal(r.status, 200);
   assert.deepEqual(r.body.events, []);
   assert.match(r.body.none, /Connect/);
+});
+
+test('a paired app reads the resolved face from /api/v1 (additive): by role, or as set', async () => {
+  const devices = require('../modules/api-v1/devices');
+  const member = await H.signIn('member', 'mode-app@test.local');
+  const phone = H.mkDevice('their phone', 'phone', H.PHONE_CAPS);
+  devices.update(phone.device.id, { userId: member.user.id, orgId: member.orgId });
+  let r = await H.api(phone.token, 'GET', '/api/v1/settings/effective');
+  assert.equal(r.status, 200);
+  assert.deepEqual(r.body.panelModeResolved, { mode: 'focused', source: 'role' });
+  devices.update(phone.device.id, { userId: H.owner.user.id, orgId: H.owner.orgId });
+  r = await H.api(phone.token, 'GET', '/api/v1/settings/effective');
+  assert.deepEqual(r.body.panelModeResolved, { mode: 'extended', source: 'role' });
+  require('../modules/screens').set(phone.device.id, { panelMode: 'focused' });
+  r = await H.api(phone.token, 'GET', '/api/v1/settings/effective');
+  assert.deepEqual(r.body.panelModeResolved, { mode: 'focused', source: 'device' });
+  assert.equal(r.body.settings.panelMode, 'focused');
 });

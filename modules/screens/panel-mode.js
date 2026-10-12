@@ -9,8 +9,9 @@
  * Which one a screen shows is the screen-home setting `panelMode` (settings-schema.js), layered like `skin`:
  * this screen → its person (theirs on every device) → the hive's prefs. A screen nobody chose for takes the default
  * of its person's role: someone holding host (an admin, the owner) starts in Extended, everyone else in Focused.
- * A screen that existed before this was built keeps Extended (migration `3.38-panel-mode-existing`, markExisting()):
- * an update never takes away the panel a person was using.
+ * A screen that existed before this was built and belongs to someone holding host (an admin, the owner — or no one, a
+ * screen from before accounts) keeps Extended (migration `3.38-panel-mode-existing`, markExisting()); a member's goes by
+ * role, to Focused, and switches back in one tap (the owner's decision, 2026-10-12).
  *
  * Never proposable: what a person sees of the machine is their own click, not the agent's suggestion.
  */
@@ -33,12 +34,20 @@ function resolve(deviceId, user, role, effective = null) {
   return { mode: roleDefault(role), from: 'role' };
 }
 
-/** Every screen that exists now keeps the panel it showed (Extended): run once by the migration. Returns how many. */
+/** Whether a screen's person holds host in any of their organisations (no person: a screen from before accounts). */
+function hostsScreen(d) {
+  if (!d.userId) return true;
+  try {
+    return require('../auth/store').membershipsOf(d.userId).some(m => m.status !== 'suspended' && require('../auth/rights').can(m.role, 'host'));
+  } catch { return false; }
+}
+
+/** Every screen of an admin's that exists now keeps the panel it showed (Extended): run once by the migration. Returns how many. */
 function markExisting() {
   const devices = require('../api-v1/devices'), screens = require('./index');
   let n = 0;
   for (const d of devices.list()) {
-    if (d.revokedAt || d.kind === 'agent') continue;
+    if (d.revokedAt || d.kind === 'agent' || !hostsScreen(d)) continue;
     if (screens.layer(d.id).panelMode !== undefined) continue;
     screens.set(d.id, { panelMode: 'extended' });
     n++;
@@ -46,4 +55,17 @@ function markExisting() {
   return n;
 }
 
-module.exports = { MODES, valid, roleDefault, resolve, markExisting };
+/** For a paired device (GET /api/v1/settings/effective): the mode its screen shows and where that came from
+ *  (`device`, `person`, `hive` or `role` — the role of the device's person in its organisation). */
+function forDevice(d, effective) {
+  let role = null;
+  try {
+    const store = require('../auth/store');
+    const m = (d.orgId && d.userId && store.membership(d.orgId, d.userId)) || (d.userId ? store.membershipsOf(d.userId)[0] : null);
+    role = m?.role || (d.userId ? null : 'owner');   // no person: a device from before accounts, the owner's
+  } catch { /* by the default */ }
+  const r = resolve(d.id, d.userId ? { id: d.userId } : null, role, effective);
+  return { mode: r.mode, source: r.from };
+}
+
+module.exports = { MODES, valid, roleDefault, resolve, forDevice, markExisting, hostsScreen };
