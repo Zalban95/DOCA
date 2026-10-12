@@ -101,7 +101,7 @@ function act(args, ctx) {
   }
   if (args.action === 'add' || args.action === 'cancel') {
     const plan = org.plan(r.id, { action: args.action, text: args.text, step: args.step, why: args.why }, { by: 'person', who });
-    const how = living.tell(r.id, plan.edit, who || 'The person');
+    const how = living.tell(r.id, plan.edit, who || 'The person', ctx.byPerson ? ctx.user : null);   // their own addition carries their authority
     const w = where(memory.getSession(r.id)?.plan);
     if (args.action === 'cancel') return plan.edit.asked
       ? `Asked **${r.title}** to drop step ${plan.edit.step} ("${short(plan.edit.text, 80)}"), which it is on now: it stops it at a sensible point.`
