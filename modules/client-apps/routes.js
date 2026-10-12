@@ -13,7 +13,8 @@
  *   POST /api/clients/apps/:app/link             a download link that needs no sign-in, for 10 minutes (host) — what a
  *                                                phone's browser opens (DocaMobile's apps_open) to save the APK
  *   GET  /api/clients/apps/:app/apk/:token       that link (public: the token is the permission)
- *   GET  /api/v1/clients/android/:app            for a device: versionCode, versionName, sha256, bytes, where (any token)
+ *   GET  /api/v1/clients/android/:app            for a device: versionCode, versionName, sha256, bytes, where (any token);
+ *                                                the watch face (docawear-face) also its validationToken
  *   GET  /api/v1/clients/android/:app/apk        the APK (any token)
  */
 const express = require('express');
@@ -34,7 +35,8 @@ const sendApk = (req, res) => {
 const _links = new Map();
 const LINK_MS = 10 * 60 * 1000;
 function makeLink(app, req) {
-  apps.known(app);
+  // The watch face goes on the wrist from the phone's app (Watch Face Push), never from a browser: no link for it.
+  if (apps.known(app).token) throw Object.assign(new Error('The watch face is installed by DocaWear from the phone\'s Settings → Watch, not from a browser.'), { status: 400 });
   if (!apps.latest(app)) throw Object.assign(new Error('No build of it is kept yet.'), { status: 404 });
   for (const [t, l] of _links) if (l.until < Date.now()) _links.delete(t);
   const token = require('crypto').randomBytes(24).toString('base64url');
@@ -70,7 +72,8 @@ function mount(app) {
     catch (e) { res.write(`data: ${JSON.stringify({ done: true, ok: false, status: `✗ ${e.message}\n` })}\n\n`); }
     res.end();
   });
-  app.post('/api/clients/apps/:app', raw, h(req => apps.keep(req.params.app, req.body, { from: 'upload', given: req.query, force: req.query.force === '1' })));
+  app.post('/api/clients/apps/:app', raw, h(req => apps.keep(req.params.app, req.body, { from: 'upload', given: req.query, force: req.query.force === '1',
+    validationToken: req.get('x-validation-token') || req.query.validationToken })));
 }
 
 function mountDevice(router) {
@@ -78,7 +81,8 @@ function mountDevice(router) {
     try {
       const m = apps.latest(req.params.app);
       if (!m) return res.status(404).json({ error: { code: 'not_found', message: 'No build of it is kept on this hub.' } });
-      res.json({ app: m.app, package: m.package, versionCode: m.versionCode, versionName: m.versionName, sha256: m.sha256, bytes: m.bytes, at: m.at, url: `/api/v1/clients/android/${m.app}/apk` });
+      res.json({ app: m.app, package: m.package, versionCode: m.versionCode, versionName: m.versionName, sha256: m.sha256, bytes: m.bytes, at: m.at, url: `/api/v1/clients/android/${m.app}/apk`,
+        ...(m.validationToken ? { validationToken: m.validationToken } : {}) });
     } catch (e) { res.status(e.status || 500).json({ error: { code: 'not_found', message: e.message } }); }
   });
   router.get('/clients/android/:app/apk', sendApk);

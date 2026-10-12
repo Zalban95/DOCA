@@ -21,7 +21,10 @@ function spec(id) {
   const rec = vault.get(id) || {};
   const base = CATALOG[rec.kind || id] || null;
   if (!base) throw bad(`No connector "${id}".`, 404);
-  const urls = base.custom ? rec.urls || {} : base;
+  // DOCA_GOOGLE_OAUTH / DOCA_MICROSOFT_OAUTH point a catalogue service's sign-in, token and whoami at a stub (the tests):
+  // the environment only, never a setting, so nobody can redirect a hive's sign-ins from the panel.
+  const stub = !base.custom && process.env[`DOCA_${(rec.kind || id).toUpperCase()}_OAUTH`];
+  const urls = base.custom ? rec.urls || {} : stub ? { ...base, authorize: `${stub}/authorize`, token: `${stub}/token`, whoami: `${stub}/whoami` } : base;
   return { id, label: rec.label || base.label, authorize: urls.authorize, token: urls.token, api: [].concat(urls.api || []),
     whoami: urls.whoami || null, account: base.account || (j => j.login || j.email || j.name || j.id), scopes: rec.scopes ?? base.scopes, extra: base.extra || {} };
 }

@@ -40,6 +40,7 @@ const COVERAGE = {
   wakeword: { v1: ['/wakeword'], note: 'a device downloads kept models and the runtime; training stays the hub\'s' },
   ambient: { v1: ['/ambient'], note: 'the person\'s day; the screen itself is the panel\'s page' },
   meetings: { v1: ['/meetings'], note: 'a device lists its person\'s meetings with their links; the room itself is a page it opens' },
+  accounts: { panel: 'a person\'s own Google / Microsoft 365 accounts are connected through a browser sign-in (OAuth), and their calendar and mail reach a device through the agent (the calendar and mail tools); sending a draft and Undo from a phone are capability-gaps.md, everyday-decide', note: 'reads only through the agent until then' },
   notices: { v1: ['/events'], note: 'a device gets a notice as an `alert` on its event stream; this is the panel\'s own list of them' },
   home: { panel: 'the Home page, drawn from Home Assistant by the hub (home/); a device\'s own /api/v1 home is a later step — capability-gaps.md, home' },
   decisions: { v1: ['/decisions'] },

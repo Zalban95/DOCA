@@ -6,6 +6,11 @@
  * built here (build.js). A device asks `GET /api/v1/clients/android/<app>` and updates itself when the versionCode is
  * higher than its own (DocaMobile's updater); a person downloads it from the panel.
  *
+ * The third is DocaWear's watch face (`docawear-face`, 2026-10-12): a Watch Face Format APK of its own package that
+ * DocaWear installs on Wear OS 6 by Watch Face Push. Push takes a face only with the validation token Google's validator
+ * makes for that APK and the installing app's package — DocaWear's `:watchface` build writes it beside the APK, an
+ * upload brings it (`X-Validation-Token`) — so the token is kept with the APK and handed to the watch with it.
+ *
  * An Android update installs only over an app signed with the same key, so the hub keeps one signing key
  * (keys/android-signing.keystore, protected) and signs what it builds with it; the phone's app must have been signed
  * with it too (until a key is uploaded, whichever machine's debug key built it).
@@ -19,6 +24,10 @@ const APPS = {
   // them apart: a phone APK kept as DocaWear would be installed on the wrist (audit 2026-10-06, cl 14).
   docamobile: { label: 'DocaMobile', package: 'tech.honlab.doca', watch: false, task: ':app:assembleDebug', apk: 'app/build/outputs/apk/debug/app-debug.apk', java: null },
   docawear: { label: 'DocaWear', package: 'tech.honlab.doca', watch: true, task: ':app:assembleDebug', apk: 'app/build/outputs/apk/debug/app-debug.apk', java: 21 },
+  // Built from DocaWear's repository (`repoOf`): its `:watchface` module, whose assemble also runs the validator.
+  'docawear-face': { label: 'DocaWear face', package: 'tech.honlab.doca.watchfacepush.face', watch: true, task: ':watchface:assembleDebug',
+    apk: 'watchface/build/outputs/apk/debug/watchface-debug.apk', buildFile: 'watchface/build.gradle.kts',
+    token: 'watchface/build/outputs/push-token/debug/validation-token.txt', repoOf: 'docawear', java: 21 },
 };
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
 const dataDir = () => require('../store').DATA_DIR;
@@ -56,9 +65,17 @@ function identify(file, given = {}) {
   return { package: String(given.package || ''), versionCode, versionName: String(given.versionName || versionCode), watch: null };   // null: nobody could tell
 }
 
-/** Keep an APK as the app's latest. Refuses another package, and an older versionCode unless `force`. */
-function keep(app, buffer, { from = 'upload', given = {}, force = false } = {}) {
+/** A Watch Face Push validation token as the validator prints it (base64, a colon, base64), or null. */
+const tokenOf = t => { const v = String(t || '').trim(); return /^[A-Za-z0-9+/=_-]{16,512}:[A-Za-z0-9+/=_-]{1,64}$/.test(v) ? v : null; };
+
+/**
+ * Keep an APK as the app's latest. Refuses another package, and an older versionCode unless `force`. The watch face
+ * also needs its validation token (`validationToken`): without one no watch can install it, so it is not kept.
+ */
+function keep(app, buffer, { from = 'upload', given = {}, force = false, validationToken } = {}) {
   const a = known(app);
+  const token = a.token ? tokenOf(validationToken) : null;
+  if (a.token && !token) throw bad(`${a.label} needs its Watch Face Push validation token beside the APK (the build writes ${a.token}; an upload sends it as X-Validation-Token).`);
   if (buffer.length < 4 || buffer.readUInt32LE(0) !== 0x04034b50) throw bad('That is not an APK (not a zip).');
   fs.mkdirSync(dir(app), { recursive: true });
   const tmp = path.join(dir(app), `incoming-${Date.now()}.apk`);
@@ -72,7 +89,7 @@ function keep(app, buffer, { from = 'upload', given = {}, force = false } = {}) 
     if (prev && id.versionCode < prev.versionCode && !force) throw bad(`It is older (${id.versionCode}) than the one kept (${prev.versionCode}).`, 409);
     fs.renameSync(tmp, apkFile(app));
     const meta = { app, label: a.label, ...id, package: id.package || a.package, bytes: buffer.length,
-      sha256: crypto.createHash('sha256').update(buffer).digest('hex'), from, at: new Date().toISOString() };
+      sha256: crypto.createHash('sha256').update(buffer).digest('hex'), from, at: new Date().toISOString(), ...(token ? { validationToken: token } : {}) };
     fs.writeFileSync(path.join(dir(app), 'latest.json'), JSON.stringify(meta, null, 2));
     return meta;
   } finally { fs.rmSync(tmp, { force: true }); }
@@ -82,7 +99,8 @@ function keep(app, buffer, { from = 'upload', given = {}, force = false } = {}) 
 function settings() {
   const prefs = require('../utils').loadPrefs().clientApps || {};
   const p = require('../paths');
-  return { apps: Object.fromEntries(Object.entries(APPS).map(([id, a]) => [id, { label: a.label, repo: prefs[id]?.repo || '', latest: latest(id) }])),
+  return { apps: Object.fromEntries(Object.entries(APPS).map(([id, a]) => [id, { label: a.label, repo: prefs[id]?.repo || '', latest: latest(id),
+    ...(a.repoOf ? { repoOf: a.repoOf, repoFrom: prefs[id]?.repo ? '' : (prefs[a.repoOf]?.repo || '') } : {}), ...(a.token ? { needsToken: true } : {}) }])),
     signing: fs.existsSync(p.ANDROID_SIGNING_STORE) ? { kept: true, ...JSON.parse(fs.readFileSync(p.ANDROID_SIGNING_FILE, 'utf8') || '{}'), storePassword: undefined, keyPassword: undefined } : { kept: false } };
 }
 
@@ -124,4 +142,10 @@ function signingEnv() {
   return { DOCA_SIGNING_STORE: p.ANDROID_SIGNING_STORE, DOCA_SIGNING_ALIAS: s.alias, DOCA_SIGNING_STORE_PASSWORD: s.storePassword, DOCA_SIGNING_KEY_PASSWORD: s.keyPassword };
 }
 
-module.exports = { APPS, latest, apkFile, keep, identify, settings, setRepo, setSigning, signingEnv, known };
+/** Where an app's source is: its own folder, else (the watch face) the app whose repository it is built from. */
+function repoFor(app) {
+  const a = known(app), apps = settings().apps;
+  return apps[app].repo || (a.repoOf ? apps[a.repoOf].repo : '');
+}
+
+module.exports = { APPS, latest, apkFile, keep, identify, settings, setRepo, setSigning, signingEnv, known, repoFor, tokenOf };

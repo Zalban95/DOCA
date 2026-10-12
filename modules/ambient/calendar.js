@@ -1,8 +1,8 @@
 'use strict';
 
 /**
- * Today's plan from the owner's calendar, for the ambient screen: Google Calendar or Microsoft 365, whichever connector
- * is connected (Field → Connectors), read with its read-only scope. The same rule as the connector's tool: the owner's
+ * Today's plan, for the ambient screen: the person's own Google or Microsoft 365 accounts (Field → Connectors → Your
+ * accounts, accounts/) and the owner's calendar connector (Field → Connectors), read with its read-only scope. The same rule as the connector's tool: the owner's
  * account is shown to a person holding host, or to everyone once the owner opened it (connectors/tools.js). Titles,
  * times and places only; kept two minutes.
  */
@@ -23,8 +23,11 @@ function usable(person) {
   return Object.keys(SOURCES).filter(id => vault.get(id)?.accessToken && require('../auth/allot').uses(person, 'connector', id, { opened: vault.get(id)?.who === 'everyone' }));
 }
 
-/** Events between two times from every calendar this person may see, oldest first: {events, errors}. */
-async function between(ids, from, to, max = 15) {
+const ownOf = person => (person?.id ? require('../accounts/store').list(person.id) : []);   // the person's own accounts (accounts/)
+const NONE = 'Connect your own Google or Microsoft 365 account in Field → Connectors → Your accounts to see the day\'s plan here.';
+
+/** Events between two times from the hub's calendars this person may see and their own accounts, oldest first. */
+async function between(ids, own, from, to, max = 15) {
   const oauth = require('../connectors/oauth');
   const events = [], errors = [];
   for (const id of ids) {
@@ -35,36 +38,38 @@ async function between(ids, from, to, max = 15) {
       events.push(...s.read(await r.json()).map(e => ({ ...e, from: id })));
     } catch (e) { errors.push(`${id}: ${e.message}`); }
   }
+  for (const rec of own) {
+    try { events.push(...(await require('../accounts/adapter').of(rec).calendar.events(rec, { from: from.toISOString(), to: to.toISOString(), max })).map(e => ({ title: e.title, start: e.start, end: e.end, allDay: e.allDay, where: e.where, from: rec.account || rec.provider }))); }
+    catch (e) { errors.push(`${rec.account || rec.provider}: ${e.message}`); }
+  }
   events.sort((a, b) => String(a.start).localeCompare(String(b.start)));
   return { events, errors };
 }
 
-const NONE = 'Connect Google or Microsoft 365 in Field → Connectors to see the day\'s plan here.';
-
 /** Events from now until the end of tomorrow, or {none: why}. */
 async function today(person) {
-  const ids = usable(person);
-  if (!ids.length) return { events: [], none: NONE };
-  const key = ids.join(','), now = Date.now();
+  const ids = usable(person), own = ownOf(person);
+  if (!ids.length && !own.length) return { events: [], none: NONE };
+  const key = `${person?.id || ''}:${ids.join(',')}:${own.map(a => a.id).join(',')}`, now = Date.now();
   if (_cache.key === key && now - _cache.at < KEEP_MS) return _cache.value;
   const from = new Date(); from.setHours(0, 0, 0, 0);
-  const { events, errors } = await between(ids, from, new Date(from.getTime() + 2 * 86400000));
+  const { events, errors } = await between(ids, own, from, new Date(from.getTime() + 2 * 86400000));
   const value = { events: events.filter(e => !e.end || new Date(e.end).getTime() > now).slice(0, 12), errors };
   _cache = { at: now, key, value };
   return value;
 }
 
-/** The week from today (the Focused view's Calendar, public/js/focused/agenda.js): `days` days, every event. Kept two minutes. */
+/** The week from today (Ambient's rule and calendars, `days` days): what a whole week of calendars looks like. Kept two minutes. */
 let _weekCache = { at: 0, key: '', value: null };
 async function week(person, days = 7) {
-  const ids = usable(person);
+  const ids = usable(person), own = ownOf(person);
   const n = Math.max(1, Math.min(14, Number(days) || 7));
-  if (!ids.length) return { events: [], days: n, none: NONE, sources: [] };
-  const key = `${ids.join(',')}:${n}`, now = Date.now();
+  if (!ids.length && !own.length) return { events: [], days: n, none: NONE, sources: [] };
+  const key = `${person?.id || ''}:${ids.join(',')}:${own.map(a => a.id).join(',')}:${n}`, now = Date.now();
   if (_weekCache.key === key && now - _weekCache.at < KEEP_MS) return _weekCache.value;
   const from = new Date(); from.setHours(0, 0, 0, 0);
-  const { events, errors } = await between(ids, from, new Date(from.getTime() + n * 86400000), 60);
-  const value = { events, errors, days: n, from: from.toISOString(), sources: ids };
+  const { events, errors } = await between(ids, own, from, new Date(from.getTime() + n * 86400000), 60);
+  const value = { events, errors, days: n, from: from.toISOString(), sources: [...ids, ...own.map(a => a.provider)] };
   _weekCache = { at: now, key, value };
   return value;
 }

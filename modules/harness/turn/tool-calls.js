@@ -42,7 +42,14 @@ function askerOf(read, { client, isMission, profile }) {
   if (isMission || client?.user?.id) return null;
   if (profile && profile.level !== 'orchestrator' && profile.level !== 'work') return null;
   const i = [...(read || [])].reverse().find(x => x.client?.user?.id && x.client.kind !== 'agent');
-  return i ? i.client.user : null;
+  if (i) return i.client.user;
+  // A job handed on from the main chat, or a step the person added to it, carries who asked (organization.start
+  // askedBy; the owner, 2026-10-12: "carry authority — it should be as safe as if the orchestrator was doing it"):
+  // the work chat's turn that reads their own words acts for them, as the Orchestrator would have. A turn woken by a
+  // report or by the supervisor carries nobody.
+  const own = profile?.level === 'work' && (client?.askedBy?.id ? client.askedBy
+    : [...(read || [])].reverse().find(x => x.client?.askedBy?.id)?.client.askedBy);
+  return own || null;
 }
 
 async function runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read = [] }) {

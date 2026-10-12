@@ -51,6 +51,8 @@ const LEADS = {
   library_search: 'Find the person\'s files by what is in them — words said in a recording, what a picture shows — use it for "find the audio where…".',
   chronicle: 'Read what happened — runs, missions, jobs, the hub\'s log, a piece of work\'s story and cost — use it for "what happened", "why did it fail".',
   hub_command: 'Run the hub\'s own commands — start or stop a service, a container, a llama.cpp server, take a snapshot — instead of shell.',
+  calendar: 'The person\'s own calendar (Google or Microsoft 365) — use it to see, add, move or delete their appointments, each with undo.',
+  mail: 'The person\'s own mail — use it to read their inbox, see which mails need them, draft a reply for their Send, or file mail.',
   today: 'The weather, today\'s calendar and what is waiting for the person — use it for "what\'s my day" or a morning brief.',
   schedule: 'Propose a message or recipe on a timetable, which the person switches on — use it when asked to do something regularly.',
   machine_backup: 'Read the backup of this machine\'s files — set up or not, its history, the copies of a file — use it for "is it backed up", "an older copy of…".',

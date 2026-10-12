@@ -27,7 +27,7 @@ const KITS = {
   panel:        { label: 'Panel',        about: 'this panel\'s state and settings, which you propose' },
   skills:       { label: 'Skills',       about: 'procedures to load when a task matches, recipes to run again without the thinking, and to keep what you learn' },
   mcp:          { label: 'MCP',          about: 'tools from MCP servers running now' },
-  connectors:   { label: 'Connectors',   about: 'the accounts the owner connected (GitHub, Google, Microsoft…), through their own APIs (connectors/)' },
+  connectors:   { label: 'Connectors',   about: 'the accounts the owner connected (GitHub, Google, Microsoft…), through their own APIs (connectors/), and each person\'s own calendar and mail (accounts/)' },
   computer:     { label: 'Computer',     about: 'a Linux desktop in a container: shell, files, screen, a real browser, recording (computers/)' },
 };
 
@@ -39,7 +39,7 @@ const KIT_OF = {
   read_file: 'files', write_file: 'files', list_dir: 'files', library_search: 'files',
   shell: 'shell', shell_job: 'shell',
   canvas: 'canvas',
-  http_fetch: 'web', research_docs: 'web', web_search: 'web', api_call: 'connectors', service: 'connectors',
+  http_fetch: 'web', research_docs: 'web', web_search: 'web', api_call: 'connectors', service: 'connectors', calendar: 'connectors', mail: 'connectors',
   memory_write: 'memory', memory_rules_write: 'memory', memory_search: 'memory', memory_list: 'memory',
   memory_forget: 'memory', memory_flag: 'memory', recall_conversations: 'memory', chronicle: 'memory',
   ask_device: 'devices', tell_device: 'devices', secret_use: 'devices', doca_clients: 'devices', show_media: 'devices', show_image: 'devices', today: 'devices', screen: 'devices', nearby: 'devices', meeting: 'devices',
