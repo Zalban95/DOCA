@@ -27,7 +27,9 @@ function mount(app) {
       const d = screens.ensure(req, res, req.query.device || null);
       // The switches that change how a call behaves on a screen: any person's screen needs them, not only the owner's.
       const ex = require('../experiments');
-      res.json({ id: d.id, name: d.name, kind: d.kind, ...screens.effective(d.id, req.auth.user.id), keys: screens.screenKeys(),
+      const eff = screens.effective(d.id, req.auth.user.id);
+      res.json({ id: d.id, name: d.name, kind: d.kind, ...eff, keys: screens.screenKeys(),
+        panelMode: require('./panel-mode').resolve(d.id, req.auth.user, req.auth.role, eff),   // Focused or Extended, and from where
         experiments: { ...Object.fromEntries(['bargeIn', 'wakeWord', 'wakeModel'].map(id => [id, ex.on(id)])), faceVoice: true } });   // faceVoice graduated (3.41.0): on for every call
     } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
@@ -53,8 +55,13 @@ function mount(app) {
   app.post('/api/screen/settings', (req, res) => {
     try {
       const d = screens.ensure(req, res, req.query.device || null);
-      screens.set(d.id, req.body || {});
-      res.json({ id: d.id, ...screens.effective(d.id, req.auth.user.id) });
+      const patch = req.body || {};
+      if (patch.panelMode != null && !require('./panel-mode').valid(patch.panelMode))
+        throw Object.assign(new Error(`panelMode is one of: ${require('./panel-mode').MODES.join(', ')}.`), { status: 400 });
+      // ?layer=person: the person's own layer, theirs on every device (S13) — "on all my screens". Else this screen's.
+      if (req.query.layer === 'person') screens.setPerson(req.auth.user.id, patch); else screens.set(d.id, patch);
+      const eff = screens.effective(d.id, req.auth.user.id);
+      res.json({ id: d.id, ...eff, panelMode: require('./panel-mode').resolve(d.id, req.auth.user, req.auth.role, eff) });
     } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
 }

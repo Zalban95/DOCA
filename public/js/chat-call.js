@@ -45,6 +45,7 @@ function _callSetStatus(text, state) {
   if (el && text !== null) el.textContent = text;
   if (text !== null && typeof _assistantSay === 'function' && typeof assistantIsOpen === 'function' && assistantIsOpen() && _callActive) _assistantSay(text);
   if (text !== null && typeof ambientSay === 'function' && _callActive) ambientSay(text, state);   // the ambient screen's own line (ambient.js)
+  if (text !== null && typeof focusedCallSay === 'function') focusedCallSay(text, state);   // the Focused view's call (focused/call.js)
   if (mic) mic.className = `chat-call-mic-icon ${state || ''}`;
 }
 

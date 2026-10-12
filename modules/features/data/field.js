@@ -22,7 +22,7 @@ module.exports = [
   { id: 'connectors', licence: 'services', name: 'Connectors (OAuth accounts)', page: 'connectors', since: '2.188.0',
     use: 'The owner\'s GitHub, Google, Microsoft 365 or any OAuth 2.0 account as a tool connector_<id>.',
     routes: ['/api/connectors*'], words: 'oauth github google gmail calendar drive microsoft outlook' },
-  { id: 'everyday-accounts', licence: 'services', name: 'Your own accounts: calendar and mail', page: 'connectors', tools: ['calendar', 'mail'], since: '3.38.0',
+  { id: 'everyday-accounts', licence: 'services', name: 'Your own accounts: calendar and mail', page: 'connectors', tools: ['calendar', 'mail'], since: '3.39.0',
     use: 'Each person connects their own Google or Microsoft 365 accounts; the agents read and change their calendar and mail with undo, and mail waits for their Send.',
     routes: ['/api/accounts*'], words: 'calendar mail email gmail outlook inbox appointment event invite draft send reply archive label undo triage needs you newsletter bill everyday' },
   { id: 'service-keys', licence: 'services', name: 'Keys for services', page: 'connectors', tools: ['api_call'], since: '2.225.0',

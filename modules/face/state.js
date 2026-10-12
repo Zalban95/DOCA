@@ -68,11 +68,13 @@ function start() {
 function viewFor(person) {
   const access = require('../harness/session-access');
   const host = !person?.id || access.isHost(person);
-  const mine = id => host || access.mayUse(person, id);
+  // A question with no conversation (or one already gone) is nobody's here: never a throw, which on the stream's
+  // heartbeat timer would take the hub down.
+  const mine = id => { if (host) return true; try { return !!id && access.mayUse(person, id); } catch { return false; } };
   let best = { state: 'idle', detail: null, sessionId: null };
   for (const [id, s] of bySession) if (mine(id) && PRIORITY[s.state] > PRIORITY[best.state]) best = { ...s, sessionId: id };
   if (PRIORITY[best.state] < PRIORITY.asking) {
-    const waiting = require('../harness/approval').pending().find(a => mine(a.sessionId));
+    const waiting = require('../harness/approval').pending().find(a => (!host && a.personId && a.personId === person.id) || mine(a.sessionId));
     if (waiting) best = { state: 'asking', detail: waiting.tool || null, sessionId: waiting.sessionId };
   }
   return { state: best.state, detail: host ? best.detail : null };

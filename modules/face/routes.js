@@ -13,7 +13,8 @@ function mount(app) {
     const person = require('../harness/turn/client').dashboardClient(req).user;
     let last = '';
     const send = force => {
-      const v = JSON.stringify(face.viewFor(person));
+      let v;
+      try { v = JSON.stringify(face.viewFor(person)); } catch { return; }
       if (!force && v === last) return;
       last = v;
       try { res.write(`data: ${v}\n\n`); } catch { /* gone */ }

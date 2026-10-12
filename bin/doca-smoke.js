@@ -66,6 +66,10 @@ async function main() {
     if (!tabs) throw new Error('The panel did not load (no NAV_TABS).');
     for (const t of JSON.parse(tabs)) { await cdp.send('Runtime.evaluate', { expression: `nav(${JSON.stringify(t)})` }); await sleep(500); }
     for (const sub of ['general', 'guided', 'channels', 'packs', 'spending', 'harness', 'system', 'experiments']) { await cdp.send('Runtime.evaluate', { expression: `nav('settings'); settingsSubNav(${JSON.stringify(sub)})` }); await sleep(500); }
+    // The Focused view (focused/*): every screen of it, on this tab only (`?view=focused` changes no setting).
+    await cdp.send('Page.navigate', { url: `${base}/?view=focused` });
+    await sleep(3000);
+    for (const sc of ['home', 'chat', 'calendar', 'mail', 'made', 'settings']) { await cdp.send('Runtime.evaluate', { expression: `typeof fcGo === 'function' && fcGo(${JSON.stringify(sc)})` }); await sleep(600); }
     if (!core) await cdp.send('Page.navigate', { url: `${base}/face` });   // the face is the voice licence's (absent with core only)
     await sleep(1500);
     for (const url of osBusy) {   // the loads the machine itself refused (above): really there?
@@ -73,7 +77,7 @@ async function main() {
       if (r.ok) retried.add(new URL(url).pathname); else errors.push(`load: ${url} — ${r.status} (also when asked again)`);
     }
     console.log(`smoke${core ? ' (core only, no licence)' : ''}: ${process.platform}, ${path.basename(browserPath)}, ${JSON.parse(tabs).length} tabs visited${core ? '' : ', /face opened'} — ${errors.length} page error${errors.length === 1 ? '' : 's'}`);
-    for (const e of errors) console.log(`  ✗ ${String(e).split('\n')[0]}`);
+    for (const e of errors) console.log(`  ✗ ${String(e).split('\n').slice(0, 3).join('\n      ')}`);   // where, not only what
     if (retried.size) console.log(`  · the machine ran out of network buffers for ${[...retried].join(', ')}; asked again, each loaded`);
     if (absent.size) console.log(`  · not on this machine (answered 50x, drawn as such): ${[...absent].join(', ')}`);
     cdp.close();

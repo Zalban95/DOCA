@@ -19,7 +19,11 @@ function lookFor(deviceId, userId) {
 }
 
 function mountDevice(router) {
-  router.get('/settings/effective', (req, res) => res.json({ deviceId: req.device.id, ...screens().effective(req.device.id, req.device.userId) }));
+  router.get('/settings/effective', (req, res) => {
+    const eff = screens().effective(req.device.id, req.device.userId);
+    // Additive (PROTOCOL §14.1): Focused or Extended as the panel resolves it — `settings.panelMode` when set, else by role.
+    res.json({ deviceId: req.device.id, ...eff, panelModeResolved: require('../screens/panel-mode').forDevice(req.device, eff) });
+  });
   router.get('/settings/look', (req, res) => {
     try { res.json({ deviceId: req.device.id, look: lookFor(req.device.id, req.device.userId) }); }
     catch (e) { res.status(500).json({ error: { code: 'look_unavailable', message: `The panel's look could not be read: ${e.message}` } }); }

@@ -25,6 +25,9 @@ const SCHEMA = {
   theme:            { is: 'travels', home: 'device', on: 'screen', screenPropose: true, note: 'colour theme', propose: p('Theme') },
   customTheme:      { is: 'travels', home: 'device', on: 'screen', note: 'a theme the person made', propose: p('Custom theme colours') },
   skin:             { is: 'travels', home: 'device', on: 'screen', note: 'the panel skin' },
+  // Focused or Extended (screens/panel-mode.js): the calm everyday view or the whole panel. Unset, a host starts in
+  // Extended and everyone else in Focused. Never proposable: what a person sees of the machine is their own click.
+  panelMode:        { is: 'travels', home: 'device', on: 'screen', note: 'Focused (the calm everyday view) or Extended (the whole panel), this screen\'s or its person\'s; unset, by role (screens/panel-mode.js)' },
   lookThemes:       { is: 'travels', home: 'device', on: 'screen', note: 'the colours last chosen for each look, {skin: theme}, put back when the look is chosen again (settings/appearance.js)' },
   hiddenTabs:       { is: 'travels', home: 'device', on: 'screen', note: 'which tabs are hidden', propose: p('Navigation visibility') },
   codeExpanded:     { is: 'travels', home: 'device', on: 'screen', note: 'a UI fold state' },

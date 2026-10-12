@@ -59,6 +59,10 @@ async function view(req) {
 
 function mount(app) {
   app.get('/api/ambient', async (req, res) => { try { res.json(await view(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } });
+  // The week from today, for the Focused view's Calendar (public/js/focused/agenda.js): the same calendars and rule as today's.
+  app.get('/api/ambient/week', async (req, res) => {
+    try { res.json(await calendar.week(person(req), req.query.days)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  });
   app.get('/api/ambient/place', async (req, res) => {
     try { res.json(await weather.locate(String(req.query.q || ''))); } catch (e) { res.status(e.status || 502).json({ error: e.message }); }
   });
