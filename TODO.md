@@ -1086,6 +1086,17 @@ Each row: what OpenDots does → where DOCA stands → what is left.
   56% → 76% over the rules; the page 52% against 97% for one model step. Open: a week of calls with the flag on;
   fine-tuning Laya on DOCA's own decisions (the cases and the traces); Jev measured once a key is had; the person's own
   browser (the extension's snapshot) and a desktop's accessibility tree as text states.
+- [ ] H10.21 Always free: the main chat answers at once, the work happens behind (asked 2026-10-12; the design
+  "Always free", owner's answers the same day: the front keeps talk, look-ups, settings asked and one quick action; a
+  person's addition is written into the running plan flagged, and the worker fits it in or splits it off; no limit on
+  parallel jobs unless set) — *phase 1 built as the experiment `alwaysFree`* (docs/experiments/always-free.md): fork
+  before the model for clear jobs on every main-chat turn and call, hand on at the first work call (one quick action
+  excepted), the fork carries files, project, recent lines, summary and a seed living plan; `work_plan add/change/
+  cancel/split`, `background {status, add, cancel, stop}`, "# In the background"; `work.parallel`; `--follow` and
+  `evals/front.json`; defects §6.1–6.3 fixed. Open: real-model measurement (DeepSeek, the local model); whether
+  `background` joins `approval.FREE` (S11); phase 2 (result cards and call relay, `which` for amend, words for stop and
+  status, the foreground lane, two speeds, call-asks following forks, the panel strip); phase 3 (step ids, team tasks,
+  exact-prefix fork).
 - [ ] H10.20 Library: the files on this machine searched by meaning (asked 2026-10-08: "find an audio that says something
   specific in my library, or find the video or picture… create a database to index the files"; refined the same day:
   "a description generator that also functions as a search tool") — *built as the experiment `library`
