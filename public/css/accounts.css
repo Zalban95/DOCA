@@ -18,9 +18,12 @@
 .acc-count { color: var(--muted); font-variant-numeric: tabular-nums; }
 .acc-draft { border-top: 1px solid var(--border); }
 .acc-draft .acc-line { border-top: 0; flex-wrap: wrap; }
+.acc-draft .acc-line-text { flex-basis: calc(100% - 24px); }   /* the point stays beside the words, the buttons go under them */
 .acc-draft-body { white-space: pre-wrap; font: inherit; font-size: 12px; color: var(--muted); margin: 0 0 8px 16px; max-height: 9em; overflow: auto; }
 .acc-draft-edit { width: 100%; font: inherit; }
 @media (max-width: 600px) {
   .acc-mail { flex-wrap: wrap; }
+  .acc-mail .acc-line-text { flex-basis: calc(100% - 24px); }
   .acc-move { margin-left: 16px; }
 }
+#accounts-card .toolbar { justify-content: flex-start; }

@@ -9,14 +9,18 @@ async function connectorsLoad() {
   const panel = document.getElementById('sp-connectors');
   if (!panel) return;
   // Without host, the hive's accounts, keys and logins are the owner's: a person sees their own accounts and their own secrets for their devices.
-  if (typeof _settingsNoHost !== 'undefined' && _settingsNoHost) {
+  const own = () => {
     panel.innerHTML = '<div class="card" id="accounts-card"></div><div class="card" id="sealed-card"></div>';
     if (typeof accountsRender === 'function') accountsRender();   // your own Google / Microsoft 365 accounts (settings/accounts.js)
     if (typeof sealedRender === 'function') sealedRender();
-    return;
-  }
+  };
+  if (typeof _settingsNoHost !== 'undefined' && _settingsNoHost) return own();
   let d;
-  try { d = await apiFetch('/api/connectors'); } catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
+  try { d = await apiFetch('/api/connectors'); } catch (e) {
+    // Opened before the page knew this person has no host right (a deep link on a phone): their own cards, not a refusal.
+    if (/needs the "host" right/.test(e.message)) return own();
+    panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return;
+  }
   panel.innerHTML = `<div class="card"><div class="card-title">Connectors</div>
     <p style="font-size:11px;color:var(--muted)">Let the agents use your own accounts (GitHub, Google, Microsoft…). When the service asks for a callback or redirect address, give it this one:
       <code>${escHtml(d.callback)}</code> <button class="btn btn-xs" onclick="navigator.clipboard?.writeText(${jsArg(d.callback)})">copy</button></p>
