@@ -6,6 +6,8 @@ const _fcCache = new Map();   // url → {at, p}
 
 /** GET `url`, the same answer for `ms` (a failed read is not kept). */
 // A feature this install's licence leaves out answers 404 (lib/licence.js): it is not asked at all (CI's core smoke).
+/** Write a line into an element of this screen, if it is still on the page (the person may have moved on while we waited). */
+const fcText = (id, text) => { const e = document.getElementById(id); if (e) e.textContent = text; };
 const fcHas = id => typeof licenceFeatureOn !== 'function' || licenceFeatureOn(id);
 const fcAccountsOn = () => fcHas('everyday-accounts');
 

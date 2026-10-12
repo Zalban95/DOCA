@@ -66,7 +66,7 @@ async function _fcMakeShow(id) {
   const first = String(msgs.find(m => m.role === 'user')?.content || '');
   const asked = ((/Their request:\n([^\n]+)/.exec(first) || [])[1] || first.split('\n')[0]).trim();
   const title = asked && asked.length < 160 && !/^\[/.test(asked) ? `“${asked}”` : (s.title || 'Work');
-  document.getElementById('fc-make-title').textContent = title;
+  fcText('fc-make-title', title);
   const steps = s.plan?.steps || [], prog = s.plan?.progress || {};
   const box = document.getElementById('fc-make-steps');
   if (steps.length) {
@@ -93,9 +93,9 @@ async function _fcMakePreview(media) {
       url = `${location.protocol}//${location.hostname}:${i.port}${i.path}/${media.rev || i.canvas.revisions.at(-1).rev}`;
       frame.setAttribute('sandbox', 'allow-scripts allow-forms allow-modals allow-popups allow-downloads');
     }
-  } catch (e) { url = ''; document.getElementById('fc-make-url').textContent = `Not shown: ${e.message}`; }
+  } catch (e) { url = ''; fcText('fc-make-url', `Not shown: ${e.message}`); }
   card.hidden = false;
-  if (url) { frame.src = url; document.getElementById('fc-make-url').textContent = media.caption || 'Preview'; }
+  if (url) { frame.src = url; fcText('fc-make-url', media.caption || 'Preview'); }
   const acts = document.getElementById('fc-make-acts');
   acts.replaceChildren();
   const add = (label, fn, kind) => { const b = Object.assign(document.createElement('button'), { type: 'button', className: `fc-btn${kind ? ` fc-${kind}` : ''}`, textContent: label }); b.onclick = fn; acts.append(b); };

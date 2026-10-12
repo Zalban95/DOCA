@@ -31,15 +31,16 @@ async function fcHomeRender(el) {
   const [me, day] = await Promise.all([fcMe(), fcToday()]);
   if (!document.getElementById('fc-hello')) return;   // gone to another screen meanwhile
   const name = fcFirstName(me);
-  document.getElementById('fc-hello').textContent = name ? `${fcGreeting()}, ${name}` : fcGreeting();
+  fcText('fc-hello', name ? `${fcGreeting()}, ${name}` : fcGreeting());
   const events = (day.calendar?.events || []);
   _fcHomeNext(document.getElementById('fc-next'), day.calendar, me);
   const needs = await fcNeedsRows(document.getElementById('fc-needs'), day);
-  document.getElementById('fc-needs-lab').textContent = needs ? `Needs you · ${needs}` : 'Needs you';
+  if (!document.getElementById('fc-hello')) return;
+  fcText('fc-needs-lab', needs ? `Needs you · ${needs}` : 'Needs you');
   fcBellCount(needs);
   const today = events.filter(e => fcSameDay(new Date(e.start), new Date())).length;
   const bits = [today ? `${today} thing${today === 1 ? '' : 's'} today` : 'Nothing in the calendar today', needs ? `${needs} need${needs === 1 ? 's' : ''} you` : ''];
-  document.getElementById('fc-hello-sub').textContent = `${bits.filter(Boolean).join('. ')}.`;
+  fcText('fc-hello-sub', `${bits.filter(Boolean).join('. ')}.`);
   const hist = await fcHistory().catch(() => ({}));
   fcStrip(document.getElementById('fc-strip'), hist.sessionId);
 }

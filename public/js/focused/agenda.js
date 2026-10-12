@@ -15,7 +15,8 @@ async function fcAgendaRender(el, focus = 'calendar') {
   const [day, week] = await Promise.all([fcToday(), fcWeek()]);
   if (!document.getElementById('fc-week')) return;
   const n = await fcNeedsRows(document.getElementById('fc-ag-needs'), day, { limit: 8, mail: false });   // mail has its own section below
-  document.getElementById('fc-ag-needs-lab').textContent = n ? `Needs you · ${n}` : 'Needs you';
+  if (!document.getElementById('fc-week')) return;
+  fcText('fc-ag-needs-lab', n ? `Needs you · ${n}` : 'Needs you');
   _fcWeek(document.getElementById('fc-week'), week);
   _fcDays(document.getElementById('fc-days'), week);
   const src = document.getElementById('fc-week-src');
