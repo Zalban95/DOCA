@@ -133,6 +133,7 @@ function mount(app) {
   app.post  ('/api/mcp',             handleUpsert);
   app.post  ('/api/mcp/export',      handleExport);
   app.get   ('/api/mcp/catalog',     wrap(async (_req, res) => res.json({ servers: require('./catalog').list() })));   // servers the panel knows how to add
+  app.post  ('/api/mcp/catalog/:id/install', wrap(async (req, res) => res.json({ ok: true, installed: await require('./craft-install').install(req.params.id) })));   // a suggested app's release, checked (craft-install.js)
   app.post  ('/api/mcp/catalog/:id', wrap(async (req, res) => res.json({ ok: true, server: await require('./catalog').add(req.params.id) })));
   // Servers the agent prepared for a person to add (drafts.js): listed and dismissed, never applied here.
   // A draft already added as a server (the same name) is done, not still waiting (2026-10-11: freecad stayed listed).
