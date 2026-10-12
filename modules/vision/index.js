@@ -72,13 +72,16 @@ const model = {
         { role: 'user', content: [{ type: 'text', text: question }, { type: 'image_url', image_url: { url: `data:image/png;base64,${png.toString('base64')}` } }] }] }) })
       .catch(e => { throw Object.assign(new Error(`${ep.label}: cannot reach ${ep.baseUrl} (${e.message})`), { status: 502 }); });
     let r;
-    try { r = await send(noThink ? { chat_template_kwargs: { enable_thinking: false } } : {}); }
+    // Without thinking a small model can run on into made-up positions until its limit (seen live: a 4B, 7.7 s): an
+    // answer is a few sentences, so it is capped (vision.maxTokens).
+    const cap = noThink ? { max_tokens: sc().value('vision.maxTokens') } : {};
+    try { r = await send(noThink ? { ...cap, chat_template_kwargs: { enable_thinking: false } } : {}); }
     catch (e) {
       // The quick model's server is not there (stopped, not yet back after a restart): the vision model reads instead.
       if (!m.quick || !main.model) throw e;
       return { ...(await model.read(png0, question0, { ...main0 }, { person, noQuick: true })), by: `${s.model} could not be reached; then ${main.model}` };
     }
-    if (noThink && r.status === 400) r = await send({});
+    if (noThink && r.status === 400) r = await send(cap);
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw Object.assign(new Error(`${ep.label} / ${s.model}: ${j.error?.message || j.error || `HTTP ${r.status}`}`), { status: 502 });
     const said = String(j.choices?.[0]?.message?.content || '').trim();
