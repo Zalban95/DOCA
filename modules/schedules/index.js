@@ -13,7 +13,10 @@
  * A loop (kind `loop`, schedules/loop.js) is a turn in the conversation it was typed in, every N minutes or again as
  * soon as a run ends (`when {self}`), until an answer says it is done or `max` runs; typed by the person, it starts on.
  *
- *   { id, title, kind: 'turn'|'recipe'|'reminder', message?, recipe?, values?, text?, device?, when: {every}|{cron}|{at},
+ * A mail reading (kind `mail-read`, accounts/reading.js) reads one of the person's own accounts' new mail; made and removed
+ * only from that account's settings, never by the agent.
+ *
+ *   { id, title, kind: 'turn'|'recipe'|'reminder'|'loop'|'mail-read', message?, recipe?, values?, text?, device?, account?, when: {every}|{cron}|{at},
  *     state: 'on'|'paused'|'proposed'|'done',
  *     by, sessionId, nextAt, lastAt, last: {ok, summary, at}, runs, createdAt, madeBy: 'person'|'agent' }
  */
@@ -46,6 +49,15 @@ function normalize(input, by, madeBy) {
     const text = String(input.text || '').trim().slice(0, 500);
     if (!text) throw bad('A reminder needs what to remind of.');
     return { title: text.slice(0, 100), kind: 'reminder', text, device: input.device ? String(input.device) : null, when: w, by, madeBy };
+  }
+  if (input.kind === 'mail-read') {
+    // The mail reader on an account of the person's own (accounts/reading.js): only an account of theirs, never by the agent.
+    const acc = require('../accounts/store').get(by, input.account);
+    if (!acc || madeBy !== 'person') throw bad('A mail reading is set on an account of your own, in Field → Connectors → Your accounts.');
+    const tz = require('../timezones').valid(input.tz) || require('../timezones').of(by);
+    const w = input.cron ? { cron: String(input.cron).trim(), ...(tz ? { tz } : {}) } : { every: Number(input.every) };
+    when.next(w);
+    return { title: `Read mail · ${acc.label || acc.account || acc.provider}`, kind: 'mail-read', account: acc.id, when: w, by, madeBy };
   }
   const kind = input.kind === 'recipe' ? 'recipe' : 'turn';
   // A cron's hours are the person's: the zone the panel sends, else the one their screens report (timezones.js).
@@ -86,7 +98,8 @@ async function runNow(id) {
   if (!person) { patch(id, { state: 'paused', last: { ok: false, summary: 'Paused: the person it runs as is gone or suspended.', at: new Date().toISOString() } }); return get(id); }
   const client = { name: `Schedule · ${s.title}`, kind: 'schedule', user: person };
   patch(id, { lastAt: new Date().toISOString(), runs: (s.runs || 0) + 1 });
-  require('../activity').note({ from: 'schedules', what: `ran "${s.title}" (${s.kind || 'turn'})`, why: 'its time came', person });
+  // A mail reading looks every few minutes and writes its own line when mail arrived (accounts/triage/run.js), not one per look.
+  if (s.kind !== 'mail-read') require('../activity').note({ from: 'schedules', what: `ran "${s.title}" (${s.kind || 'turn'})`, why: 'its time came', person });
   let last;
   try {
     if (s.kind === 'reminder') {
@@ -96,6 +109,11 @@ async function runNow(id) {
       const out = notice.deliver({ personId: person.id, title: 'Reminder', text: s.text, to: notice.ownIds(person.id, s.device), panel: 'always', from: 'reminder' });
       last = { ok: !!(out.sent?.delivered.length || out.onPanel), summary: out.summary };
       return patch(id, { state: 'done', nextAt: null, last: { ...last, at: new Date().toISOString() } });
+    }
+    if (s.kind === 'mail-read') {
+      // Mechanical first; the mail reader only for what the rules cannot tell (accounts/triage/run.js). No turn, no conversation.
+      const r = await require('../accounts/triage/run').read(person.id, s.account, { trigger: 'schedule' });
+      return patch(id, { last: { ok: !r.errors.length, summary: `${r.read} new: ${r['needs-you']} need you, ${r.handled} handled, ${r.filed} filed${r.errors.length ? `; ${r.errors[0]}` : ''}`, at: new Date().toISOString() } });
     }
     if (s.kind === 'recipe') {
       const r = await require('../recipes/run').run(require('../recipes/store').get(s.recipe), { params: s.values, person, client });

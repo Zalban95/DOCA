@@ -8,14 +8,19 @@
 async function connectorsLoad() {
   const panel = document.getElementById('sp-connectors');
   if (!panel) return;
-  // Without host, the accounts, keys and logins are the owner's: a person sees only their own secrets for their devices.
-  if (typeof _settingsNoHost !== 'undefined' && _settingsNoHost) {
-    panel.innerHTML = '<div class="card" id="sealed-card"></div>';
+  // Without host, the hive's accounts, keys and logins are the owner's: a person sees their own accounts and their own secrets for their devices.
+  const own = () => {
+    panel.innerHTML = '<div class="card" id="accounts-card"></div><div class="card" id="sealed-card"></div>';
+    if (typeof accountsRender === 'function') accountsRender();   // your own Google / Microsoft 365 accounts (settings/accounts.js)
     if (typeof sealedRender === 'function') sealedRender();
-    return;
-  }
+  };
+  if (typeof _settingsNoHost !== 'undefined' && _settingsNoHost) return own();
   let d;
-  try { d = await apiFetch('/api/connectors'); } catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
+  try { d = await apiFetch('/api/connectors'); } catch (e) {
+    // Opened before the page knew this person has no host right (a deep link on a phone): their own cards, not a refusal.
+    if (/needs the "host" right/.test(e.message)) return own();
+    panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return;
+  }
   panel.innerHTML = `<div class="card"><div class="card-title">Connectors</div>
     <p style="font-size:11px;color:var(--muted)">Let the agents use your own accounts (GitHub, Google, Microsoft…). When the service asks for a callback or redirect address, give it this one:
       <code>${escHtml(d.callback)}</code> <button class="btn btn-xs" onclick="navigator.clipboard?.writeText(${jsArg(d.callback)})">copy</button></p>
@@ -23,6 +28,7 @@ async function connectorsLoad() {
       OAuth app you make yourself in that service's console (its developer settings) — none is shipped with this hub, so nobody sits between the hive and your
       accounts. Make the app there, paste its client id and secret here, Save, then Connect and allow access on the page that opens. Connected, a service is the
       tool <code>connector_&lt;id&gt;</code>: changes are asked about like any change, and by default only admins may use it.</details></div>
+    <div class="card" id="accounts-card"></div>
     ${d.connectors.map(c => `<div class="card" data-conn="${escHtml(c.id)}"${appAskAttr(c.kind === 'custom' ? `Help me connect another service with OAuth 2.0: find its sign-in page, token address and API address, and walk me through making its app with the callback address ${d.callback}.`
       : `Help me connect ${c.label}: walk me through making the OAuth app in its console with the callback address ${d.callback}, and tell me what to paste here.`)}>
       <div class="card-title" style="display:flex;gap:8px;align-items:center">${escHtml(c.label)}
@@ -47,6 +53,7 @@ async function connectorsLoad() {
     <div class="card" id="service-keys-card"></div>
     <div class="card" id="logins-card"></div>
     <div class="card" id="sealed-card"></div>`;
+  if (typeof accountsRender === 'function') accountsRender();
   if (typeof serviceKeysRender === 'function') serviceKeysRender();
   loginsRender();
   if (typeof sealedRender === 'function') sealedRender();

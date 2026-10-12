@@ -1,8 +1,8 @@
 'use strict';
 
 /**
- * Today's plan from the owner's calendar, for the ambient screen: Google Calendar or Microsoft 365, whichever connector
- * is connected (Field → Connectors), read with its read-only scope. The same rule as the connector's tool: the owner's
+ * Today's plan, for the ambient screen: the person's own Google or Microsoft 365 accounts (Field → Connectors → Your
+ * accounts, accounts/) and the owner's calendar connector (Field → Connectors), read with its read-only scope. The same rule as the connector's tool: the owner's
  * account is shown to a person holding host, or to everyone once the owner opened it (connectors/tools.js). Titles,
  * times and places only; kept two minutes.
  */
@@ -26,8 +26,9 @@ function usable(person) {
 /** Events from now until the end of tomorrow, or {none: why}. */
 async function today(person) {
   const ids = usable(person);
-  if (!ids.length) return { events: [], none: 'Connect Google or Microsoft 365 in Field → Connectors to see the day\'s plan here.' };
-  const key = ids.join(','), now = Date.now();
+  const own = person?.id ? require('../accounts/store').list(person.id) : [];   // the person's own accounts (accounts/)
+  if (!ids.length && !own.length) return { events: [], none: 'Connect your own Google or Microsoft 365 account in Field → Connectors → Your accounts to see the day\'s plan here.' };
+  const key = `${person?.id || ''}:${ids.join(',')}:${own.map(a => a.id).join(',')}`, now = Date.now();
   if (_cache.key === key && now - _cache.at < KEEP_MS) return _cache.value;
   const from = new Date(); from.setHours(0, 0, 0, 0);
   const to = new Date(from.getTime() + 2 * 86400000);
@@ -40,6 +41,10 @@ async function today(person) {
       if (!r.ok) throw new Error(`answered ${r.status}`);
       events.push(...s.read(await r.json()).map(e => ({ ...e, from: id })));
     } catch (e) { errors.push(`${id}: ${e.message}`); }
+  }
+  for (const rec of own) {
+    try { events.push(...(await require('../accounts/adapter').of(rec).calendar.events(rec, { from: from.toISOString(), to: to.toISOString(), max: 15 })).map(e => ({ title: e.title, start: e.start, end: e.end, allDay: e.allDay, where: e.where, from: rec.account || rec.provider }))); }
+    catch (e) { errors.push(`${rec.account || rec.provider}: ${e.message}`); }
   }
   events.sort((a, b) => String(a.start).localeCompare(String(b.start)));
   const value = { events: events.filter(e => !e.end || new Date(e.end).getTime() > now).slice(0, 12), errors };

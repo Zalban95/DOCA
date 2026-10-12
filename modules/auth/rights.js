@@ -183,6 +183,9 @@ const TABLE = [
   R(GET, '/api/connectors/sealed/mine', 'chat'),
   R('POST', '/api/connectors/sealed/mine', 'chat'),
   R('DELETE', '/api/connectors/sealed/mine/[^/]+', 'chat'),
+  // A person's own Google / Microsoft 365 accounts, their calendar, mail, drafts and action log (accounts/routes.js): theirs
+  // alone — whose comes from the session in every route, never the body — so anyone who chats has them (2026-10-12).
+  R(ANY, '/api/accounts(/.*)?', 'chat'),
   R(ANY, '/api/connectors(/.*)?', 'host'),                    // the keys to the owner's accounts (connectors/routes.js)                         // evaluation sets: a run spends tokens, results hold answers (evals/routes.js)
   R(GET, '/api/clients/browser.zip', 'read'),
   R(GET, '/api/clients/apps/[a-z]+/apk/[A-Za-z0-9_-]{32}', 'public'),   // a 10-minute download link: its token is the permission (client-apps/routes.js)

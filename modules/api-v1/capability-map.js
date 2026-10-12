@@ -135,6 +135,13 @@ const PERSON = [
   { id: 'sealed-use', does: 'use a sealed secret on a device', panel: [], v1: ['GET /mcp/self/seal'], note: 'keeping one is the owner\'s, at the panel (capability-map-host.js)' },
   { id: 'sealed-own', does: 'keep or forget a secret of my own for my devices', panel: ['POST /api/connectors/sealed/mine', 'DELETE /api/connectors/sealed/mine/:name'],
     only: 'a secret is typed in only where the password is asked again (CONSTITUTION S4, S14) — the panel, or a device opening /d/<id>/; never sent to a device to keep' },
+  // ── A person's own accounts: calendar and mail (accounts/) ──
+  { id: 'accounts-own', does: 'connect, rename or disconnect my own Google or Microsoft 365 account, let the agents use it, set when its mail is read, and my rules for it',
+    panel: ['POST /api/accounts/connect', 'PATCH /api/accounts/:id', 'POST /api/accounts/:id/reading', 'POST /api/accounts/:id/read', 'DELETE /api/accounts/:id', 'PUT /api/accounts/mail/rules'],
+    only: 'an account is connected by signing in to the service in a browser (OAuth); a device opens the panel (/d/<id>/) to do it' },
+  { id: 'everyday-decide', does: 'send or discard a drafted mail, change it, undo what the assistant changed in my calendar or mail, correct which mails need me',
+    panel: ['POST /api/accounts/drafts/:id/send', 'PATCH /api/accounts/drafts/:id', 'DELETE /api/accounts/drafts/:id', 'POST /api/accounts/actions/:id/undo', 'POST /api/accounts/mail/triage/:account/:mail'],
+    gap: 23, why: 'Send and Undo where the draft or the change is seen — a phone hears them on its event stream and asks the agent until a route is asked for' },
   { id: 'channel-link', does: 'link or unlink a chat app (Telegram, Matrix, Slack, mail)', panel: ['POST /api/channels/:name/link', 'DELETE /api/channels/:name/chats/:chat'],
     gap: 15, why: 'the link code is made once; a linked chat is itself a device' },
 

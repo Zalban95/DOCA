@@ -738,6 +738,51 @@ The harness gives its agent eight rules for working on any repository (charter r
 - **Every place a person must go to set something up is a link, and on a phone its app first** (`public/js/lib/app-links.js`): one registry of the exact pages — Home Assistant's token page and MCP Server integration, @BotFather, the Slack apps page, Element, GitHub's New OAuth App, Google Cloud's credentials and consent screen, Entra's app registrations, the mail app-password pages — each with its web address and, only where the service documents one, its app link (`homeassistant://navigate/<path>`, companion.home-assistant.io; `tg://resolve?domain=`, core.telegram.org/api/links; `slack://open`, docs.slack.dev). `appLinkHtml` gives the website on a desk and "open in <app>" then "the website" on a phone (a `DocaMobile/` user agent, or a phone browser); a hub address on loopback is never offered to a phone (Home Assistant falls back to My Home Assistant's documented redirect). `appStepsHtml` draws a flow's numbered steps (folded "How, step by step" on the connector, channel and MCP catalogue cards, and under the API service form for `home-assistant`, at the address typed or its MCP row's); `appLinkify` makes the addresses in a service's own words links. A link never carries a secret. New schemes are added only with their documentation (`test/app-links.test.js` holds the list). Provider key pages stay in `guided/suggested-models.json` (`keyPages`), now also on Field → API keys (`keys.keyPageOf`). DocaMobile opens app schemes and intent links (its branch `link-schemes`, `ExternalLinks`).
 - **A card with steps names its first message to the agent**: `data-help-ask` (`appAskAttr`) is what "✨ Ask the agent" puts in the chat for that card (form-help.js; never sent by itself), and such a card gets the button even with fewer than two fields.
 
+### Your own accounts: calendar and mail (branch `everyday-accounts`, `modules/accounts`; the owner's decisions of 2026-10-12)
+- **Each person connects their own Google and Microsoft 365 accounts, as many as they need** (Field → Connectors → Your
+  accounts, `public/js/settings/accounts*.js`, every person; `/api/accounts*`, right `chat`, whose always from the session,
+  never the body — an admin gets 404 on someone else's). The OAuth app is the hive's (an admin's client id and secret for
+  `google` / `microsoft` in Field → Connectors); the account and its tokens are the person's. Records in the store
+  document `accounts` (`store.view()` is what a page sees), tokens in `keys/accounts.json` (protected keys folder, 0600,
+  `keys-file.js`). Scopes (`scopes.js`): **read and act** by default — `calendar.events`, `gmail.modify`, `gmail.send`;
+  `Calendars.ReadWrite`, `Mail.ReadWrite`, `Mail.Send` — or **read only**. The redirect URI is the existing
+  `<panel>/api/connectors/callback` (`oauth.start(…, {scopes, save})`). `allot.js` kind **`account`** (by provider,
+  everyone's until a level lists which). `meetings/calendars.js` (one events-only calendar per person for meetings) is
+  separate and untouched.
+- **"✅ the Orchestrator may use it"** (`orchestrator`, on by default): off, the agents' tools do not see the account; the
+  person's own views and their reading schedule still read it. `usable.js` decides: the turn's person (else the
+  conversation's owner — a mission works for them), never another person's.
+- **Native tools** `calendar {list|find|create|move|delete|history|undo}` and `mail {list|read|triage|drafts|draft|reply|
+  send|archive|label|unlabel|history|undo}` (`harness/toolbox/calendar.js`, `mail.js`, kit connectors) over one adapter
+  (`adapter.js` → `google.js`, `microsoft.js`; `DOCA_GOOGLE_API` / `DOCA_GRAPH_API` / `DOCA_GOOGLE_OAUTH` /
+  `DOCA_MICROSOFT_OAUTH` point at a stub). `connector_<id>` stays beside them (W14). Offered only once anyone here has
+  connected an account (`tool-shape.js`). A specialist reads and may draft; changes are the leaders'.
+- **Sending is the person's**: `mail send` runs only on the person's own turn (`ctx.byPerson`) with `asked: true`; any
+  other turn — automatic, a mission, a specialist — answers "Not sent" and the draft waits (`drafts.js`). The person's
+  Send is `POST /api/accounts/drafts/:id/send`. Risk tiers class it outward.
+- **Action log with mechanical undo** (`actions.js`, store `accounts-actions`): `{id, at, by, accountId, act, target,
+  before, after, summary, undoOf, undoneBy, undoable}`; undo is the opposite call (create↔delete re-made from the kept
+  fields, change back, archive↔unarchive, label↔unlabel), itself an action, so undoing it is "undo the undo". A sent mail
+  is logged, not undoable. No model anywhere in it.
+- **Which mails need you** (`triage/`): `rules.js` first (the person's sender rules, invitations, bills, newsletters,
+  receipts, notifications, replies in their threads) → `needs-you | handled | filed`; what is left goes to the shipped
+  specialist **`mail-reader`** (`specialists/mail-reader.md`, its provider/model the owner's to set) as one `transport.ask`
+  with no tools: (a) the skill `mail-triage`, (b) the person's rules/notes (`accounts-mail-rules`) and memory about the
+  sender, (c) recent mails of the thread or sender, and the mail framed. Unreadable answer → needs-you. Its reply draft
+  waits. Results per mail in store `accounts-triage`; moving one teaches that sender's rule. **When** (`reading.js`): off,
+  every N minutes, at set times (cron schedules on the person's clock), or "on every new mail" — schedules of kind
+  `mail-read` every 2 minutes reading Gmail's `history` / Graph's inbox `delta` (push needs Pub/Sub or a public HTTPS
+  address, which a tailnet hub lacks). Only the account's own settings make or remove them.
+- **For the Focused view** (branch `focused-view`, `public/js/focused/*`): read `GET /api/accounts` (accounts, providers),
+  `GET /api/accounts/calendar?from&to` (events across accounts, `setByAssistant` tints what the assistant added),
+  `GET /api/accounts/mail/triage?verdict&account` (`{mails, counts}`), `GET /api/accounts/drafts`, `GET
+  /api/accounts/actions?domain`; act with `POST /api/accounts/drafts/:id/send`, `PATCH|DELETE /api/accounts/drafts/:id`,
+  `POST /api/accounts/actions/:id/undo`, `POST /api/accounts/mail/triage/:account/:mail {verdict}`, `POST
+  /api/accounts/:id/read`. Live: topic **`everyday`** on `/api/live/stream`, only the person's own pages (not a host's),
+  `{id, what, personId, kind: account|action|draft|triage, …}` — re-read the route. In a turn, the tools emit
+  `{type: 'everyday', action | draft}` events (result cards: Undo / Send). Capability rows `accounts-own` (the panel's)
+  and `everyday-decide` (gap 23). `test/everyday-accounts.test.js` runs it all against `test/fixtures/everyday-stub.js`.
+
 ### Setting up a service by pasting a key (since 2.225.0; asked 2026-10-06: "without having to change parts of the code")
 - **Keys for services** (`modules/service-keys.js`, Field → Connectors → API services — the card was "Keys for services", its form and `/api/connectors/keys/*` unchanged, host): a key pasted once with its service's origin, where it goes (a header with a prefix, `Authorization: Bearer` by default, a query parameter, or since 2026-10-08 `basic`, user:password as HTTP Basic) and who may use it (admins' turns unless opened to everyone, like a connector). `api_call {url, key}` (since 2.259.0; `http_fetch` only reads, GET/HEAD) has the hub add it only when the URL's origin is the key's; the result is scrubbed of the key; the tool's description lists the keys by name, address and note, never the key. `DATA_DIR/keys/services.json`, 0600, `PROTECTED_FILES`.
 - **Services the agent prepared** (since 2.235.0, `modules/service-drafts.js`, tool `service_draft`, kit panel, in `registry.NEVER`): for any API with a key the agent reads its docs and drafts everything but the secret — how the key is sent (header, query, basic or exchange), the origin, a note, its actions (`openapi`, or `openapi_url` read when opened) and a skill. Field → Connectors → API services → "Prepared by the agent" → Open in the form: the person checks it, pastes the key, and one Save writes the key (protected file), the service and the skill (never over a shipped one). Nothing is usable as a draft.

@@ -21,10 +21,13 @@
  * `vnc` is a VNC target (Machines → VNC, vnc-targets/), by its id or name: another machine's screen, an admin's until
  * allotted, like a login (2026-10-08).
  *
+ * `account` is a provider a person may connect their own accounts of and let their agents use (accounts/, 2026-10-12:
+ * `google`, `microsoft`): everyone's until a level lists which — the accounts are the person's own, the app the hive's.
+ *
  * `home` is a Home Assistant entity on the Home page (home/, TODO H10.10), by its entity id (`light.kitchen`; `light.*`
  * every light): the hive's home is everyone's to see and use until a level lists which of it its people have.
  */
-const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer', 'service', 'device', 'home', 'vnc'];
+const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer', 'service', 'device', 'home', 'vnc', 'account'];
 
 /**
  * Kinds that were an admin's alone before levels could list them: a level that names nothing gives none. Another

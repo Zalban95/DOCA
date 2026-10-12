@@ -83,6 +83,12 @@ const TOOLS = {
   agent_resume: [{ tier: 'reversible', way: WAY.work }],
   mcp_connect: [{ tier: 'reversible', way: 'the server is started or stopped again' }],
   today: [{ tier: 'read' }],
+  // The person's own calendar and mail (accounts/): every change is in their action log with a mechanical Undo; a sent
+  // mail cannot be unsent, and only the person's own "send it" or click sends one (accounts/drafts.js).
+  calendar: reads(['list', 'find', 'history'], { tier: 'reversible', way: 'the action log\'s Undo (Field → Connectors → Your accounts; or ask to undo it)' }),
+  mail: [{ when: { action: ['list', 'read', 'triage', 'drafts', 'history'] }, tier: 'read' },
+    { when: { action: ['send'] }, tier: 'outward', why: 'sends a mail from the person\'s own account' },
+    { tier: 'reversible', way: 'a draft waits for its person; archiving and labels have Undo in the action log' }],
   web_search: [{ tier: 'read' }],
   tools_more: [{ tier: 'read' }],
   screen: reads(['list', 'propose'], { tier: 'reversible', way: 'a page on a screen; another can be shown' }),
