@@ -36,6 +36,15 @@ function mount(app) {
           if (un?.ok) said.push(`${section} was unloaded: its next request loads it with the new settings.`);
         } else if (m && m.state === 'working') said.push(`${section} is answering now: the new settings apply from its next load.`);
       }
+      // Another function may lean on this model with a window of its own (the harness's fallback chain): a new context
+      // here is said there, so the fallback is not left believing the old one (asked 2026-10-12).
+      if (r.changed && values['ctx-size']) {
+        const chain = require('../harness/catalog').configFor('doca')?.fallbackChain || [];
+        chain.forEach((c, i) => {
+          if (c?.model === section && Number(c.contextWindow) !== Number(values['ctx-size']))
+            said.push(`The harness's fallback ${i + 1} uses ${section} with a window of ${Number(c.contextWindow) ? Number(c.contextWindow).toLocaleString() : 'none declared'}: Controls → DOCA ⚙ → Fallback offers ${Number(values['ctx-size']).toLocaleString()}.`);
+        });
+      }
       require('../activity').note({ from: 'llama.cpp', what: r.changed ? `changed the router's ${section}: ${Object.keys(values).join(', ')}` : `left the router's ${section} as it was`,
         why: 'a host saved it in Field → Models', machine: { kind: 'llamacpp', id: `router:${section}`, name: section }, act: 'configure' });
       res.json({ ...r, said, ...preset.read(r.file) });

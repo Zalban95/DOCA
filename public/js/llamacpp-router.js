@@ -16,9 +16,13 @@ async function llamaRouterCard() {
   const field = (sec, k) => {
     const meta = d.keys[k], v = sec.values[k] ?? '', id = `lr-${_lrId(sec.name)}-${k}`;
     const browse = k === 'model' || k === 'mmproj' ? ` <button class="btn btn-xs" title="Browse" onclick="fpOpen('${id}','file')">📁</button>` : '';
+    const unset = sec.name === '*' ? 'as llama.cpp decides' : 'as for every model';
+    // A setting with fixed choices is a list (empty: not set here), never a box to type true or q8_0 into.
+    const input = meta.choices
+      ? `<select class="input" id="${id}" data-key="${escHtml(k)}" style="flex:1;min-width:0;font-size:11px"><option value="">${unset}</option>${meta.choices.map(c => `<option value="${escHtml(c)}"${c === v ? ' selected' : ''}>${escHtml(c)}</option>`).join('')}</select>`
+      : `<input class="input" id="${id}" data-key="${escHtml(k)}" value="${escHtml(v)}" style="flex:1;min-width:0;font-size:11px" placeholder="${unset}">`;
     return `<label class="services-ctrl-label">${escHtml(meta.label)} ${infoBtn(meta.hint)}</label>
-      <div style="display:flex;gap:4px;align-items:center;flex:1;min-width:160px"><input class="input" id="${id}" data-key="${escHtml(k)}" value="${escHtml(v)}" style="flex:1;min-width:0;font-size:11px"
-        placeholder="${sec.name === '*' ? 'as llama.cpp decides' : 'as for every model'}">${browse}</div>`;
+      <div style="display:flex;gap:4px;align-items:center;flex:1;min-width:160px">${input}${browse}</div>`;
   };
   const card = sec => {
     const keys = Object.keys(d.keys).filter(k => sec.name !== '*' || (k !== 'model' && k !== 'mmproj'));
@@ -40,7 +44,7 @@ const _lrId = name => String(name).replace(/[^A-Za-z0-9_-]/g, '_');
 
 async function llamaRouterSave(section) {
   const card = document.getElementById(`lr-card-${_lrId(section)}`), said = document.getElementById(`lr-said-${_lrId(section)}`);
-  const values = Object.fromEntries([...card.querySelectorAll('input[data-key]')].map(i => [i.dataset.key, i.value.trim()]));
+  const values = Object.fromEntries([...card.querySelectorAll('[data-key]')].map(i => [i.dataset.key, i.value.trim()]));
   said.textContent = 'Saving…';
   try {
     const r = await apiFetch('/api/models/llamacpp/router', { method: 'POST', body: { section, values } });

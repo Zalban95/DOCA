@@ -59,6 +59,13 @@ test('a save changes those keys, keeps every comment and other line, drops "no p
   assert.match(fs.readFileSync(file, 'utf8').split('[big]')[0], /flash-attn  = on/, 'another section untouched');
 });
 
+test('a new context names a harness fallback that uses this model with another window', async () => {
+  require('../modules/harness/catalog').saveConfig('doca', { fallbackChain: [{ provider: 'llamacpp', model: 'big', contextWindow: 40960 }] });
+  const r = await H.api(null, 'POST', '/api/models/llamacpp/router', { section: 'big', values: { 'ctx-size': '98304' } });
+  assert.equal(r.status, 200, r.body.error);
+  assert.ok(r.body.said.some(l => /fallback 1 uses big with a window of 40,960/.test(l) && /offers 98,304/.test(l)), JSON.stringify(r.body.said));
+});
+
 test('a key it does not change, a value it does not take, a model file that is not there: refused, nothing written', async () => {
   const before = fs.readFileSync(file, 'utf8');
   for (const [values, re] of [[{ 'models-dir': '/' }, /not a setting this form changes/], [{ 'ctx-size': 'lots' }, /Context size/],

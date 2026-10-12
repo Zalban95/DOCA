@@ -11,7 +11,7 @@ const fs = require('fs');
 const path = require('path');
 
 const num = (min, max) => v => /^-?\d+$/.test(v) && +v >= min && +v <= max;
-const oneOf = (...xs) => v => xs.includes(v);
+const oneOf = (...xs) => Object.assign(v => xs.includes(v), { choices: xs });
 const gguf = v => /\.gguf$/i.test(v) && path.isAbsolute(v) && fs.existsSync(v);
 const KEYS = {
   'model': { check: gguf, label: 'Model file', hint: 'The .gguf file this model runs (a full path on this machine).' },
@@ -104,7 +104,7 @@ function read(file = find()) {
   if (!file) return { file: null, why: 'No llama.cpp router with a preset file was found running here. Name its file in the setting llamacpp.routerPreset.' };
   let text;
   try { text = fs.readFileSync(file, 'utf8'); } catch (e) { return { file, why: `Cannot read it: ${e.message}` }; }
-  return { file, ...parse(text), keys: Object.fromEntries(Object.entries(KEYS).map(([k, d]) => [k, { label: d.label, hint: d.hint }])) };
+  return { file, ...parse(text), keys: Object.fromEntries(Object.entries(KEYS).map(([k, d]) => [k, { label: d.label, hint: d.hint, ...(d.check.choices ? { choices: d.check.choices } : {}) }])) };
 }
 
 /** Writes `values` into `section`, keeping the replaced file beside it. */
