@@ -57,6 +57,20 @@ test('a look: the first sets the baseline; the next measures growth and notices 
   assert.equal(third.fresh.length, 0, 'a news item is new once');
 });
 
+test('"in use here" is said under the function that uses a model, never one whose reading says it is off', () => {
+  const signals = require('../modules/scout/signals');
+  const roles = [
+    { id: 'guards', label: 'Screening', tasks: ['text-classification'], current: null },
+    { id: 'system-one', label: 'Decisions', tasks: ['text-classification'], current: 'Laya (english, on this hub) — not in use (experiment systemOne is off)' },
+    { id: 'stt', label: 'Speech', tasks: ['automatic-speech-recognition'], current: 'acme/whisper-next' }];
+  const r = { at: 'now', first: false, fresh: [], failures: [], models: [
+    { id: 'convai/laya', likes: 1, downloads: 1, task: 'text-classification', roles: ['guards', 'system-one'], usedBy: [] },
+    { id: 'acme/whisper-next', likes: 1, downloads: 1, task: 'automatic-speech-recognition', roles: ['stt'], usedBy: ['stt'] }] };
+  const text = signals.brief(r, roles);
+  assert.doesNotMatch(text, /laya[^\n]*in use here/);
+  assert.match(text, /whisper-next[^\n]*in use here/);
+});
+
 test('on: the tool files suggestions once each; a person accepts one into TODO.md and declines another', async () => {
   require('../modules/experiments').setDeveloper(true); require('../modules/experiments').set('modelScout', true);
   assert.equal(has(), true);
