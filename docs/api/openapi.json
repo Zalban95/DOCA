@@ -1140,7 +1140,7 @@
         ],
         "summary": "The newest build of one of DOCA's Android apps that this hub keeps",
         "operationId": "clientAndroidLatest",
-        "description": "app is docamobile or docawear. An app compares versionCode with its own and offers (or installs) the update; sha256 checks the download. 404 while no build is kept. Any token.",
+        "description": "app is docamobile, docawear or docawear-face (DocaWear's watch face, a Watch Face Format APK DocaWear installs by Watch Face Push on Wear OS 6; it alone carries validationToken, the token Push requires, made by the validator for this APK and DocaWear's package). An app compares versionCode with its own and offers (or installs) the update; sha256 checks the download. 404 while no build is kept. Any token.",
         "parameters": [
           {
             "name": "app",
@@ -1181,6 +1181,9 @@
                       "type": "string"
                     },
                     "url": {
+                      "type": "string"
+                    },
+                    "validationToken": {
                       "type": "string"
                     }
                   }
