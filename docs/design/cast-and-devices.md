@@ -93,5 +93,9 @@ under their approvals; one that changes the machine asks as it does today.
   target per link, short-lived, bound to its screen record, revoked by Stop or by revoking the screen, acting on nothing.
 - **`/api/v1` additions — yes** (the controls catalogue, presets, running a control, a phone carrying a device); the
   work is organised as the phases above.
-- Open: whether a cast target is reached over the LAN listen mode for view links only — decided in phase 1 by what the
-  network allows, said in the cast's own words when it cannot reach the hub.
+- **How a cast reaches a TV that is not a DOCA screen** (asked once the limit was found: the hub answers only on the
+  tailnet and this machine, with a self-signed certificate a Chromecast refuses): **DOCA screens first** — any browser
+  signed in, or made one by opening a view link — and then **the page served through the phone**, "kind of like the
+  watch": DocaMobile runs a small server on the Wi-Fi it is on and carries the view link's page from the hub over its
+  own tailnet connection; no Tailscale on the TV, nothing of the hub opened to the LAN. Such a cast lives through the
+  phone: it ends when the phone leaves that Wi-Fi, which the phone says (a DOCA screen keeps its page by itself).
