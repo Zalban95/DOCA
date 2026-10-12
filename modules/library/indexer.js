@@ -41,17 +41,27 @@ function hashOf(file, size) {
 
 const sleep = (ms, signal) => new Promise(r => { const t = setTimeout(r, ms); t.unref?.(); signal?.addEventListener('abort', () => { clearTimeout(t); r(); }, { once: true }); });
 
-/** Wait while the machine is busy (load per core over library.idleLoad); says so in the state. */
+/**
+ * Wait while the machine is busy (load per core over library.idleLoad), and — once this run made room on the GPU
+ * (room.js) — while a turn, a call or a request to a local model runs: the room is theirs then. Says so in the state.
+ */
 async function idle(st, limit, signal) {
-  const cores = os.cpus().length || 1;
-  while (!signal.aborted && os.loadavg()[0] / cores > limit) { st.waiting = true; await sleep(5000, signal); }
+  const cores = os.cpus().length || 1, room = require('./room');
+  if (room.holding()) st.madeRoom = room.made();
+  for (;;) {
+    if (signal.aborted) break;
+    if (os.loadavg()[0] / cores > limit) st.waiting = true;
+    else if (st.madeRoom && room.busyElsewhere()) { st.waiting = 'models'; room.wanted(null, 'a turn or a model request needed the GPU'); }
+    else break;
+    await sleep(st.waiting === 'models' ? 3000 : 5000, signal);
+  }
   st.waiting = false;
 }
 
 /** Embed a file's pieces: text pieces with the card's document prefix, pictures and sound as they are. */
 async function embedPieces(name, pieces, cfg, signal) {
   const asks = pieces.map(p => (p.image ? { image: p.image } : p.audio ? { audio: p.audio } : { text: E.docText(cfg.model, name, p.text) }));
-  const vecs = await E.embed(asks, cfg, signal);
+  const vecs = await require('./room').withRoom(() => E.embed(asks, cfg, signal), cfg.model);
   pieces.forEach((p, i) => { p.vec = vecs[i]; });
   return pieces.filter(p => p.vec);
 }
@@ -92,7 +102,8 @@ function start({ why = 'demand', person = null } = {}) {
     settings: settings(), captions: 0 };
   const ctrl = new AbortController();
   _run = { ctrl, st };
-  go(st, ctrl.signal, person).catch(e => { st.error = e.message; }).finally(() => {
+  go(st, ctrl.signal, person).catch(e => { st.error = e.message; }).finally(async () => {
+    await require('./room').giveBack(st.stopped ? 'the run was stopped' : 'the run ended').catch(() => {});
     st.running = false; st.finishedAt = new Date().toISOString(); st.current = null; _last = st; _run = null;
     require('../activity').note({ from: 'library', what: `indexed ${st.read} file${st.read === 1 ? '' : 's'}, removed ${st.removed}, ${st.failed} failed${st.error ? ` — stopped: ${st.error}` : ''}`,
       why: st.stopped ? 'stopped by a person' : 'the run ended', level: st.error ? 'warn' : 'info', person });

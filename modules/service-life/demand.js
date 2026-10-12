@@ -39,6 +39,7 @@ async function ensure(url, { wait = true, role = 'model', onStarting = null } = 
     const f = _failed.get(key);
     if (f && Date.now() - f.at < RETRY_MS) return { state: 'failed', notice: `${t.label} could not be started a moment ago (${f.why}).` };
     const p = (async () => {
+      await require('../library/room').giveBack(`${t.label} is starting`).catch(() => {});   // room the Library made is theirs again
       const r = await targets.start(t);
       if (r.ok) { usage.started(key); _failed.delete(key); } else _failed.set(key, { at: Date.now(), why: r.why || 'it failed' });
       require('./idle').note(t, r, `a request needed it (${WHAT[role] || 'a request'})`, 'start');

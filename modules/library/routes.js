@@ -28,7 +28,7 @@ async function view(brief = false) {
   if (brief) return { experiment: require('../experiments').on('library'), on: require('.').on(), kinds: require('../settings-schema').value('library.kinds') };
   const E = require('./embed'), I = require('./indexer'), M = require('./media'), sc = require('../settings-schema');
   const cfg = E.settings();
-  const leaves = Object.fromEntries(['folders', 'open', 'kinds', 'when', 'everyHours', 'captions', 'tags', 'transcribe'].map(k => [k, sc.value(`library.${k}`)]));
+  const leaves = Object.fromEntries(['folders', 'open', 'kinds', 'when', 'everyHours', 'captions', 'tags', 'transcribe', 'makeRoom'].map(k => [k, sc.value(`library.${k}`)]));
   let local = true;
   try { local = require('../harness/providers').endpoint(cfg.provider).local; } catch { /* named below */ }
   const stt = require('../chat').loadVoiceServices();
@@ -37,6 +37,7 @@ async function view(brief = false) {
     settings: { ...cfg, ...leaves }, local, run: I.view(), lastRun: require('.').lastRun(), watching: require('.').watching(),
     index: await require('./store').stats(), have: { ...M.have(), stt: !!stt.sttUrl, vision: !!sc.value('vision.model') },
     captions: require('./captions').why(), vocabulary: require('./tags').vocabulary().length, ollama: await ollamaSays(cfg),
+    suggest: cfg.provider === 'ollama' ? await require('./suggest').here(local) : null, room: require('./room').made(),
     folderNotes: leaves.folders.filter(f => !require('./scan').allowedFolder(f)).map(f => ({ folder: f, why: 'not inside the Files roots, protected, or gone' })),
   };
 }
@@ -60,6 +61,7 @@ function save(b) {
   if (b.kinds !== undefined) next.kinds = (Array.isArray(b.kinds) ? b.kinds : []).filter(k => KINDS.includes(k));
   if (b.when !== undefined) { if (!['demand', 'schedule', 'watch'].includes(b.when)) throw bad('when is demand, schedule or watch'); next.when = b.when; }
   if (b.captions !== undefined) next.captions = b.captions === true;
+  if (b.makeRoom !== undefined) next.makeRoom = b.makeRoom === true;
   if (b.tags !== undefined) next.tags = (Array.isArray(b.tags) ? b.tags : String(b.tags).split(',')).map(t => String(t).trim().slice(0, 40)).filter(Boolean).slice(0, 200);
   if (b.dialect !== undefined) { if (!['ollama', 'openai'].includes(b.dialect)) throw bad('dialect is ollama or openai'); next.dialect = b.dialect; }
   savePrefs({ ...prefs, library: next });

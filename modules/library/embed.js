@@ -74,7 +74,7 @@ async function embed(items, cfg = settings(), signal) {
 
 /** The query's vector, with the card's query prefix. */
 async function query(text, cfg = settings(), signal) {
-  const [v] = await embed([{ text: prefixOf(cfg.model).query + String(text) }], cfg, signal);
+  const [v] = await require('./room').withRoom(() => embed([{ text: prefixOf(cfg.model).query + String(text) }], cfg, signal), cfg.model);
   return v;
 }
 

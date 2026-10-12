@@ -111,6 +111,26 @@ What the first cut taught, and what changed:
 - **captions**: a vision model (Settings → Harness → Vision) and the switch.
 - **the model**: Ollama 0.36 or newer for EmbeddingGemma 2 (the section says the version it found), or any endpoint
   speaking Ollama's `/api/embed` with media; an OpenAI-shaped `/embeddings` indexes text only.
+- **MLX** (checked 2026-10-12 with Ollama 0.40.3): every EmbeddingGemma 2 tag runs only on Ollama's MLX engine —
+  `270m-*-text` reads text, `440m-*-text-vision` adds pictures, `570m-*-text-audio` adds sound, `740m` all three. A
+  Mac's Ollama has MLX; on Linux with an NVIDIA card it is a package of its own (`ollama-linux-amd64-mlx`, ~1.3 GB)
+  that Ollama's `install.sh` does not fetch — System tools → **Ollama's MLX runtime** installs it beside Ollama, and
+  the Ollama row refreshes it on an update. Without it the pull succeeds in name only and every embed answers "requires
+  MLX support"; the pull now ends in that error and the section offers the runtime first. The GGUF
+  (`ggml-org/embeddinggemma-2-GGUF`, architecture `gemma-embedding2`) is read by neither Ollama's other engine nor the
+  hub's llama.cpp 9174; llama.cpp b11576 embeds its text, not its pictures ("Failed to tokenize prompt").
+  **The suggestion follows the machine** (`library/suggest.js`): 740m-mxfp8 on a Mac or an NVIDIA card on Linux (with
+  the runtime named when missing), else the first `embeddinggemma:300m`, documents only.
+  Measured on the hub (RTX 5060 Ti, MLX on the GPU): the first load 27 s, then two pictures in 0.46 s; a query for
+  "a red car" ranks the red car's picture first (0.77 against 0.58 for the boat), "how much did the boiler repair cost"
+  the invoice (0.77), "a recipe with eggs" the recipes (0.67), across text, pictures and a voice note.
+- **Room on the GPU** (`library.makeRoom`, off by default; `library/room.js`): a full card makes Ollama refuse the
+  model for memory. With the switch on the Library frees one thing at a time and asks again — another Ollama model, then
+  a service or llama.cpp server DOCA manages and starts again when needed (service-life), then an idle llama.cpp
+  router model while no turn runs — each written in the activity log and each coming back by itself when asked;
+  nothing started outside DOCA is touched. While it holds that room, any request DOCA sends to a local model server
+  and any service starting when needed unloads the Library's model first, the run waits until they are quiet, and the
+  model is unloaded when the run ends.
 
 ## Built beside search (asked 2026-10-08: "a description generator that also functions as a search tool")
 
