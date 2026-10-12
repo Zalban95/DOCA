@@ -150,6 +150,8 @@ const MIGRATIONS = [
     describe: 'licence grace given (keys/licence-grace.json)',
     run() { return require('./license/grace').adopt() === 'given'; } }] },
   { id: '3.4-tool-tiers-graduated', note: 'tools are sent by tier for everyone now (harness.config.doca.toolsLoading); the experiment\'s switch is gone', steps: [drop('experiments.toolTiers')] },
+  { id: '3.47-wake-word-graduated', note: 'a screen may call the hive by name for everyone now (still off until a screen turns on call.listenWithFace); the experiment\'s switch is gone', steps: [drop('experiments.wakeWord')] },
+  { id: '3.47-model-scout-graduated', note: 'the model scout is part of every install now (its daily routine, scout.enabled, still off until switched on); the experiment\'s switch is gone', steps: [drop('experiments.modelScout')] },
   { id: '3.41-face-voice-graduated', note: 'the face follows every voice call now; the experiment\'s switch is gone', steps: [drop('experiments.faceVoice')] },
   // 3.42: Focused and Extended (screens/panel-mode.js). A new screen starts by its person's role; an admin's screens
   // that existed before keep the whole panel they showed. A member's go by role, to Focused — one tap switches back.

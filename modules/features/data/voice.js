@@ -33,7 +33,7 @@ module.exports = [
     use: 'In a call, speech while a turn works is sent to it and the interrupted answer\'s sentences are dropped.', words: 'interrupt call' },
   { id: 'face-voice', licence: 'voice', name: 'The face follows a voice call', state: 'on', since: '2.193.0', graduated: '3.41.0',
     use: 'The corner face is driven by the call\'s own audio — speaking with the agent\'s voice, listening with the microphone.', words: 'face animation audio' },
-  { id: 'wake-word', licence: 'lab', name: 'Start a call by saying its name', page: 'settings/experiments', flag: 'wakeWord', state: 'experiment', since: '2.210.0',
+  { id: 'wake-word', licence: 'voice', name: 'Start a call by saying its name', page: 'settings/voice', state: 'on', since: '2.210.0', graduated: '3.47.0',
     settings: ['call.wakeWord'],
     use: 'A screen listening with the face starts a call when a transcript calls its name.', words: 'hey wake word hotword listen' },
   { id: 'wake-model', licence: 'lab', name: 'A wake word model trained here', page: 'models', settings: ['wakeword'], flag: 'wakeModel', state: 'experiment', since: '2.244.0',

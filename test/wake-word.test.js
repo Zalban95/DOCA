@@ -33,8 +33,8 @@ test('any word a person sets is matched the same way', () => {
   assert.equal(m('Harvest season', 'Jarvis').heard, false);
 });
 
-test('a screen is told which call experiments are on, without the owner\'s rights', () => {
+test('calling by name graduated: every screen is told it may, and no switch is left', () => {
   const src = fs.readFileSync(path.join(__dirname, '..', 'modules', 'screens', 'routes.js'), 'utf8');
-  assert.match(src, /'bargeIn', 'wakeWord'/);
-  assert.ok(require('../modules/experiments').EXPERIMENTS.some(e => e.id === 'wakeWord'));
+  assert.match(src, /wakeWord: true/);
+  assert.ok(!require('../modules/experiments').EXPERIMENTS.some(e => e.id === 'wakeWord'));
 });

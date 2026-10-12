@@ -130,7 +130,7 @@ module.exports = [
   { id: 'retrieval', licence: 'lab', tables: ['embeddings'], name: 'Search by meaning', page: 'settings/harness', flag: 'retrieval', state: 'experiment', settings: ['retrieval.model'], since: '2.181.0',
     use: 'Memory and conversation search ranked by meaning as well as keywords, with embeddings from the owner\'s provider.',
     routes: ['/api/retrieval*'], words: 'embeddings semantic vector rag' },
-  { id: 'model-scout', licence: 'lab', name: 'The model scout', page: 'settings/harness', tools: ['model_scout'], uses: 'tool:model_scout', flag: 'modelScout', state: 'experiment', settings: ['scout.enabled'], since: '2.213.0',
+  { id: 'model-scout', licence: 'core', name: 'The model scout', page: 'settings/harness', tools: ['model_scout'], uses: 'tool:model_scout', state: 'on', settings: ['scout.enabled'], since: '2.213.0', graduated: '3.47.0',
     use: 'A daily look for better and new models and a brief with suggestions a host accepts, declines or starts work on.',
     routes: ['/api/scout*'], words: 'new models trending hugging face suggestions' },
   { id: 'effort', licence: 'core', name: 'Thinking effort', tools: ['effort'], settings: ['assistant.effort'], since: '2.217.0',

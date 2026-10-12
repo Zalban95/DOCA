@@ -40,7 +40,7 @@ const SCHEMA = {
       silenceMs:   { type: 'integer', min: 300, max: 10000, default: 2000, hint: 'How long a pause, in milliseconds, ends what you said and sends it. A device\'s call (a watch\'s) reads it too, from the device\'s own page; unset there, 1400 (realtime/call-pause.js).' },
       sensitivity: { type: 'integer', min: 1, default: 15, hint: 'The microphone level that counts as speech; lower hears quieter voices and more of the room.' },
       assistantIdleSec: { type: 'integer', min: 5, default: 12, hint: 'In the Live call (the face tapped) and Ambient\'s assistant, seconds of quiet before it goes back to waiting for the wake word, where the screen listens for one.' },
-      listenWithFace: { type: 'boolean', default: false, hint: 'While the corner face shows, listen for the wake word and start a call when it is said (experiments.wakeWord).' },
+      listenWithFace: { type: 'boolean', default: false, hint: 'While the corner face shows, listen for the wake word and start a call when it is said.' },
       wakeWord: { type: 'string', default: '', hint: 'The word that starts a call. Empty: the product\'s name (branding).' },
       language: { type: 'string', default: '', hint: 'The language spoken in a call on this screen, as a two-letter code (en, it…): the transcriber is told it instead of guessing. Empty: the person\'s usual language, from what they write and say.' },
       // Whether the microphone may stay open with the page in the background (public/js/lib/mic-keep.js). The person's
@@ -51,7 +51,7 @@ const SCHEMA = {
     keys: {
       place:  { type: 'string', default: '', hint: 'Where this screen is, for the weather: a town, or "lat,lon". Empty: this device\'s own location (with auto), else no weather.' },
       units:  { type: 'string', default: 'metric', hint: 'metric (°C, km/h) or imperial (°F, mph).' },
-      listen: { type: 'boolean', default: true, hint: 'While the ambient screen rests, listen for the wake word (experiments.wakeWord); a call or a recording takes the microphone when it needs it.' },
+      listen: { type: 'boolean', default: true, hint: 'While the ambient screen rests, listen for the wake word; a call or a recording takes the microphone when it needs it.' },
       clock24: { type: 'boolean', default: true, hint: 'A 24-hour clock.' },
       auto:    { type: 'boolean', default: true, hint: 'With no place named, use this device\'s own location (the browser asks once).' },
       margin:  { type: 'integer', min: 0, max: 25, default: 7, hint: 'Side margins, % of the screen\'s width.' },
@@ -161,7 +161,7 @@ const SCHEMA = {
       idleDays:        { type: 'number', min: 1, default: 30, hint: 'Days without a use before an alternative is listed as unused.' },
       replacementRuns: { type: 'number', min: 1, default: 50, hint: 'Uses of the feature it stands beside, in that time, before it is listed as unused.' },
     } },
-  scout:            { is: 'travels', home: 'hive', note: 'the model scout: what it watches, how often, where accepted suggestions go and who works on them (modules/scout; the switch is experiments.modelScout)',
+  scout:            { is: 'travels', home: 'hive', note: 'the model scout: what it watches, how often, where accepted suggestions go and who works on them (modules/scout; its routine is scout.enabled)',
     propose: p('Model scout', 'What the scout watches and how often; switching it on is a proposal too'),
     keys: { enabled: { type: 'boolean', default: false, hint: 'Look daily for better or new models and brief every everyDays (a turn of the agent). Off by default.' },
       everyDays: { type: 'number', min: 1, default: 7, hint: 'Days between briefs; a look that finds something notable briefs at once.' },

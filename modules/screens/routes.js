@@ -30,7 +30,7 @@ function mount(app) {
       const eff = screens.effective(d.id, req.auth.user.id);
       res.json({ id: d.id, name: d.name, kind: d.kind, ...eff, keys: screens.screenKeys(),
         panelMode: require('./panel-mode').resolve(d.id, req.auth.user, req.auth.role, eff),   // Focused or Extended, and from where
-        experiments: { ...Object.fromEntries(['bargeIn', 'wakeWord', 'wakeModel'].map(id => [id, ex.on(id)])), faceVoice: true } });   // faceVoice graduated (3.41.0): on for every call
+        experiments: { ...Object.fromEntries(['bargeIn', 'wakeModel'].map(id => [id, ex.on(id)])), faceVoice: true, wakeWord: true } });   // graduated: faceVoice (3.41.0), wakeWord (3.47.0) — pages older than these still read them
     } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   // A device's own notifications (its profile: questions, haptics, quiet hours), for its page — the device's

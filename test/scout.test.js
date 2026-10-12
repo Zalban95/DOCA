@@ -34,10 +34,11 @@ after(async () => { delete process.env.DOCA_HF_API; await H.stop(); await new Pr
 
 const has = () => require('../modules/harness/tools').schemas().some(t => t.function.name === 'model_scout');
 
-test('off: no tool, no card, no routine', async () => {
-  assert.equal(has(), false);
-  assert.equal(await require('../modules/scout').tick(), null);
-  assert.equal((await H.api(null, 'GET', '/api/scout')).body.experiment, false);
+test('graduated: the tool and the card are there; the routine stays off until switched on', async () => {
+  assert.equal(has(), true);
+  assert.equal(await require('../modules/scout').tick(), null, 'scout.enabled is off by default: no look, no brief');
+  assert.equal((await H.api(null, 'GET', '/api/scout')).body.experiment, true);
+  assert.ok(!require('../modules/experiments').EXPERIMENTS.some(e => e.id === 'modelScout'));
 });
 
 test('a look: the first sets the baseline; the next measures growth and notices news', async () => {
@@ -72,7 +73,6 @@ test('"in use here" is said under the function that uses a model, never one whos
 });
 
 test('on: the tool files suggestions once each; a person accepts one into TODO.md and declines another', async () => {
-  require('../modules/experiments').setDeveloper(true); require('../modules/experiments').set('modelScout', true);
   assert.equal(has(), true);
   const tools = require('../modules/harness/tools');
   const out = await tools.call('model_scout', { action: 'suggest', title: 'A faster speech-to-text', role: 'stt', candidate: 'acme/whisper-next', replaces: 'whisper large-v3-turbo', why: 'Half the latency at the same word error rate.', evidence: ['https://example.com/card'], tryWith: 'voiceServices.sttModel' });
