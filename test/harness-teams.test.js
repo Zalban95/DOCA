@@ -96,10 +96,12 @@ test('a team uses an outside harness only when the person asked for it: unasked 
   assert.ok(require('../modules/harness/turn/tool-calls').byPerson({ client: { user: { id: 'u' } }, isMission: true }) === false, 'a mission never counts as the person');
 });
 
-test('the key goes into the worker\'s environment by name only — never an argument', async () => {
+// A stand-in docker is a shell script that runs this very node: a POSIX host's way (Windows cannot run one by its path).
+test('the key goes into the worker\'s environment by name only — never an argument', { skip: process.platform === 'win32' && 'a stand-in docker script needs a POSIX shell' }, async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-fake-docker-'));
   const fake = path.join(dir, 'docker');
-  fs.writeFileSync(fake, `#!/usr/bin/env node\nprocess.stdout.write(JSON.stringify({ argv: process.argv.slice(2), has: process.env.ANTHROPIC_API_KEY === ${JSON.stringify(SECRET)} }));\n`);
+  fs.writeFileSync(path.join(dir, 'fake.js'), `process.stdout.write(JSON.stringify({ argv: process.argv.slice(2), has: process.env.ANTHROPIC_API_KEY === ${JSON.stringify(SECRET)} }));\n`);
+  fs.writeFileSync(fake, `#!/bin/sh\nexec ${JSON.stringify(process.execPath)} ${JSON.stringify(path.join(dir, 'fake.js'))} "$@"\n`);
   fs.chmodSync(fake, 0o755);
   process.env.DOCA_CONTAINER_CLI = fake;
   try {
