@@ -9,13 +9,13 @@ const soloOn = () => !!SOLO_PAGE && typeof NAV_TABS !== 'undefined' && NAV_TABS.
 
 function soloStart() {
   document.body.classList.add('solo');
-  nav(SOLO_PAGE);
   const bar = Object.assign(document.createElement('div'), { className: 'solo-bar' });
   bar.innerHTML = `<span>${escHtml((typeof NAV_LABELS !== 'undefined' && NAV_LABELS[SOLO_PAGE]) || SOLO_PAGE)}</span>
     <button class="btn btn-xs" onclick="soloFull()" title="Full screen (F)">⛶</button>
     <button class="btn btn-xs" onclick="location.href='/'" title="Back to the whole panel">✕</button>`;
   document.body.append(bar);
-  _soloCastLock(bar);
+  _soloCastLock(bar);   // before the page draws: a cast screen is locked whatever the page does
+  nav(SOLO_PAGE);
   let t = null;
   const wake = () => { bar.classList.add('awake'); clearTimeout(t); t = setTimeout(() => bar.classList.remove('awake'), 3000); };
   ['mousemove', 'touchstart', 'keydown'].forEach(e => document.addEventListener(e, wake, { passive: true }));
