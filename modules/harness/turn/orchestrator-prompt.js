@@ -33,7 +33,7 @@ function orchestratorPrompt({ p, userText, summary, toolCount, client, profile, 
   const registry = require('../../agents/registry');
   const specialists = held.has('agent_dispatch') && registry.enabled() ? registry.list().filter(a => !a.broken).map(a => a.id) : [];
   const route = require('../coordinator').routing({
-    held, specialists, workSteps: Number(p.orchestratorWorkSteps) || 0,
+    held, specialists, workSteps: Number(p.orchestratorWorkSteps) || 0, free: require('../../experiments').on('alwaysFree'),
     skills: count(() => require('../skills').list()), recipes: count(() => require('../../recipes/store').list()),
   });
   const brief = [environmentBrief(p, toolCount), ...environment.mcpSection(undefined, { held })].join('\n');

@@ -66,8 +66,11 @@ function mount(app) {
     catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   // What the fold beside a chat shows: what is waiting, and the plan with its progress.
+  // The main chat's fold also lists its background jobs, by step (experiment alwaysFree; background.js) — each the person may open.
   app.get('/api/harness/sessions/:id/inbox', handle(req => ({ waiting: require('./inbox').waiting(req.params.id),
-    plan: memory.getSession(req.params.id)?.plan || null })));
+    plan: memory.getSession(req.params.id)?.plan || null,
+    ...(req.params.id === memory.mainSession().id && require('../experiments').on('alwaysFree')
+      ? { background: require('./background').rows(req.params.id).filter(r => require('./session-access').mayUse(who(req), r.id)) } : {}) })));
   app.delete('/api/harness/sessions/:id/inbox/:qid', handle(req => {
     require('./inbox').withdraw(req.params.id, req.params.qid);
     return { waiting: require('./inbox').waiting(req.params.id) };

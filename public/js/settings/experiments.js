@@ -22,7 +22,7 @@ async function experimentsLoad() {
   if (!dev) return;
   // The ceiling adaptive step budgets stay under (experiment adaptiveLimits): a developer's setting, here with the experiment.
   const limits = panel.appendChild(Object.assign(document.createElement('div'), { className: 'card' }));
-  leafFieldsDraw(limits, ['limits.maxStepsCeiling'], { label: 'Advanced — the most steps an adaptive turn may reach', id: 'exp-limits' });
+  leafFieldsDraw(limits, ['limits.maxStepsCeiling', 'work.parallel', 'work.localSlots'], { label: 'Advanced — the most steps an adaptive turn may reach; how many background jobs run at once (alwaysFree)', id: 'exp-limits' });
   for (const x of list) {
     const card = Object.assign(document.createElement('div'), { className: 'card' });
     card.innerHTML = `<div class="card-title" style="display:flex;align-items:center;gap:10px">${escHtml(x.label)}

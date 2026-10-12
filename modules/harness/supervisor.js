@@ -138,7 +138,12 @@ function specialistsRunning(id) {
 /** Called by turn/lifecycle.changed when a turn ends. Deferred, so a mission's own bookkeeping lands first. */
 function afterTurn(sessionId, info = {}) {
   _why.delete(sessionId);
-  setImmediate(() => { try { decide(sessionId, info); } catch (e) { console.warn(`[supervisor] ${sessionId}: ${e.message}`); } });
+  setImmediate(() => {
+    try { decide(sessionId, info); } catch (e) { console.warn(`[supervisor] ${sessionId}: ${e.message}`); }
+    // A job lined up behind the person's limit starts when one ends (work-cap.js; lined up only under experiment
+    // alwaysFree, released whether or not it is still on, so switching it off strands nothing).
+    if (_enabled) try { require('./work-cap').next(); } catch (e) { console.warn(`[work-cap] ${e.message}`); }
+  });
 }
 
 function decide(id, info = {}) {

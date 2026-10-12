@@ -16,7 +16,7 @@
  * as before, for a model with room to spare and a cache that makes the bytes cheap.
  */
 const CORE = new Set([
-  'work_chats', 'work_plan', 'agent_dispatch', 'agent_results', 'mission_plan', 'scout_report',
+  'work_chats', 'work_plan', 'background', 'agent_dispatch', 'agent_results', 'mission_plan', 'scout_report',
   'read_file', 'write_file', 'list_dir', 'search_files', 'shell', 'git', 'project', 'repo_rules',
   'memory_search', 'memory_list', 'memory_write', 'recall_conversations', 'skill', 'recipe',
   'settings_read', 'settings_propose', 'panel_layout', 'install_propose', 'system_status', 'doca_clients',

@@ -22,7 +22,7 @@
  */
 const FRONT = new Set(['remind', 'today', 'memory_write', 'memory_search', 'memory_list', 'recall_conversations', 'tell_device',
   'screen', 'recipe', 'skill', 'effort', 'settings_read', 'settings_propose', 'system_status', 'doca_clients', 'show_media', 'web_search',
-  'work_chats', 'agent_dispatch', 'agent_results']);
+  'work_chats', 'agent_dispatch', 'agent_results', 'background']);
 const STEPS = 6;        // tool steps a front turn may take at most
 const WORK_STEPS = 2;   // steps of real work before the rest moves to a work chat
 
@@ -81,7 +81,8 @@ function lately(sessionId) {
 /**
  * Hand the request to a work chat now, before any model is asked. @returns {string} the line the call says
  */
-function delegate({ session, message, client, say, deep }) {
+function delegate({ session, message, client, say, deep, attachments = [] }) {
+  if (require('./route').on()) return require('../fork').beforeModel({ session, message, client, say, deep, attachments });   // experiment alwaysFree
   const organization = require('../organization'), memory = require('../memory');
   const chat = organization.create({ title: short(message, 80) || 'From a call' });
   require('../session-access').claim(client?.user, chat.id);   // the person's work, under their level
@@ -104,4 +105,4 @@ const LINE = 'You are the quick voice of this call: answer at once, or do one sh
   + 'couple of steps goes to a work chat (work_chats) or a specialist, with one spoken line that you are on it — its outcome '
   + 'is said in this call when it ends.';
 
-module.exports = { plan, planned, delegate, offOutside, DEEP, FRONT, STEPS, WORK_STEPS, LINE };
+module.exports = { plan, planned, delegate, offOutside, lately, DEEP, FRONT, STEPS, WORK_STEPS, LINE };

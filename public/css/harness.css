@@ -376,6 +376,9 @@ body.harness-tab .chat-fab { display: none; }
 .agent-fold-step[data-state="done"] { color: var(--green); }
 .agent-fold-step[data-state="running"] { color: var(--amber); }
 .agent-fold-step[data-state="blocked"] { color: var(--red); }
+.agent-fold-step[data-state="cancelled"] { text-decoration: line-through; opacity: .6; }
+.agent-fold-theirs, .agent-fold-changed { color: var(--amber); font-size: 11px; }
+.agent-fold-changed { display: block; margin: 2px 0 4px 18px; }
 .hc-conv { padding: 4px 12px; border-bottom: 1px solid var(--border); }
 .hc-conv:empty { display: none; }
 .hc-tabs { padding-left: 10px; }
