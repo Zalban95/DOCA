@@ -123,6 +123,7 @@ function _renderLlamaGrid() {
         <label class="services-ctrl-label">Port ${infoBtn('The number the server listens on, so its address is http://localhost:<port>/v1. Each server needs a port of its own, between 1024 and 65535.')}</label>
         <input class="input" id="llama-port-${inst.id}" value="${inst.port}" type="number"
                style="width:70px" min="1024" max="65535">
+        <label class="services-ctrl-label" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="llama-auto-${inst.id}" ${inst.autostart ? 'checked' : ''}> Start with DOCA ${infoBtn('Start this server whenever DOCA starts. Without it, a server that was running when DOCA stopped (an update, a restart) is started again anyway; one you stopped stays stopped.')}</label>
       </div>
       ${advancedFold(`<div class="llamacpp-controls">
         <label class="services-ctrl-label">GPU layers ${infoBtn('How much of the model is put on the graphics card: a number of layers, or auto to let llama.cpp decide by the memory it finds. More layers answer faster but need more graphics memory. Default 999, which means all of them.')}</label>
@@ -196,6 +197,7 @@ async function llamaSaveConfig(id) {
     port:       document.getElementById(`llama-port-${id}`)?.value         || '11435',
     nGpuLayers: document.getElementById(`llama-ngl-${id}`)?.value          || '999',
     ctxSize:    document.getElementById(`llama-ctx-${id}`)?.value          || '8192',
+    autostart:  !!document.getElementById(`llama-auto-${id}`)?.checked,
   };
   try {
     await apiFetch('/api/models/llamacpp/config', { method: 'POST', body });

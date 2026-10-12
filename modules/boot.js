@@ -19,6 +19,7 @@ function afterListen({ certs = null, mode } = {}) {
   require('./harness/runs').recoverJobs();            // a device's command job that was running did not survive it
   require('./api-services/jobs').recover();           // nor did following a service's long job: said where it started
   require('./mcp/registry').startWithDoca();          // MCP servers marked "start with DOCA"
+  require('./llamacpp-resume').resume().catch(() => {});   // DOCA's own llama.cpp servers that were running, or marked to start with it
   require('./canvas/origin').start({ certs, mode });  // agent-written pages, on their own origin
   require('./backup/schedule').start();               // backups on a schedule, when switched on
   require('./machine-backup/schedule').start();       // and this machine's own files, daily and when the disk is back (off by default)

@@ -12,6 +12,7 @@ module.exports = { is: 'travels', home: 'hive', note: 'how a computer\'s screen 
       quickProvider: { type: 'string', default: '', hint: 'The provider serving the quick vision model. Empty: the vision model\'s own provider.' },
       quickModel: { type: 'string', default: '', hint: 'A smaller model that reads images, used while the vision model is not loaded on its server (see when). Empty: none.' },
       quickWhen: { type: 'string', default: 'cold', hint: 'When the quick model answers: cold — while the vision model is not in memory on its own server; always; or never.' },
+      thinking: { type: 'boolean', default: true, hint: 'Let the vision model think before answering. Off, a thinking model (Qwen3.5, Qwen3.8) answers what is on the screen in about a second instead of many.' },
       quickThinking: { type: 'boolean', default: false, hint: 'Let the quick vision model think before answering: better positions, many seconds slower. Off, it answers what is on the screen in about a second.' },
       // A model trained to point at things on screens (vision/locate.js; asked 2026-10-12).
       locatorProvider: { type: 'string', default: '', hint: 'The provider serving the locator. Empty: the vision model\'s own provider.' },

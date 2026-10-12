@@ -122,6 +122,7 @@ function handleConfig(req, res) {
     ctxSize:     parseInt(ctxSize)    || 8192,
     ...(mmprojPath !== undefined ? { mmprojPath: String(mmprojPath || '') } : {}),
     ...(jinja !== undefined ? { jinja: !!jinja } : {}),
+    ...(req.body.autostart !== undefined ? { autostart: req.body.autostart === true } : {}),
   };
 
   if (idx >= 0) {
@@ -259,6 +260,7 @@ function handleStop(req, res) {
   if (!id) return res.status(400).json({ error: 'id required' });
 
   const proc = _procs[id];
+  require('./llamacpp-resume').record(id, false);   // a person stopped it: not started again after a restart
   if (!proc || !proc.child || proc.child.killed) {
     delete _procs[id];
     return res.json({ ok: true, wasRunning: false });
@@ -321,6 +323,7 @@ async function handleHealth(req, res) {
 
 function registerEndpoint(inst) {
   require('./service-life/usage').started(`llamacpp:${inst.id}`);   // its idle clock starts (service-life/)
+  require('./llamacpp-resume').record(inst.id, true);   // so it runs again after a restart (llamacpp-resume.js)
   try {
     require('./provider-keys').set(`llamacpp-${inst.id}`, {
       baseUrl: `http://${advertiseHost()}:${inst.port}/v1`,

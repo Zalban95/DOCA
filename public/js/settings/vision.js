@@ -17,6 +17,7 @@ async function visionCardRender(panel) {
     <div style="display:flex;flex-direction:column;gap:8px">
       ${f('Default reader', `<select class="input" id="vision-backend" style="width:auto">${Object.entries(v.readers).map(([id, l]) => `<option value="${id}" ${s.backend === id ? 'selected' : ''}>${escHtml(l)}${has(id) ? '' : ' — not set up'}</option>`).join('')}</select>`, 'Which way an agent reads a screen unless it asks for another: a vision model (understands anything, needs one set below), a detector (finds trained objects), text recognition, or matching a small picture. One marked "not set up" cannot be used yet.')}
       ${f('Vision model', `${inp('provider', s.provider, 'provider (ollama)', '140px')} ${inp('model', s.model, 'e.g. qwen2.5vl')}`, 'A model that understands pictures: the provider (as in Field → API keys; Ollama for one on this machine) and the model\'s name. Empty: no vision model.')}
+      ${f('Let it think', `<label style="font-size:11px"><input type="checkbox" id="vision-thinking" ${s.thinking !== false ? 'checked' : ''} data-default="true"> the vision model</label> <label style="font-size:11px"><input type="checkbox" id="vision-quickThinking" ${s.quickThinking ? 'checked' : ''} data-default="false"> the quick model</label>`, 'Whether a model that thinks before answering may do so. Thinking makes a reasoning model (Qwen3.5, Qwen3.8) better at hard questions and many seconds slower; off, it says what is on the screen in about a second. Default: the vision model thinks, the quick one does not.')}
       ${f('Quick model', `${inp('quickProvider', s.quickProvider, 'provider (the same)', '140px')} ${inp('quickModel', s.quickModel, 'a smaller vision model')}`, 'A smaller model that reads pictures, used while the vision model is not loaded yet — it answers in seconds, and the vision model is woken for the next look. Empty: none, the vision model always answers.')}
       ${f('Locator', `${inp('locatorProvider', s.locatorProvider, 'provider (the same)', '140px')} ${inp('locatorModel', s.locatorModel, 'a model that points at things on screens')}`, 'A model trained to point at things on screens (GUI grounding), asked "where is …" and answering a point in well under a second — the right tool for where to click. Empty: none, the vision model answers those too.')}
       ${advancedFold(`<div style="display:flex;flex-direction:column;gap:8px">
@@ -38,6 +39,8 @@ async function visionSave() {
   const g = id => document.getElementById(`vision-${id}`).value.trim();
   const body = Object.fromEntries(['backend', 'provider', 'model', 'quickProvider', 'quickModel', 'quickWhen', 'locatorProvider', 'locatorModel', 'locateWhen', 'locatorPrompt', 'detectorUrl', 'detectorModel', 'apiKey', 'ocrLang'].map(k => [k, g(k)]));
   body.warmMain = document.getElementById('vision-warmMain').checked;
+  body.thinking = document.getElementById('vision-thinking').checked;
+  body.quickThinking = document.getElementById('vision-quickThinking').checked;
   try { await apiFetch('/api/vision', { method: 'POST', body }); }
   catch (e) { return appAlert(e.message); }
   visionCardRender(document.getElementById('sp-harness'));
