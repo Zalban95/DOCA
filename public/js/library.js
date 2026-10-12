@@ -23,7 +23,8 @@ function _libModelRow(v) {
     : `${_libTick(o.newEnough, `Ollama ${escHtml(o.version)}${o.newEnough ? '' : ' — EmbeddingGemma 2 needs 0.36 or newer'}`)} ${s.model ? _libTick(o.pulled, o.pulled ? `${escHtml(s.model)} pulled` : `${escHtml(s.model)} not pulled`) : ''}`;
   return `<div class="ww-row"><label>Model <input class="input" id="lib-model" value="${escHtml(s.model)}" placeholder="${LIB_MODEL.name}" style="width:260px"
       list="lib-models" onchange="librarySave({model:this.value})"></label>${infoBtn('The model that reads your files and turns them into something searchable by meaning (an embedding model). The suggested one is EmbeddingGemma 2, run by Ollama on this machine; Install fetches it. Saved when changed; files are read again with a new model.')}<datalist id="lib-models">${(o?.models || []).map(m => `<option value="${escHtml(m)}">`).join('')}</datalist>
-    ${o?.reachable && !o.pulled ? `<button class="btn btn-sm" onclick="libraryInstall()">Install EmbeddingGemma 2 (${LIB_MODEL.size})</button>` : ''}
+    ${o?.reachable && !o.newEnough ? `<button class="btn btn-sm" onclick="libraryUpdateOllama()">Update Ollama first</button>`
+      : o?.reachable && !o.pulled ? `<button class="btn btn-sm" onclick="libraryInstall()">Install EmbeddingGemma 2 (${LIB_MODEL.size})</button>` : ''}
     ${ollama} <span class="ww-dim">${escHtml(s.provider)}${v.local ? ' · on this machine' : ' · a hosted endpoint: file content is sent there'}</span></div>
     <div id="lib-install-out" class="ww-dim"></div>`;
 }
@@ -125,6 +126,15 @@ function libraryEmpty() {
   });
 }
 
+/** An Ollama too old for the model: its row in System tools, updated by that row's own installer (asked, with the
+    machine's password where it needs one) — the Library never installs a model that would not load. */
+async function libraryUpdateOllama() {
+  settingsSubNav('system');
+  await sysdepsLoad();
+  document.getElementById('sysdeps-list')?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  sysdepsUpdate('ollama');
+}
+
 /** EmbeddingGemma 2 through Ollama's own pull (the Models tab's), asked first with its size. */
 function libraryInstall() {
   appConfirm(`Pull ${LIB_MODEL.name} into Ollama on this machine? It is a ${LIB_MODEL.size} download and needs Ollama 0.36 or newer.`, () => {
@@ -132,7 +142,9 @@ function libraryInstall() {
     let failed = false;
     sseStream('/api/models/ollama/pull', { name: LIB_MODEL.name }, {
       onEvent: d => {
+        if (d.error && out) out.textContent = `Not installed: ${typeof d.error === 'string' ? d.error : d.status}`;
         if (d.done) { failed = !!d.error; return; }
+        if (d.error) { failed = true; return; }
         if (out) out.textContent = d.total ? `${d.status} ${Math.round(((d.completed || 0) / d.total) * 100)}%` : (d.status || '');
       },
       onError: e => { failed = true; if (out) out.textContent = e.message || String(e); },
