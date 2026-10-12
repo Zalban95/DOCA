@@ -70,7 +70,7 @@ function make({ session, message, person = null, deep = false, spoken = false, a
   const task = taskFor({ session, message, deep, spoken, done, attachments: files });
   const origin = { sessionId: session.id, by: person?.id || null, at: new Date().toISOString() };
   const waiting = require('./work-cap').lineUp(chat.id, { person, task, from: session.id, attachments: files, origin });
-  if (!waiting) organization.start(chat.id, task, session.id, { attachments: files, origin });
+  if (!waiting) organization.start(chat.id, task, session.id, { attachments: files, origin, asker: person });   // their own words: their authority (askedBy)
   return { chat: organization.session(chat.id), title: name, waiting };
 }
 
@@ -90,7 +90,7 @@ function beforeModel({ session, message, client, say, deep, attachments }) {
   const spoken = client?.mode === 'assistant' || client?.mode === 'call';
   const { chat, title, waiting } = make({ session, message, person: client?.user, deep, spoken, attachments });
   say({ type: 'handoff', step: 0, sessionId: chat.id, title: chat.title, from: session.id, before: true, ...(waiting ? { waiting } : {}) });
-  const text = line({ title, spoken, deep, waiting });
+  const text = line({ title, spoken, deep, waiting }) + require('./manual-note').note(session.id, { spoken });   // Manual: the price, and Auto offered
   memory.append(session.id, { role: 'assistant', content: text });
   say({ type: 'text', text });
   return text;
@@ -111,7 +111,7 @@ function fromSafetyNet({ session, message, from, reply, say, step, person, spoke
     say({ type: 'tool_result', name, result, step });
   }
   say({ type: 'handoff', step, sessionId: chat.id, title: chat.title, from: session.id, ...(waiting ? { waiting } : {}) });
-  return line({ title, spoken, safety: true, waiting });
+  return line({ title, spoken, safety: true, waiting }) + require('./manual-note').note(session.id, { spoken });
 }
 
 module.exports = { make, line, beforeModel, fromSafetyNet, titleOf, lately, taskFor };
