@@ -11,6 +11,10 @@
  *   { anyTool: ['a', 'b'] }                     at least one of them called (more than one right way)
  *   { maxSteps: n } / { maxTokens: n }          what the turn took
  *   { judge: 'rubric' }                         one model call with no tools judges the answer against the rubric
+ *   { lane: 'job' }                             what the front did: talk, look, do-now, job or amend (follow.js laneOf)
+ *   { maxChildren: n } / { minChildren: n }     how many work chats it handed work to
+ *   { maxFirstMs: n }                           the first word, thought or call came within n ms
+ * With --follow the tool checks read the front's tools and its work chats' together (`allTools`).
  *
  * The judge is the harness's own `ask` (no tools, no memory, no charter): it reads the question, the rubric and the
  * answer, and its first word is PASS or FAIL. It is the only check that spends tokens.
@@ -31,7 +35,7 @@ const calledList = tools => tools.length ? `it called ${[...new Set(tools)].join
 
 async function one(c, prompt, o) {
   const text = String(o.text || '');
-  const tools = o.tools || [];
+  const tools = o.allTools || o.tools || [];
   const has = s => text.toLowerCase().includes(String(s).toLowerCase());
   if (c.contains !== undefined) return said(has(c.contains), `answer contains "${c.contains}"`, `answer does not contain "${c.contains}"`);
   if (c.notContains !== undefined) return said(!has(c.notContains), `answer does not contain "${c.notContains}"`, `answer contains "${c.notContains}", which it should not`);
@@ -44,6 +48,10 @@ async function one(c, prompt, o) {
   if (c.noTool !== undefined) return said(!named(tools, c.noTool), `never called ${c.noTool}`, `called ${c.noTool}, which it should not (${tools.filter(t => named([t], c.noTool)).length}×)`);
   if (c.maxSteps !== undefined) return said((o.steps ?? Infinity) <= c.maxSteps, `${o.steps ?? '?'} steps ≤ ${c.maxSteps}`, `${o.steps ?? '?'} steps, more than ${c.maxSteps}`);
   if (c.maxTokens !== undefined) return said((o.tokens ?? Infinity) <= c.maxTokens, `${o.tokens ?? '?'} tokens ≤ ${c.maxTokens}`, `${o.tokens ?? '?'} tokens, more than ${c.maxTokens}`);
+  if (c.lane !== undefined) return said(o.lane === c.lane, `lane ${o.lane}`, `lane ${o.lane ?? '?'}, expected ${c.lane}`);
+  if (c.maxChildren !== undefined) return said((o.children ?? 0) <= c.maxChildren, `${o.children ?? 0} work chats ≤ ${c.maxChildren}`, `${o.children} work chats, more than ${c.maxChildren}`);
+  if (c.minChildren !== undefined) return said((o.children ?? 0) >= c.minChildren, `${o.children ?? 0} work chats ≥ ${c.minChildren}`, `${o.children ?? 0} work chats, fewer than ${c.minChildren}`);
+  if (c.maxFirstMs !== undefined) return said(o.firstMs != null && o.firstMs <= c.maxFirstMs, `first output at ${o.firstMs} ms ≤ ${c.maxFirstMs}`, `first output at ${o.firstMs ?? '?'} ms, later than ${c.maxFirstMs}`);
   if (c.judge !== undefined) {
     try { const j = await judge(c.judge, prompt, o); return { pass: j.pass, why: `judge: ${j.why}` }; }
     catch (e) { return { pass: false, why: `judge could not answer: ${e.message}` }; }

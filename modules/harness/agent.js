@@ -140,8 +140,9 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     if (!client?.user?.id || require('../auth/allot').allowsModel(client.user, quick)) p = quick;
   }
   p = require('../spending').priced({ person: client?.user, sessionId }, p);   // a money budget counts only priced models
-  // A call's turn answers at once, with a short kit, or hands the request on (turn/front.js) — and is never triaged.
-  const front = await require('./turn/front').planned({ client, message, session: memory.getSession(sessionId), profile });
+  // A call's turn answers at once, with a short kit, or hands the request on (turn/front.js) — and is never triaged;
+  // under experiment alwaysFree every turn of the main chat may hand a clear job on before any model (turn/route.js).
+  const front = await require('./turn/route').decide({ client, message, session: memory.getSession(sessionId), profile });
   if (front?.steps) p = { ...p, maxSteps: Math.min(Math.max(1, Number(p.maxSteps) || 1), front.steps) };
   // Limits that follow the work (experiment adaptiveLimits, turn/triage.js): null when off, and then nothing changes.
   const verdict = front ? null : await require('./turn/triage').verdict({ message, client, session: memory.getSession(sessionId), p });
@@ -172,11 +173,10 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   });
   userRow(message, client, attachments.resolve(attached || []));
   const from = memory.messages(session.id).length;   // where this turn's own work starts (turn/handoff.js)
-  if (front?.delegate) return { sessionId: session.id, text: require('./turn/front').delegate({ session, message, client, say, deep: front.deep }),
+  if (front?.delegate) return { sessionId: session.id, text: require('./turn/front').delegate({ session, message, client, say, deep: front.deep, attachments: attached }),
     steps: 0, usage: budget.report(budget.ledger(), p), handedOff: true };
-  const orchestrating = (profile?.level === 'orchestrator' && Number(p.orchestratorWorkSteps) > 0) || !!front;
-  const workLimit = front ? front.workSteps : require('./turn/handoff').limitFor({ p, message, client, session: memory.getSession(session.id) });   // by the request's size
-  let workSteps = 0;
+  // How much work this turn does before the job moves to a work chat, by the request's size (turn/handoff.js).
+  const hand = require('./turn/handoff').counter({ p, profile, front, message, client, session: memory.getSession(session.id) });
 
   let summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
   // An allowlist is expressed as its complement, because `schemas()` filters by
@@ -344,15 +344,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     }
 
     // The Orchestrator does a few steps of real work at most; the rest moves to a work chat (turn/handoff.js).
-    const handoff = require('./turn/handoff');
-    const working = orchestrating && reply.tool_calls.some(handoff.isWork);
-    if (working && workSteps >= workLimit) {
-      const note = handoff.handOff({ session, message, from, reply, say, step, person: client?.user, spoken: !!front });
-      memory.append(session.id, { role: 'assistant', content: note });
-      say({ type: 'text', text: note });
-      return { sessionId: session.id, text: text + note, steps: step, usage: spend, handedOff: true, ...(fallbacks.length ? { fallbacks } : {}) };
-    }
-    if (working) workSteps++;
+    const note = require('./turn/handoff').step(hand, { reply, session, message, from, say, step, person: client?.user, attachments: attached });
+    if (note) return { sessionId: session.id, text: text + note, steps: step, usage: spend, handedOff: true, ...(fallbacks.length ? { fallbacks } : {}) };
 
     await runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read });
 

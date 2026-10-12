@@ -64,7 +64,7 @@ async function measure(provider, { model, fetchImpl = fetch } = {}) {
     const w = await require('./context-window').discover(ep.id, model).catch(() => null);
     if (w?.tokens) { ctx = w.tokens; from = w.source; }
   }
-  const pace = { ...valuesFor({ ctx, slots }), from: from || 'a model on this machine or the local network (its server said nothing about its size)', at: new Date().toISOString() };
+  const pace = { ...valuesFor({ ctx, slots }), ...(slots ? { slots } : {}), from: from || 'a model on this machine or the local network (its server said nothing about its size)', at: new Date().toISOString() };
   const doc = store.readJson(DOC, { providers: {} });
   doc.providers[ep.id] = pace;
   store.writeJson(DOC, doc);

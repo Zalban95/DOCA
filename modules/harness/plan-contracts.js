@@ -80,8 +80,9 @@ async function verify(contract, { cwd } = {}) {
   return { ok: true, why: '' };
 }
 
-/** Every step done: the plan is fulfilled. */
-const fulfilled = plan => !!plan?.steps?.length && plan.steps.every((_, i) => plan.progress?.[i + 1] === 'done');
+/** Every step done — or cancelled, with at least one done (harness/living-plan.js): the plan is fulfilled. */
+const fulfilled = plan => !!plan?.steps?.length && plan.steps.some((_, i) => plan.progress?.[i + 1] === 'done')
+  && plan.steps.every((_, i) => ['done', 'cancelled'].includes(plan.progress?.[i + 1]));
 
 /** "1. Build the page — done when it shows the model" for prompts and documents. */
 const line = (plan, i) => `${plan.steps[i]}${plan.contracts?.[i]?.done ? ` — done when ${plan.contracts[i].done}` : ''}`;

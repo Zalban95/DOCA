@@ -23,11 +23,15 @@ const STEPS = /^\s*(\d+[.)]|[-*•])\s+\S/gm;
 
 const LEVELS = ['small', 'medium', 'large'];
 
-/** Open steps in the conversation's plan (a work chat's job), or 0. */
+/**
+ * Open steps in the conversation's plan, or 0. A plan lives at `session.plan` (organization.plan); this read
+ * `session.job.plan`, which nothing writes, so the rule never fired (design always-free §6.1). A cancelled step is not
+ * open (harness/living-plan.js).
+ */
 function openPlanSteps(session) {
-  const plan = session?.job?.plan;
+  const plan = session?.plan;
   if (!plan?.steps?.length) return 0;
-  return plan.steps.filter((_, i) => plan.progress?.[i + 1] !== 'done').length;
+  return plan.steps.filter((_, i) => !['done', 'cancelled'].includes(plan.progress?.[i + 1])).length;
 }
 
 /**

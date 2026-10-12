@@ -21,6 +21,7 @@ const untrusted = require('./untrusted');
 
 const TOOLS = [
   ...require('./toolbox/work'),
+  ...require('./toolbox/background'),
   ...require('./toolbox/files'),
   ...require('./toolbox/repo'),
   ...require('./toolbox/memory'),

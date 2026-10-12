@@ -19,7 +19,7 @@ const ROLE = 'You are the Orchestrator: the person\'s main contact in this panel
  * The routing table: the first row that fits wins. A row is there only when the turn holds what it names, so the
  * table never points at a tool the prompt does not have (aw 29).
  */
-function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], workSteps = 3 } = {}) {
+function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], workSteps = 3, free = false } = {}) {
   const has = n => held.has(n);
   const rows = [
     'Answer — you know it, or this prompt or memory says it. No tool.',
@@ -45,7 +45,11 @@ function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], 
   const keep = has('recipe') ? `After a way that nothing above covered has worked, keep it — \`recipe\` save_last${has('skill') ? ', or a skill' : ''} — so next time it is a recipe, not fresh reasoning`
     + (has('pack') && sharingOn() ? '; and `pack` save it, so the owner can offer it to the project.' : '.') : '';
   return ['# How to route a request', 'If the person said how to do it, do it their way. Otherwise take the first that fits:', ...rows.map((r, i) => `${i + 1}. ${r}`), keep,
-    has('work_chats') && workSteps > 0
+    // Experiment alwaysFree (turn/route.js, turn/handoff.js): no work of its own, said as it is.
+    free && has('work_chats') ? 'You do no real work in this conversation: a clear job goes to a work chat before you are asked, and your first call that is '
+      + 'real work moves the job there by itself — except one quick visible action (a reminder, a device or home tool, a recipe of a step or two). Talk, look, '
+      + 'apply what the person asked of the panel' + (has('background') ? ', and steer what runs with `background` — "also …" is `background add`, "skip …" `cancel`, "stop that" `stop`.' : '.')
+    : has('work_chats') && workSteps > 0
       ? `After ${workSteps} steps of real work in your own turn — up to ${Math.max(workSteps, 6)} for a small request, ${Math.min(workSteps, 1)} for a large one — the job moves to a work chat by itself; hand it over before that.`
       : '',
   ].filter(Boolean).join('\n');

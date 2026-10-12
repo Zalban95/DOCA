@@ -17,7 +17,7 @@
 const memory = require('../memory');
 
 // Coordinating and remembering: the Orchestrator's own job, never "work".
-const COORD = new Set(['work_chats', 'work_plan', 'team', 'agent_dispatch', 'agent_results', 'agent_resume', 'permission_grant',
+const COORD = new Set(['work_chats', 'work_plan', 'background', 'team', 'agent_dispatch', 'agent_results', 'agent_resume', 'permission_grant',
   'settings_propose', 'panel_layout', 'install_propose', 'spend_propose', 'memory_write', 'memory_rules_write', 'memory_flag', 'memory_forget',
   'ask_device', 'tell_device', 'screen', 'meeting', 'chronicle', 'skill', 'show_media', 'show_image']);
 
@@ -35,11 +35,65 @@ function limitFor({ p, message = '', client = null, session = null } = {}) {
   return difficulty === 'small' ? Math.max(base, SMALL_STEPS) : difficulty === 'large' ? Math.min(base, LARGE_STEPS) : base;
 }
 
+/**
+ * Under experiment alwaysFree (docs/experiments/always-free.md) the Orchestrator does no work of its own: the first
+ * call that is real work moves the job to a work chat — with one exception, a single quick visible action (§3.10 of
+ * the design; the owner's answer of 2026-10-12, "as you suggest"): a reminder, a recipe of a step or two, or a tool of
+ * an MCP server that is not an agents' computer (the lights, the heating, a device). Waiting 15 s for a worker's cold
+ * prompt to switch a light off would be slower and no freer. Reading the day or the web is a look, not work.
+ * `orchestratorWorkSteps` is left alone: 0 still means off without the flag.
+ */
+const LOOK = new Set(['today', 'web_search']);
+const QUICK = new Set(['remind']);
+const free = () => require('../../experiments').on('alwaysFree');
+
+/** One quick visible action (see QUICK): the call may run in the front turn, once. */
+function isQuick(tc) {
+  const name = tc.function?.name || '';
+  if (QUICK.has(name)) return true;
+  if (name === 'recipe') {
+    const a = argsOf(tc);
+    if (a.action !== 'run') return false;
+    const r = (() => { try { return require('../../recipes/store').get(a.id); } catch { return null; } })();
+    return !!r && (r.quick === true || (r.steps || []).length <= 2);
+  }
+  return /^mcp__/.test(name) && !/^mcp__computer-/.test(name) && require('../kits').kitOf(name) === 'mcp';
+}
+
+/**
+ * This turn's count of work, and whether it hands work on at all: a front turn (a call's) or the Orchestrator's —
+ * with `orchestratorWorkSteps` above 0, or under alwaysFree whatever it says.
+ */
+function counter({ p, profile, front, message, client, session }) {
+  const free_ = free() && (profile?.level === 'orchestrator' || !!front);
+  const on = !!front || free_ || (profile?.level === 'orchestrator' && Number(p.orchestratorWorkSteps) > 0);
+  return { on, free: free_, quickLeft: 1, work: 0, spoken: !!front,
+    limit: front ? front.workSteps : limitFor({ p, message, client, session }) };
+}
+
+/**
+ * After a model reply with calls: null when they run here, else the line the turn ends with — the job has moved to a
+ * work chat (handOff), each unrun call answered so none is left unpaired.
+ */
+function step(c, { reply, session, message, from, say, step: n, person, attachments }) {
+  if (!c.on) return null;
+  const work = reply.tool_calls.filter(isWork);
+  if (!work.length) return null;
+  if (c.free) {
+    if (work.every(isQuick) && c.quickLeft > 0) { c.quickLeft--; return null; }
+  } else if (c.work < c.limit) { c.work++; return null; }
+  const note = handOff({ session, message, from, reply, say, step: n, person, spoken: c.spoken, attachments });
+  memory.append(session.id, { role: 'assistant', content: note });
+  say({ type: 'text', text: note });
+  return note;
+}
+
 function argsOf(tc) { try { return tc.function?.arguments ? JSON.parse(tc.function.arguments) : {}; } catch { return {}; } }
 
 function isWork(tc) {
   const name = tc.function?.name || '';
   if (COORD.has(name) || require('../approval').FREE.has(name)) return false;
+  if (LOOK.has(name) && free()) return false;
   return !require('../tools').isRead(name, argsOf(tc));
 }
 
@@ -62,7 +116,8 @@ function doneSince(sessionId, from) {
  * calls have not run: each gets its result row, so no call is left unpaired.
  * @returns {string} the line the Orchestrator ends its turn with
  */
-function handOff({ session, message, from, reply, say, step, person = null, spoken = false }) {
+function handOff({ session, message, from, reply, say, step, person = null, spoken = false, attachments = [] }) {
+  if (free()) return require('../fork').fromSafetyNet({ session, message, from, reply, say, step, person, spoken, attachments });
   const organization = require('../organization');
   const chat = organization.create({ title: short(message, 80) || 'Handed-off job' });
   require('../session-access').claim(person, chat.id);   // the person's work, under their level — not the Orchestrator's owner's
@@ -83,4 +138,4 @@ function handOff({ session, message, from, reply, say, step, person = null, spok
     + 'and I will tell you when it reports.';
 }
 
-module.exports = { isWork, handOff, doneSince, limitFor, COORD, SMALL_STEPS, LARGE_STEPS };
+module.exports = { isWork, isQuick, handOff, doneSince, limitFor, counter, step, callLine, COORD, LOOK, QUICK, SMALL_STEPS, LARGE_STEPS };

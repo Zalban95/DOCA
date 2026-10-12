@@ -54,8 +54,10 @@ test('the rules: a short question is small, a build of a whole thing large, word
   assert.equal(steps.difficulty, 'large', steps.reasons.join('; '));
   const mid = triage.rate({ message: 'Find every file in the workspace that mentions the word invoice.' });
   assert.deepEqual([mid.difficulty, mid.sure], ['medium', false], 'unsure: the one place a model is asked');
-  const plan = { job: { plan: { steps: ['a', 'b', 'c'], progress: { 1: 'done' } } } };
+  const plan = { plan: { steps: ['a', 'b', 'c'], progress: { 1: 'done' } } };
   assert.equal(triage.openPlanSteps(plan), 2);
+  assert.equal(triage.openPlanSteps({ job: { plan: plan.plan } }), 0, 'a plan lives at session.plan, never session.job.plan');
+  assert.equal(triage.openPlanSteps({ plan: { steps: ['a', 'b', 'c'], progress: { 1: 'done', 2: 'cancelled' } } }), 1, 'a cancelled step is not open');
   assert.match(triage.rate({ message: 'Carry on with the work please, there is more to do here', session: plan }).reasons.join(), /a plan with 2 open steps/);
   assert.deepEqual(triage.parseModel('Large, normal.'), { difficulty: 'large', urgency: 'normal' });
   assert.equal(triage.parseModel('no idea'), null);
@@ -88,7 +90,7 @@ test('the extension rule: two new successful steps carry on; a failure, a repeat
   assert.equal(extend.extension({ v, step: 4, budget: 4, rows: [...good, ...step('{"a":2}', 'ok')], from: 0 }), null, 'the same calls again');
   assert.equal(extend.extension({ v, step: 4, budget: 4, rows: good, from: 0, loop: { tool: 'shell', times: 3, kind: 'timeout' } }), null);
   assert.equal(extend.extension({ v, step: 4, budget: 4, rows: good.slice(0, 3), from: 0 }), null, 'one step is not enough to tell');
-  const closed = extend.advancing({ rows: [], planOpenAtStart: 3, session: { job: { plan: { steps: ['a', 'b', 'c'], progress: { 1: 'done' } } } } });
+  const closed = extend.advancing({ rows: [], planOpenAtStart: 3, session: { plan: { steps: ['a', 'b', 'c'], progress: { 1: 'done' } } } });
   assert.deepEqual(closed, { ok: true, why: '1 step of the plan closed this turn' });
   assert.match(extend.warning({ to: 8, why: 'x' }, 4, 10).text, /extended to 8 steps, up to limits.maxStepsCeiling \(10\)/);
 });
