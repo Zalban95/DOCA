@@ -163,13 +163,14 @@ module.exports = [
     name: 'install_propose',
     // Built from the catalogs it validates against, so it can never name what is missing or miss what was added
     // (audit 2026-10-06, coh F8: roboflow and home-assistant were absent while the smart-home skill proposed one).
+    // Ids only: it is read on every step, and list() looks on PATH for what each server needs.
     get description() {
       const ids = fn => { try { return fn().join(', '); } catch { return ''; } };
       return 'Ask the user to install something this panel already knows how to install: an Ollama model (kind "ollama-model", '
         + 'id is the model name); an inference service (kind "service": '
         + ids(() => require('../../services').INFERENCE_SERVICES.map(x => x.id)) + '); an agent harness (kind "harness": '
         + ids(() => require('../catalog').KNOWN.filter(x => x.installCmd).map(x => x.id)) + '); an MCP server from the panel\'s '
-        + 'catalogue (kind "mcp": ' + ids(() => require('../../mcp/catalog').list().map(x => x.id)) + '); or a program from '
+        + 'catalogue (kind "mcp": ' + ids(() => require('../../mcp/catalog').CATALOG.map(x => x.id)) + '); or a program from '
         + 'Settings → System → System tools (kind "tool": ' + ids(() => require('../../system-tools-catalog').SYSTEM_TOOLS.map(x => x.id))
         + ' — each installed with its own command for this OS); or a GGUF from Hugging Face run by a llama.cpp server (kind '
         + '"llamacpp-hf", id "org/repo:QUANT" or "org/repo:file.gguf" — a quantization the repository lists; a split set '
