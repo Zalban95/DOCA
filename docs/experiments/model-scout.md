@@ -1,5 +1,7 @@
 # Experiment: a scout for better and new models
 
+**Graduated 2026-10-12 (3.47.0)**: part of every install, the flag removed; its daily routine (`scout.enabled`) stays off until switched on. Measured that day on a copy of the owner's settings: three briefs with DeepSeek flash and specialists, 3.5-6 min each, five suggestions each argued from model cards with a way to try them that leaves the current way running; a second brief over an unchanged look re-filed none and added one, saying it was the weakest. Fixed with it: "in use here" said only under the function that uses a model.
+
 **Flag:** `experiments.modelScout` (Settings → Developer), off by default; the routine itself is `scout.enabled`, also off.
 **TODO:** H10.4. **Since:** 2.213.0. **Where:** Settings → Harness → Scout; `modules/scout`; the `model_scout` tool.
 

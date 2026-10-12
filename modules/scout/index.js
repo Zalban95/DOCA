@@ -29,7 +29,7 @@ const settings = () => ({
   enabled: sc().value('scout.enabled'), everyDays: sc().value('scout.everyDays'), growthLikes: sc().value('scout.growthLikes'),
   watch: sc().value('scout.watch') || [], feeds: sc().value('scout.feeds') || [], repo: sc().value('scout.repo'), implementer: sc().value('scout.implementer'),
 });
-const on = () => require('../experiments').on('modelScout');
+const on = () => true;   // graduated (3.47.0): part of every install; the routine itself is scout.enabled, off by default
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
 
 const dir = () => path.join(require('../store').DATA_DIR, 'scout');
@@ -202,7 +202,7 @@ async function tick(now = Date.now()) {
     if (!st.lastLookAt || now - Date.parse(st.lastLookAt) >= 20 * 3600e3) {
       const r = await require('./signals').look();
       notable = r.notable;
-      require('../activity').note({ from: 'scout', what: `looked for new models${notable.length ? ` — ${notable.length} notable` : ''}`, why: 'its daily look (experiments.modelScout)' });
+      require('../activity').note({ from: 'scout', what: `looked for new models${notable.length ? ` — ${notable.length} notable` : ''}`, why: 'its daily look (scout.enabled)' });
       setState({ lastLookAt: r.at, lastNotable: notable });
     }
     const due = !st.lastBriefAt || now - Date.parse(st.lastBriefAt) >= s.everyDays * 86400e3;

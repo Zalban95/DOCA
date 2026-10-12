@@ -1,5 +1,7 @@
 # Experiment: start a call by saying the hive's name
 
+**Graduated 2026-10-12 (3.47.0)**: available to every screen, the flag removed — still off until a screen turns on "Call by name" (`call.listenWithFace`). Measured again that day: 15 of 15 calls, 0 of 21 non-calls, ~1 s, twice; the owner calls by name daily.
+
 **Flag:** `experiments.wakeWord` (Settings → Developer, or Settings → Voice → Live call), off by default. **TODO:** H8.2.
 **Since:** 2.210.0. **Per screen:** `call.listenWithFace` and `call.wakeWord` (Settings → Voice → Live call).
 

@@ -21,6 +21,19 @@ function roles() {
   try { specialists = require('./agents/registry').list().filter(a => !a.broken && (a.model || a.provider)).map(a => `${a.id}: ${pm(a.provider, a.model)}`).join('; '); } catch { /* none */ }
   let wake = '';
   try { wake = require('./wakeword').models().map(m => m.word || m.id).join(', '); } catch { /* none kept */ }
+  // Every voice in use, not only the hive's: a screen's own voice and its call voices (voice.engine, voice.quick/deep/
+  // ambient.service, on the hive, a person or a device) — the scout read only the hive's and suggested a voice already
+  // running for the calls (2026-10-12).
+  let voices = [];
+  try {
+    const screens = require('./screens'), sp = require('./speech-services'), rows = { [sp.ROW.id]: { hf: sp.MODEL } };
+    const said = new Set();
+    const add = v => { for (const e of [v?.engine, v?.quick?.service, v?.deep?.service, v?.ambient?.service]) if (e && e !== 'hive') said.add(String(e)); };
+    add(prefs.voice);
+    for (const d of require('./api-v1/devices').list()) add(screens.layer(d.id)?.voice);
+    for (const u of require('./auth/store').listUsers?.() || []) add(screens.personLayer(u.id)?.voice);
+    voices = [...said].map(e => rows[e]?.hf || rows[e]?.label || e);
+  } catch { /* none set beyond the hive's */ }
   let guards = null;
   try { guards = require('./harness/guard').list().filter(g => g.enabled !== false && g.model).map(g => g.model).join(', ') || null; } catch { /* none */ }
   return [
@@ -30,7 +43,7 @@ function roles() {
     { id: 'assistant', label: 'Live call (the face, Ambient’s assistant)', tasks: ['text-generation'], current: pm(val('assistant.provider'), val('assistant.model')), setting: 'assistant.model', where: 'Settings → Voice → Live call' },
     { id: 'specialists', label: 'Specialists with a model of their own', tasks: ['text-generation'], current: specialists || null, setting: 'agents (each definition)', where: 'Agents → Harness → Specialists' },
     { id: 'stt', label: 'Speech to text', scout: true, tasks: ['automatic-speech-recognition'], current: vs.sttModel || null, setting: 'voiceServices.sttModel', where: 'Settings → Voice; Field → Models → Inference Services (Whisper)' },
-    { id: 'tts', label: 'Text to speech', scout: true, tasks: ['text-to-speech'], current: pm(vs.ttsModel, vs.ttsVoice), setting: 'voiceServices.ttsModel', where: 'Settings → Voice; Field → Models → Inference Services (Kokoro)' },
+    { id: 'tts', label: 'Text to speech', scout: true, tasks: ['text-to-speech'], current: [pm(vs.ttsModel, vs.ttsVoice), ...voices].filter(Boolean).join('; ') || null, setting: 'voiceServices.ttsModel', where: 'Settings → Voice; Field → Models → Inference Services (Kokoro)' },
     { id: 'realtime', label: 'Speech to speech (calls)', scout: true, tasks: ['any-to-any', 'audio-text-to-text'], current: val('realtime.model'), setting: 'realtime.model', where: 'Settings → Voice → Realtime speech model' },
     { id: 'vision', label: 'Reading a screen', scout: true, tasks: ['image-text-to-text'], current: val('vision.model'), setting: 'vision.model', where: 'Settings → Harness → Vision' },
     { id: 'vision-locate', label: 'Pointing at things on a screen', tasks: ['image-text-to-text'], current: val('vision.locatorModel') ? pm(val('vision.locatorProvider') || val('vision.provider'), val('vision.locatorModel')) : null, setting: 'vision.locatorModel', where: 'Settings → Harness → Vision' },

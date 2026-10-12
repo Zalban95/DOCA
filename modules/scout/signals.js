@@ -67,7 +67,10 @@ async function look({ roles = require('./roles').roles(), settings = require('./
     m.isNew = !before;
     m.fast = m.gained !== null && m.gained >= settings.growthLikes;
     m.roles = roles.filter(r => r.tasks.includes(m.task)).map(r => r.id);
-    m.inUse = roles.some(r => r.current && r.current.toLowerCase().includes(m.id.toLowerCase().split('/').pop()));
+    // In use for a function only when that function's reading names it and does not say it is off.
+    const name = m.id.toLowerCase().split('/').pop();
+    m.usedBy = roles.filter(r => r.current && !/not in use/i.test(r.current) && r.current.toLowerCase().includes(name)).map(r => r.id);
+    m.inUse = m.usedBy.length > 0;
   }
   const fresh = [];
   const feeds = [...settings.watch.map(repo => ({ url: `https://github.com/${repo}/releases.atom`, kind: 'release', source: repo })),
@@ -101,7 +104,7 @@ function brief(r, roles = require('./roles').roles()) {
   for (const role of roles) {
     const ms = r.models.filter(m => m.roles.includes(role.id)).slice(0, 6);
     lines.push(`\n## ${role.label} — now: ${role.current || 'nothing set'}`);
-    for (const m of ms) lines.push(`- ${m.id} · ${m.likes} likes${m.gained != null ? ` (+${m.gained})` : ''} · ${m.downloads} downloads${m.fast ? ' · GROWING FAST' : ''}${m.inUse ? ' · in use here' : ''}`);
+    for (const m of ms) lines.push(`- ${m.id} · ${m.likes} likes${m.gained != null ? ` (+${m.gained})` : ''} · ${m.downloads} downloads${m.fast ? ' · GROWING FAST' : ''}${m.usedBy?.includes(role.id) ? ' · in use here' : ''}`);
   }
   if (r.fresh.length) lines.push('\n## New releases and news', ...r.fresh.slice(0, 20).map(i => `- [${i.kind}] ${i.source}: ${i.title} — ${i.link}`));
   if (r.failures.length) lines.push('\n## Could not look', ...r.failures.map(f => `- ${f}`));

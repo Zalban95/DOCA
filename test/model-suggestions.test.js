@@ -121,19 +121,10 @@ test('the overlay: what a person accepted here wins over the list, and forgettin
 });
 
 test('the scout files a model for the list; a person accepts it into Set-up, never silently', async () => {
-  const ex = require('../modules/experiments');
   const scout = require('../modules/scout');
-  // Off on an install that is not a developer's: nothing is looked for, and a newcomer is never pointed at developer
-  // mode or an experiment (deep test B, C11); Set-up draws no button.
-  const off = (await H.api(null, 'POST', '/api/guided/suggestions/check', {})).body;
-  assert.equal(off.started, false);
-  assert.doesNotMatch(off.how, /developer|experiment/i);
-  assert.deepEqual((await H.api(null, 'GET', '/api/guided')).body.scout, { on: false, developer: false });
-  // A developer's install is told where the switch is.
-  ex.setDeveloper(true);
-  assert.match((await H.api(null, 'POST', '/api/guided/suggestions/check', {})).body.how, /Settings → Developer/);
-
-  ex.set('modelScout', true);
+  // Graduated (3.47.0): every install has the scout, so Set-up's "Check for newer models" looks when a person presses
+  // it, with no developer mode and no experiment named (deep test B, C11).
+  assert.deepEqual((await H.api(null, 'GET', '/api/guided')).body.scout, { on: true, developer: false });
   const briefs = [];
   const real = scout.brief;
   scout.brief = async (why, message) => { briefs.push({ why, message }); };   // a stub: no turn, no network
@@ -166,7 +157,6 @@ test('the scout files a model for the list; a person accepts it into Set-up, nev
   assert.equal((await H.api(null, 'POST', `/api/scout/${id}/work`, {})).status, 409, 'nothing to build');
   assert.equal((await H.api(null, 'GET', '/api/guided')).body.suggestions.local, 1, 'Set-up says one was added here');
   require('../modules/guided/overlay').forget('chat', entry().id);
-  ex.set('modelScout', false); ex.setDeveloper(false);
 });
 
 test('the suggested list can name a llama.cpp install, and the set-up proposes it with the runtime first', () => {
