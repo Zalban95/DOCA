@@ -11,6 +11,7 @@ async function llamaInit() {
   await llamaLoadList();
   _llamaServerBadge();
   llamaHfCard();   // From Hugging Face (llamacpp-hf.js)
+  llamaRouterCard();   // a llama.cpp router's models, from its preset file (llamacpp-router.js)
 }
 
 /** Detect the llama-server binary (shared system-tools check) and badge it. */

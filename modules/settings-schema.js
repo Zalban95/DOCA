@@ -237,7 +237,8 @@ const SCHEMA = {
   fmFavorites:      { is: 'local', home: 'device', on: 'host', note: 'favourite folders: paths of this machine', propose: p('File manager favourites') },
   llamacpp:         { is: 'local', home: 'device', on: 'host', note: 'binary paths and server instances',
     keys: { discovery: { type: 'string', default: 'servers', hint: 'How the Models tab finds llama-servers DOCA did not start: servers (model-servers.js, the default) or props (each one\'s /props, kept beside it).' },
-      modelsDir: { type: 'string', default: '', hint: 'Where GGUF files from Hugging Face are kept (Field → Models → llama.cpp → From Hugging Face); empty is models/gguf in your home folder.' } } },
+      modelsDir: { type: 'string', default: '', hint: 'Where GGUF files from Hugging Face are kept (Field → Models → llama.cpp → From Hugging Face); empty is models/gguf in your home folder.' },
+      routerPreset: { type: 'string', default: '', hint: 'A llama.cpp router\'s preset file (its --models-preset), edited from Field → Models. Empty: found from the running router on Linux.' } } },
   serviceSettings:  { is: 'local', home: 'device', on: 'host', note: 'ports and URLs of services on this machine', propose: p('Inference services', 'GPU assignment, ports, images') },
   // When the inference services and llama.cpp servers DOCA started are stopped by DOCA (modules/service-life). Never
   // proposable: an agent switching services off under the person, or keeping them on, is the person's call. `each` holds

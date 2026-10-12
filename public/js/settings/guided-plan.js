@@ -43,7 +43,7 @@ function _guidedInstallRow(s, i, applied) {
 
 /** Already set up: the agent's model answers (whatever provider it is on). */
 function _guidedHaveRow(s) {
-  return `<div class="guided-step"><div class="guided-step-title">✓ ${escHtml(s.label)}: ${escHtml(s.model)} <span class="guided-muted">— on ${escHtml(s.provider)}, and it answers. Change it with ⚙ on its row in Controls.</span></div></div>`;
+  return `<div class="guided-step"><div class="guided-step-title">✓ ${escHtml(s.label)}: ${escHtml(s.model)} <span class="guided-muted">— on ${escHtml(s.provider)}, and it answers. Change it with ⚙ on its row in Controls; a llama.cpp server's own settings (context, pictures, sleep) are in <a href="#" onclick="nav('models');return false">Field → Models</a>.</span></div></div>`;
 }
 
 /** Or a model the person already runs (llama.cpp, vLLM, LM Studio, Ollama…) at an address: added as Field → API keys → + Add provider adds it. */
