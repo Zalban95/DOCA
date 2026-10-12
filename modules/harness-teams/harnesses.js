@@ -24,7 +24,8 @@ function offered() {
   let allow = [];
   try { allow = require('../settings-schema').value('teams.outside.allow') || []; } catch { /* undeclared in an old schema */ }
   const set = new Set(allow.map(String));
-  return all().filter(r => !set.size || set.has(r.id));
+  const off = require('../harness/harness-life');
+  return all().filter(r => (!set.size || set.has(r.id)) && !off.isDisabled(r.id));   // a switched-off harness is not summoned
 }
 
 /** A harness by id or label, among those offered. Throws a sentence that names what is offered. */

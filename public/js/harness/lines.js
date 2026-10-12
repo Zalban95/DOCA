@@ -88,6 +88,7 @@ function _harnessRowHtml(h) {
   const actions = [
     h.isDefault
       ? '<span class="badge badge-green" style="font-size:9px">default</span>'
+      : h.disabled ? '<span class="badge" style="font-size:9px">off</span>'
       : `<button class="btn btn-xs" onclick="harnessSetDefault(${arg})" title="Make this the harness DOCA talks to">Use</button>`,
     h.detected && h.surface === 'web' ? webStackActions(h)   // a web app: its own page, its own project (harness/web-stack.js)
       : h.detected
@@ -101,12 +102,16 @@ function _harnessRowHtml(h) {
       : '',
     `<button class="btn btn-xs tool-gear" onclick="harnessConfigToggle(${arg})" title="Model and parameters">⚙</button>`,
     h.url ? `<a class="tool-repo" href="${escHtml(h.url)}" target="_blank" rel="noopener" title="${escHtml(h.url)}">docs</a>` : '',
-    h.kind === 'custom'
-      ? `<button class="btn btn-xs btn-red" onclick="harnessRemoveCustom(${arg})" title="Remove this custom harness">🗑</button>`
+    // Off and delete (harness/life.js): every harness but DOCA's own, which is the panel.
+    h.kind !== 'builtin' && (h.detected || h.kind === 'custom' || h.disabled)
+      ? `<button class="btn btn-xs" onclick="harnessToggle(${arg}, ${h.disabled ? 'true' : 'false'})" title="${h.disabled ? 'Switch it on again' : 'Keep it installed but never chosen: not the default, not in teams'}">${h.disabled ? 'Switch on' : 'Switch off'}</button>`
+      : '',
+    h.kind !== 'builtin' && (h.detected || h.kind === 'custom')
+      ? `<button class="btn btn-xs btn-red" onclick="harnessDelete(${arg})" title="Remove it from this list, or uninstall it">🗑</button>`
       : '',
   ].filter(Boolean).join('');
 
-  return `<div class="harness-row ${h.detected ? 'harness-ok' : 'harness-off'} ${h.isDefault ? 'harness-default' : ''}" id="harness-row-${escHtml(id)}">
+  return `<div class="harness-row ${h.detected ? 'harness-ok' : 'harness-off'} ${h.isDefault ? 'harness-default' : ''}" id="harness-row-${escHtml(id)}"${h.disabled ? ' style="opacity:.55"' : ''}>
       <span class="harness-dot" title="${h.isDefault ? 'Default harness' : 'Not the default'}">${h.isDefault ? '●' : '○'}</span>
       <span class="harness-label">${escHtml(h.label)}</span>
       <span class="harness-vendor">${escHtml(h.vendor || '')}</span>

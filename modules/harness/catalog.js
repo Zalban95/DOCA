@@ -201,7 +201,7 @@ function get(id) {
 /** The definition the built-in agent and the chat panel should use. */
 function defaultId() {
   const { default: id } = loadHarnessPrefs();
-  return get(id) ? id : BUILTIN_ID;
+  return get(id) && !require('./harness-life').isDisabled(id) ? id : BUILTIN_ID;   // a switched-off one is not chosen
 }
 
 /* ── Detection ────────────────────────────────────────── */
@@ -228,6 +228,7 @@ async function list() {
     canInstall: !!h.installCmd,
     needsSudo:  !!h.installCmd && h.installCmd.includes('sudo '),
     isDefault:  h.id === hp.default,
+    disabled:   (hp.disabled || []).includes(h.id),   // switched off (harness-life.js)
     config:     configFor(h.id),
     ...(h.kind === 'builtin' ? { foldWarning: require('./fold-check').warning(configFor(h.id)) } : {}),
   })));
@@ -264,6 +265,7 @@ function saveConfig(id, patch) {
 
 function setDefault(id) {
   if (!get(id)) throw Object.assign(new Error('Unknown harness'), { status: 404 });
+  if (require('./harness-life').isDisabled(id)) throw Object.assign(new Error(`${get(id).label} is switched off: switch it on first.`), { status: 409 });
   saveHarnessPrefs({ default: id });
   return id;
 }
@@ -324,5 +326,5 @@ function install(res, id, password) {
 module.exports = {
   BUILTIN_ID, KNOWN,
   all, get, list, detect, defaultId,
-  loadHarnessPrefs, configFor, saveConfig, setDefault, addCustom, removeCustom, install,
+  loadHarnessPrefs, saveHarnessPrefs, configFor, saveConfig, setDefault, addCustom, removeCustom, install,
 };

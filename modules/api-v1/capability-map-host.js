@@ -75,7 +75,7 @@ module.exports = [
 
   // ── How the agents work ──
   row('harnesses', 'install, choose and configure harnesses', ['POST /api/harness/default', 'POST /api/harness/custom', 'DELETE /api/harness/custom/:id', 'POST /api/harness/:id/config',
-    'POST /api/harness/:id/install', 'POST /api/harness/opendots/config', 'POST /api/harness/opendots/stack', 'DELETE /api/harness/contracts/:provider', 'POST /api/harness/usage/prices']),
+    'POST /api/harness/:id/install', 'POST /api/harness/:id/enabled', 'POST /api/harness/:id/delete', 'POST /api/harness/opendots/config', 'POST /api/harness/opendots/stack', 'DELETE /api/harness/contracts/:provider', 'POST /api/harness/usage/prices']),
   row('approval-mode', 'switch the approval mode, and forget an "always"', ['POST /api/harness/approval', 'DELETE /api/harness/approval/always/:key'],
     { only: 'the agent\'s leash is the owner\'s at the panel, with the password (a safety switch, CONSTITUTION S14); no device changes it — Full auto left the wrist in 2.281.0' }),
   row('installs', 'accept or decline an install the agent proposed', ['POST /api/harness/installs/:id/apply', 'POST /api/harness/installs/:id/reject'],
