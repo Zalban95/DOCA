@@ -36,6 +36,7 @@ function mount(app) {
   require('./opendots').mount(app);   // OpenDots as a peer harness: state, settings, its own Compose project (harness/opendots.js)   // DOCA's Android apps: kept, built here, offered to devices (client-apps/)   // the browser extension, to download (clients/browser)   // realtime voice: what a live call uses (realtime/)
   require('../evals/routes').mount(app);
   require('../connectors/routes').mount(app);
+  require('../accounts/routes').mount(app);   // each person's own Google / Microsoft 365 accounts, calendar and mail (accounts/)
   require('../api-v1/a2a').mountCard(app);   // the A2A agent card, public at /.well-known (api-v1/a2a.js)   // OAuth connectors: the owner's accounts as tools (connectors/)   // evaluation sets: run, results, import and export (evals/)   // retrieval: the embedding model, a try, the index (retrieval/)   // web search: the provider and its key (search/)
   require('../screens/routes').mount(app);   // a browser is a device: this screen's settings (screens/)
   require('../llamacpp-hf/routes').mount(app);   // a llama.cpp server from a GGUF on Hugging Face (llamacpp-hf/)

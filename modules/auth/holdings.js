@@ -33,6 +33,7 @@ function inUse(person, kind) {
       const vault = require('../connectors/vault');
       return quiet(() => Object.entries(vault.all()).filter(([id, r]) => r.accessToken && ok(id, r.who === 'everyone')).map(([id]) => id));
     }
+    case 'account':  return quiet(() => require('../accounts/store').list(person.id).filter(a => ok(a.provider)).map(a => a.account || a.provider));   // their own (accounts/)
     case 'login':    return quiet(() => require('../logins').list().filter(l => ok(l.id) || ok(l.label)).map(l => l.label));
     case 'vnc':      return quiet(() => require('../vnc-targets/store').list().filter(t => ok(t.id) || ok(t.name)).map(t => t.name));
     case 'service':  return quiet(() => require('../services').INFERENCE_SERVICES.filter(s => s.chat && ok(s.id)).map(s => s.id));   // those a turn can use
