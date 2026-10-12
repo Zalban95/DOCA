@@ -22,6 +22,7 @@ async function detail(p) {
 }
 
 function mount(app) {
+  require('../harness-teams/routes').mount(app, { h, P });   // Team branches: a team's work, with its diff and Merge
   app.get('/api/projects', h(req => ({ projects: projects.list().filter(p => req.query.all === '1' || !p.archivedAt) })));   // archived ones: the Archive page
   app.post('/api/projects', h(req => ({ project: projects.create(req.body || {}) })));
   app.get('/api/projects/:id', h(async req => {

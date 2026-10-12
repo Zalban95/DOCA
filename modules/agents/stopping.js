@@ -15,6 +15,7 @@ function stop(who, id) {
   const m = require('./missions').get(id);
   if (!m || !mayUse(who, m.sessionId)) throw Object.assign(new Error(`No mission called "${id}".`), { status: 404 });
   if (m.state !== 'running' || !m.sessionId) return { stopped: false, mission: m, note: `It is ${m.state}: nothing to stop.` };
+  if (m.outside) { require('../harness-teams').stopMission(m.id).catch(() => {}); return { stopped: true, mission: m, note: `Stopping ${m.label} in its computer; what it committed comes back on its branch.` }; }   // an outside harness (harness-teams/)
   return { stopped: require('../harness/agent').cancel(m.sessionId), mission: m, note: 'Stopping at its next step; what sent it waits for you.' };
 }
 

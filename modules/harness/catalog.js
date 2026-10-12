@@ -53,6 +53,10 @@ const KNOWN = [
   {
     id: 'claude', label: 'Claude Code', vendor: 'Anthropic', kind: 'cli', cmd: 'claude',
     oneShot: ['-p', '{message}'],   // one question without a terminal (harness/one-shot.js)
+    // A worker in a team in an agents' computer (harness-teams/): https://code.claude.com/docs/en/cli-reference and /headless
+    // (-p, --permission-mode bypassPermissions, --output-format stream-json with --verbose, --model, `claude auth status`).
+    team: { args: ['-p', '--permission-mode', 'bypassPermissions', '--output-format', 'stream-json', '--verbose', '{model}', '{task}'], model: ['--model', '{model}'],
+      events: 'claude', key: { env: 'ANTHROPIC_API_KEY', host: 'api.anthropic.com' }, signedIn: ['auth', 'status'] },
     installCmd: 'npm install -g @anthropic-ai/claude-code',
     url: 'https://github.com/anthropics/claude-code',
     configPathHint: '~/.claude/settings.json',
@@ -60,6 +64,10 @@ const KNOWN = [
   {
     id: 'codex', label: 'Codex CLI', vendor: 'OpenAI', kind: 'cli', cmd: 'codex',
     oneShot: ['exec', '{message}'],   // one question without a terminal (harness/one-shot.js)
+    // https://learn.chatgpt.com/docs/developer-commands?surface=cli (exec --dangerously-bypass-approvals-and-sandbox, --json,
+    // -m) and https://learn.chatgpt.com/docs/non-interactive-mode (CODEX_API_KEY, the item.* JSON Lines events).
+    team: { args: ['exec', '--dangerously-bypass-approvals-and-sandbox', '--json', '{model}', '{task}'], model: ['-m', '{model}'],
+      events: 'codex', key: { env: 'CODEX_API_KEY', host: 'api.openai.com' } },
     installCmd: 'npm install -g @openai/codex',
     url: 'https://github.com/openai/codex',
     configPathHint: '~/.codex/config.toml',
@@ -69,6 +77,10 @@ const KNOWN = [
     // `dsh headless "<task>"` answers one task and exits — the answer on stdout, diagnostics on stderr; settings in ~/.dsh.
     id: 'dsh', label: 'DeepSeek Harness', vendor: 'DeepSeek', kind: 'cli', cmd: 'dsh',
     oneShot: ['headless', '{message}'],   // one question without a terminal (harness/one-shot.js)
+    // docs/cli-help.md and packages/bundle/headless/README.md of github.com/deepseek-ai/deepseek-harness: `headless --json`
+    // (session, status, text, tool_call, tool_result, final). No model flag (the profile's agentDefaultModel) and no approval
+    // flag: headless asks no one, so an ask fails closed (docs/subsystems/approval.md). DEEPSEEK_API_KEY (docs/config-catalog.md).
+    team: { args: ['headless', '--json', '{task}'], model: null, events: 'dsh', key: { env: 'DEEPSEEK_API_KEY', host: 'api.deepseek.com' } },
     installCmd: 'npm install -g @deepseek-ai/dsh',
     url: 'https://github.com/deepseek-ai/deepseek-harness',
     configPathHint: '~/.dsh/profiles',
@@ -76,6 +88,10 @@ const KNOWN = [
   {
     id: 'gemini', label: 'Gemini CLI', vendor: 'Google', kind: 'cli', cmd: 'gemini',
     oneShot: ['-p', '{message}'],   // one question without a terminal (harness/one-shot.js)
+    // github.com/google-gemini/gemini-cli docs/cli/cli-reference.md (--approval-mode yolo, -m, --output-format stream-json,
+    // -p) and docs/cli/headless.md (init, message, tool_use, tool_result, error, result); GEMINI_API_KEY in its README.
+    team: { args: ['--approval-mode', 'yolo', '--output-format', 'stream-json', '{model}', '-p', '{task}'], model: ['-m', '{model}'],
+      events: 'gemini', key: { env: 'GEMINI_API_KEY', host: 'generativelanguage.googleapis.com' } },
     installCmd: 'npm install -g @google/gemini-cli',
     url: 'https://github.com/google-gemini/gemini-cli',
     configPathHint: '~/.gemini/settings.json',
