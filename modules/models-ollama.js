@@ -137,7 +137,7 @@ async function handlePull(req, res) {
     }
     const reader = r.body.getReader();
     const dec    = new TextDecoder();
-    let buf = '';
+    let buf = '', failed = null;   // Ollama says why in a line of its own ({error}) and then simply ends the stream
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -148,11 +148,13 @@ async function handlePull(req, res) {
         if (!line.trim()) continue;
         try {
           const obj = JSON.parse(line);
+          if (obj.error) failed = String(obj.error);
           sseWrite(obj);
         } catch {}
       }
     }
-    sseWrite({ status: 'success', done: true });
+    // A pull Ollama refused ("this model requires MLX support…") is not a success, or the page saves a model that is not there.
+    sseWrite(failed ? { status: `Error: ${failed}`, done: true, error: failed } : { status: 'success', done: true });
   } catch (e) {
     // Hanging up is not a failure to report — there is nobody left to report
     // it to, and the pull itself carries on at ollama's end regardless.
