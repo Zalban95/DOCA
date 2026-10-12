@@ -55,10 +55,12 @@ async function castLink(btn) {
   } catch (e) { appAlert(e.message); }
 }
 
-// ⎘ in the header beside ⧉ and 📱 (a phone has it first in the ☰ drawer instead: phone-header.js).
+// ⎘ in the header beside ⧉ and 📱 — on a phone too (asked 2026-10-12: "I don't see the casting button on mobile"):
+// its own class, which the phone's header keeps where it hides ⧉ and 📱 (css/system.css).
 if (typeof document !== 'undefined' && typeof window !== 'undefined') window.addEventListener('load', () => {
   if (!document.getElementById('chat-fab')) return;   // the panel only, not a page served alone
-  const btn = Object.assign(document.createElement('button'), { className: 'btn btn-xs solo-open', textContent: '⎘', title: 'Cast: put this page on another screen of yours' });
+  const btn = Object.assign(document.createElement('button'), { className: 'btn btn-xs cast-open', textContent: '⎘', title: 'Cast: put this page on another screen of yours' });
+  btn.setAttribute('aria-label', 'Cast this page to another screen');
   btn.onclick = () => castOpen();
   document.getElementById('header-search')?.before(btn);
 });

@@ -338,3 +338,4 @@ html[data-hosted] .harness-add-row { display: none; }
 .disk-row > .app-steps-row { grid-column: 1 / -1; white-space: normal; font-size: 11px; }
 /* Cast (js/cast.js): a screen per row, its state beneath its name, the actions at the end. */
 .cast-target { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.cast-open { flex-shrink: 0; }

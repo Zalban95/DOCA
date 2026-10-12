@@ -24,7 +24,7 @@ test('a view link opens once, on a screen of its own, and shows its one page rea
   assert.equal(link.status, 200);
   const tv = await openLink(link.body.path);
   assert.equal(tv.status, 302);
-  assert.equal(tv.location, '/?view=live');
+  assert.equal(tv.location, '/?view=live&cast=1');
   assert.equal((await openLink(link.body.path)).status, 410, 'once only');
 
   const me = await as(tv.cookie, 'GET', '/api/auth/me');

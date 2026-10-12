@@ -54,7 +54,8 @@ function open(code, req) {
   const secure = req.secure || req.socket?.encrypted === true;
   const screens = require('../screens');
   return {
-    location: l.page === 'face' ? '/face' : `/?view=${l.page}${l.focus ? `#${encodeURIComponent(l.focus)}` : ''}`,
+    // `cast=1`: the page locks itself at once, before it has asked who it is (solo.js); the hub refuses the rest anyway.
+    location: l.page === 'face' ? '/face' : `/?view=${l.page}&cast=1${l.focus ? `#${encodeURIComponent(l.focus)}` : ''}`,
     cookies: [credentials.cookieHeader(token, { secure }), `${screens.COOKIE}=${made.device.id}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${400 * 86400}${secure ? '; Secure' : ''}`],
     screen: devices.get(made.device.id),
   };
