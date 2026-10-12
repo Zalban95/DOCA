@@ -135,7 +135,10 @@ things to hand a screen to (it has no screen of its own to show a canvas on). Th
 existing field changed. Since hub 2.164.0 there is also **`browser`**: a browser someone signed in on,
 with no scopes and no token of its own (it reaches the hub by its sign-in session); revoking it signs that
 browser out. `GET /settings/effective` answers any token with that device's settings over the hive's, and
-`GET /settings/look` the panel's look those settings draw (§14.1).
+`GET /settings/look` the panel's look those settings draw (§14.1). Since hub 3.41 (additive) `GET /settings/effective`
+also carries `panelModeResolved: {mode: focused|extended, source: device|person|hive|role}` — which face of the panel
+the device's screen shows (Focused, the calm everyday view, or Extended, the whole panel); an app opening the panel in
+its web view may open `/?view=focused` when `mode` is `focused`.
 Since hub 2.168.0 `POST /mcp` is the hub as an MCP server (JSON-RPC: initialize, tools/list, tools/call), for
 any MCP client holding a device token; its tools follow the token's scopes.
 Since hub 2.187.0 `POST /agui` (scope `harness:chat`) is the hub as an AG-UI agent: AG-UI's RunAgentInput in
