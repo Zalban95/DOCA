@@ -61,3 +61,22 @@ function mcpFormBack() {
   const card = id && form?.style.display !== 'none' && document.getElementById(`mcp-status-${id}`)?.closest('.mcp-card');
   if (card) card.after(form);
 }
+
+/* A command server's secrets as keys for services (modules/mcp/key-env.js): NAME=key lines beside its environment, the
+   hub filling each variable from the key as it starts the server — so the value lives in Keys for services, not here. */
+function mcpKeyEnvField(map) {
+  let box = document.getElementById('mcp-keyenv');
+  if (!box) {
+    const env = document.getElementById('mcp-env')?.closest('.field');
+    if (!env) return;
+    const field = document.createElement('div');
+    field.className = 'field';
+    field.innerHTML = `<div class="input-label">Environment from keys for services${infoBtn('One NAME=key per line: the variable NAME is set, as the server starts, to the key of that name in Field → Connectors → Keys for services. The token is kept there, never with the server. Empty by default.')}</div>
+      <textarea id="mcp-keyenv" class="input" rows="2" placeholder="GITHUB_TOKEN=github" data-default=""></textarea>`;
+    env.after(field);
+    box = document.getElementById('mcp-keyenv');
+  }
+  box.value = Object.entries(map || {}).map(([k, v]) => `${k}=${v}`).join('\n');
+}
+/** What the field says, as the server's keyEnv ('' takes it off); undefined while the field is not drawn. */
+function mcpKeyEnvRead() { const box = document.getElementById('mcp-keyenv'); return box ? box.value : undefined; }
