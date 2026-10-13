@@ -165,6 +165,7 @@ function normalize(input, existing) {
     autostart: !!input.autostart,
     // The name of a key for services the hub adds when it connects (withKey); '' takes it off.
     ...(typeof input.key === 'string' ? { key: input.key.trim().toLowerCase() || undefined } : {}),
+    ...(input.keyEnv !== undefined ? { keyEnv: (m => (m && Object.keys(m).length ? m : undefined))(require('./key-env').normalize(input.keyEnv)) } : {}),   // key-env.js
     // Absent on every definition written before this existed, which is exactly
     // what `server` means, so nothing has to be migrated.
     origin:    normalizeOrigin(input.origin !== undefined ? input.origin : existing?.origin, transport),
@@ -208,7 +209,7 @@ async function start(id) {
   if (existing?.state === 'running') return existing;
   if (existing) existing.stop(true);
 
-  const c = new McpClient(spec.key ? withKey(spec) : spec);
+  const c = new McpClient(require('./key-env').apply(spec.key ? withKey(spec) : spec));   // keys for services in its env (key-env.js)
   _clients.set(id, c);
   await c.start();
   rememberTools(id, c.tools);
