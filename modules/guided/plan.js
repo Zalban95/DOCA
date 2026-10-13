@@ -75,14 +75,25 @@ function plan(answers, assessment, doc, { have = {} } = {}) {
   // Speech has no hosted route yet, so it stays local even when the person prefers providers for the rest.
   if (!useLocal) for (const p of picks) if (p.local && !p.providers.length) local.push(p);
   const needs = new Set(local.map(p => p.local.runtime));
-  if (needs.has('ollama') && !assessment.runtimes.ollama) steps.push({ type: 'install', kind: 'tool', id: 'ollama', label: 'Ollama', why: 'runs the models on this machine' });
-  if (needs.has('docker') && !assessment.runtimes.docker) steps.push({ type: 'install', kind: 'tool', id: 'docker', label: 'Docker', why: 'runs the speech services' });
-  if (needs.has('llama.cpp') && !assessment.runtimes.llamacpp) steps.push({ type: 'install', kind: 'tool', id: 'llama-server', label: 'llama.cpp', why: 'runs GGUF models from Hugging Face on this machine' });
+  // Each install has a key and the installs it waits for (`after`), so "Install everything" (guided/run.js) starts
+  // what can run side by side and holds what needs a runtime until that runtime is in.
+  const tools = {};
+  const tool = (id, label, why) => { tools[id] = `tool:${id}`; steps.push({ type: 'install', kind: 'tool', id, key: `tool:${id}`, after: [], label, why }); };
+  if (needs.has('ollama') && !assessment.runtimes.ollama) tool('ollama', 'Ollama', 'runs the models on this machine');
+  if (needs.has('docker') && !assessment.runtimes.docker) tool('docker', 'Docker', 'runs the speech services');
+  if (needs.has('llama.cpp') && !assessment.runtimes.llamacpp) tool('llama-server', 'llama.cpp', 'runs GGUF models from Hugging Face on this machine');
+  if (assessment.os?.platform === 'linux' && local.some(p => p.local.engine === 'mlx') && !assessment.runtimes.mlx) {
+    tool('ollama-mlx', 'Ollama\'s MLX runtime', 'Ollama runs EmbeddingGemma 2 on the NVIDIA card with it');
+    if (tools.ollama) steps[steps.length - 1].after.push(tools.ollama);   // it unpacks beside Ollama
+  }
+  const RUNTIME_TOOL = { ollama: 'ollama', docker: 'docker', 'llama.cpp': 'llama-server' };
   const pictures = picks.some(p => p.role === 'vision');
   for (const p of local) {
     // A GGUF's vision projector comes only when the person wants pictures read (llamacpp-hf installs).
     const params = p.local.install.kind === 'llamacpp-hf' && !pictures ? { vision: false } : undefined;
-    steps.push({ type: 'install', kind: p.local.install.kind, id: p.local.install.id, role: p.role, label: p.local.label,
+    const after = [tools[RUNTIME_TOOL[p.local.runtime]], p.local.engine === 'mlx' && tools['ollama-mlx']].filter(Boolean);
+    steps.push({ type: 'install', kind: p.local.install.kind, id: p.local.install.id, key: `${p.local.install.kind}:${p.local.install.id}`, after, role: p.role, label: p.local.label,
+      ...(p.local.needs?.diskGB ? { diskGB: p.local.needs.diskGB } : {}),
       why: `${p.label} — fits here (${WHERE[p.local.where] || 'on the processor'})`, ...(params ? { params } : {}) });
   }
   for (const p of picks.filter(x => !local.includes(x))) {

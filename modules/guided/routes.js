@@ -8,6 +8,9 @@
  *   POST /api/guided/choose    {mode: guided|advanced} — the first-run choice; advanced changes nothing else
  *   POST /api/guided/plan      {answers} — what they would set up, written nowhere
  *   POST /api/guided/apply     {answers} — keep them, and put each install in front of the person as a proposal
+ *   POST /api/guided/run       {password?} — install every pending one of the kept answers' plan: the machine's tools
+ *                              one at a time, the rest side by side once what they need is in, the password asked once
+ *                              (run.js); GET /api/guided/run — how far it is
  *   GET  /api/guided/suggestions          the suggested models in use: which list, the day checked, what was accepted here
  *   POST /api/guided/suggestions/check    ask the model scout to look for newer ones now (its experiment on), else say how
  *   POST /api/guided/suggestions/forget   {role, id} — take back one accepted here (docs/design/model-suggestions.md)
@@ -66,6 +69,13 @@ function mount(app) {
   app.post('/api/guided/suggestions/forget', h(req => require('./overlay').forget(String(req.body?.role || ''), String(req.body?.id || ''))));
   app.post('/api/guided/apply', h(async req => plan.apply(req.body?.answers || {}, await machine.assess(), suggestions.load(),
     { by: req.auth?.user?.id || null, have: await have() })));
+  app.get('/api/guided/run', h(() => ({ run: require('./run').view() })));
+  app.post('/api/guided/run', async (req, res) => {
+    try {
+      const out = plan.apply(plan.get() || {}, await machine.assess(), suggestions.load(), { by: req.auth?.user?.id || null, have: await have() });
+      res.json({ run: await require('./run').start(out.steps, { password: typeof req.body?.password === 'string' ? req.body.password : null }) });
+    } catch (e) { res.status(e.status || 500).json({ error: e.message, code: e.code }); }
+  });
 }
 
 module.exports = { mount, overview, have };

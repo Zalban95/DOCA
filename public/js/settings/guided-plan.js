@@ -24,9 +24,10 @@ function guidedPlanRender(p, applied) {
     `<div class="guided-muted">• ${escHtml(d.label)}: ${_guidedPlaces(d.how)}</div>`).join('')}</div>` : '';
   el.innerHTML = `<div class="card"><div class="card-title">${applied ? 'Waiting for you' : 'What it would set up'}</div>
     ${p.steps.length ? '' : '<p class="guided-muted">Nothing to set up: everything this needs is here.</p>'}
-    ${rows}${devices}
+    ${applied ? guidedRunButtonHtml(p) : ''}${rows}${devices}
     ${applied ? '' : '<p class="guided-muted">Nothing has changed yet: "Set it up" keeps your answers and puts each install in front of you.</p>'}</div>`;
   p.steps.forEach((s, i) => { if (s.type === 'key' && s.providers.length) guidedKeyProvider(i); });
+  if (applied) guidedRunResume();
 }
 
 function _guidedInstallRow(s, i, applied) {
