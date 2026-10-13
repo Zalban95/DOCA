@@ -86,3 +86,9 @@ test('stop ends what plays, and is a line', async () => {
   try { assert.deepEqual((await s.status()).applications, []); } finally { s.close(); }
   assert.ok(lines().some(l => l.act === 'stop' && l.machine?.id === speaker.id));
 });
+
+test('the door\'s port is neither the panel\'s nor the previews\' beside it (found 2026-10-13: it was PORT + 1)', () => {
+  const port = require('../modules/settings-schema').value('cast.doorPort');
+  assert.notEqual(port, 4242);
+  assert.notEqual(port, 4243, 'canvas/origin.js serves previews on PORT + 1');
+});

@@ -151,7 +151,7 @@ an option for later (§2.5), not a prerequisite.
 
 `modules/cast/door.js`: a second, plain-HTTP server, **off unless a cast needs it and the owner allowed it**
 (`cast.door`: `off` | `on`, default `off`, `propose: false`; S11 — it is a new way in). When on, it listens on a fixed
-port (`cast.doorPort`, default 4243) on the hub's **private LAN addresses only** (never the tailnet, never `0.0.0.0`
+port (`cast.doorPort`, default 4250) on the hub's **private LAN addresses only** (never the tailnet, never `0.0.0.0`
 on a public interface; `listen.isPrivate`), and serves a request only when:
 
 - the peer's address is the address of a **cast running now** (the door keeps `{address → cast}` while the cast lives,
