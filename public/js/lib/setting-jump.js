@@ -35,10 +35,12 @@ async function settingJump(r) {
   _settingMark(el);
   // A page that draws its fields again just after (the MCP page reloads its list) replaces the marked one, and a field
   // that came after the card was marked in its place: for a few seconds, the field is found again and marked — or the mark lands on a node nobody sees (Windows CI, 2026-10-13).
-  if (r.field) for (let i = 0; i < 15; i++) {
+  // Watched up to 12 s while it is not the field yet (a slow page's Advanced fields), 3 s once it is.
+  for (let i = 0, settled = 0; r.field && i < 60 && settled < 15; i++) {
     await new Promise(res => setTimeout(res, 200));
     let isField = false; try { isField = el.matches(r.field); } catch { /* not a selector */ }
-    if (el.isConnected && isField) continue;   // still there, and the field itself — not the card it fell back to
+    if (el.isConnected && isField) { settled++; continue; }   // still there, and the field itself — not the card it fell back to
+    settled = 0;
     let f = null; try { f = document.querySelector(r.field); } catch { /* not a selector */ }
     if (f && shown(f)) { el = f; _settingMark(el); }
   }
