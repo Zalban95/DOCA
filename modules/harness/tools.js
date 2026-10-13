@@ -50,6 +50,7 @@ const TOOLS = [
   ...require('./toolbox/schedules'),
   ...require('./toolbox/features'),
   ...require('./toolbox/screens'),
+  ...require('./toolbox/cast'),
   ...require('./toolbox/nearby'),
   ...require('./toolbox/meetings'),
   ...require('./toolbox/chronicle'),

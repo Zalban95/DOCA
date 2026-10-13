@@ -55,7 +55,9 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     Live"), and the Devices list fills.
   - [ ] R3c Music and media links and a file to a speaker or a TV (the Default Media Receiver; a media token for an
     attachment or a file the person may read; Range).
-  - [ ] R3d The `cast` tool for the agent (kit devices, `registry.NEVER`, risk rules: sound or a page on a device is
+  - [~] R3d *2026-10-13: the `cast` tool (list, show, say, stop, volume) on the person's own request only (`asked`),
+    kit devices, `registry.NEVER`, outward in the risk tiers, in a call's front kit.* Left: the per-thing switches.
+    The `cast` tool for the agent (kit devices, `registry.NEVER`, risk rules: sound or a page on a device is
     outward), with Nearby's per-thing switches it reads: may speak unasked (off), quiet hours, max volume (0.6).
   - [ ] R3e DLNA / UPnP AVTransport for TVs without Cast; `cast/running.js` and kept casts restored at start.
   - [ ] R3f **Look from and serve from a client** (asked again 2026-10-13: "devices in the neighbourhood of the client,

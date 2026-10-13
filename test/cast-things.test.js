@@ -95,3 +95,22 @@ test('the door\'s port is neither the panel\'s nor the previews\' beside it (fou
   assert.notEqual(port, 4242);
   assert.notEqual(port, 4243, 'canvas/origin.js serves previews on PORT + 1');
 });
+
+test('the agent casts only when the person asked, to what they may use (the cast tool)', async () => {
+  const tools = require('../modules/harness/tools');
+  const owner = { ...H.owner.user, role: 'owner' };
+  const list = await tools.call('cast', { action: 'list' }, [], { user: owner });
+  assert.match(list, /Kitchen speaker \(n_[0-9a-f]+\) — speaker, Home · Kitchen: says a sentence/);
+  const unasked = await tools.call('cast', { action: 'say', thing: 'kitchen', text: 'Hello' }, [], { user: owner, byPerson: true });
+  assert.match(unasked, /only when the person asked/);
+  const notTheirTurn = await tools.call('cast', { action: 'say', thing: 'kitchen', text: 'Hello', asked: true }, [], { user: owner });
+  assert.match(notTheirTurn, /only when the person asked/, 'an automatic turn cannot claim the person asked');
+  dev.fetched.length = 0;
+  const said = await tools.call('cast', { action: 'say', thing: 'kitchen', text: 'Dinner is ready', asked: true }, [], { user: owner, byPerson: true });
+  assert.match(said, /Said on Kitchen speaker/);
+  assert.match(dev.fetched[0]?.url || '', /\/api\/cast\/media\//);
+  const speakerShows = await tools.call('cast', { action: 'show', thing: 'kitchen', page: 'live', asked: true }, [], { user: owner, byPerson: true });
+  assert.match(speakerShows, /is a speaker/);
+  assert.ok(require('../modules/agents/registry').NEVER.includes('cast'), 'never from a mission');
+});
+
