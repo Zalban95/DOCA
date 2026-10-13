@@ -38,6 +38,81 @@ Anyone can ask for anything and it is done safely: their way when they say how; 
 skill, specialist, the harness's suggestion); otherwise find the best way, make it reliable, save it — and offer it to
 the project's managers only if the owner allows sharing specialists and skills (asked at installation, and a setting).
 
+### Asked 2026-10-12/13 in one conversation — checked against what is built (W5)
+
+Every request of that conversation, with what shipped and what is left. `ask` marks an item W3/S11 says to ask about
+first (an `/api/v1` contract, a guard); everything else goes ahead in the order of the plan below.
+
+- [x] R1 The Live call's circle above, beside or centred under the chat button (3.52.0).
+- [x] R2 Craft App Suite suggested, installed checked against its sums (3.51.0). [ ] R2b the "not affiliated with the
+  Craft App Suite's authors" line — **waits for the owner's yes**.
+- [~] R3 **Cast to the things Nearby saved** (docs/design/cast-reach.md). *3.56.0–3.57.0: the Cast v2 sender, the cast
+  door (owner's switch, password), one-time sounds through the door only, a TV shows a page (DashCast), a speaker says
+  a sentence in the person's Quick call voice, Stop, volume; the Cast sheet's "Around you" by place and room; the
+  picker above the sheet; a switch that is off asked about where it was hit.* Left:
+  - [ ] R3a **Proof on the real devices**: the Kitchen speaker says a sentence; Live on the Living room TV (W8).
+  - [ ] R3b A cast screen is one record per thing, reused: today every show makes a new browser record ("Living room —
+    Live"), and the Devices list fills.
+  - [ ] R3c Music and media links and a file to a speaker or a TV (the Default Media Receiver; a media token for an
+    attachment or a file the person may read; Range).
+  - [ ] R3d The `cast` tool for the agent (kit devices, `registry.NEVER`, risk rules: sound or a page on a device is
+    outward), with Nearby's per-thing switches it reads: may speak unasked (off), quiet hours, max volume (0.6).
+  - [ ] R3e DLNA / UPnP AVTransport for TVs without Cast; `cast/running.js` and kept casts restored at start.
+  - [ ] R3f **Look from and serve from a client** (asked again 2026-10-13: "devices in the neighbourhood of the client,
+    so we can select where to perform the search… the client app serving the page or media… wifi, bluetooth or anything
+    else"): Nearby's "Look from" (the hub, this phone, another client), the client reporting what it sees around it
+    (its own Wi-Fi, Bluetooth), and the client as the relay that serves the page or the sound to a thing on its network.
+    Order: doca-client first (this repo, `clients/node`), then DocaMobile (its own repo), then DocaDesk. **ask**: the
+    `/api/v1` contracts (families `nearby` and `cast`, a `cast:send` scope) — listed for the owner (design §5.5, §6).
+  - [ ] R3g The page's own sound, a call or Ambient's assistant on a speaker; a headset as a work station (design §4,
+    phase D).
+- [x] R4 **EmbeddingGemma 2 for the Library, verified** (3.52.1–3.55.0, proven live 2026-10-13: 740m on MLX, 9 files in
+  20 s, searches right first, the index follows adds, changes and removals). Ollama's MLX runtime is a System tools row,
+  restarted with Ollama; the Library makes room on the GPU (`library.makeRoom`) and suggests the model by machine.
+  - [ ] R4a The results' order does not always follow the score shown (Library search).
+  - [ ] R4b Ollama's MLX runtime on Windows (its own package, not wired in).
+  - [ ] R4c The third GPU (RX 6600, another site, models over Tailscale) — when the owner sets it up.
+- [ ] R5 **Panel search in sections** — Settings, Files, Repos, pages… each a fold inside the search's dropdown; a
+  result opens where it lives, or asks which when several places fit. *3.57.0 did the groundwork: every declared
+  setting is a search row with its page.*
+- [~] R6 Meetings: [x] chat inside a meeting (3.17.0, the meeting room's chat); [ ] **meeting notes like Google AI Edge
+  Foresight** — opt-in with everyone's consent, a transcript from one's own microphone, a notes page, live answers as
+  the person, recall later (design doc first); [ ] a parity roadmap against Teams and its competitors
+  (docs/design/parity.md: what exists, what is missing, in order).
+- [~] R7 **Every feature since 3.0.0 with proof of testing** (loop; `~/doca-tools/v3-proof.md`). *Proven: signed
+  updates end to end, the Library live. Found and fixed on the way: three keys files a power cut could empty.* The rest
+  in the loop.
+- [x] R8 The sudo password reaches an installer's own sudo, and the dialog says it is the machine's (3.53.1).
+- [x] R9 OpenClaw out of System tools (3.53.1).
+- [ ] R10 **An audit in a fresh session, report only** — the brief is `~/doca-tools/audit-brief.md`.
+- [x] R11 First set-up: the password once, the machine's tools in turn, the rest side by side (3.54.0).
+- [x] R12 ⟳ Restart beside ↻ Update for what runs as a service (3.55.0).
+- [~] R13 **A switch that is off is a question where it was hit** (3.57.0: Switch it on and go on, Open its settings;
+  apiFetch asks by itself; developer mode, every experiment, specialists, a harness, sharing, the cast door; set-up
+  cases for the Library's model, the project hub, the speech service). Left from the audit of 2026-10-13 (72 places):
+  - [ ] R13a The set-up cases on their pages: web search's provider, channels' tokens, the vision and retrieval models
+    (whose cards hide while their experiment is off), backups' destination, the realtime model, the licence key,
+    OAuth apps, Laya and the wake-word trainer — each a `switch-off.unset` with its page and card.
+  - [ ] R13b `network.lanAdmin`'s refusal (auth/gate.js, **ask**: an auth file) as a question with its switch.
+  - [ ] R13c Model-scout leftovers: `scout.on()` is always true, so two refusals never fire; the one Set-up shows
+    points to Developer instead of Harness → Scout.
+  - [ ] R13d One password for a chain of switches a person approves within seconds — **ask** (S14, a guard).
+- [x] R14 Every declared setting can be found by the header search, the owner's own switches too (3.57.0).
+- [x] R15 A Nearby scan no longer stops on a sighting it cannot name (3.57.0).
+- [ ] R16 Queue 30 (2026-10-12): Proxmox VE as a hypervisor row; "Draw my hive" from DOCA's records; Uptime Kuma and
+  TrueNAS as key-pasted services with skills.
+
+**Plan, in this order** (each a branch, CI on three OSes, released, the live panel switched and swept):
+1. Release 3.57.0; prove R3a on the real speaker and TV; fix R3b (one record per cast thing).
+2. R13a — the remaining set-up questions, page by page, each checked in a phone-sized browser.
+3. R3d then R3c — the agent's `cast` tool with its risk rules, then media and files to a speaker or a TV.
+4. R5 — the search in sections.
+5. R3f — Look from / serve from: doca-client first; the `/api/v1` contracts listed for the owner before code.
+6. R6 — the Foresight-like meeting notes (design doc, then build), and the parity roadmap.
+7. R7, the loop — every 3.x feature without proof, debugged and tested, functionality unchanged; R10 runs alongside
+   in a fresh session.
+8. R4a, R13c, R3e, R16, R3g as they come up; R2b, R13b, R13d when the owner answers.
+
 ### P0 — the premise in the product
 - [~] P0.1 **No personal choices in the project** — *2.270.0: the constitution's rules name "the project's admin";
   one installation's machine notes moved to the gitignored `AGENTS.local.md`; the UI's personal placeholders, the
