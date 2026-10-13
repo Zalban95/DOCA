@@ -63,13 +63,14 @@ async function show(who, id, page) {
   if (dlnaOnly(t)) throw bad(`${name(t)} plays over DLNA, which has no browser: it can say a sentence or play a sound, not show a page.`, 409);
   const link = require('./links').create({ page, name: `${name(t)} — ${require('./views').VIEWS[page].label}`, thing: t.id }, who);
   const c = via(who, t);
-  if (c) { const r = await require('./relay').show(c, t, link); note(who, t, `cast ${page} to ${name(t)} through ${c.label}`, 'cast'); return { ...r, page }; }
+  if (c) { const r = await require('./relay').show(c, t, link); require('./running').note({ thing: t.id, ip: ipOf(t), page, via: c.id }); note(who, t, `cast ${page} to ${name(t)} through ${c.label}`, 'cast'); return { ...r, page }; }
   const origin = await require('./door').open(t.how.cast.ip, { page });
   const url = `${origin}${link.path}`;
   await withDevice(t, async s => {
     const app = await s.launch(APPS.dashcast);
     s.send(app.transportId, NS.dashcast, { url, force: true, reload: false, reload_time: 0 });
   });
+  require('./running').note({ thing: t.id, ip: ipOf(t), page });   // kept across a restart (running.js)
   note(who, t, `cast ${page} to ${name(t)}`, 'cast');
   return { ok: true, url, page };
 }
@@ -103,6 +104,7 @@ async function say(who, id, text, { story = false } = {}) {
 
 async function stop(who, id) {
   const t = thing(who, id);
+  require('./running').forget(t.id);
   const c = via(who, t);
   if (c) { await require('./relay').stop(c, t); require('./links').forgetThing(t.id); note(who, t, `stopped what played on ${name(t)} through ${c.label}`, 'stop'); return { ok: true }; }
   if (dlnaOnly(t)) { await require('./dlna').stop(t.how.dlna); require('./door').release(ipOf(t)); note(who, t, `stopped what played on ${name(t)} (DLNA)`, 'stop'); return { ok: true }; }

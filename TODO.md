@@ -59,7 +59,7 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     kit devices, `registry.NEVER`, outward in the risk tiers, in a call's front kit.* Left: the per-thing switches.
     The `cast` tool for the agent (kit devices, `registry.NEVER`, risk rules: sound or a page on a device is
     outward), with Nearby's per-thing switches it reads: may speak unasked (off), quiet hours, max volume (0.6).
-  - [~] R3e DLNA / UPnP AVTransport for TVs without Cast *(3.63.0: cast/dlna.js — say, a story, stop and volume on a DLNA renderer through the door; a page refused, no browser)*; left: `cast/running.js` and kept casts restored at start.
+  - [x] R3e DLNA / UPnP AVTransport for TVs without Cast *(3.63.0: cast/dlna.js — say, a story, stop and volume on a DLNA renderer through the door; a page refused, no browser)*; 3.64.0: kept casts restored at start (cast/running.js: the door again for the page casts of the last day while cast.door is on).
   - [~] R3f **Look from and serve from a client** *(3.60.0: Look from — doca-client's `nearby` family, the hub's chips and `nearby scan {from}`; 3.61.0: casting through a client — doca-client's `cast` family, cast/relay.js; DocaMobile and DocaDesk next)* (asked again 2026-10-13: "devices in the neighbourhood of the client,
     so we can select where to perform the search… the client app serving the page or media… wifi, bluetooth or anything
     else"): Nearby's "Look from" (the hub, this phone, another client), the client reporting what it sees around it
