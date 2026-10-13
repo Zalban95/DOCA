@@ -30,6 +30,15 @@ const CATALOG = [
     // Home Assistant on this machine (a container on the host network) answers on localhost, and `homeassistant.local`
     // often does not resolve here at all (2026-10-11): the first that answers is the address it is added with.
     near: ['http://localhost:8123/api/mcp'] },
+  // A person's own n8n (skills/n8n): a workflow whose "MCP Server Trigger" node gives it an address. Never installed or
+  // hosted here (n8n's Sustainable Use License is for their own internal use): only connected, with its Bearer token
+  // as the key for services `n8n`, so the secret never sits in the server's headers. The path is each workflow's own.
+  { id: 'n8n', label: 'n8n — your own workflows as tools (MCP Server Trigger)',
+    about: 'A workflow in your own n8n that starts with the "MCP Server Trigger" node offers the tools connected to it. '
+      + 'Copy its Production URL (or Test URL while you build it) into the address here, choose Bearer auth on the trigger, '
+      + 'and paste the same token in the Token box (kept as the key "n8n" in Field → Connectors → Keys for services). '
+      + 'This panel does not install n8n.',
+    transport: 'http', url: 'http://localhost:5678/mcp/your-workflow-path', headers: {}, key: 'n8n', needs: [] },
   // Suggested, never default: open-source creative apps, each its own server (catalog-craft.js).
   ...require('./catalog-craft').ROWS,
 ];
