@@ -12,7 +12,7 @@ socket — so DOCA reads, it does not edit. It is the API service `uptime-kuma`:
 
 ## Connecting it (once, with the person)
 
-1. In Uptime Kuma: **Settings → API Keys → Add API Key**. It shows the key once (`uk2_…`).
+1. In Uptime Kuma's own settings, under **API Keys**, add one. It shows the key once (`uk2_…`).
 2. In **Field → Connectors → API services**, type `uptime-kuma` in "Add a service": set its address
    (`http://<its host>:3001`) and paste `doca:<the key>` — sent as a Basic sign-in, the name before the colon ignored.
 

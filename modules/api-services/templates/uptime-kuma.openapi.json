@@ -6,7 +6,7 @@
     "summary": "What Uptime Kuma watches: every monitor's state and response time (its metrics), and a published status page's monitors and recent beats.",
     "x-doca-name": "uptime-kuma",
     "x-doca-skill": "uptime-kuma",
-    "x-doca-key-hint": "An API key from Settings → API Keys, pasted as any name, a colon, and the key (for example doca:uk2_…): it is sent as Basic sign-in, the name ignored",
+    "x-doca-key-hint": "An API key from Uptime Kuma's own settings (API Keys), pasted as any name, a colon, and the key (for example doca:uk2_…): it is sent as Basic sign-in, the name ignored",
     "x-doca-checked": "2026-10-13, github.com/louislam/uptime-kuma/wiki/Internal-API (/metrics with an API key over Basic, the status-page and badge routes)"
   },
   "externalDocs": { "url": "https://github.com/louislam/uptime-kuma/wiki/Internal-API" },
