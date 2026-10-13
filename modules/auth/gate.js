@@ -138,14 +138,20 @@ function gate(req, res, next) {
 }
 
 async function confirmSwitch(req, res, next, what) {
+  const unlock = require('./unlock');
+  const hash = req.auth?.session?.hash;
   const password = req.get('x-doca-password');
+  // Unlocked a moment ago (one click's chain) or for the minutes the person chose (unlock.js): no question.
+  if (!password && unlock.until(hash)) return next();
   if (!password)
-    return res.status(401).json({ code: 'password_required', switch: what,
-      error: `Changing ${what} asks for your password, every time.` });
+    return res.status(401).json({ code: 'password_required', switch: what, unlockChoices: unlock.CHOICES,
+      error: `Changing ${what} asks for your password.` });
   try {
     const bad = await require('./routes').confirmPassword(req, password);
     if (bad) return res.status(bad.status).json({ code: bad.code, switch: what, error: bad.error });
   } catch (e) { return res.status(500).json({ error: e.message }); }
+  const until = unlock.grant(hash, req.get('x-doca-unlock'));
+  if (until) res.set('X-Doca-Unlocked-Until', new Date(until).toISOString());
   next();
 }
 

@@ -227,7 +227,9 @@ words.)*
   follows their level. Nothing is spent unasked. (2026-10-07)
 - **S14 Important and safety switches ask for the password.** Turning on or off anything that governs safety or
   what agents may do — approval modes, developer mode, sharing, spending, reach, levels, the guards — asks for the
-  person's password again, however recently they signed in. (2026-10-07)
+  person's password again, however recently they signed in. (2026-10-07) One password covers the switches one
+  click flips, and the person may choose to keep it unlocked for a few minutes (1–30), held in memory only, shown as
+  "Unlocked until" with Lock now. (2026-10-13)
 - **S5 Admin and developer mode are internal.** Experiments live under developer mode, which is an admin's;
   admin is for the repository's owners, independent testers and private copies. A customer's install never meets
   the experiments. Licensing decides the rest (3.0): one build for every hive, a licence from the project's own
