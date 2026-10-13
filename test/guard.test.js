@@ -68,3 +68,12 @@ test('guards are managed through the panel: presets, switches, thresholds, test'
   assert.equal((await H.api(null, 'DELETE', '/api/harness/guards/rules')).status, 409, 'the rules guard stays');
   assert.equal((await H.api(null, 'DELETE', '/api/harness/guards/prompt-guard-2-22m')).status, 200);
 });
+
+test('a blocked piece of markup is read again in a few runs of lines, never hundreds of single ones', () => {
+  const { groupLines } = require('../modules/harness/guard');
+  const lines = Array.from({ length: 300 }, (_, i) => `<div>${i}</div>`);
+  const g = groupLines(lines);
+  assert.ok(g.length <= 12, `${g.length} runs`);
+  assert.equal(g.join('\n'), lines.join('\n'), 'nothing lost, in order');
+  assert.deepEqual(groupLines(['a', 'b']), ['a', 'b'], 'a short piece keeps its lines');
+});

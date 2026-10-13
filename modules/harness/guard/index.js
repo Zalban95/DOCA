@@ -148,9 +148,21 @@ async function scores(g, pieces) {
 const LOG = () => path.join(store.dir('harness'), 'guard-log.jsonl');
 const NOTE = '[a part of this text tried to give an AI instructions and was withheld by the guards]';
 
+/**
+ * A piece's lines, joined into at most `most` runs of neighbours: a page of markup is hundreds of one-tag lines, and
+ * scoring each with every guard was most of what five Scouts cost the machine (2026-10-14). What is withheld is then a
+ * few lines rather than one, never the whole piece.
+ */
+function groupLines(lines, most = 12) {
+  if (lines.length <= most) return lines;
+  const per = Math.ceil(lines.length / most), out = [];
+  for (let i = 0; i < lines.length; i += per) out.push(lines.slice(i, i + per).join('\n'));
+  return out;
+}
+
 /** A blocked piece, line by line: clean lines kept, the rest replaced by the note. A guard that fails withholds. */
 async function refine(active, piece) {
-  const lines = piece.split('\n');
+  const lines = groupLines(piece.split('\n'));
   if (lines.length < 2) return NOTE;
   const blocked = lines.map(l => !l.trim() ? false : null);
   for (const g of active) {
@@ -204,4 +216,4 @@ async function screen(text, { direction = 'in', source = '' } = {}) {
 
 function log(n = 50) { return store.readJsonl(LOG()).slice(-n).reverse(); }
 
-module.exports = { PRESETS, list, add, update, remove, status, screen, chunks, log, need, save, _testKinds };
+module.exports = { PRESETS, list, add, update, remove, status, screen, chunks, groupLines, log, need, save, _testKinds };
