@@ -9007,7 +9007,7 @@
         ],
         "summary": "Report which tool families this device has granted",
         "operationId": "putDeviceGrants",
-        "description": "Families: files, shell, processes, screen, input, apps, device, elevated, mcp, home. The harness is offered only a granted family that DOCA has not revoked. Reporting also clears a disconnect.",
+        "description": "Families: files, shell, processes, screen, input, apps, device, elevated, mcp, home, nearby, cast. The harness is offered only a granted family that DOCA has not revoked. Reporting also clears a disconnect.",
         "requestBody": {
           "required": true,
           "content": {
@@ -9046,6 +9046,12 @@
                         "type": "boolean"
                       },
                       "home": {
+                        "type": "boolean"
+                      },
+                      "nearby": {
+                        "type": "boolean"
+                      },
+                      "cast": {
                         "type": "boolean"
                       }
                     },
@@ -9098,6 +9104,12 @@
                           "type": "boolean"
                         },
                         "home": {
+                          "type": "boolean"
+                        },
+                        "nearby": {
+                          "type": "boolean"
+                        },
+                        "cast": {
                           "type": "boolean"
                         }
                       },
