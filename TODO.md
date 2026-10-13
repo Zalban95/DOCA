@@ -99,10 +99,11 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
   and Show all; a file inside a project asks Files or the project; a declared setting reads as words.* **Panel search in sections** — Settings, Files, Repos, pages… each a fold inside the search's dropdown; a
   result opens where it lives, or asks which when several places fit. *3.57.0 did the groundwork: every declared
   setting is a search row with its page.*
-- [~] R6 Meetings: [x] chat inside a meeting (3.17.0, the meeting room's chat); [ ] **meeting notes like Google AI Edge
-  Foresight** — opt-in with everyone's consent, a transcript from one's own microphone, a notes page, live answers as
-  the person, recall later (design doc first); [ ] a parity roadmap against Teams and its competitors
-  (docs/design/parity.md: what exists, what is missing, in order).
+- [~] R6 Meetings: [x] chat inside a meeting (3.17.0, the meeting room's chat); [~] **meeting notes like Google AI Edge
+  Foresight** — *3.70.0: consent asked of everyone (a Not me is final), each consenting page's own microphone to the
+  hub's speech-to-text, a notes page, Write it up by the person's model, the record kept as markdown for the meeting's
+  people (meetings/notes.js, meet/notes.js). Left: live answers to a spoken question, the record in the Library and
+  recall.* [x] a parity roadmap against Teams and its competitors (docs/design/parity.md, merged in 3.70.0).
 - [~] R7 **Every feature since 3.0.0 with proof of testing** (loop; `~/doca-tools/v3-proof.md`). *Proven: signed
   updates end to end, the Library live. Found and fixed on the way: three keys files a power cut could empty.* The rest
   in the loop.
@@ -124,7 +125,7 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     bot token, the retrieval and vision models, the realtime service's address and this machine's backup destination are
     questions, and the realtime, channels and machine-backup routes pass them on. Not a case: web search (DuckDuckGo
     needs no set-up) and speech-to-text (it always has an address). Left: the licence key.*
-  - [ ] R13b `network.lanAdmin`'s refusal (auth/gate.js, **ask**: an auth file) as a question with its switch.
+  - [x] R13b `network.lanAdmin`'s refusal as a question with its setting (3.70.0, the owner left auth calls to my judgement): what is off, why, Settings → System → Network — never switched from there, since switching it is managing the machine.
   - [x] R13c Model-scout leftovers: the dead experiment refusals removed; Set-up's "Check for newer models" always
     runs (the person asked) and names Harness → Scout for the routine (3.62.0).
   - [x] R13d One password for a chain of switches, and "Keep it unlocked for" 1–30 minutes (owner yes 2026-10-13; auth/unlock.js, lib/unlock.js).

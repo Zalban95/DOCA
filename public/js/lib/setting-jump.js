@@ -33,7 +33,9 @@ async function settingJump(r) {
     el = (shown(f) && f) || ((!r.field || i >= 40) && byCard()) || null;
     if (!el) await new Promise(res => setTimeout(res, 100));
   }
+  window._settingJumpLast = { field: r.field || null, card: r.card || null, found: !!el, isField: false, at: Date.now() };   // what the last jump did: for a test's failure message
   if (!el) return;
+  try { window._settingJumpLast.isField = !!(r.field && el.matches(r.field)); } catch { /* not a selector */ }
   _settingMark(el);
   // A page that draws its fields again just after (the MCP page reloads its list) replaces the marked one, and a field
   // that came after the card was marked in its place: for a few seconds, the field is found again and marked — or the mark lands on a node nobody sees (Windows CI, 2026-10-13).

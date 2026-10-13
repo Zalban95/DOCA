@@ -44,7 +44,10 @@ test('a setting under Advanced has its fold opened', { skip: B.skip }, async () 
   await choose('MCP timeouts');
   const ok = await B.until(`(() => { const f = document.querySelector('[data-leaf="mcpSettings.callTimeoutMs"]');
     return f && f.classList.contains('setting-found') && f.closest('details').open; })()`);
-  assert.ok(ok, await B.evaluate(`JSON.stringify({ tab: typeof currentTab !== 'undefined' && currentTab, f: !!document.querySelector('[data-leaf="mcpSettings.callTimeoutMs"]'), cls: document.querySelector('[data-leaf="mcpSettings.callTimeoutMs"]')?.className })`));
+  assert.ok(ok, await B.evaluate(`JSON.stringify({ tab: typeof currentTab !== 'undefined' && currentTab, jump: window._settingJumpLast || null,
+    matches: [...document.querySelectorAll('[data-leaf="mcpSettings.callTimeoutMs"]')].map(f => ({ cls: f.className, rects: f.getClientRects().length,
+      folds: (() => { const o = []; for (let d = f.closest('details'); d; d = d.parentElement?.closest('details')) o.push(d.open); return o; })(),
+      page: f.closest('.tab-page')?.id || null, pageShown: !!f.closest('.tab-page')?.getClientRects().length })) })`));
   if (process.env.DOCA_SHOTS) await B.shot(`${process.env.DOCA_SHOTS}/settings-search-fold.png`);
   assert.deepEqual(B.errors, []);
 });
