@@ -32,7 +32,7 @@ function incompatibility(manifest) {
   const have = Number(manifest.dataFormat) || 1, can = store.DATA_FORMAT;
   if (have > can)
     return `This backup was made by DOCA ${manifest.appVersion} with data format ${have}; this version reads up to format ${can}. `
-      + `Switch to v${manifest.appVersion} or newer (Settings → Updates → Version) and restore it there.`;
+      + `Switch to v${manifest.appVersion} or newer (Settings → General → Updates) and restore it there.`;
   for (let f = have; f < can; f++)
     if (!MIGRATIONS[f]) return `This backup's data is format ${have}, and there is no way here from format ${f} to ${f + 1}. Restore it with a version between ${manifest.appVersion} and this one first.`;
   return null;

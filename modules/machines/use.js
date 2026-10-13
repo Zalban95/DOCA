@@ -62,7 +62,7 @@ const KIND = {
     const service = svc && require('../services').INFERENCE_SERVICES.find(s => s.id === svc);
     if (service) reasons.push(`it is the inference service ${service.label || service.id}`);
     const project = projectOf(c);
-    if (project && project === stackProject()) reasons.push('it is part of the stack (Settings → OpenClaw → Stack)');
+    if (project && project === stackProject()) reasons.push('it is part of the stack (Settings → Harnesses → OpenClaw → Stack)');
     if (String(c.State).toLowerCase() === 'running') for (const p of ports.published(c.Ports)) reasons.push(...ports.reasons(p, service?.label || name));
     return { name, reasons: [...new Set(reasons)] };
   },

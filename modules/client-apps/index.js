@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * DOCA's own Android apps, served by the hub that they talk to (Settings → DOCA apps). Each app's latest build is kept
+ * DOCA's own Android apps, served by the hub that they talk to (Field → API keys → DOCA apps). Each app's latest build is kept
  * under DATA_DIR/clients/<app>/ — the APK and what it is (versionCode, versionName, sha256) — whether it was uploaded or
  * built here (build.js). A device asks `GET /api/v1/clients/android/<app>` and updates itself when the versionCode is
  * higher than its own (DocaMobile's updater); a person downloads it from the panel.

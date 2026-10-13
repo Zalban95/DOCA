@@ -28,7 +28,7 @@ function run(cmd, args, opts, say) {
 async function build(app, { pull = false } = {}, say = () => {}) {
   const a = apps.known(app);
   const repo = apps.repoFor(app);
-  if (!repo) throw Object.assign(new Error(`Say where ${a.repoOf ? apps.known(a.repoOf).label : a.label}'s repository is first (Settings → DOCA apps).`), { status: 409 });
+  if (!repo) throw Object.assign(new Error(`Say where ${a.repoOf ? apps.known(a.repoOf).label : a.label}'s repository is first (Field → API keys → DOCA apps).`), { status: 409 });
   if (_running) throw Object.assign(new Error(`${_running} is building; one at a time.`), { status: 409 });
   _running = a.label;
   try {

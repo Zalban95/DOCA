@@ -34,7 +34,7 @@ const KNOWN = [
   },
   {
     id: 'openclaw', label: 'OpenClaw', vendor: 'OpenClaw', kind: 'stack',
-    note: 'Docker Compose agent stack — started and updated in Settings → OpenClaw → Stack',
+    note: 'Docker Compose agent stack — started and updated in Settings → Harnesses → OpenClaw → Stack',
     url: 'https://github.com/openclaw/openclaw',
     // Falls back to "installed" so a stack that is not a git checkout still
     // reports as present instead of offering to clone over it.
