@@ -17,7 +17,7 @@
  *      its own, or a CLI harness (Claude Code, Codex…) asked once in the repository — following the doca-dev-cycle
  *      skill: branch, build, test, commit, and the owner's yes before merge, tag and push.
  *
- * The routine is off by default (`scout.enabled`), the whole is an experiment (developer mode), and nothing in it
+ * The routine is off by default (`scout.enabled`; the scout graduated from experiment in 3.47.0), and nothing in it
  * changes a setting or installs anything: suggestions are proposals, and the work is a conversation that asks.
  */
 const fs = require('fs');

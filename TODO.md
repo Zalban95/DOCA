@@ -66,7 +66,7 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     (its own Wi-Fi, Bluetooth), and the client as the relay that serves the page or the sound to a thing on its network.
     Order: doca-client first (this repo, `clients/node`), then DocaMobile (its own repo), then DocaDesk. The `/api/v1`
     contracts (families `nearby` and `cast`, a `cast:send` scope; design §5.5, §6) — **approved by the owner 2026-10-13**.
-  - [ ] R3h **Tones to choose** (asked 2026-10-13, after the Kitchen speaker spoke): beside Say, a dropdown of the tone
+  - [x] R3h **Tones to choose** *(3.62.0: a Tone select beside Say and a Story… overlay in the Cast sheet, the cast tool's `story`; cast/speech.js story, voice-tags.parts)* (asked 2026-10-13, after the Kitchen speaker spoke): beside Say, a dropdown of the tone
     (calm, excited, whispers, sad…) when the voice takes tags; and, as a tool of its own, a **story mode** — a longer text
     with several tones marked through it, read on a speaker. *3.58.1: the agent is told the tags exist and whether the
     person's voice speaks them.*
@@ -75,7 +75,7 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
 - [x] R4 **EmbeddingGemma 2 for the Library, verified** (3.52.1–3.55.0, proven live 2026-10-13: 740m on MLX, 9 files in
   20 s, searches right first, the index follows adds, changes and removals). Ollama's MLX runtime is a System tools row,
   restarted with Ollama; the Library makes room on the GPU (`library.makeRoom`) and suggests the model by machine.
-  - [ ] R4a The results' order does not always follow the score shown (Library search).
+  - [x] R4a The results' order does not always follow the score shown (Library search): the score shown is now the merged ranking's own, 0–1, the raw similarity in its tooltip (3.62.0).
   - [ ] R4b Ollama's MLX runtime on Windows (its own package, not wired in).
   - [ ] R4c The third GPU (RX 6600, another site, models over Tailscale) — when the owner sets it up.
 - [x] R5 *2026-10-13: Pages, Settings, Projects and Files, each a fold with its count (kept per browser), the first six
@@ -105,13 +105,16 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     (whose cards hide while their experiment is off), backups' destination, the realtime model, the licence key,
     OAuth apps, Laya and the wake-word trainer — each a `switch-off.unset` with its page and card.
   - [ ] R13b `network.lanAdmin`'s refusal (auth/gate.js, **ask**: an auth file) as a question with its switch.
-  - [ ] R13c Model-scout leftovers: `scout.on()` is always true, so two refusals never fire; the one Set-up shows
-    points to Developer instead of Harness → Scout.
+  - [x] R13c Model-scout leftovers: the dead experiment refusals removed; Set-up's "Check for newer models" always
+    runs (the person asked) and names Harness → Scout for the routine (3.62.0).
   - [x] R13d One password for a chain of switches, and "Keep it unlocked for" 1–30 minutes (owner yes 2026-10-13; auth/unlock.js, lib/unlock.js).
 - [x] R14 Every declared setting can be found by the header search, the owner's own switches too (3.57.0).
 - [x] R15 A Nearby scan no longer stops on a sighting it cannot name (3.57.0).
-- [ ] R16 Queue 30 (2026-10-12): Proxmox VE as a hypervisor row; "Draw my hive" from DOCA's records; Uptime Kuma and
-  TrueNAS as key-pasted services with skills.
+- [~] R16 Queue 30 (2026-10-12): Proxmox VE as a hypervisor row; "Draw my hive" from DOCA's records; Uptime Kuma and
+  TrueNAS as key-pasted services with skills. *3.62.0: Proxmox VE and Uptime Kuma as ready-made API services (templates,
+  checked against their docs 2026-10-13) with skills; TrueNAS as a skill over SSH (`midclt call`), since its REST API
+  goes in 26 and its JSON-RPC is a WebSocket. "Draw my hive": Machines → Map (machines/map.js, hive-map.js). Left: Proxmox in the VMs tab. **Ask:** Proxmox makes a
+  self-signed certificate the hub refuses — accepting one for the owner's own addresses would loosen a guard.*
 
 **Plan, in this order** (each a branch, CI on three OSes, released, the live panel switched and swept):
 1. Release 3.57.0; prove R3a on the real speaker and TV; fix R3b (one record per cast thing).

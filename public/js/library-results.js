@@ -34,7 +34,7 @@ function libraryResultHtml(r, ctx = '') {
     <div class="lib-body">
       <div class="lib-name"><span class="badge">${LIB_KIND[r.kind] || escHtml(r.kind)}</span> <b>${escHtml(r.name)}</b> <span class="ww-dim">${escHtml(dir)}</span></div>
       <div class="ww-dim">${escHtml(r.about || '')}</div>
-      <div class="ww-dim">${r.similar ? 'like it' : `matched by ${escHtml(how)}`}${r.score != null ? ` · ${r.score}` : ''}${m?.text && m.kind !== 'caption' ? ` — “${escHtml(m.text.slice(0, 160))}”` : ''}</div>
+      <div class="ww-dim">${r.similar ? 'like it' : `matched by ${escHtml(how)}`}${r.score != null ? ` · <span title="${escHtml(r.similar ? 'How alike they are' : `How well it matches, which is the order: its meaning${r.similarity != null ? ` (similarity ${r.similarity})` : ''} and${r.words ? ` ${r.words} of your words` : ' no word of yours'}`)}">${r.similar ? '' : 'match '}${r.score}</span>` : ''}${m?.text && m.kind !== 'caption' ? ` — “${escHtml(m.text.slice(0, 160))}”` : ''}</div>
       ${r.caption ? `<div class="lib-caption" title="Written by the vision model">✎ ${escHtml(r.caption)}</div>` : ''}
       ${(r.tags || []).length ? `<div class="lib-tags">${r.tags.map(t => `<button class="lib-tag" title="score ${t.score} — show only files with this tag" onclick="libraryTagFilter('${escHtml(ctx)}','${escHtml(t.tag)}')">${escHtml(t.tag)}</button>`).join('')}</div>` : ''}
     </div>

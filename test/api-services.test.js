@@ -190,3 +190,17 @@ test('without a service the tool is not offered, and says where they are set up'
   for (const s of store().list()) { store().remove(s.name); try { require('../modules/service-keys').remove(s.name); } catch { /* none */ } }
   assert.ok(shape.switches().some(x => x.name === 'service' && /Field → Connectors → API services/.test(x.why)));
 });
+
+test('Proxmox VE and Uptime Kuma are ready-made: an address of the person\'s, their own key, nothing else (R16)', async () => {
+  const t = require('../modules/api-services/templates');
+  const pve = t.load('proxmox-ve');
+  assert.deepEqual(pve.warnings, []);
+  assert.deepEqual(pve.definition.auth, { type: 'apiKey', in: 'header', name: 'Authorization', prefix: 'PVEAPIToken=' });
+  assert.match(pve.definition.server, /^https:\/\/[^/]+:8006\/api2\/json$/);
+  assert.ok(['listResources', 'vmStatus', 'vmShutdown', 'containerStart'].every(n => pve.definition.actions.some(a => a.name === n)));
+  const kuma = t.load('uptime-kuma');
+  assert.deepEqual(kuma.definition.auth, { type: 'basic' });
+  assert.ok(kuma.definition.actions.some(a => a.name === 'metrics'));
+  const r = await H.api(null, 'POST', '/api/connectors/services/find', { q: 'proxmox' });
+  assert.deepEqual(r.body.templates.map(x => x.id), ['proxmox-ve']);
+});

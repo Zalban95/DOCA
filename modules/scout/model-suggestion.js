@@ -56,21 +56,15 @@ async function view() {
 }
 
 /**
- * Set-up's "Check for newer models": the scout looks now, as a brief in its own conversation, when its experiment is on.
- * Off, nothing reaches the network and the answer says how to turn it on. Either way nothing changes until accepted.
+ * Set-up's "Check for newer models": the model scout looks now, as a brief in its own conversation — the person asked,
+ * so it runs whether or not the scout's own routine (every few days, Settings → Harness → Scout) is switched on. Nothing
+ * changes until a suggestion is accepted. (The scout graduated in 3.47.0; its old experiment switch is gone, R13c.)
  */
 function check() {
   const scout = require('./index');
-  if (!scout.on()) {
-    // Experiments are for the repository's owners and testers, never a newcomer (AGENTS.md, Experiments): only a
-    // developer's install is told where the switch is.
-    return { started: false, how: require('../experiments').developer()
-      ? 'The model scout is off. It looks for newer models every few days and files what it finds in Settings → Harness → Scout for you to accept; switch it on in Settings → Developer, then press this again.'
-      : 'The suggested models come from a list the DOCA project tests, and a newer list arrives with DOCA\'s updates — there is nothing to do here.' };
-  }
   scout.brief('suggestions', CHECK).catch(() => { /* no owner to run as: the scout card says so */ });
   return { started: true, sessionId: scout.state().sessionId || null,
-    said: 'The model scout is looking now, in its conversation "Model scout". What it finds waits in Settings → Harness → Scout for you to accept.' };
+    said: `The model scout is looking now, in its conversation "Model scout". What it finds waits in Settings → Harness → Scout for you to accept.${scout.settings().enabled ? '' : ' It can also look every few days by itself: switch that on in Settings → Harness → Scout.'}` };
 }
 
 module.exports = { CHECK, prepare, accept, view, check };

@@ -62,7 +62,7 @@ test('a link is for a page a screen can show; a person casts only to their own s
 // In a real browser, as a TV opens it: each page a screen can be given draws through its view link alone, locked to
 // it, with no script error — the list of what it reads (cast/views.js) is held to what the page really reads.
 const headless = require('../modules/headless');
-test('every castable page draws through a view link, locked, with no script error', { skip: !headless.findBrowser() && 'no browser here', timeout: 200000 }, async () => {
+test('every castable page draws through a view link, locked, with no script error', { skip: !headless.findBrowser() && 'no browser here', timeout: 600000 }, async () => {
   const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), { spawn } = require('node:child_process');
   for (const page of Object.keys(require('../modules/cast/views').VIEWS)) {
     const l = (await H.api(null, 'POST', '/api/cast/links', { page })).body;
@@ -76,7 +76,8 @@ test('every castable page draws through a view link, locked, with no script erro
       await cdp.send('Runtime.enable');
       await cdp.send('Page.navigate', { url: `${H.base}${l.path}` });
       let where = '';
-      for (let i = 0; i < 100 && !/cast-view|face/.test(where); i++) {
+      // Up to a minute: under a full run's load, or on Windows CI, the panel's boot took past thirty seconds ('live: / ').
+      for (let i = 0; i < 200 && !/cast-view|face/.test(where); i++) {
         await headless.sleep(300);
         where = (await cdp.send('Runtime.evaluate', { expression: "location.pathname + ' ' + document.body.className", returnByValue: true })).result.value || '';
       }

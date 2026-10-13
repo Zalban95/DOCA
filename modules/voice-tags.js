@@ -102,4 +102,24 @@ function line() {
     + '(a tag colours only its own sentence), sparingly — where a person would really whisper, laugh or light up. They are not shown or read out.';
 }
 
-module.exports = { TAGS, PATTERN, found, strip, stream, spokenTurn, forVoice, rewrite, line };
+/**
+ * A story's parts (R3h, asked 2026-10-13: "a text mode with multiple emotions"): each tag colours what follows it until
+ * the next, so "[calm] Once upon a time. [whispers] Quiet now." is two parts — each said in its own tone (cast/speech.js).
+ */
+function parts(text) {
+  const out = [];
+  let tag = null, last = 0;
+  const s = String(text || '');
+  for (const m of s.matchAll(PATTERN)) {
+    const id = WORD.get(m[1].toLowerCase());
+    if (!id) continue;
+    const before = strip(s.slice(last, m.index)).trim();
+    if (before) out.push({ tag, text: before });
+    tag = id; last = m.index + m[0].length;
+  }
+  const rest = strip(s.slice(last)).trim();
+  if (rest) out.push({ tag, text: rest });
+  return out;
+}
+
+module.exports = { TAGS, PATTERN, found, strip, stream, spokenTurn, forVoice, rewrite, line, parts };

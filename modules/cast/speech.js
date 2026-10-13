@@ -5,6 +5,35 @@
  * their own layer, else the hive's), from the hub's speech service, as MP3 the Default Media Receiver plays. A voice
  * from a hosted service is not used here yet: the hive's own speech service says it instead.
  */
+/** The person's Quick call voice and the speech service it is on. */
+function voiceOf(person = {}) {
+  let mine = null;
+  try { mine = require('../call-voices').pick('quick', { userId: person.id || null }); } catch { /* the hive's below */ }
+  let vs = mine?.engine;
+  if (!vs || vs.hosted) vs = require('../tts-engines').hive();
+  return { mine, vs };
+}
+
+/** The tones this person's voice takes (voice-tags.js), or [] when it says words only. */
+function tones(person = {}) {
+  const { vs } = voiceOf(person);
+  return vs?.tags ? Object.keys(require('../voice-tags').TAGS) : [];
+}
+
+/**
+ * A story (R3h): its parts each said in their own tone, one request per part, played as one sound (MP3 frames follow
+ * one another). A voice without tones says it in one request, its tags dropped.
+ */
+async function story(text, person = {}) {
+  const tags = require('../voice-tags');
+  const parts = tags.parts(text);
+  if (!tones(person).length || parts.length < 2) return speak(text, person);
+  const out = [];
+  let mime = 'audio/mpeg';
+  for (const p of parts) { const a = await speak(p.tag ? `[${p.tag}] ${p.text}` : p.text, person); out.push(a.buffer); mime = a.mime; }
+  return { buffer: Buffer.concat(out), mime };
+}
+
 async function speak(text, person = {}) {
   let mine = null;
   try { mine = require('../call-voices').pick('quick', { userId: person.id || null }); } catch { /* the hive's below */ }
@@ -23,4 +52,4 @@ async function speak(text, person = {}) {
   return { buffer: Buffer.from(await r.arrayBuffer()), mime: r.headers.get('content-type') || 'audio/mpeg' };
 }
 
-module.exports = { speak };
+module.exports = { speak, story, tones };

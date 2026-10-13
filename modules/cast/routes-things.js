@@ -4,7 +4,7 @@
  * Casting to things Nearby saved (cast/things.js; docs/design/cast-reach.md phase A):
  *   GET  /api/cast/things                 the person's Cast devices by place and room, and whether the door is on
  *   POST /api/cast/things/:id/show        {page}   a TV shows the page (DashCast, through the door)
- *   POST /api/cast/things/:id/say         {text}   a speaker says it in the person's Quick call voice
+ *   POST /api/cast/things/:id/say         {text, story?}  a speaker says it in the person's Quick call voice (a story: each part its own tone)
  *   POST /api/cast/things/:id/stop                 what the receiver plays or shows stops
  *   POST /api/cast/things/:id/volume      {level}  0–1
  *   POST /api/cast/door                   {on}     the owner's switch (cast.door), with the password (auth/guarded.js)
@@ -16,9 +16,10 @@ const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e)
 
 function mount(app) {
   require('./door').attach(app);
-  app.get('/api/cast/things', h(req => ({ things: things.list(req.auth), door: { on: require('./door').on(), mayChange: isHost(req.auth) } })));
+  app.get('/api/cast/things', h(req => ({ things: things.list(req.auth), door: { on: require('./door').on(), mayChange: isHost(req.auth) },
+    tones: (() => { try { return require('./speech').tones({ id: req.auth?.user?.id }); } catch { return []; } })() })));
   app.post('/api/cast/things/:id/show', h(req => things.show(req.auth, req.params.id, String(req.body?.page || ''))));
-  app.post('/api/cast/things/:id/say', h(req => things.say(req.auth, req.params.id, req.body?.text)));
+  app.post('/api/cast/things/:id/say', h(req => things.say(req.auth, req.params.id, req.body?.text, { story: req.body?.story === true })));
   app.post('/api/cast/things/:id/stop', h(req => things.stop(req.auth, req.params.id)));
   app.post('/api/cast/things/:id/volume', h(req => things.volume(req.auth, req.params.id, req.body?.level)));
   app.post('/api/cast/door', h(req => {

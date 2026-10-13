@@ -78,10 +78,17 @@ async function search(source, query, items, { limit = 8, signal } = {}) {
 }
 
 /** Reciprocal-rank fusion of ranked ref lists (best first). */
-function hybrid(...lists) {
+function hybrid(...lists) { return hybridScored(...lists).map(x => x.ref); }
+
+/**
+ * The same merge with each ref's score, 0–1: its reciprocal-rank sum over the best a ref could have (first in every
+ * list) — so a score shown beside a result falls as the order does (the Library's results, R4a).
+ */
+function hybridScored(...lists) {
   const score = new Map();
   for (const list of lists) list.forEach((ref, i) => score.set(ref, (score.get(ref) || 0) + 1 / (60 + i + 1)));
-  return [...score.entries()].sort((a, b) => b[1] - a[1]).map(([ref]) => ref);
+  const top = lists.filter(l => l.length).length / 61 || 1;
+  return [...score.entries()].sort((a, b) => b[1] - a[1]).map(([ref, v]) => ({ ref, score: Math.round((v / top) * 1000) / 1000 }));
 }
 
 /** What the index holds, per source and model — for Settings. */
@@ -93,4 +100,4 @@ async function clear(source) {
   return db.run(`DELETE FROM embeddings WHERE tenant_id = 'local'${source ? ' AND source = ?' : ''}`, source ? [source] : []);
 }
 
-module.exports = { on, chunks, refresh, search, hybrid, stats, clear };
+module.exports = { on, chunks, refresh, search, hybrid, hybridScored, stats, clear };
