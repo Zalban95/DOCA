@@ -8,14 +8,13 @@
  * still reached by api_call. A person saves a definition (Field → Connectors → API services, a pack's import, a draft's
  * Save); the agent only drafts one (service-drafts.js).
  */
-const fs = require('fs');
-const path = require('path');
 const keys = () => require('../service-keys');
 
 const file = () => require('../paths').API_SERVICES_FILE;
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
-const all = () => { try { return JSON.parse(fs.readFileSync(file(), 'utf8')); } catch { return {}; } };
-function write(d) { fs.mkdirSync(path.dirname(file()), { recursive: true }); fs.writeFileSync(file(), JSON.stringify(d, null, 2), { mode: 0o600 }); try { fs.chmodSync(file(), 0o600); } catch { /* Windows */ } }
+// Power-cut safe (keys-file): a damaged file is read from its earlier copy, never as empty and then written over.
+const all = () => require('../keys-file').read(file(), {});
+const write = d => require('../keys-file').write(file(), d);
 
 const NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
 const AUTH = ['apiKey', 'bearer', 'basic', 'oauth2', 'none'];

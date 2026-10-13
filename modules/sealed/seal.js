@@ -10,17 +10,13 @@
  * agent never holds a seal key (the keys folder is refused to its file tools), and the hub's own MCP calls are the
  * only ones that carry a sealed payload. PROTOCOL.md §22.3 is the device's side.
  */
-const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 
 const file = () => path.join(require('./vault').keysDir(), 'device-seals.json');
-const all = () => { try { return JSON.parse(fs.readFileSync(file(), 'utf8')); } catch { return {}; } };
-function write(d) {
-  fs.mkdirSync(path.dirname(file()), { recursive: true });
-  fs.writeFileSync(file(), JSON.stringify(d, null, 2), { mode: 0o600 });
-  try { fs.chmodSync(file(), 0o600); } catch { /* Windows */ }
-}
+// Power-cut safe (keys-file): a damaged file read as empty would have made the next device's key the only one kept.
+const all = () => require('../keys-file').read(file(), {});
+const write = d => require('../keys-file').write(file(), d);
 
 /** The device's seal key (base64), made the first time it asks. */
 function mint(deviceId) {

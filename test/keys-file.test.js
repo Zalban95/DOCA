@@ -60,3 +60,21 @@ test('the incident: a key saved after the file was damaged keeps the others', ()
   assert.throws(() => keys.save({ name: 'x', origin: 'https://x.example.com', key: 'k' }), e => e.code === 'keys_damaged');
   assert.equal(fs.readFileSync(file, 'utf8'), '');
 });
+
+test('providers and devices\' seal keys use it too: a damaged file falls back, and a save keeps the others (2026-10-13)', () => {
+  const pk = require('../modules/provider-keys');
+  pk.set('one', { baseUrl: 'http://127.0.0.1:1/v1', apiKey: 'k1' });
+  pk.set('two', { baseUrl: 'http://127.0.0.1:2/v1', apiKey: 'k2' });
+  fs.writeFileSync(pk.FILE, '{"providers": {"on');               // a power cut mid-write
+  assert.equal(pk.get('one')?.apiKey, 'k1', 'read from the earlier copy, never as no providers');
+  pk.set('three', { baseUrl: 'http://127.0.0.1:3/v1', apiKey: 'k3' });
+  assert.deepEqual(['one', 'three'].map(id => pk.get(id)?.apiKey), ['k1', 'k3']);
+
+  const seal = require('../modules/sealed/seal');
+  const a = seal.mint('dev_a');
+  seal.mint('dev_b');
+  const file = path.join(require('../modules/sealed/vault').keysDir(), 'device-seals.json');
+  fs.writeFileSync(file, '');
+  seal.mint('dev_c');
+  assert.equal(seal.mint('dev_a'), a, 'the first device keeps its seal key');
+});
