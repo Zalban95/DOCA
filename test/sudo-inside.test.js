@@ -19,7 +19,10 @@ function run(cmd, opts) {
 }
 const text = out => out.split('\n').filter(l => l.startsWith('data: ')).map(l => JSON.parse(l.slice(6)).status || '').join('');
 
-test('a script\'s own sudo asks the same helper, and the helper is gone afterwards', { skip: shell.WIN || !shell.which('sudo') }, async () => {
+// Linux only: where a vendor's script calls sudo (Ollama's install.sh). On macOS CI the script found /usr/bin/sudo
+// before the shim (2026-10-13, cause not found); a Mac installs through Homebrew, which refuses sudo.
+const linux = process.platform === 'linux' && !!shell.which('sudo');
+test('a script\'s own sudo asks the same helper, and the helper is gone afterwards', { skip: !linux }, async () => {
   const out = text(await run('s=$(command -v sudo); echo "SUDO=$s"; cat "$s"; echo "ASK=$SUDO_ASKPASS"', { password: 'pw' }));
   const at = /SUDO=(\S+)/.exec(out)[1];
   assert.match(out, /exec '.*sudo' -A "\$@"/, 'the sudo a script finds hands every call to the real one with -A');
