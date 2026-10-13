@@ -23,18 +23,22 @@ function mayUse(who, t) {
   return allot.uses(p, 'nearby', t.id) || (!!t.place && allot.uses(p, 'nearby', `place:${t.place}`));
 }
 
-const castable = t => (t.can || []).includes('cast') && t.how?.cast?.ip;
+const hasCast = t => (t.can || []).includes('cast') && !!t.how?.cast?.ip;
+// A DLNA renderer (R3e, cast/dlna.js): plays sound and video, shows no page. Its address: the sighting's, else its control URL's.
+const dlnaOnly = t => !hasCast(t) && (t.can || []).includes('dlna-play') && !!t.how?.dlna?.control;
+const castable = t => hasCast(t) || dlnaOnly(t);
+const ipOf = t => t.how?.cast?.ip || t.how?.dlna?.ip || (() => { try { return new URL(t.how.dlna.control).hostname; } catch { return null; } })();
 
 function list(who) {
   return require('../nearby/store').saved().filter(t => castable(t) && mayUse(who, t)).map(t => ({
     id: t.id, name: name(t), kind: t.kind || 'thing', place: t.place || null, room: t.room || null, model: t.model || null,
-    shows: t.kind !== 'speaker', speaks: true, address: t.how.cast.ip, lastSeen: t.lastSeen || null }))
+    shows: t.kind !== 'speaker' && hasCast(t), speaks: true, address: ipOf(t), via: hasCast(t) ? 'cast' : 'dlna', lastSeen: t.lastSeen || null }))
     .sort((a, b) => String(a.place || '~').localeCompare(String(b.place || '~')) || String(a.room || '~').localeCompare(String(b.room || '~')) || a.name.localeCompare(b.name));
 }
 
 function thing(who, id) {
   const t = require('../nearby/store').saved().find(x => x.id === id);
-  if (!t || !castable(t)) throw bad('Not a saved Cast device of this hive.', 404);
+  if (!t || !castable(t)) throw bad('Not a saved Cast or DLNA device of this hive.', 404);
   if (!mayUse(who, t)) throw bad('Not a device allotted to you: an admin allots it (Settings → Users).', 403);
   return t;
 }
@@ -51,11 +55,12 @@ async function withDevice(t, fn) {
 }
 
 /** The hub reaches it itself (an address on its network), else one of the person's devices that saw it there (relay.js). */
-const via = (who, t) => (require('./door').addressFor(t.how.cast.ip) ? null : require('./relay').pick(who, t));
+const via = (who, t) => (dlnaOnly(t) || require('./door').addressFor(ipOf(t)) ? null : require('./relay').pick(who, t));
 
 async function show(who, id, page) {
   const t = thing(who, id);
   if (!require('./views').VIEWS[page]) throw bad(`A screen can be given ${Object.keys(require('./views').VIEWS).join(', ')}.`);
+  if (dlnaOnly(t)) throw bad(`${name(t)} plays over DLNA, which has no browser: it can say a sentence or play a sound, not show a page.`, 409);
   const link = require('./links').create({ page, name: `${name(t)} — ${require('./views').VIEWS[page].label}`, thing: t.id }, who);
   const c = via(who, t);
   if (c) { const r = await require('./relay').show(c, t, link); note(who, t, `cast ${page} to ${name(t)} through ${c.label}`, 'cast'); return { ...r, page }; }
@@ -79,8 +84,13 @@ async function say(who, id, text, { story = false } = {}) {
   const c = via(who, t);
   if (c) { const r = await require('./relay').say(c, t, audio, words.slice(0, 80)); note(who, t, `said a sentence on ${name(t)} through ${c.label}`, 'say'); return r; }
   const media = require('./media');
-  const tok = media.token({ buffer: audio.buffer, mime: audio.mime, for: t.how.cast.ip });
-  const origin = await require('./door').open(t.how.cast.ip, { tokens: [tok] });
+  const tok = media.token({ buffer: audio.buffer, mime: audio.mime, for: ipOf(t) });
+  const origin = await require('./door').open(ipOf(t), { tokens: [tok] });
+  if (dlnaOnly(t)) {
+    await require('./dlna').play(t.how.dlna, `${origin}/api/cast/media/${tok}`, audio.mime, words.slice(0, 80));
+    note(who, t, `said a sentence on ${name(t)} (DLNA)`, 'say');
+    return { ok: true };
+  }
   const r = await withDevice(t, async s => {
     const app = await s.launch(APPS.media);
     return s.request(app.transportId, NS.media, { type: 'LOAD', autoplay: true,
@@ -95,6 +105,7 @@ async function stop(who, id) {
   const t = thing(who, id);
   const c = via(who, t);
   if (c) { await require('./relay').stop(c, t); require('./links').forgetThing(t.id); note(who, t, `stopped what played on ${name(t)} through ${c.label}`, 'stop'); return { ok: true }; }
+  if (dlnaOnly(t)) { await require('./dlna').stop(t.how.dlna); require('./door').release(ipOf(t)); note(who, t, `stopped what played on ${name(t)} (DLNA)`, 'stop'); return { ok: true }; }
   await withDevice(t, async s => {
     const apps = (await s.status()).applications || [];
     for (const a of apps.filter(x => x.appId === APPS.dashcast || x.appId === APPS.media)) await s.stop(a.sessionId);
@@ -111,6 +122,7 @@ async function volume(who, id, level) {
   if (!Number.isFinite(v)) throw bad('A volume from 0 to 1.');
   const c = via(who, t);
   if (c) return require('./relay').volume(c, t, v);
+  if (dlnaOnly(t)) { await require('./dlna').volume(t.how.dlna, v); return { ok: true, level: v }; }
   await withDevice(t, s => s.volume(v));
   return { ok: true, level: v };
 }

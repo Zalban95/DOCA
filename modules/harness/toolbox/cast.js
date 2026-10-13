@@ -30,7 +30,7 @@ function pick(list, name) {
 
 module.exports = [{
   name: 'cast',
-  description: 'Show a page on a TV or say a sentence on a speaker that Machines → Nearby saved (Cast devices) — use it when the person asks to '
+  description: 'Show a page on a TV or say a sentence on a speaker that Machines → Nearby saved (Cast devices; DLNA ones say and play, they show no page) — use it when the person asks to '
     + 'put something on a TV or say something in a room ("say dinner is ready in the kitchen"). list: the TVs and speakers by place and room; '
     + 'show: a page on a TV; say: a sentence in the person\'s voice; story: a longer text, a tone tag before each part; stop; volume (0–1). Only when the person asked for it: asked true.',
   parameters: {

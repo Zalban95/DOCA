@@ -79,7 +79,7 @@ test('every castable page draws through a view link, locked, with no script erro
       // Up to a minute: under a full run's load, or on Windows CI, the panel's boot took past thirty seconds ('live: / ').
       for (let i = 0; i < 200 && !/cast-view|face/.test(where); i++) {
         await headless.sleep(300);
-        where = (await cdp.send('Runtime.evaluate', { expression: "location.pathname + ' ' + document.body.className", returnByValue: true })).result.value || '';
+        where = (await cdp.send('Runtime.evaluate', { expression: "location.pathname + ' ' + document.body.className + ' | ' + location.search + ' | ' + document.title + ' | ' + document.readyState", returnByValue: true })).result.value || '';
       }
       await headless.sleep(1500);
       assert.match(where, page === 'face' ? /\/face/ : /cast-view/, `${page}: ${where}`);
