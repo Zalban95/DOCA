@@ -245,6 +245,7 @@ function mount(app) {
   app.get ('/api/auth/host-check', (_req, res) => res.json({ ok: true }));
   app.post('/api/auth/password', handlePassword);
   app.post('/api/auth/step-up',  handleStepUp);
+  require('./unlock').mount(app);   // one password for a while (unlock.js)
   app.get   ('/api/auth/sessions', handleSessions);
   app.delete('/api/auth/sessions', handleSessions);
 }

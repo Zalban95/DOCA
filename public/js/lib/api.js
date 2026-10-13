@@ -35,22 +35,41 @@ function _renewSignIn(why) {
 }
 
 /**
- * An important or safety switch asks for the password for that one change (modules/auth/guarded.js; CONSTITUTION
- * S14): asked here, sent with the request again, kept nowhere. Resolves the answer, or null when the person cancels.
+ * An important or safety switch asks for the password (modules/auth/guarded.js; CONSTITUTION S14): asked here, sent
+ * with the request again, kept nowhere in the page. One question at a time — requests that hit a switch while it is
+ * asked wait for it and go through the window it opened (one click's chain, auth/unlock.js) — and the question offers
+ * "Keep it unlocked for" a few minutes (lib/unlock.js draws "Unlocked until"). Resolves the answer, or null on Cancel.
  */
+let _switchAsking = null;
 async function _confirmSwitch(input, init, d) {
-  let ask = `${d.error || 'This switch asks for your password.'} Your password:`;
-  for (;;) {
-    const password = await new Promise(resolve => appPrompt(ask, v => resolve(v || null), '', { secret: true, onCancel: () => resolve(null) }));
-    if (!password) return null;
-    const headers = new Headers(init?.headers || {});
-    headers.set('X-Doca-Password', password);
-    const res = await _rawFetch(input, { ...(init || {}), headers });
-    if (res.status !== 403 && res.status !== 429) return res;
-    const e = await res.clone().json().catch(() => ({}));
-    if (e.code !== 'bad_credentials' && e.code !== 'rate_limited') return res;
-    ask = `${e.error} Your password:`;
+  if (_switchAsking) {
+    const ok = await _switchAsking;
+    if (!ok) return null;
+    const again = await _rawFetch(input, init);   // the window the first answer opened lets it through
+    if (again.status !== 401) return again;
   }
+  let release;
+  _switchAsking = new Promise(r => { release = r; });
+  try {
+    let ask = `${d.error || 'This switch asks for your password.'} Your password:`;
+    for (;;) {
+      const [password, keep] = await new Promise(resolve => appPrompt(ask, (v, k) => resolve([v || null, k]), '',
+        { secret: true, onCancel: () => resolve([null]), choice: typeof unlockChoice === 'function' ? unlockChoice(d.unlockChoices) : null }));
+      if (!password) { release(false); return null; }
+      const headers = new Headers(init?.headers || {});
+      headers.set('X-Doca-Password', password);
+      headers.set('X-Doca-Unlock', keep && keep !== '0' ? keep : 'chain');
+      const res = await _rawFetch(input, { ...(init || {}), headers });
+      if (res.status !== 403 && res.status !== 429) {
+        release(res.status !== 401);   // the password was taken: the window is open, whatever this request answered
+        if (res.ok && keep && keep !== '0' && typeof unlockShow === 'function') unlockShow(res.headers.get('X-Doca-Unlocked-Until'));
+        return res;
+      }
+      const e = await res.clone().json().catch(() => ({}));
+      if (e.code !== 'bad_credentials' && e.code !== 'rate_limited') { release(false); return res; }
+      ask = `${e.error} Your password:`;
+    }
+  } finally { _switchAsking = null; }
 }
 
 /* The control a person just changed, and what it showed before (deep test A, 2026-10-08): a switch drawn on before

@@ -31,6 +31,19 @@ function appPrompt(message, onSubmit, defaultValue, opts = {}) {
   if (!modal) { const v = prompt(message, defaultValue || ''); if (v !== null) onSubmit(v); else opts.onCancel?.(); return; }
 
   msgEl.textContent = message;
+  // A choice under the box (the password question's "Keep it unlocked for", lib/unlock.js): made here, gone at cleanup.
+  modal.querySelector?.('.app-prompt-choice')?.remove();
+  let choice = null;
+  if (opts.choice) {
+    const row = Object.assign(document.createElement('label'), { className: 'app-prompt-choice desc' });
+    row.style.cssText = 'display:flex;gap:8px;align-items:center;margin-top:8px';
+    row.append(opts.choice.label);
+    choice = document.createElement('select');
+    choice.className = 'input';
+    for (const [v, l] of opts.choice.options) choice.add(new Option(l, v, false, String(v) === String(opts.choice.value)));
+    row.append(choice);
+    input.after(row);
+  }
   input.type  = opts.secret ? 'password' : 'text';
   input.value = defaultValue || '';
   modal.classList.add('open');
@@ -43,14 +56,16 @@ function appPrompt(message, onSubmit, defaultValue, opts = {}) {
     btnOk.onclick = null;
     btnCan.onclick = null;
     input.onkeydown = null;
+    modal.querySelector?.('.app-prompt-choice')?.remove();
     unEscape();
   };
 
   const submit = () => {
     const val = opts.secret ? input.value : input.value.trim();
     if (!val && !opts.allowEmpty) return;
+    const picked = choice?.value;
     cleanup();
-    onSubmit(val);
+    onSubmit(val, picked);
   };
 
   btnOk.onclick = submit;

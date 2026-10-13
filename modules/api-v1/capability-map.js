@@ -172,7 +172,7 @@ const PERSON = [
     only: 'who reports to whom is people and levels: an admin\'s, or a team leader\'s for their own people, at the panel' },
 
   // ── A person's account ──
-  { id: 'sign-in', does: 'sign in, out, or change my password', panel: ['POST /api/auth/login', 'POST /api/auth/logout', 'POST /api/auth/setup', 'POST /api/auth/step-up', 'POST /api/auth/password', 'DELETE /api/auth/sessions'],
+  { id: 'sign-in', does: 'sign in, out, or change my password', panel: ['POST /api/auth/login', 'POST /api/auth/logout', 'POST /api/auth/setup', 'POST /api/auth/step-up', 'POST /api/auth/password', 'DELETE /api/auth/sessions', 'DELETE /api/auth/unlock'],
     only: 'a person signing in to the panel; a device pairs instead (/devices)' },
   { id: 'grants', does: 'give or take back an exception (a grant)', panel: ['POST /api/auth/grants', 'DELETE /api/auth/grants/:id'],
     gap: 17, ask: true, why: 'an exception given from a phone; delegating is S11\'s, so the owner decides first' },
