@@ -133,6 +133,7 @@ function mount(app) {
   app.post  ('/api/mcp',             handleUpsert);
   app.post  ('/api/mcp/export',      handleExport);
   app.get   ('/api/mcp/catalog',     wrap(async (_req, res) => res.json({ servers: require('./catalog').list() })));   // servers the panel knows how to add
+  app.get   ('/api/mcp/software',    wrap(async (req, res) => res.json({ jobs: require('./software').jobs(), job: req.query.job || null, choices: require('./software').forJob(String(req.query.job || '')) })));   // software for a job, open or proprietary, side by side (software.js)
   app.post  ('/api/mcp/catalog/:id/install', wrap(async (req, res) => res.json({ ok: true, installed: await require('./craft-install').install(req.params.id) })));   // a suggested app's release, checked (craft-install.js)
   app.post  ('/api/mcp/catalog/:id', wrap(async (req, res) => res.json({ ok: true, server: await require('./catalog').add(req.params.id) })));
   // Servers the agent prepared for a person to add (drafts.js): listed and dismissed, never applied here.

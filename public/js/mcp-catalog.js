@@ -8,6 +8,7 @@
 async function mcpCatalogRender() {
   const list = document.getElementById('mcp-list');
   if (!list) return;
+  if (typeof mcpSoftwareRender === 'function') mcpSoftwareRender();   // software for a job (mcp-software.js)
   let servers = [];
   try { servers = (await apiFetch('/api/mcp/catalog')).servers || []; } catch { return; }
   const fresh = servers.filter(s => !s.added);

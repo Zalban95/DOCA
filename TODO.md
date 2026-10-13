@@ -44,8 +44,8 @@ Every request of that conversation, with what shipped and what is left. `ask` ma
 first (an `/api/v1` contract, a guard); everything else goes ahead in the order of the plan below.
 
 - [x] R1 The Live call's circle above, beside or centred under the chat button (3.52.0).
-- [x] R2 Craft App Suite suggested, installed checked against its sums (3.51.0). [ ] R2b the "not affiliated with the
-  Craft App Suite's authors" line — **waits for the owner's yes**.
+- [x] R2 Craft App Suite suggested, installed checked against its sums (3.51.0). [x] R2b no disclaimer: software for a job,
+  open or proprietary side by side, marked, Connect / Install / Download (owner's answer 2026-10-13; mcp/software.js).
 - [~] R3 **Cast to the things Nearby saved** (docs/design/cast-reach.md). *3.56.0–3.57.0: the Cast v2 sender, the cast
   door (owner's switch, password), one-time sounds through the door only, a TV shows a page (DashCast), a speaker says
   a sentence in the person's Quick call voice, Stop, volume; the Cast sheet's "Around you" by place and room; the
