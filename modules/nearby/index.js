@@ -25,10 +25,10 @@ const scan = require('./scan');
 const store = require('./store');
 
 function view(person = null) {
-  let lookers = [];
-  try { lookers = require('./lookers').list(person); } catch { /* no registry yet */ }
+  let lookers = [], lookersWaiting = [];
+  try { lookers = require('./lookers').list(person); lookersWaiting = require('./lookers').waiting(person); } catch { /* no registry yet */ }
   return { sources: scan.sources(), seen: store.seen(), saved: store.saved(), places: store.places(), lastScan: store.lastScan(), scanning: scan.scanning(),
-    everyMin: require('../settings-schema').value('nearby.everyMin'), platform: process.platform, lookers };
+    everyMin: require('../settings-schema').value('nearby.everyMin'), platform: process.platform, lookers, lookersWaiting };
 }
 
 /** Whether there is anything for the agent: a source on, or something seen or saved. */

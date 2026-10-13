@@ -101,3 +101,16 @@ test('a client\'s nearby and cast answers are kept, and can be withdrawn from th
   assert.ok(s.usable.includes('nearby') && s.usable.includes('cast'), JSON.stringify(s));
   assert.ok(dc.FAMILIES.includes('nearby') && dc.FAMILIES.includes('cast'), 'askable and revocable by name');
 });
+
+test('a device of yours that knows Nearby but has not allowed it is listed with why, and can be asked', t => {
+  const d = devices(), dc = require('../modules/devices-control');
+  const list = d.list;
+  d.list = () => [...list(), { id: 'd_phone', name: 'Phone', userId: H.owner.user.id }, { id: 'd_old', name: 'Old phone', userId: H.owner.user.id },
+    { id: 'd_other', name: 'Their phone', userId: 'someone-else' }];
+  t.after(() => { d.list = list; });
+  dc.reportGrants('d_phone', { files: true, nearby: false, cast: false });   // DocaMobile 1.7.0 before its person said yes
+  dc.reportGrants('d_old', { files: true });                                 // an app that predates the family: not listed
+  dc.reportGrants('d_other', { nearby: false });
+  const w = require('../modules/nearby/lookers').waiting({ id: H.owner.user.id });
+  assert.deepEqual(w, [{ deviceId: 'd_phone', label: 'Phone', why: 'not allowed on the device yet', askable: true }]);
+});

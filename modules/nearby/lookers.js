@@ -32,6 +32,24 @@ function clients(person) {
     .map(({ s, d }) => ({ id: s.id, deviceId: d.id, label: d.name }));
 }
 
+/**
+ * The person's devices that know the nearby family but cannot look now, each with why — so the panel says why a phone
+ * is missing from "Look from" instead of leaving it out (2026-10-14: DocaMobile 1.7.0 reported nearby off, and the
+ * phone simply was not there). `askable` when the person has not said yes on the device: the panel can ask it there.
+ */
+function waiting(person) {
+  const control = require('../devices-control');
+  const lending = new Set(clients(person).map(c => c.deviceId));
+  return require('../api-v1/devices').list()
+    .filter(d => !d.revokedAt && !lending.has(d.id) && (!person?.id || d.userId === person.id))
+    .map(d => ({ d, s: control.state(d.id) }))
+    .filter(({ s }) => Object.prototype.hasOwnProperty.call(s.grants || {}, 'nearby'))   // a client that knows the family
+    .map(({ d, s }) => {
+      const why = s.revoked.includes('nearby') ? 'taken back in Devices' : s.grants.nearby !== true ? 'not allowed on the device yet' : 'not connected now';
+      return { deviceId: d.id, label: d.name, why, askable: s.grants.nearby !== true && !s.revoked.includes('nearby') };
+    });
+}
+
 /** The choices for "Look from": the hub first, then the person's clients. */
 function list(person) {
   return [{ id: 'hub', label: `This hub (${require('os').hostname()})`, kind: 'hub' }, ...clients(person).map(c => ({ ...c, kind: 'client' }))];
@@ -50,4 +68,4 @@ async function fromClient(serverId, person, only = null) {
   return { things, network: r.network || null, why: r.why || {}, sources: r.sources || [], by: c.deviceId, label: c.label, sameNetwork: same };
 }
 
-module.exports = { list, clients, fromClient, hubNetwork };
+module.exports = { list, clients, waiting, fromClient, hubNetwork };
