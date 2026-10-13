@@ -51,7 +51,7 @@ module.exports = [
   row('nearby', 'switch on what Nearby looks with, scan, save things by place and room, and pair a Bluetooth device', ['POST /api/machines/nearby/*', 'PUT /api/machines/nearby/saved/:id', 'DELETE /api/machines/nearby/saved/:id', 'DELETE /api/machines/nearby/seen/:id'],
     { only: 'what this machine sees on its own network and radio, and pairing with its own adapter: a host\'s, at the panel; the agent reads it with the nearby tool' }),
   row('services-settings', 'set up inference services, and when they stop and start by themselves', ['POST /api/services/settings', 'POST /api/services/life', 'POST /api/services/life/:kind/:id', 'POST /api/services/life/:kind/:id/adopt']),
-  row('system-tools', 'install what this machine needs', ['POST /api/system/tools/install', 'POST /api/setup/scripts/:name']),
+  row('system-tools', 'install what this machine needs, and restart what runs as a service', ['POST /api/system/tools/install', 'POST /api/system/tools/restart', 'POST /api/setup/scripts/:name']),
   row('snapshots', 'restore a snapshot and set where they go', ['POST /api/snapshots/restore', 'POST /api/snapshots/settings']),
   row('skills', 'install and remove skills', ['POST /api/skills/install', 'DELETE /api/skills/:name']),
   row('models', 'download, delete and configure models, and tell Ollama where they live', ['POST /api/models/*', 'DELETE /api/models/llamacpp/:id']),

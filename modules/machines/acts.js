@@ -17,7 +17,7 @@
 const VERB = { start: 'started', stop: 'stopped', restart: 'restarted', reboot: 'rebooted', kill: 'cut the power to', resume: 'resumed',
   remove: 'removed', rm: 'removed', delete: 'deleted', create: 'made', run: 'ran', adopt: 'adopted', archive: 'put away', restore: 'brought back',
   add: 'added', update: 'updated', 'take-over': 'took over', pause: 'paused', unpause: 'resumed' };
-const LABEL = { container: 'the container', service: 'the inference service', llamacpp: 'the llama.cpp server', vm: 'the VM',
+const LABEL = { tool: 'the program', container: 'the container', service: 'the inference service', llamacpp: 'the llama.cpp server', vm: 'the VM',
   computer: 'the computer', vnc: 'the VNC screen', stack: '', mcp: 'the MCP server' };
 
 const stackId = () => require('./use').stackProject();
@@ -74,6 +74,7 @@ const ROUTES = [
   ['POST', /^\/api\/stack\/update$/, () => ({ kind: 'stack', id: stackId(), act: 'update' })],
   ['POST', /^\/api\/docker\/containers\/([^/]+)\/action$/, (r, m) => ({ kind: 'container', id: decodeURIComponent(m[1]), act: r.body?.action, container: true })],
   ['POST', /^\/api\/docker\/run$/, r => (r.body?.name ? { kind: 'container', id: String(r.body.name), act: 'run' } : null)],
+  ['POST', /^\/api\/system\/tools\/restart$/, r => r.body?.id && { kind: 'tool', id: String(r.body.id), act: 'restart' }],
   ['POST', /^\/api\/services\/(start|stop)$/, (r, m) => r.body?.id && { kind: 'service', id: String(r.body.id), act: m[1] }],
   ['POST', /^\/api\/models\/llamacpp\/(start|stop|restart)$/, (r, m) => r.body?.id && { kind: 'llamacpp', id: String(r.body.id), act: m[1] }],
   ['DELETE', /^\/api\/models\/llamacpp\/([^/]+)$/, (r, m) => ({ kind: 'llamacpp', id: decodeURIComponent(m[1]), act: 'delete' })],

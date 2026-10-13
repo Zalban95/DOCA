@@ -119,7 +119,9 @@ const SYSTEM_TOOLS = [
     detect: { any: [{ bin: 'docker', args: ['--version'] }, { bin: 'podman', args: ['--version'] }] },
     note: 'Runs the inference services (Whisper, Kokoro, ComfyUI…) and the agents\' computers. Podman works in its place.',
     repo: 'https://docs.docker.com/engine/install/', repoLabel: 'docs.docker.com',
-    install: { linux: 'curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker "$USER" && echo "Sign out and in again to use docker without sudo."', darwin: brew('docker', true), win32: winget('Docker.DockerDesktop') }, needsSudo: true },
+    install: { linux: 'curl -fsSL https://get.docker.com | sh && sudo usermod -aG docker "$USER" && echo "Sign out and in again to use docker without sudo."', darwin: brew('docker', true), win32: winget('Docker.DockerDesktop') }, needsSudo: true,
+    restart: { linux: 'sudo systemctl restart docker' },
+    restartNote: 'Every container stops while Docker restarts — the services, the agents\' computers, Home Assistant if it runs here — and those set to restart come back on their own.' },
   { id: 'docker-compose', label: 'Docker Compose', category: 'recommended', for: 'compose stacks',
     detect: { any: [{ bin: 'docker', args: ['compose', 'version'] }, { bin: 'podman', args: ['compose', 'version'] }] },
     note: 'Compose v2 — for stacks such as OpenClaw\'s. Docker Desktop includes it.',
@@ -151,7 +153,9 @@ const SYSTEM_TOOLS = [
   { id: 'ollama', label: 'Ollama', category: 'optional', for: 'local models',
     detect: { bin: 'ollama', args: ['--version'] }, note: 'Runs language and vision models on this machine — the Models tab\'s Ollama, and the default for local embeddings.',
     repo: 'https://ollama.com/download', repoLabel: 'ollama.com',
-    install: { linux: `curl -fsSL https://ollama.com/install.sh | sh && ${OLLAMA_MLX_REFRESH}`, darwin: brew('ollama'), win32: winget('Ollama.Ollama') }, needsSudo: true },
+    install: { linux: `curl -fsSL https://ollama.com/install.sh | sh && ${OLLAMA_MLX_REFRESH}`, darwin: brew('ollama'), win32: winget('Ollama.Ollama') }, needsSudo: true,
+    restart: { linux: 'sudo systemctl restart ollama', darwin: 'brew services restart ollama' },
+    restartNote: 'Models it holds are unloaded and a request it is answering is cut; it loads them again when asked.' },
   { id: 'ollama-mlx', label: 'Ollama\'s MLX runtime', category: 'optional', for: 'EmbeddingGemma 2 and other MLX models on an NVIDIA card (Linux)',
     detect: { any: OLLAMA_LIBS.map(dir => ({ file: path.join(dir, 'mlx_cuda_v13', 'libmlx.so') })) },
     note: 'Ollama\'s installer leaves it out: models such as EmbeddingGemma 2 (the Library\'s) answer "requires MLX support" without it. About 1.3 GB, beside Ollama in /usr/local; installing Ollama again here refreshes it. A Mac\'s Ollama has MLX already.',
@@ -255,4 +259,7 @@ function versionOf(t, line) {
   return m ? m[1] : line.slice(0, 40);
 }
 
-module.exports = { SYSTEM_TOOLS, installFor, versionOf };
+/** A row's restart command on this OS (a program that runs as a service), or null. */
+const restartFor = t => (t.restart && t.restart[process.platform]) || null;
+
+module.exports = { SYSTEM_TOOLS, installFor, versionOf, restartFor };

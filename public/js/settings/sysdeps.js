@@ -54,6 +54,7 @@ function _sysdepsRender(tools) {
       installing:     _sysdepsInstalling === t.id,
       installOnclick: `sysdepsInstall('${t.id}')`,
       updateOnclick:  t.canUpdate ? `sysdepsUpdate('${t.id}')` : '',
+      restartOnclick: t.restartCmd ? `sysdepsRestart('${t.id}')` : '',
       repo:           t.repo,
       repoLabel:      t.repoLabel,
     })).join('');
@@ -81,6 +82,18 @@ function sysdepsUpdate(id) {
   );
 }
 
+/** Restart a program that runs as a service (Ollama, Docker): asked first with what it cuts, then the machine's
+ *  password where its command needs it; only the row's own command runs (system-tools.js handleRestart). */
+function sysdepsRestart(id) {
+  const tool = _sysdepsTools.find(t => t.id === id);
+  if (!tool?.restartCmd) return;
+  appConfirm(`Restart ${tool.label}? ${tool.restartNote || ''}`.trim(), () => {
+    const go = pw => _sysdepsRunInstall(id, pw, 'Restarting', '/api/system/tools/restart');
+    if (tool.restartCmd.includes('sudo ')) sudoAsk(`Restarting "${tool.label}" requires elevated privileges.`, pw => { if (pw !== null) go(pw); });
+    else go(null);
+  });
+}
+
 function _sysdepsStart(id, verb) {
   const tool = _sysdepsTools.find(t => t.id === id);
   const needsSudo = tool && (tool.needsSudo || (typeof tool.installCmd === 'string' && tool.installCmd.includes('sudo ')));
@@ -95,7 +108,7 @@ function _sysdepsStart(id, verb) {
   }
 }
 
-async function _sysdepsRunInstall(id, password, verb = 'Installing') {
+async function _sysdepsRunInstall(id, password, verb = 'Installing', url = '/api/system/tools/install') {
   _sysdepsInstalling = id;
   // Re-render with installing flag using cached tools list
   if (_sysdepsTools.length) _sysdepsRender(_sysdepsTools);
@@ -106,7 +119,7 @@ async function _sysdepsRunInstall(id, password, verb = 'Installing') {
   const body = { id };
   if (password !== null && password !== undefined) body.password = password;
 
-  await sseStream('/api/system/tools/install', body, {
+  await sseStream(url, body, {
     onStatus: text => appendStream(out, text),
     onDone: () => {
       _sysdepsInstalling = null;

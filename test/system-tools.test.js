@@ -68,3 +68,15 @@ test('a machine without a C++ toolchain still installs: node-pty is optional, an
   const row = SYSTEM_TOOLS.find(t => t.id === 'node-pty');
   assert.ok(!/npm install node-pty/.test(installFor(row, 'linux')), 'installed with --no-save, so package.json is left alone');
 });
+
+test('restart: only a row\'s own command, only for what runs as a service, only a host (2026-10-13)', async () => {
+  await H.start();
+  const { restartFor, SYSTEM_TOOLS } = require('../modules/system-tools-catalog');
+  const row = id => SYSTEM_TOOLS.find(t => t.id === id);
+  if (process.platform === 'linux') assert.equal(restartFor(row('ollama')), 'sudo systemctl restart ollama');
+  assert.equal(restartFor(row('git')), null, 'a program that is not a service has none');
+  assert.equal((await H.api(null, 'POST', '/api/system/tools/restart', { id: 'git' })).status, 400);
+  assert.equal((await H.api(null, 'POST', '/api/system/tools/restart', { id: 'nope; reboot' })).status, 400, 'an id names a row, never a command');
+  const member = await H.signIn('member');
+  assert.equal((await H.api(null, 'POST', '/api/system/tools/restart', { id: 'ollama' }, { Cookie: member.cookie })).status, 403);
+});

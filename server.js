@@ -268,8 +268,7 @@ app.post('/api/models/hf/download', modelsHf.handleDownload);
 app.post('/api/models/hf/delete',   modelsHf.handleDelete);
 
 // ─── Routes: System Tools ─────────────────────────────────────────────────────
-app.get ('/api/system/tools',         systemTools.handleList);
-app.post('/api/system/tools/install', systemTools.handleInstall);
+systemTools.mount(app);   // /api/system/tools, …/install, …/restart
 
 // ─── Routes: Update ──────────────────────────────────────────────────────────
 update.mount(app);   // update, restart, /api/versions, /api/backups
