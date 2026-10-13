@@ -90,7 +90,7 @@ function _meetHeard(c) {
     case 'media': if (p) p.media = c.media; break;
     case 'shared': if (p) p.sharing = c.sharing; if (c.peer === MEET.me && !c.sharing && MEET.screen) meetShareStop(true); break;
     case 'said': MEET.chat.push(c.line); break;
-    case 'notes': case 'notes-line': if (typeof meetNotesHeard === 'function') meetNotesHeard(c); return;   // meet/notes.js
+    case 'notes': case 'notes-line': case 'notes-answer': if (typeof meetNotesHeard === 'function') meetNotesHeard(c); return;   // meet/notes.js
     case 'closed': { const why = c.why; _meetReset(); appAlert(`The meeting ended: ${why}.`); return; }
     default: if (typeof meetShareHeard === 'function') meetShareHeard(c); return;
   }

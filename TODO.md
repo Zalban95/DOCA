@@ -99,11 +99,14 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
   and Show all; a file inside a project asks Files or the project; a declared setting reads as words.* **Panel search in sections** — Settings, Files, Repos, pages… each a fold inside the search's dropdown; a
   result opens where it lives, or asks which when several places fit. *3.57.0 did the groundwork: every declared
   setting is a search row with its page.*
-- [~] R6 Meetings: [x] chat inside a meeting (3.17.0, the meeting room's chat); [~] **meeting notes like Google AI Edge
+- [x] R6 Meetings: [x] chat inside a meeting (3.17.0, the meeting room's chat); [x] **meeting notes like Google AI Edge
   Foresight** — *3.70.0: consent asked of everyone (a Not me is final), each consenting page's own microphone to the
   hub's speech-to-text, a notes page, Write it up by the person's model, the record kept as markdown for the meeting's
-  people (meetings/notes.js, meet/notes.js). Left: live answers to a spoken question, the record in the Library and
-  recall.* [x] a parity roadmap against Teams and its competitors (docs/design/parity.md, merged in 3.70.0).
+  people (meetings/notes.js, meet/notes.js). 3.71.0: a question said aloud answered on the asker's page alone, from the
+  Library and their earlier meetings' notes (notes-answers.js); a past meeting's 📝 Notes in Meetings. The agent's
+  recall_conversations finds and reads the notes of the person's meetings. Not done on purpose: indexing records in the
+  Library — its folders are searched by every admin (or everyone, when opened), and a meeting's notes are its people's
+  alone; questions, Meetings → 📝 Notes and recall find them, each checked against the meeting's people.* [x] a parity roadmap against Teams and its competitors (docs/design/parity.md, merged in 3.70.0).
 - [~] R7 **Every feature since 3.0.0 with proof of testing** (loop; `~/doca-tools/v3-proof.md`). *Proven: signed
   updates end to end, the Library live. Found and fixed on the way: three keys files a power cut could empty.* The rest
   in the loop.
