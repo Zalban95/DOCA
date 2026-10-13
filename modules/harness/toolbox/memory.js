@@ -197,7 +197,7 @@ module.exports = [
       + 'refers to something discussed before ("like last time", "the Blender bridge we fixed"), or when a task '
       + 'looks like one solved in another conversation — before redoing the work. search matches titles, the '
       + 'topics and rolling summary of every conversation (archived ones too) and the words in the recent '
-      + 'transcripts; read gives one conversation\'s summary and its last messages. What you learn there that '
+      + 'transcripts, and the notes kept of the person\'s meetings; read gives one conversation\'s summary and last messages, or a meeting\'s notes. What you learn there that '
       + 'will matter again belongs in memory_write.',
     parameters: {
       type: 'object',
@@ -210,6 +210,12 @@ module.exports = [
     },
     run: async ({ action = 'search', query, id, limit }, ctx = {}) => {
       const recall = require('../recall');
+      // A meeting's kept notes (meetings/notes.js), for one of its own people (a meeting id: m + 12 hex).
+      if (action === 'read' && /^m[0-9a-f]{12}$/.test(String(id || ''))) {
+        if (!ctx.user?.id) return 'Error: a meeting\'s notes are read for one of its people.';
+        try { await require('../../meetings').reachable(String(id), { id: ctx.user.id, role: ctx.user.role, orgId: ctx.user.orgId }); } catch { return `Error: no meeting ${id} of this person's.`; }
+        return clip(require('../../meetings/notes').readRecord(String(id)) || `No notes were kept for meeting ${id}.`);
+      }
       if (action === 'read') {
         const c = recall.read(String(id || ''), { person: ctx.user });
         return clip([`# ${c.title} (${c.id}, ${c.kind}, last active ${c.updatedAt})`,
@@ -220,12 +226,15 @@ module.exports = [
       if (!recall.terms(query).length) return 'Error: say what to look for in query.';
       const opts = { limit: Math.min(12, Math.max(1, Number(limit) || 6)), exclude: ctx.sessionId, person: ctx.user };
       const { hits, note } = require('../../retrieval').on() ? await require('../../retrieval/sources').conversations(query, opts) : { hits: recall.search(query, opts), note: null };
-      if (!hits.length) return `No earlier conversation mentions "${query}".${note ? ` ${note}` : ''}`;
+      // And the notes kept of the person's meetings (meetings/notes-answers.js): lines holding the query's words.
+      const met = ctx.user?.id ? await require('../../meetings/notes-answers').fromMeetings({ id: ctx.user.id }, query, null).catch(() => []) : [];
+      const metText = met.length ? `\n\nMeetings' notes:\n${met.map(x => `- ${x.title} — id ${x.meeting}: ${x.text}`).join('\n')}\n(read one with action read and its id)` : '';
+      if (!hits.length) return met.length ? metText.trim() : `No earlier conversation mentions "${query}".${note ? ` ${note}` : ''}`;
       return clip(hits.map(h => [`- ${h.title} — id ${h.id}, ${h.kind}${h.archived ? ', archived' : ''}, last active ${h.updatedAt}`,
         h.topics.length ? `  topics: ${h.topics.join(', ')}` : '',
         h.summary ? `  summary: ${h.summary}` : '',
         ...h.matches.map(m => `  ${m.role} said: ${m.text}`)].filter(Boolean).join('\n')).join('\n')
-        + `\n\nread one with action read and its id.${note ? `\n${note}` : ''}`);
+        + `\n\nread one with action read and its id.${note ? `\n${note}` : ''}` + metText);
     },
   },
 ];

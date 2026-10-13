@@ -103,8 +103,8 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
   Foresight** — *3.70.0: consent asked of everyone (a Not me is final), each consenting page's own microphone to the
   hub's speech-to-text, a notes page, Write it up by the person's model, the record kept as markdown for the meeting's
   people (meetings/notes.js, meet/notes.js). 3.71.0: a question said aloud answered on the asker's page alone, from the
-  Library and their earlier meetings' notes (notes-answers.js); a past meeting's 📝 Notes in Meetings. Left: the record
-  indexed by the Library and the agent's recall of meetings.* [x] a parity roadmap against Teams and its competitors (docs/design/parity.md, merged in 3.70.0).
+  Library and their earlier meetings' notes (notes-answers.js); a past meeting's 📝 Notes in Meetings. The agent's
+  recall_conversations finds and reads the notes of the person's meetings. Left: the record indexed by the Library.* [x] a parity roadmap against Teams and its competitors (docs/design/parity.md, merged in 3.70.0).
 - [~] R7 **Every feature since 3.0.0 with proof of testing** (loop; `~/doca-tools/v3-proof.md`). *Proven: signed
   updates end to end, the Library live. Found and fixed on the way: three keys files a power cut could empty.* The rest
   in the loop.

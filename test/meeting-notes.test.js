@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 const H = require('./helpers');
 
-let alice, bob, eve, stt, sttHeard = 0, sttText = 'We move the launch to the thirtieth.';
+let alice, bob, eve, firstMeeting, stt, sttHeard = 0, sttText = 'We move the launch to the thirtieth.';
 async function page(who) {
   const ctrl = new AbortController();
   const res = await fetch(`${H.base}/api/live/stream`, { headers: { Cookie: who.cookie }, signal: ctrl.signal });
@@ -35,6 +35,7 @@ test.after(async () => { stt.close(); await H.stop(); });
 
 test('asked of everyone; only a yes is transcribed; written up; the record kept for the meeting\'s people', async () => {
   const m = (await as(alice, 'POST', '/api/meetings', { now: true, people: [bob.user.id], title: 'Launch sync' })).body.meeting;
+  firstMeeting = m.id;
   const pa = await page(alice), pb = await page(bob);
   await as(alice, 'POST', `/api/meetings/${m.id}/join`, { screen: pa.screen });
   await as(bob, 'POST', `/api/meetings/${m.id}/join`, { screen: pb.screen });
@@ -105,4 +106,14 @@ test('a question said aloud is answered on the asker\'s page alone, from their e
   const q = require('../modules/meetings/notes-answers');
   assert.ok(q.isQuestion('Dove facciamo la cena?') && q.isQuestion('Wann ist der Termin') && !q.isQuestion('We move the launch.'));
   pa.close(); pb.close();
+});
+
+test('the agent\'s recall finds and reads the notes of the person\'s meetings, and no one else\'s', async () => {
+  const tools = require('../modules/harness/tools');
+  const found = await tools.call('recall_conversations', { query: 'launch thirtieth' }, [], { user: { id: alice.user.id, role: 'member' } });
+  assert.match(found, /Meetings' notes:[\s\S]*Launch sync — id m[0-9a-f]{12}/);
+  const read = await tools.call('recall_conversations', { action: 'read', id: firstMeeting }, [], { user: { id: alice.user.id, role: 'member' } });
+  assert.match(read, /# Launch sync — notes/);
+  const eveRead = await tools.call('recall_conversations', { action: 'read', id: firstMeeting }, [], { user: { id: eve.user.id, role: 'member' } });
+  assert.match(eveRead, /no meeting .* of this person's/);
 });
