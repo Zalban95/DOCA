@@ -32,14 +32,14 @@ module.exports = [{
   name: 'cast',
   description: 'Show a page on a TV or say a sentence on a speaker that Machines → Nearby saved (Cast devices) — use it when the person asks to '
     + 'put something on a TV or say something in a room ("say dinner is ready in the kitchen"). list: the TVs and speakers by place and room; '
-    + 'show: a page on a TV; say: a sentence in the person\'s voice; stop; volume (0–1). Only when the person asked for it: asked true.',
+    + 'show: a page on a TV; say: a sentence in the person\'s voice; story: a longer text, a tone tag before each part; stop; volume (0–1). Only when the person asked for it: asked true.',
   parameters: {
     type: 'object',
     properties: {
-      action: { type: 'string', enum: ['list', 'show', 'say', 'stop', 'volume'] },
+      action: { type: 'string', enum: ['list', 'show', 'say', 'story', 'stop', 'volume'] },
       thing: { type: 'string', description: 'show, say, stop, volume: the thing\'s name, its room, or its id from list.' },
       page: { type: 'string', description: 'show: live, workstream, ambient, home, computers, chronicle or face.' },
-      text: { type: 'string', description: 'say: the sentence, as it should be heard. An expressive voice speaks tone tags in it — [whispers] [laughs] [sighs] [excited] [calm] [sad] [curious] [serious] — when the person asks for a tone; list says whether theirs does.' },
+      text: { type: 'string', description: 'say: the sentence, as it should be heard; story: up to 4000 characters, each part after its tone tag ("[calm] Once upon a time… [whispers] Quiet now…"). An expressive voice speaks tone tags in it — [whispers] [laughs] [sighs] [excited] [calm] [sad] [curious] [serious] — when the person asks for a tone; list says whether theirs does.' },
       level: { type: 'number', description: 'volume: 0 to 1.' },
       asked: { type: 'boolean', description: 'true only when the person asked for exactly this on this turn.' },
     },
@@ -69,6 +69,7 @@ module.exports = [{
         return `${t.name} shows ${page || 'live'} in a few seconds. Say so in one line.`;
       }
       if (action === 'say') { await things.say(who, t.id, text); return `Said on ${t.name}. Confirm in a few words.`; }
+      if (action === 'story') { await things.say(who, t.id, text, { story: true }); return `Told on ${t.name}. Confirm in a few words.`; }
       if (action === 'stop') { await things.stop(who, t.id); return `Stopped what played on ${t.name}.`; }
       if (action === 'volume') {
         const v = Math.max(0, Math.min(1, Number(level)));
@@ -77,6 +78,6 @@ module.exports = [{
         return `${t.name}'s volume is ${Math.round(v * 100)}%.`;
       }
     } catch (e) { return bad(e.message); }
-    return bad('action is list, show, say, stop or volume.');
+    return bad('action is list, show, say, story, stop or volume.');
   },
 }];

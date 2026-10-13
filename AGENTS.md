@@ -1305,6 +1305,7 @@ The harness gives its agent eight rules for working on any repository (charter r
   split across chunks included) and never kept (the stored row and the chat history are stripped when the turn was
   spoken). The device call pipeline speaks them through its Quick call voice and shows the words, and the device's
   turn is told of them when that voice takes them (above).
+- **Tones on a speaker, and a story** (R3h, 2026-10-13; `cast/speech.js` `tones`/`story`, `voice-tags.parts`, `public/js/cast-story.js`): when the person's Quick call voice takes tones, the Cast sheet's Say has a Tone select (the sentence goes with its tag) and Story… opens a longer text (up to 4000 characters) with tone buttons that put `[calm]`, `[whispers]`… at the cursor. A story is said part by part — each tag colours what follows it until the next — one speech request per part, the MP3s played as one sound; a voice without tones says it in one request, tags dropped. The agent's `cast {action: story}` is the same, asked like `say`.
 - **A voice that must be told the language is told it** (`modules/speech-language.js`): Qwen3-TTS left to guess
   spoke an Italian sentence Whisper heard as Spanish. The script, then the commonest small words; unsure sends nothing.
 - `test/expressive-voice.test.js` (stub speech servers; nothing starts a container).

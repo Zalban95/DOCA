@@ -3,20 +3,26 @@
    in this person's Quick call voice. Both go through the hub's cast door, the owner's switch: off, an admin is offered
    it here, anyone else is told who switches it on. */
 
+let _castTones = [];
+
 async function castThingsHtml() {
   let d;
   try { d = await apiFetch('/api/cast/things'); } catch { return ''; }
   if (!d.things.length) return `<div class="input-label">Around you</div>
     <p class="desc">No TV or speaker saved yet: Machines → Nearby finds them on this network (its Cast source), and Save keeps one with its place and room.</p>`;
   const door = castDoorHtml(d.door);
+  // The tone it is said in, when this person's voice takes tones (R3h; voice-tags.js): the sentence goes with its tag.
+  const tones = d.tones?.length ? `<select class="input cast-tone" aria-label="Tone" title="The tone it is said in">
+      <option value="">Tone</option>${d.tones.map(x => `<option value="${escHtml(x)}">${escHtml(x)}</option>`).join('')}</select>` : '';
+  _castTones = d.tones || [];
   const groups = {};
   for (const t of d.things) (groups[[t.place, t.room].filter(Boolean).join(' · ') || 'Elsewhere'] ||= []).push(t);
   const row = t => `<div class="cast-target cast-thing" data-thing="${escHtml(t.id)}"><div><b>${t.kind === 'speaker' ? '🔊' : '📺'} ${escHtml(t.name)}</b>
       <br><span class="desc">${escHtml([t.model, t.address].filter(Boolean).join(' · '))}</span>
-      ${t.shows ? '' : `<div class="cast-say"><input class="input" placeholder="Say something here…" aria-label="What ${escHtml(t.name)} says" onkeydown="if(event.key==='Enter')castThingSay('${escHtml(t.id)}', this)"></div>`}
+      ${t.shows ? '' : `<div class="cast-say">${tones}<input class="input" placeholder="Say something here…" aria-label="What ${escHtml(t.name)} says" onkeydown="if(event.key==='Enter')castThingSay('${escHtml(t.id)}', this)"></div>`}
       <span class="status-line"></span></div>
     <span class="cast-acts">${t.shows ? `<button class="btn btn-sm btn-teal" type="button" onclick="castThingShow('${escHtml(t.id)}', this)">Cast</button>`
-      : `<button class="btn btn-sm btn-teal" type="button" onclick="castThingSay('${escHtml(t.id)}', this)">Say</button>`}
+      : `<button class="btn btn-sm btn-teal" type="button" onclick="castThingSay('${escHtml(t.id)}', this)">Say</button><button class="btn btn-sm" type="button" title="A longer text, a tone for each part" onclick="castStoryOpen('${escHtml(t.id)}', ${jsArg(t.name)})">Story…</button>`}
       <button class="btn btn-sm" type="button" onclick="castThingStop('${escHtml(t.id)}', this)">Stop</button></span></div>`;
   return `<div class="input-label">Around you</div>${door}${Object.entries(groups).map(([g, list]) =>
     `<div class="cast-room">${escHtml(g)}</div>${list.map(row).join('')}`).join('')}`;
@@ -33,8 +39,10 @@ async function castThingShow(id, btn) {
 
 async function castThingSay(id, el) {
   const box = el.closest('.cast-thing'), input = box.querySelector('.cast-say input'), st = _castThingSay(el);
-  const text = input?.value.trim();
-  if (!text) { input?.focus(); return setStatus(st, 'Write what it says first.', ''); }
+  const words = input?.value.trim();
+  if (!words) { input?.focus(); return setStatus(st, 'Write what it says first.', ''); }
+  const tone = box.querySelector('.cast-tone')?.value;
+  const text = tone ? `[${tone}] ${words}` : words;
   setStatus(st, 'speaking…', '');
   try { await apiFetch(`/api/cast/things/${encodeURIComponent(id)}/say`, { method: 'POST', body: { text } }); input.value = ''; setStatus(st, '✓ said', 'ok'); }
   catch (e) {

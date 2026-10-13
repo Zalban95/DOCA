@@ -69,11 +69,13 @@ async function show(who, id, page) {
   return { ok: true, url, page };
 }
 
-async function say(who, id, text) {
+/** Say a sentence — or, with `story`, a longer text whose parts each carry their own tone (speech.js story). */
+async function say(who, id, text, { story = false } = {}) {
   const t = thing(who, id);
-  const words = String(text || '').trim().slice(0, 600);
+  const words = String(text || '').trim().slice(0, story ? 4000 : 600);
   if (!words) throw bad('Say what?');
-  const audio = await require('./speech').speak(words, personOf(who));
+  const speech = require('./speech');
+  const audio = story ? await speech.story(words, personOf(who)) : await speech.speak(words, personOf(who));
   const c = via(who, t);
   if (c) { const r = await require('./relay').say(c, t, audio, words.slice(0, 80)); note(who, t, `said a sentence on ${name(t)} through ${c.label}`, 'say'); return r; }
   const media = require('./media');

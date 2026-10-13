@@ -66,7 +66,7 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     (its own Wi-Fi, Bluetooth), and the client as the relay that serves the page or the sound to a thing on its network.
     Order: doca-client first (this repo, `clients/node`), then DocaMobile (its own repo), then DocaDesk. The `/api/v1`
     contracts (families `nearby` and `cast`, a `cast:send` scope; design §5.5, §6) — **approved by the owner 2026-10-13**.
-  - [ ] R3h **Tones to choose** (asked 2026-10-13, after the Kitchen speaker spoke): beside Say, a dropdown of the tone
+  - [x] R3h **Tones to choose** *(3.62.0: a Tone select beside Say and a Story… overlay in the Cast sheet, the cast tool's `story`; cast/speech.js story, voice-tags.parts)* (asked 2026-10-13, after the Kitchen speaker spoke): beside Say, a dropdown of the tone
     (calm, excited, whispers, sad…) when the voice takes tags; and, as a tool of its own, a **story mode** — a longer text
     with several tones marked through it, read on a speaker. *3.58.1: the agent is told the tags exist and whether the
     person's voice speaks them.*
