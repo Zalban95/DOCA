@@ -175,3 +175,14 @@ if (typeof document !== 'undefined' && typeof document.addEventListener === 'fun
     }).observe(document.body, { childList: true, subtree: true });
   });
 }
+
+/**
+ * A tooltip's text: its first line, at most `n` characters. A long one becomes a popup on a phone (a long press) that
+ * stays over every page until the system closes it (2026-10-14: a mission's whole errand); the full text has its own
+ * place (the log, the card).
+ */
+function tipText(s, n = 140) {
+  const line = String(s || '').split('\n').find(x => x.trim()) || '';
+  return line.length > n ? `${line.slice(0, n - 1).trimEnd()}…` : line;
+}
+

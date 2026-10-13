@@ -118,7 +118,7 @@ async function _hcLoadMissions() {
   else {
     bar.style.display = '';
     bar.innerHTML = teamRows + rows.map(m => `
-      <span class="hc-mission ${escHtml(m.state)}" title="${escHtml(m.task || '')}"
+      <span class="hc-mission ${escHtml(m.state)}" title="${escHtml(tipText(m.task))}"
             onmouseenter="hcMissionPeek(${jsArg(m.id)}, this)" onmouseleave="hcMissionPeekHide()">
         <span class="hc-mission-dot"></span>
         ${escHtml(m.label || m.agentId)}
