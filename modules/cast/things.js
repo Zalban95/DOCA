@@ -53,7 +53,7 @@ async function withDevice(t, fn) {
 async function show(who, id, page) {
   const t = thing(who, id);
   if (!require('./views').VIEWS[page]) throw bad(`A screen can be given ${Object.keys(require('./views').VIEWS).join(', ')}.`);
-  const link = require('./links').create({ page, name: `${name(t)} — ${require('./views').VIEWS[page].label}` }, who);
+  const link = require('./links').create({ page, name: `${name(t)} — ${require('./views').VIEWS[page].label}`, thing: t.id }, who);
   const origin = await require('./door').open(t.how.cast.ip, { page });
   const url = `${origin}${link.path}`;
   await withDevice(t, async s => {
@@ -89,6 +89,7 @@ async function stop(who, id) {
     for (const a of apps.filter(x => x.appId === APPS.dashcast || x.appId === APPS.media)) await s.stop(a.sessionId);
   });
   require('./door').release(t.how.cast.ip);
+  require('./links').forgetThing(t.id);   // the page it showed is signed out with it
   note(who, t, `stopped what played on ${name(t)}`, 'stop');
   return { ok: true };
 }
