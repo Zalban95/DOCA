@@ -31,6 +31,9 @@ function draft({ name, transport = 'stdio', command, args, url, env, headers, wh
   // A value for a setting that is not a secret is kept (a path, a port); a secret's value never is.
   const envVals = Object.fromEntries(Object.entries(env && !Array.isArray(env) && typeof env === 'object' ? env : {})
     .filter(([k, v]) => /^[\w.-]{1,60}$/.test(k) && !SECRET.test(k) && ['string', 'number'].includes(typeof v)).map(([k, v]) => [k, String(v).slice(0, 300)]));
+  // A secret's value is dropped by name above; one in an argument, the address or a plain-named value is refused (secret-scan.js).
+  require('../secret-scan').guard([{ name: 'args', text: (Array.isArray(args) ? args : [args]).map(a => String(a ?? '')).join('\n') },
+    { name: 'url', text: String(url || '') }, { name: 'env', text: Object.entries(envVals).map(([k, v]) => `${k}=${v}`).join('\n') }], 'The draft');
   const d = {
     id: `draft_${crypto.randomBytes(4).toString('hex')}`, name, transport,
     command: transport === 'stdio' ? String(command).trim().slice(0, 200) : '',

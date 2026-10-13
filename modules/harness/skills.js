@@ -124,6 +124,8 @@ function write(name, { description, body }) {
   if (!NAME.test(String(name || ''))) throw bad('A skill name is lower-case letters, digits and -, up to 64.');
   if (!String(description || '').trim()) throw bad('A skill needs a description: when to use it, in one line.');
   if (!String(body || '').trim()) throw bad('A skill needs its instructions.');
+  // A skill travels (packs, sharing): a key written into it would travel too (secret-scan.js).
+  require('../secret-scan').guardText(`${description}\n${body}`, `skill ${name}`, 'Saving the skill');
   const dir = path.join(local(), name);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'SKILL.md'), `---\nname: ${name}\ndescription: ${String(description).replace(/\n/g, ' ').trim()}\n---\n\n${String(body).trim().slice(0, MAX_BODY)}\n`);
@@ -143,12 +145,25 @@ function importDest(name) {
   return dest;
 }
 
+/** What looks like a key in a skill folder's text files (secret-scan.js), named relative to the folder. */
+function scanFolder(dir) {
+  const files = [];
+  const walk = (d, rel = '') => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+    const r = rel ? `${rel}/${e.name}` : e.name, abs = path.join(d, e.name);
+    if (e.isDirectory()) walk(abs, r); else if (fs.statSync(abs).size <= MAX_FILE * 5) files.push({ name: r, data: fs.readFileSync(abs) });
+  } };
+  walk(dir);
+  return require('../secret-scan').scanFiles(files);
+}
+
 function importFrom(folder, { overwrite = false } = {}) {
   const out = [];
   for (const s of readDir(folder, 'import')) {
     let dest;
     try { dest = importDest(s.name); } catch (e) { out.push({ name: s.name, skipped: e.message }); continue; }
     if (fs.existsSync(dest) && !overwrite) { out.push({ name: s.name, skipped: 'exists here' }); continue; }
+    const found = scanFolder(s.dir);
+    if (found.length) { out.push({ name: s.name, skipped: require('../secret-scan').sentence(found, 'Bringing it in') }); continue; }
     fs.cpSync(s.dir, dest, { recursive: true });
     out.push({ name: s.name, description: s.description });
   }
