@@ -265,7 +265,8 @@ function saveConfig(id, patch) {
 
 function setDefault(id) {
   if (!get(id)) throw Object.assign(new Error('Unknown harness'), { status: 404 });
-  if (require('./harness-life').isDisabled(id)) throw Object.assign(new Error(`${get(id).label} is switched off: switch it on first.`), { status: 409 });
+  if (require('./harness-life').isDisabled(id)) throw require('../switch-off').off(`${get(id).label} is switched off: switch it on first.`, {
+    what: get(id).label, route: `/api/harness/${encodeURIComponent(id)}/enabled`, body: { on: true }, page: 'controls', why: 'A harness switched off is kept but not offered or run; switched on, it can be the default again.' });
   saveHarnessPrefs({ default: id });
   return id;
 }

@@ -38,7 +38,8 @@ const media = it => !!(it.image || it.audio);
  * take. Throws with the provider's own words when it refuses.
  */
 async function embed(items, cfg = settings(), signal) {
-  if (!cfg.model) throw Object.assign(new Error('No embedding model is set for the Library (Field → Models → Library).'), { status: 409 });
+  if (!cfg.model) throw require('../switch-off').unset('No embedding model is set for the Library (Field → Models → Library).', { what: 'The Library\'s model', page: 'models', card: 'Library', field: '#lib-model',
+    why: 'The Library reads your files with an embedding model: Field → Models → Library suggests the one this machine runs, and Install fetches it.' });
   const { ep, url } = route(cfg);
   const out = new Array(items.length).fill(null);
   const idx = items.map((it, i) => i).filter(i => cfg.dialect === 'ollama' || !media(items[i]));

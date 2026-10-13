@@ -95,8 +95,9 @@ async function one(f, have, ctx) {
 
 /** Start a run (`why`: demand, schedule, watch); refused while one runs or while the Library is off. */
 function start({ why = 'demand', person = null } = {}) {
-  if (!require('../experiments').on('library')) throw Object.assign(new Error('The Library experiment is off (Settings → Developer).'), { status: 409 });
-  if (!E.settings().model) throw Object.assign(new Error('No embedding model is set for the Library (Field → Models → Library).'), { status: 409 });
+  require('../experiments').need('library', 'The Library');
+  if (!E.settings().model) throw require('../switch-off').unset('No embedding model is set for the Library (Field → Models → Library).', { what: 'The Library\'s model', page: 'models', card: 'Library', field: '#lib-model',
+    why: 'The Library reads your files with an embedding model: Field → Models → Library suggests the one this machine runs, and Install fetches it.' });
   if (_run) throw Object.assign(new Error('The Library is already indexing.'), { status: 409 });
   const st = { running: true, why, startedAt: new Date().toISOString(), phase: 'listing', total: 0, done: 0, read: 0, removed: 0, failed: 0, skipped: 0, current: null, waiting: false, error: null,
     settings: settings(), captions: 0 };

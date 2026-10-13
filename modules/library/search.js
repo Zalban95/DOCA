@@ -68,7 +68,7 @@ const words = q => String(q || '').toLowerCase().split(/[^\p{L}\p{N}]+/u).filter
  * `kinds` narrows (documents, images, audio, video); `folder` narrows to one folder the person may search.
  */
 async function search(person, query, { kinds = null, folder = null, tags = null, limit = 10, signal } = {}) {
-  if (!require('../experiments').on('library')) throw Object.assign(new Error('The Library experiment is off (Settings → Developer).'), { status: 409 });
+  require('../experiments').need('library', 'The Library');
   const cfg = E.settings();
   let dirs = foldersFor(person);
   if (folder) { const f = path.resolve(folder); dirs = dirs.filter(d => inside(f, [d]) || inside(d, [f])).map(d => (inside(f, [d]) ? f : d)); }

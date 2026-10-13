@@ -21,7 +21,7 @@ const organization = require('./organization');
 
 /** Send the thrown error with its own status when it carries one. */
 function fail(res, e) {
-  res.status(e.status || 500).json({ error: e.message });
+  res.status(e.status || 500).json(require('../switch-off').body(e, res.req));   // a switch that is off is asked about
 }
 
 const wrap = fn => async (req, res) => { try { await fn(req, res); } catch (e) { fail(res, e); } };

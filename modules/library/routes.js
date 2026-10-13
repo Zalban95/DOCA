@@ -6,7 +6,7 @@
  * answering to search.js's one rule of which folders a person may search.
  */
 const path = require('path');
-const h = fn => async (req, res) => { try { res.json(await fn(req, res)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+const h = fn => async (req, res) => { try { res.json(await fn(req, res)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, req)); } };
 const person = req => require('../harness/turn/client').dashboardClient(req).user || null;
 const bad = msg => Object.assign(new Error(msg), { status: 400 });
 const KINDS = ['documents', 'images', 'audio', 'video'];

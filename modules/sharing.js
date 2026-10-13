@@ -44,8 +44,12 @@ function view() {
 
 async function share(packId) {
   const s = state();
-  if (!s.contribute) throw bad('Sharing with the project is off: the owner switches it on in Settings → Packs.', 409);
-  if (!s.upstream) throw bad('No project hub is chosen: pick one in Settings → Packs → Share with the project.', 409);
+  const where = { page: 'settings/packs', card: 'Share with the project' };
+  if (!s.contribute) throw require('./switch-off').off('Sharing with the project is off: the owner switches it on in Settings → Packs.', {
+    what: 'Sharing with the project', route: '/api/sharing', body: { contribute: true }, password: true, setting: 'sharing.contribute', ...where,
+    why: 'What your agents learned (packs they saved) may be offered to the project, one click per pack: nothing leaves without it.' });
+  if (!s.upstream) throw require('./switch-off').unset('No project hub is chosen: pick one in Settings → Packs → Share with the project.', {
+    what: 'The project\'s hub', ...where, why: 'Where shared packs are sent: one of the hubs this hive sends packs to.' });
   let meta = null;
   try { meta = require('./packs/library').get(packId).meta; } catch { /* not in the library */ }
   if (meta?.origin !== 'agent') throw bad('Only a pack the agents kept here is offered to the project.', 404);
@@ -55,7 +59,7 @@ async function share(packId) {
 }
 
 function mount(app) {
-  const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+  const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('./switch-off').body(e, req)); } };
   app.get('/api/sharing', h(() => view()));
   app.post('/api/sharing', h(req => set(req.body || {})));
   app.post('/api/sharing/:packId/share', h(req => share(req.params.packId)));

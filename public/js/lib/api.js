@@ -122,8 +122,16 @@ async function apiFetch(url, opts = {}) {
   let data;
   try { data = JSON.parse(text); }
   catch (e) { throw new Error(`Bad JSON from ${url}: ${e.message}`); }
-  // The answer's own details ride on the error: a switch that is off (`needs`, lib/switch-ask.js) is asked about.
-  if (!res.ok) throw Object.assign(new Error(data.error || res.statusText), { status: res.status, code: data.code || null, needs: data.needs || null });
+  if (!res.ok) {
+    const err = Object.assign(new Error(data.error || res.statusText), { status: res.status, code: data.code || null, needs: data.needs || null });
+    // A switch that is off is asked about here, for every page (lib/switch-ask.js): switched on, the same request goes
+    // again and the caller never sees the refusal; declined, the error is marked asked and not alerted a second time.
+    if (err.code === 'switch_off' && err.needs && !opts.noAsk && typeof switchAskWait === 'function') {
+      if (await switchAskWait(err)) return apiFetch(url, opts);
+      err.asked = true;
+    }
+    throw err;
+  }
   return data;
 }
 

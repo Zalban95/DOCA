@@ -53,13 +53,30 @@ function list() {
   });
 }
 
+const devOff = () => require('./switch-off').off('Developer mode is off: switch it on in Settings → Developer first.', {
+  what: 'Developer mode', route: '/api/experiments/developer', body: { on: true }, password: true, setting: 'developer.mode', page: 'settings/experiments',
+  why: 'Experiments are offered only with developer mode on: it is for the people who build and test this panel.' });
+
 function set(id, value) {
   if (!EXPERIMENTS.some(e => e.id === id && licensed(e.id))) throw Object.assign(new Error(`No experiment "${id}".`), { status: 404 });
-  if (!developer()) throw Object.assign(new Error('Developer mode is off: switch it on in Settings → Developer first.'), { status: 409 });
+  if (!developer()) throw devOff();
   const { loadPrefs, savePrefs } = require('./utils');
   const prefs = loadPrefs();
   savePrefs({ ...prefs, experiments: { ...(prefs.experiments || {}), [id]: value === true } });
   return { id, on: on(id) };
+}
+
+/**
+ * Refuse unless experiment `id` is on, as a question the panel asks (switch-off.js): its switch, which asks for developer
+ * mode first when that is off. `what`: the feature in a person's words.
+ */
+function need(id, what) {
+  if (on(id)) return;
+  if (!developer()) throw devOff();   // the first switch missing first: one question and one password each
+  const e = EXPERIMENTS.find(x => x.id === id);
+  throw require('./switch-off').off(`${what} is an experiment that is off (Settings → Developer).`, {
+    what, route: `/api/experiments/${id}`, body: { on: true }, password: true, setting: `experiments.${id}`, page: 'settings/experiments',
+    why: e?.what || e?.label || `The experiment "${id}" — switched on here, it takes effect at once.` });
 }
 
 function setDeveloper(value) {
@@ -73,8 +90,8 @@ function mount(app) {
   app.get('/api/experiments', (_req, res) => res.json({ developer: developer(), experiments: list() }));
   app.post('/api/experiments/developer', (req, res) => res.json(setDeveloper(req.body?.on === true)));
   app.post('/api/experiments/:id', (req, res) => {
-    try { res.json(set(req.params.id, req.body?.on === true)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+    try { res.json(set(req.params.id, req.body?.on === true)); } catch (e) { res.status(e.status || 500).json(require('./switch-off').body(e, req)); }
   });
 }
 
-module.exports = { lastMeasured, STALE_DAYS, EXPERIMENTS, on, developer, list, set, setDeveloper, mount };
+module.exports = { lastMeasured, STALE_DAYS, EXPERIMENTS, on, need, developer, list, set, setDeveloper, mount };

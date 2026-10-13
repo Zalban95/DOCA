@@ -7,7 +7,8 @@
  *   what      the switch in a person's words ("Casting to devices on this network")
  *   why       one sentence on what switching it on does
  *   setting   its prefs path, when it is one (`cast.door`)
- *   route     the call that switches it on, and `body` — the same one the switch's own box calls
+ *   route     the call that switches it on, and `body` — the same one the switch's own box calls; none when it is set up
+ *             rather than switched (a model, a service's address): the panel then offers its settings alone
  *   password  whether that call asks for the password (auth/guarded.js); the panel's fetch asks when it does
  *   page, card, field   where it lives, for "Open its settings" (the header search's own jump, global-search.js)
  *   right     who may switch it (auth/rights.js); `body()` turns it into `mayChange` for the person asking
@@ -24,4 +25,7 @@ function body(e, req) {
   return { error: e.message, code: 'switch_off', needs: { ...needs, mayChange } };
 }
 
-module.exports = { off, body };
+/** The same for something that must be set up (a model, an address): where, no switch. */
+const unset = (message, needs) => off(message, { route: null, ...needs });
+
+module.exports = { off, unset, body };
