@@ -131,6 +131,16 @@ function tokenFrom(req) {
   return null;
 }
 
+/**
+ * A cast screen's session without a cookie (R3i; the owner's yes of 2026-10-13): `X-Cast-View`, or `vs=` on a live
+ * stream, which an EventSource cannot give a header (public/js/lib/view-token.js). resolve() takes it only for a view
+ * session — one page, read-only — so it can never stand in for a person's sign-in.
+ */
+function viewTokenFrom(req) {
+  const v = req.headers['x-cast-view'] || (req.method === 'GET' ? req.query?.vs : null);
+  return typeof v === 'string' && /^[A-Za-z0-9_-]{20,200}$/.test(v) ? v : null;
+}
+
 let _lastTouch = 0;
 
 /**
@@ -139,7 +149,11 @@ let _lastTouch = 0;
  */
 function resolve(req) {
   const token = tokenFrom(req);
-  return token ? resolveHash(sha256(token)) : null;
+  if (token) return resolveHash(sha256(token));
+  const view = viewTokenFrom(req);
+  if (!view) return null;
+  const who = resolveHash(sha256(view));
+  return who && (who.session.cap || []).some(c => String(c).startsWith('view:')) ? who : null;   // a view session alone
 }
 
 function resolveHash(hash) {
@@ -166,5 +180,5 @@ function steppedUp(session) {
 module.exports = {
   COOKIE, SESSION_DAYS, STEP_UP_HOURS, MIN_PASSWORD,
   hashPassword, verifyPassword, checkNewPassword, oneTimePassword, sha256,
-  startSession, fromDevice, capOf, cookieHeader, tokenFrom, resolve, steppedUp,
+  startSession, fromDevice, capOf, cookieHeader, tokenFrom, viewTokenFrom, resolve, steppedUp,
 };

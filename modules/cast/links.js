@@ -58,7 +58,9 @@ function open(code, req) {
   const screens = require('../screens');
   return {
     // `cast=1`: the page locks itself at once, before it has asked who it is (solo.js); the hub refuses the rest anyway.
-    location: l.page === 'face' ? '/face' : `/?view=${l.page}&cast=1${l.focus ? `#${encodeURIComponent(l.focus)}` : ''}`,
+    // The session rides in the fragment too (`vs`): never sent to the hub or logged, read by lib/view-token.js, for a Cast
+    // receiver that keeps no cookie (R3i).
+    location: `${l.page === 'face' ? '/face' : `/?view=${l.page}&cast=1`}#vs=${token}${l.focus ? `&focus=${encodeURIComponent(l.focus)}` : ''}`,
     cookies: [credentials.cookieHeader(token, { secure }), `${screens.COOKIE}=${made.device.id}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${400 * 86400}${secure ? '; Secure' : ''}`],
     screen: devices.get(made.device.id),
   };

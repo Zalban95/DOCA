@@ -77,6 +77,10 @@ function gate(req, res, next) {
   if (PUBLIC_FILES.test(p)) return next();
 
   const method = req.method === 'HEAD' ? 'GET' : req.method;
+  // Through the cast door only — the one address a cast runs to, while it runs (cast/door.js) — the panel's own page
+  // and its code load without a session: a Cast receiver may keep no cookie, and a script tag cannot carry the view
+  // session's header. Everything with data still needs the view session (R3i, the owner's yes of 2026-10-13).
+  if (req.castDoor && method === 'GET' && !isApi(p) && /^\/($|face$|(js|css|fonts|img|icons|vendor)\/[\w./-]+$|[\w.-]+\.(svg|png|ico|webmanifest)$)/.test(p)) return next();
   // The app's own pages and scripts: signed in. /.well-known/ is for other software (the A2A agent card) and has rows.
   const right = isApi(p) || p.startsWith('/.well-known/') ? rights.rightFor(method, p) : 'read';
 

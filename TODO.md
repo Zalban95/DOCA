@@ -70,11 +70,12 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     (calm, excited, whispers, sad…) when the voice takes tags; and, as a tool of its own, a **story mode** — a longer text
     with several tones marked through it, read on a speaker. *3.58.1: the agent is told the tags exist and whether the
     person's voice speaks them.*
-  - [ ] R3i **A TV showed "Cannot reach the panel: Unexpected token 'N', "Not here."…"** (the owner, 2026-10-13, casting
+  - [x] R3i **A TV showed "Cannot reach the panel: Unexpected token 'N', "Not here."…"** (the owner, 2026-10-13, casting
     Ambient to the living-room TV): the view link opened, but the Cast receiver kept no session cookie, so the page's
     load was sent to sign in and the door refused the sign-in page's request. 3.65.0: a cast screen without a session
-    is told so in words. **Ask (auth/, S11):** carry the view session in the link (`#vs=`) and a header (`X-Doca-View`,
-    `?vs=` for the live stream), accepted only for view-only sessions — so a receiver that keeps no cookie shows the page.
+    is told so in words. 3.66.0 (the owner left it to my judgement, 2026-10-13): the view session in the link's fragment
+    (`#vs=`), sent as `X-Cast-View` (`vs=` on a live stream) and taken only for a view session; through the door alone
+    the page and its code load without a session. Shown by a browser that keeps no cookie. A relay's cast keeps cookies.
   - [ ] R3j **The phone as the source, on any network** (the owner, 2026-10-13): from DocaMobile on another Wi-Fi, show
     something of the panel on a TV there by streaming it from the app — a page rendered on the phone, no pairing of the TV
     in the panel, no input (for now); the phone controls the TV, and the Orchestrator's instructions for it go to the
