@@ -40,6 +40,13 @@ test('POST /api/prefs asks only when a guarded setting would change', async () =
   assert.equal(r.status, 200, 'sending a guarded setting back unchanged asks nothing');
 });
 
+test('the cast door cannot be opened around its own route: a settings write asks too (found 2026-10-13)', async () => {
+  const r = await H.api(null, 'POST', '/api/prefs', { cast: { door: 'on' } }, without);
+  assert.equal(r.status, 401);
+  assert.match(r.body.error, /cast door/);
+  assert.notEqual(prefs().cast?.door, 'on');
+});
+
 test('a conversation\'s approval switch asks; its title does not', async () => {
   const { switchOf } = require('../modules/auth/guarded');
   const req = body => ({ method: 'POST', path: '/api/harness/sessions/abc/settings', body });
