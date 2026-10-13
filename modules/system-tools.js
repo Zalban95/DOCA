@@ -5,7 +5,7 @@ const { detect } = require('./detect');
 
 const { streamCmd } = require('./utils');
 
-const { SYSTEM_TOOLS, installFor, versionOf } = require('./system-tools-catalog');   // the rows, per OS
+const { SYSTEM_TOOLS, installFor, versionOf, restartFor } = require('./system-tools-catalog');   // the rows, per OS
 
 /** GET /api/system/tools */
 async function handleList(req, res) {
@@ -20,6 +20,9 @@ async function handleList(req, res) {
       installCmd: cmd,
       // sudo is POSIX: on Windows an installer elevates through UAC on the desktop, never through a password here.
       needsSudo: process.platform !== 'win32' && !!cmd && (!!t.needsSudo || cmd.includes('sudo ')),
+      // A program that runs as a service: restarted by its own command (ask first, the password where it needs it).
+      restartCmd: detected ? restartFor(t) : null,
+      restartNote: t.restartNote || null,
       detected,
       version: detected ? versionOf(t, version) : null,
     };
@@ -41,4 +44,19 @@ function handleInstall(req, res) {
   });
 }
 
-module.exports = { SYSTEM_TOOLS, handleList, handleInstall };
+/** POST /api/system/tools/restart — SSE progress; only a row's own restart command, never one from the request. */
+function handleRestart(req, res) {
+  const { id, password } = req.body || {};
+  const tool = SYSTEM_TOOLS.find(t => t.id === id);
+  const cmd = tool && restartFor(tool);
+  if (!cmd) return res.status(400).json({ error: `${tool ? tool.label : 'This'} has no restart here on ${process.platform}` });
+  streamCmd(res, cmd, { label: null, password: typeof password === 'string' && password.length > 0 ? password : undefined });
+}
+
+function mount(app) {
+  app.get('/api/system/tools', handleList);
+  app.post('/api/system/tools/install', handleInstall);
+  app.post('/api/system/tools/restart', handleRestart);
+}
+
+module.exports = { SYSTEM_TOOLS, handleList, handleInstall, handleRestart, mount };

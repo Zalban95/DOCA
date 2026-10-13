@@ -14,6 +14,7 @@
  *   detected: boolean, version?: string|null,
  *   canInstall?: boolean, installing?: boolean, installOnclick?: string,
  *   updateOnclick?: string,  - opt-in: shows ↻ Update once the tool is detected
+ *   restartOnclick?: string, - shows ⟳ Restart beside it, for a program that runs as a service
  *   gearOnclick?: string, repo?: string, repoLabel?: string,
  *   extraActions?: string,   - pre-built HTML appended to the actions cell
  * }} t
@@ -42,6 +43,10 @@ function toolRowHtml(t) {
        </button>`
     : '';
 
+  const restartBtn = t.detected && t.restartOnclick
+    ? `<button class="btn btn-xs" onclick="${t.restartOnclick}" ${t.installing ? 'disabled' : ''} title="Restart the service it runs as">⟳ Restart</button>`
+    : '';
+
   const repoLink = !t.detected && t.repo
     ? `<a class="tool-repo" href="${t.repo}" target="_blank" title="${t.repo}">${escHtml(t.repoLabel || t.repo)}</a>`
     : '';
@@ -59,7 +64,7 @@ function toolRowHtml(t) {
     <span class="tool-label">${escHtml(t.label)}</span>
     ${versionStr}
     <span class="tool-note">${t.for ? `<span class="tool-for">${escHtml(t.for)}</span> ` : ''}${escHtml(t.note || '')}</span>
-    <span class="tool-actions">${t.extraActions || ''}${installBtn}${updateBtn}${repoLink}${manualNote}${gearBtn}</span>
+    <span class="tool-actions">${t.extraActions || ''}${installBtn}${updateBtn}${restartBtn}${repoLink}${manualNote}${gearBtn}</span>
   </div>`;
 }
 

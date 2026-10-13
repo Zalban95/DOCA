@@ -178,10 +178,13 @@ async function settingJump(r) {
   };
   const byCard = () => r.card && [...document.querySelectorAll('.card-title')]
     .find(t => t.textContent.trim().toLowerCase().startsWith(r.card.toLowerCase()) && shown(t))?.closest('.card');
+  // The field first: a card draws at once while its Advanced fields come from a request of their own, so taking the card
+  // as soon as it showed marked the card and never the field on a slow machine (Windows CI, 2026-10-13). The card is
+  // the answer only once the field has had its time, or when there is no field to wait for.
   let el = null;
-  for (let i = 0; i < 40 && !el; i++) {
+  for (let i = 0; i < 60 && !el; i++) {
     let f = null; try { f = r.field ? document.querySelector(r.field) : null; } catch { /* not a selector */ }
-    el = (shown(f) && f) || byCard() || null;
+    el = (shown(f) && f) || ((!r.field || i >= 40) && byCard()) || null;
     if (!el) await new Promise(res => setTimeout(res, 100));
   }
   if (!el) return;
