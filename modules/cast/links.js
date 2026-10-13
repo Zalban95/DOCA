@@ -45,7 +45,7 @@ function open(code, req) {
   if (!user || user.suspendedAt) throw bad('The person who cast this can no longer sign in.', 410);
   const views = require('./views').VIEWS;
   // A TV or a speaker Nearby saved has one screen record: the one its last cast made is signed out and goes, so the
-  // Devices list does not fill with "Living room — Live" (2026-10-13).
+  // Devices list does not fill with "<a TV> — Live" records (2026-10-13).
   if (l.thing) forgetThing(l.thing);
   const made = devices.create({ name: l.name || `Showing ${views[l.page].label}`, kind: 'browser', scopes: [],
     caps: { formFactor: 'browser', input: { touch: false, text: false } } });

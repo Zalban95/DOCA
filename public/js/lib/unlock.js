@@ -52,5 +52,5 @@ async function unlockRead() {
     if (d.until && Date.parse(d.until) - Date.now() > 35e3) unlockShow(d.until);
   } catch { /* signed out, or an older hub */ }
 }
-if (typeof document !== 'undefined' && typeof window !== 'undefined' && !/\/login/.test(location.pathname))
+if (typeof document !== 'undefined' && typeof window !== 'undefined' && !/\/login/.test(location.pathname) && !/[?&]cast=1\b/.test(location.search))   // a cast screen switches nothing
   window.addEventListener('load', () => setTimeout(unlockRead, 1500));

@@ -70,6 +70,20 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     (calm, excited, whispers, sad…) when the voice takes tags; and, as a tool of its own, a **story mode** — a longer text
     with several tones marked through it, read on a speaker. *3.58.1: the agent is told the tags exist and whether the
     person's voice speaks them.*
+  - [ ] R3i **A TV showed "Cannot reach the panel: Unexpected token 'N', "Not here."…"** (the owner, 2026-10-13, casting
+    Ambient to the living-room TV): the view link opened, but the Cast receiver kept no session cookie, so the page's
+    load was sent to sign in and the door refused the sign-in page's request. 3.65.0: a cast screen without a session
+    is told so in words. **Ask (auth/, S11):** carry the view session in the link (`#vs=`) and a header (`X-Doca-View`,
+    `?vs=` for the live stream), accepted only for view-only sessions — so a receiver that keeps no cookie shows the page.
+  - [ ] R3j **The phone as the source, on any network** (the owner, 2026-10-13): from DocaMobile on another Wi-Fi, show
+    something of the panel on a TV there by streaming it from the app — a page rendered on the phone, no pairing of the TV
+    in the panel, no input (for now); the phone controls the TV, and the Orchestrator's instructions for it go to the
+    phone, which carries them out — the panel controls it indirectly. "Look from" a client adds what that client sees,
+    to stream to as well. Needs DocaMobile (and DocaDesk) with the `nearby` and `cast` families and this phone-rendered
+    mode (PROTOCOL §22.5); a client is updated first (doca-client: `doca-client update`, twice from an older one).
+  - [x] R3k Cast code checked for hard-coded names and addresses (the owner, 2026-10-13): none in logic — what is
+    shown and used comes from Nearby's records and the pairings; two comments that named the owner's own devices made
+    generic. Example words in help texts ("kitchen", "Living room") are examples.
   - [ ] R3g The page's own sound, a call or Ambient's assistant on a speaker; a headset as a work station (design §4,
     phase D).
 - [x] R4 **EmbeddingGemma 2 for the Library, verified** (3.52.1–3.55.0, proven live 2026-10-13: 740m on MLX, 9 files in

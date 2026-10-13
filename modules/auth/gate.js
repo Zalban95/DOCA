@@ -24,6 +24,10 @@ const isApi = p => p.startsWith('/api/');
 const wantsPage = req => req.method === 'GET' && !isApi(req.path.toLowerCase());
 
 function deny(req, res, status, code, error) {
+  // A cast screen (a TV opened by a view link) has nobody to sign in: its session ended, or its Cast receiver kept no
+  // cookie — said on the screen, never the sign-in page, which its door would not serve anyway ("Not here.").
+  if (wantsPage(req) && status === 401 && req.query?.cast === '1')
+    return res.status(401).type('html').send('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width"><body style="margin:0;display:flex;align-items:center;justify-content:center;height:100vh;background:#0d0f12;color:#ddd;font:22px/1.5 system-ui,sans-serif;text-align:center;padding:32px">This screen is no longer signed in to show the page. Cast it again from the panel.</body>');
   if (wantsPage(req) && status === 401) {
     const next = encodeURIComponent(req.originalUrl || '/');
     return res.redirect(302, `/login?next=${next}`);
