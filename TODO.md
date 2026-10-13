@@ -105,8 +105,8 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     (whose cards hide while their experiment is off), backups' destination, the realtime model, the licence key,
     OAuth apps, Laya and the wake-word trainer — each a `switch-off.unset` with its page and card.
   - [ ] R13b `network.lanAdmin`'s refusal (auth/gate.js, **ask**: an auth file) as a question with its switch.
-  - [ ] R13c Model-scout leftovers: `scout.on()` is always true, so two refusals never fire; the one Set-up shows
-    points to Developer instead of Harness → Scout.
+  - [x] R13c Model-scout leftovers: the dead experiment refusals removed; Set-up's "Check for newer models" always
+    runs (the person asked) and names Harness → Scout for the routine (3.62.0).
   - [x] R13d One password for a chain of switches, and "Keep it unlocked for" 1–30 minutes (owner yes 2026-10-13; auth/unlock.js, lib/unlock.js).
 - [x] R14 Every declared setting can be found by the header search, the owner's own switches too (3.57.0).
 - [x] R15 A Nearby scan no longer stops on a sighting it cannot name (3.57.0).

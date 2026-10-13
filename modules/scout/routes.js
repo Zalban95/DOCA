@@ -33,7 +33,6 @@ function mount(app) {
   }));
   app.post('/api/scout/look', h(async () => { const r = await require('./signals').look(); return { look: { at: r.at, first: r.first, notable: r.notable, failures: r.failures, models: r.models.length, fresh: r.fresh.length }, brief: require('./signals').brief(r) }; }));
   app.post('/api/scout/brief', h(async () => {
-    if (!scout.on()) throw Object.assign(new Error('The model scout is an experiment that is off (Settings → Developer).'), { status: 409 });
     scout.brief('asked').catch(() => {});
     return { started: true, sessionId: scout.state().sessionId };
   }));

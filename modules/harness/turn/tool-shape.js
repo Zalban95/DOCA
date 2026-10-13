@@ -23,7 +23,6 @@ function switches() {
   if (!require('../../api-services/store').list().length) out.push({ name: 'service', why: 'no API service is set up (Field → Connectors → API services)' });
   if (!require('../../accounts/store').any())
     for (const name of ['calendar', 'mail']) out.push({ name, why: 'nobody has connected their own Google or Microsoft 365 account yet (Field → Connectors → Your accounts)' });
-  if (!require('../../scout').on()) out.push({ name: 'model_scout', why: 'the model scout experiment is off' });
   if (!require('../../experiments').on('alwaysFree')) out.push({ name: 'background', why: 'the always-free experiment is off' });
   if (!require('../../library/indexer').on()) out.push({ name: 'library_search', why: 'the Library experiment is off, or no embedding model is set for it' });
   if (require('./tool-tiers').mode() === 'all') out.push({ name: 'tools_more', why: 'every tool is sent in full (harness.config.doca.toolsLoading: all)' });

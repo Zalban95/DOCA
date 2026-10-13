@@ -32,10 +32,8 @@ async function guidedLoad() {
       <span class="guided-muted" title="${escHtml(`Models it suggests come from a list tested by the ${guidedBrand()} project (version ${g.suggestions.version}, ${g.suggestions.updated}).`)}">${g.shapeHere === 'local' ? 'It can run its own models.' : 'It cannot run the agent\'s model well, so the model will come from elsewhere: an online provider, or one you run on another machine.'}</span>
       ${g.have?.chat ? `<br><span style="color:var(--green)">✓ ${B} has a model: ${escHtml(g.have.chat.model)} on ${escHtml(g.have.chat.provider)}, and it answers.</span>` : ''}
       <br><span class="guided-muted">The suggested models were checked on <b>${escHtml(g.suggestions.checked || g.suggestions.updated || '—')}</b>${g.suggestions.local ? ` (${g.suggestions.local} added here from the model scout)` : ''}.</span>
-      ${g.scout?.on ? `<button class="btn btn-xs" onclick="guidedCheckModels(this)" title="Ask the model scout to look for newer models now">Check for newer models</button>
-      <span class="status-line" id="guided-models-status"></span>`
-        : g.scout?.developer ? `<br><span class="guided-muted">The model scout, which looks for newer models every few days, is off: an experiment, switched on in <a href="#settings/experiments" onclick="settingsSubNav('experiments'); return false">Settings → Developer</a>.</span>`
-        : `<span class="guided-muted">A newer list arrives with ${B}'s updates.</span>`}
+      <button class="btn btn-xs" onclick="guidedCheckModels(this)" title="Ask the model scout to look for newer models now">Check for newer models</button>
+      <span class="status-line" id="guided-models-status"></span>
       ${g.suggestions.local ? '<div id="guided-accepted"></div>' : ''}</div>
     <div class="guided-q"><div class="guided-q-title">1. What do you want ${B} for?${infoBtn('Tick everything you want. Each choice adds what it needs — a model, a speech service, a key — fitted to this machine. Nothing is installed by ticking: you see the plan below first, and every install waits for its own click.')}</div>
       ${g.uses.map(u => box('guided-use', u.id, u.label, uses.has(u.id))).join('')}
@@ -90,7 +88,7 @@ async function guidedApply(btn) {
   finally { if (btn) btn.disabled = false; }
 }
 
-/** Newer models: the model scout looks now (its experiment on); otherwise the answer says how. Nothing changes until accepted. */
+/** Newer models: the model scout looks now, and says where its own routine is switched when that is off. Nothing changes until accepted. */
 async function guidedCheckModels(btn) {
   const st = document.getElementById('guided-models-status');
   if (btn) btn.disabled = true;
