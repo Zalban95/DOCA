@@ -39,7 +39,7 @@ module.exports = [{
       action: { type: 'string', enum: ['list', 'show', 'say', 'stop', 'volume'] },
       thing: { type: 'string', description: 'show, say, stop, volume: the thing\'s name, its room, or its id from list.' },
       page: { type: 'string', description: 'show: live, workstream, ambient, home, computers, chronicle or face.' },
-      text: { type: 'string', description: 'say: the sentence, as it should be heard.' },
+      text: { type: 'string', description: 'say: the sentence, as it should be heard. An expressive voice speaks tone tags in it — [whispers] [laughs] [sighs] [excited] [calm] [sad] [curious] [serious] — when the person asks for a tone; list says whether theirs does.' },
       level: { type: 'number', description: 'volume: 0 to 1.' },
       asked: { type: 'boolean', description: 'true only when the person asked for exactly this on this turn.' },
     },
@@ -53,8 +53,11 @@ module.exports = [{
     if (action === 'list') {
       if (!list.length) return 'No TV or speaker this person may cast to: Machines → Nearby finds them (its Cast source) and Save keeps one with its place and room; an admin allots them.';
       const door = require('../../cast/door').on();
+      let tones = false;
+      try { tones = !!require('../../call-voices').pick('quick', { userId: person.id }).tags; } catch { /* the hive's voice: words only */ }
       return [`Cast devices${door ? '' : ' (casting to devices on this network is off: the owner switches it on in ⎘ Cast or Machines → Nearby)'}:`,
-        ...list.map(t => `- ${t.name} (${t.id}) — ${t.kind}, ${[t.place, t.room].filter(Boolean).join(' · ') || 'no place'}: ${t.shows ? 'shows a page, says a sentence' : 'says a sentence'}`)].join('\n');
+        ...list.map(t => `- ${t.name} (${t.id}) — ${t.kind}, ${[t.place, t.room].filter(Boolean).join(' · ') || 'no place'}: ${t.shows ? 'shows a page, says a sentence' : 'says a sentence'}`),
+        tones ? 'Their voice speaks tone tags ([whispers], [excited], [calm]…): use one when they ask for a tone.' : 'Their voice says words only: tone tags are dropped.'].join('\n');
     }
     if (!(asked === true && ctx.byPerson)) return bad('cast only when the person asked for it on their own turn (asked: true). Casting on your own initiative is not allowed: a sound or a page lands in a room.');
     const { thing: t, error } = pick(list, thing);
