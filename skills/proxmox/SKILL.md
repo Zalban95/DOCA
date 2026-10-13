@@ -18,9 +18,10 @@ lists its actions.
 2. In **Field → Connectors → API services**, type `proxmox` in "Add a service": the ready-made Proxmox VE fills the
    actions; set its address to the host's (`https://pve.lan:8006/api2/json`, the name it really has) and paste the
    token as `USER@REALM!TOKENID=SECRET` (root@pam!doca=…). Never ask for the secret in the chat.
-3. **Its certificate.** Proxmox makes a self-signed one, which the hub refuses — it checks every certificate. Give
-   Proxmox a trusted one: **Node → System → Certificates → ACME** (Let's Encrypt, with a name that resolves to it), or
-   put it behind a reverse proxy with one. Say this plainly when a call fails with a certificate error.
+3. **Its certificate.** Proxmox makes its own (self-signed), which the hub refuses until the person trusts that exact
+   certificate: **Field → Connectors → Certificates you trust**, its address, "Look at its certificate", compare the
+   fingerprint with Proxmox's own (the node's System → Certificates), Trust — with their password. Or give Proxmox a
+   trusted one (its ACME, Let's Encrypt). Say this plainly when a call fails with a certificate error.
 
 ## Using it
 

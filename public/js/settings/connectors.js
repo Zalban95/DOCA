@@ -52,11 +52,12 @@ async function connectorsLoad() {
     <div class="card"><button class="btn btn-sm" onclick="connectorsAdd()">＋ Another OAuth 2.0 service</button></div>
     <div class="card" id="service-keys-card"></div>
     <div class="card" id="logins-card"></div>
-    <div class="card" id="sealed-card"></div>`;
+    <div class="card" id="sealed-card"></div><div class="card" id="certs-card"></div>`;
   if (typeof accountsRender === 'function') accountsRender();
   if (typeof serviceKeysRender === 'function') serviceKeysRender();
   loginsRender();
   if (typeof sealedRender === 'function') sealedRender();
+  if (typeof certPinsRender === 'function') certPinsRender();   // certificates trusted by name (cert-pins.js)
   for (const c of d.connectors) { const el = panel.querySelector(`[data-conn="${CSS.escape(c.id)}"] [data-f="clientId"]`); if (el && c.configured) el.placeholder = 'client id saved — type to replace'; }
 }
 
