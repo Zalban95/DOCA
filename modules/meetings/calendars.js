@@ -39,7 +39,8 @@ function view(personId) {
 function connect(person, provider, redirectUri) {
   if (!PROVIDERS[provider]) throw bad('provider is google or microsoft.');
   if (!require('../connectors/vault').get(provider)?.clientId)
-    throw bad(`${PROVIDERS[provider].label} needs the hive's OAuth app first: an admin adds it in Field → Connectors (the same app connects everyone's calendar).`, 409);
+    throw require('../switch-off').unset(`${PROVIDERS[provider].label} needs the hive's OAuth app first: an admin adds it in Field → Connectors (the same app connects everyone's calendar).`, { what: `${PROVIDERS[provider].label}'s OAuth app for this hive`, page: 'connectors',
+      why: 'One OAuth app of the hive\'s own connects everyone\'s accounts: an admin makes it at the provider and pastes its client id and secret in Field → Connectors.' });
   return require('../connectors/oauth').start(provider, redirectUri, { scopes: PROVIDERS[provider].scopes,
     save: (tokens, account) => put(person.id, { provider, ...tokens, account, connectedAt: new Date().toISOString() }) });
 }

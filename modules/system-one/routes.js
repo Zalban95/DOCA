@@ -10,7 +10,7 @@ const one = require('./index');
 const service = require('./service');
 
 function mount(app) {
-  const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+  const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, res.req)); } };
   app.get('/api/system-one', h(async () => {
     const health = await service.health(1500);
     return { on: one.on(), settings: one.settings(), service: { ...service.status(), computesOn: health ? Object.values(health.checkpoint_devices || {}).join(', ') || null : null }, jev: jev() };

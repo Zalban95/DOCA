@@ -37,7 +37,7 @@ function mount(app) {
       if (png.length < 8) return res.status(400).json({ error: 'Send a PNG (base64) to read.' });
       const t0 = Date.now(), r = await vision.read(png, req.body?.question || '', { how: req.body?.how || 'auto' });
       res.json({ ms: Date.now() - t0, answer: vision.say(r) });
-    } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+    } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, res.req)); }
   });
 }
 

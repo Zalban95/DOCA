@@ -3,7 +3,7 @@
 /** Settings → Harness → Web search (modules/search): the provider, the SearXNG address, the keys, and a try. Host only. */
 const search = require('./index');
 
-const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, res.req)); } };
 
 function mount(app) {
   app.get('/api/search/settings', h(() => search.status()));

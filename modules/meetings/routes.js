@@ -65,7 +65,7 @@ function mount(app) {
       if (!m.startsAt || !m.endsAt) throw bad('This call has no time to put in a calendar.', 409);
       res.type('text/calendar; charset=utf-8').set('Content-Disposition', `attachment; filename="${m.id}.ics"`)
         .send(await require('./invite').icsFor(m, m.state === 'cancelled' ? 'CANCEL' : 'REQUEST'));
-    } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+    } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, res.req)); }
   });
 
   // The room, from a page.

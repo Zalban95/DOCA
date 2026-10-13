@@ -19,7 +19,8 @@ const uvEnv = () => ({ UV_HTTP_TIMEOUT: '600' });
 
 function setup() {
   const uv = require('../shell').which('uv');
-  if (!uv) throw Object.assign(new Error('Training needs uv, which makes its Python environment: Settings → System → System tools → uv.'), { status: 409 });
+  if (!uv) throw require('../switch-off').unset('Training needs uv, which makes its Python environment: Settings → System → System tools → uv.', { what: 'uv (Python environments)', page: 'settings/system', field: '#tool-row-sysdep-uv',
+    why: 'uv makes the Python environment this needs: its row in System tools installs it.' });
   const d = ww.dir(), py = ww.python();
   fs.mkdirSync(d, { recursive: true });
   const gpu = !!require('../shell').which('nvidia-smi');

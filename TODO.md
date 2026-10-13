@@ -90,7 +90,11 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
 - [~] R13 **A switch that is off is a question where it was hit** (3.57.0: Switch it on and go on, Open its settings;
   apiFetch asks by itself; developer mode, every experiment, specialists, a harness, sharing, the cast door; set-up
   cases for the Library's model, the project hub, the speech service). Left from the audit of 2026-10-13 (72 places):
-  - [ ] R13a The set-up cases on their pages: web search's provider, channels' tokens, the vision and retrieval models
+  - [~] R13a *2026-10-13: an account's or a calendar's OAuth app (an admin's, so a member is told so) and uv for Laya and
+    the wake-word trainer are questions; the routes of search, vision, retrieval, backups, connectors, accounts,
+    meetings, Laya and wake words pass a question on. Left on purpose: a refusal shown on the card that fixes it (web
+    search's Try, the vision and retrieval tries, backups, a connector's own form) — Set it up would open the same card.*
+    The set-up cases on their pages: web search's provider, channels' tokens, the vision and retrieval models
     (whose cards hide while their experiment is off), backups' destination, the realtime model, the licence key,
     OAuth apps, Laya and the wake-word trainer — each a `switch-off.unset` with its page and card.
   - [ ] R13b `network.lanAdmin`'s refusal (auth/gate.js, **ask**: an auth file) as a question with its switch.

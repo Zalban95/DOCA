@@ -9,7 +9,7 @@ const vault = require('./vault');
 const oauth = require('./oauth');
 const { CATALOG, ID } = require('./catalog');
 
-const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, res.req)); } };
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
 const callback = req => `${req.protocol}://${req.get('host')}/api/connectors/callback`;
 const url = (v, what) => { const s = String(v || '').trim(); if (s && !/^https?:\/\/[^\s]+$/.test(s)) throw bad(`${what} is an http(s) address.`); return s; };

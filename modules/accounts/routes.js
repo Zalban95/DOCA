@@ -25,7 +25,7 @@
  */
 const accounts = require('./store');
 
-const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, res.req)); } };
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
 const callback = req => `${req.protocol}://${req.get('host')}/api/connectors/callback`;
 
@@ -62,7 +62,8 @@ function mount(app) {
     const p = me(req), { provider, access = 'full' } = req.body || {};
     const scopes = require('./scopes').of(provider, access);
     if (!require('../auth/allot').uses(p, 'account', provider)) throw bad(`Your level does not include ${provider} accounts — an admin allots them in Settings → Users.`, 403);
-    if (!require('../connectors/vault').get(provider)?.clientId) throw bad(`${require('./scopes').PROVIDERS[provider].label} needs the hive's OAuth app first: an admin adds its client id and secret in Field → Connectors (one app connects everyone's own accounts).`, 409);
+    if (!require('../connectors/vault').get(provider)?.clientId) throw require('../switch-off').unset(`${require('./scopes').PROVIDERS[provider].label} needs the hive's OAuth app first: an admin adds its client id and secret in Field → Connectors (one app connects everyone's own accounts).`, { what: `${require('./scopes').PROVIDERS[provider].label}'s OAuth app for this hive`, page: 'connectors',
+      why: 'One OAuth app of the hive\'s own connects everyone\'s accounts: an admin makes it at the provider and pastes its client id and secret in Field → Connectors.' });
     const out = require('../connectors/oauth').start(provider, callback(req), { scopes, save: (tokens, account) => {
       const rec = accounts.add(p.id, { provider, account, access: access === 'read' ? 'read' : 'full', scopes }, tokens);
       require('../activity').note({ from: 'accounts', what: `${p.name || p.email || 'a person'} connected ${account || provider} (${access === 'read' ? 'read only' : 'read and act'})`, why: 'they connected their own account', person: p });
