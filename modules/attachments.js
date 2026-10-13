@@ -171,9 +171,11 @@ function saveIndex(i) { store.writeJson('attachments', i); }
  */
 function save(buffer, filename, meta = {}) {
   if (!Buffer.isBuffer(buffer)) throw Object.assign(new Error('attachment must be a buffer'), { status: 400 });
-  if (buffer.length > MAX_BYTES)
+  const most = Math.min(Number(meta.maxBytes) || MAX_BYTES, 200 * 1024 * 1024);   // a caller keeping a video may allow more (computers.fetchFile)
+  delete meta.maxBytes;
+  if (buffer.length > most)
     throw Object.assign(new Error(
-      `That is over the ${Math.round(MAX_BYTES / 1e6)} MB upload limit. Put the file in `
+      `That is over the ${Math.round(most / 1e6)} MB upload limit. Put the file in `
       + `${dir()} yourself and say its name — the agent reads it the same way.`), { status: 413 });
 
   const d    = ensureDir();
