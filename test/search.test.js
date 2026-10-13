@@ -30,6 +30,19 @@ test('DuckDuckGo\'s result page is read for titles, addresses and snippets', () 
   assert.ok(r[0].snippet.length > 20);
 });
 
+test('DuckDuckGo\'s bot check is said as a refusal, and searches go one at a time', async () => {
+  const real = global.fetch, at = [];
+  global.fetch = async () => { at.push(Date.now()); return new Response('<form id="challenge-form" class="anomaly-modal">bots use DuckDuckGo too</form>', { status: 202 }); };
+  try {
+    const ddg = require('../modules/search').duckduckgo;
+    const [a, b] = await Promise.allSettled([ddg('one', 5), ddg('two', 5)]);
+    assert.equal(a.status, 'rejected');
+    assert.match(a.reason.message, /refusing searches.*Settings → Harness → Web search/, 'never "No results"');
+    assert.equal(b.status, 'rejected');
+    assert.ok(at[1] - at[0] >= 1400, `the second waited its turn (${at[1] - at[0]} ms)`);
+  } finally { global.fetch = real; }
+});
+
 test('a SearXNG provider is used when chosen; the tool frames what it says as external content', async () => {
   const set = await H.api(null, 'POST', '/api/search/settings', { provider: 'searxng', url: `http://127.0.0.1:${searx.address().port}` });
   assert.equal(set.body.provider, 'searxng');
