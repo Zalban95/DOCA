@@ -1,0 +1,38 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Proxmox VE",
+    "version": "1",
+    "summary": "A Proxmox VE host or cluster: its nodes, virtual machines and containers, their state, and start, shut down or stop them.",
+    "x-doca-name": "proxmox",
+    "x-doca-skill": "proxmox",
+    "x-doca-key-hint": "An API token from Datacenter → Permissions → API Tokens, pasted as USER@REALM!TOKENID=SECRET (for example root@pam!doca=…)",
+    "x-doca-checked": "2026-10-13, pve.proxmox.com/wiki/Proxmox_VE_API (API tokens, /api2/json on port 8006, the nodes, qemu and lxc paths)"
+  },
+  "externalDocs": { "url": "https://pve.proxmox.com/wiki/Proxmox_VE_API" },
+  "servers": [{ "url": "https://{host}:8006/api2/json", "variables": { "host": { "default": "pve.lan", "description": "Your Proxmox host's name or address" } } }],
+  "components": {
+    "securitySchemes": {
+      "key": { "type": "apiKey", "in": "header", "name": "Authorization", "x-doca-prefix": "PVEAPIToken=" }
+    },
+    "parameters": {
+      "node": { "name": "node", "in": "path", "required": true, "schema": { "type": "string" }, "description": "The node's name, as listNodes gives it" },
+      "vmid": { "name": "vmid", "in": "path", "required": true, "schema": { "type": "integer" }, "description": "The VM's or container's id" }
+    }
+  },
+  "security": [{ "key": [] }],
+  "paths": {
+    "/cluster/resources": { "get": { "operationId": "listResources", "summary": "Everything in the cluster at once: nodes, VMs, containers and storage, with their state and use." } },
+    "/nodes": { "get": { "operationId": "listNodes", "summary": "The nodes, with their state, CPU and memory use." } },
+    "/nodes/{node}/status": { "get": { "operationId": "nodeStatus", "summary": "One node's state: uptime, load, memory, CPU.", "parameters": [{ "$ref": "#/components/parameters/node" }] } },
+    "/nodes/{node}/qemu": { "get": { "operationId": "listVms", "summary": "The virtual machines on a node.", "parameters": [{ "$ref": "#/components/parameters/node" }] } },
+    "/nodes/{node}/lxc": { "get": { "operationId": "listContainers", "summary": "The containers (LXC) on a node.", "parameters": [{ "$ref": "#/components/parameters/node" }] } },
+    "/nodes/{node}/qemu/{vmid}/status/current": { "get": { "operationId": "vmStatus", "summary": "A VM's state now.", "parameters": [{ "$ref": "#/components/parameters/node" }, { "$ref": "#/components/parameters/vmid" }] } },
+    "/nodes/{node}/qemu/{vmid}/status/start": { "post": { "operationId": "vmStart", "summary": "Start a VM.", "parameters": [{ "$ref": "#/components/parameters/node" }, { "$ref": "#/components/parameters/vmid" }] } },
+    "/nodes/{node}/qemu/{vmid}/status/shutdown": { "post": { "operationId": "vmShutdown", "summary": "Ask a VM to shut down cleanly (its operating system does it).", "parameters": [{ "$ref": "#/components/parameters/node" }, { "$ref": "#/components/parameters/vmid" }] } },
+    "/nodes/{node}/qemu/{vmid}/status/stop": { "post": { "operationId": "vmStop", "summary": "Stop a VM at once, like pulling its plug.", "parameters": [{ "$ref": "#/components/parameters/node" }, { "$ref": "#/components/parameters/vmid" }] } },
+    "/nodes/{node}/lxc/{vmid}/status/current": { "get": { "operationId": "containerStatus", "summary": "A container's state now.", "parameters": [{ "$ref": "#/components/parameters/node" }, { "$ref": "#/components/parameters/vmid" }] } },
+    "/nodes/{node}/lxc/{vmid}/status/start": { "post": { "operationId": "containerStart", "summary": "Start a container.", "parameters": [{ "$ref": "#/components/parameters/node" }, { "$ref": "#/components/parameters/vmid" }] } },
+    "/nodes/{node}/lxc/{vmid}/status/shutdown": { "post": { "operationId": "containerShutdown", "summary": "Shut a container down cleanly.", "parameters": [{ "$ref": "#/components/parameters/node" }, { "$ref": "#/components/parameters/vmid" }] } }
+  }
+}

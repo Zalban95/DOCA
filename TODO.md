@@ -110,8 +110,11 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
   - [x] R13d One password for a chain of switches, and "Keep it unlocked for" 1–30 minutes (owner yes 2026-10-13; auth/unlock.js, lib/unlock.js).
 - [x] R14 Every declared setting can be found by the header search, the owner's own switches too (3.57.0).
 - [x] R15 A Nearby scan no longer stops on a sighting it cannot name (3.57.0).
-- [ ] R16 Queue 30 (2026-10-12): Proxmox VE as a hypervisor row; "Draw my hive" from DOCA's records; Uptime Kuma and
-  TrueNAS as key-pasted services with skills.
+- [~] R16 Queue 30 (2026-10-12): Proxmox VE as a hypervisor row; "Draw my hive" from DOCA's records; Uptime Kuma and
+  TrueNAS as key-pasted services with skills. *3.62.0: Proxmox VE and Uptime Kuma as ready-made API services (templates,
+  checked against their docs 2026-10-13) with skills; TrueNAS as a skill over SSH (`midclt call`), since its REST API
+  goes in 26 and its JSON-RPC is a WebSocket. Left: Proxmox in the VMs tab; "Draw my hive". **Ask:** Proxmox makes a
+  self-signed certificate the hub refuses — accepting one for the owner's own addresses would loosen a guard.*
 
 **Plan, in this order** (each a branch, CI on three OSes, released, the live panel switched and swept):
 1. Release 3.57.0; prove R3a on the real speaker and TV; fix R3b (one record per cast thing).

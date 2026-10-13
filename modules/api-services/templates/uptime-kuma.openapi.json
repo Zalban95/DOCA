@@ -1,0 +1,21 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Uptime Kuma",
+    "version": "1",
+    "summary": "What Uptime Kuma watches: every monitor's state and response time (its metrics), and a published status page's monitors and recent beats.",
+    "x-doca-name": "uptime-kuma",
+    "x-doca-skill": "uptime-kuma",
+    "x-doca-key-hint": "An API key from Settings → API Keys, pasted as any name, a colon, and the key (for example doca:uk2_…): it is sent as Basic sign-in, the name ignored",
+    "x-doca-checked": "2026-10-13, github.com/louislam/uptime-kuma/wiki/Internal-API (/metrics with an API key over Basic, the status-page and badge routes)"
+  },
+  "externalDocs": { "url": "https://github.com/louislam/uptime-kuma/wiki/Internal-API" },
+  "servers": [{ "url": "http://{host}:3001", "variables": { "host": { "default": "uptime-kuma.lan", "description": "Your Uptime Kuma's name or address" } } }],
+  "components": { "securitySchemes": { "key": { "type": "http", "scheme": "basic" } } },
+  "security": [{ "key": [] }],
+  "paths": {
+    "/metrics": { "get": { "operationId": "metrics", "summary": "Every monitor's state (1 up, 0 down, 2 pending, 3 maintenance), response time and certificate days left, as Prometheus text." } },
+    "/api/status-page/{slug}": { "get": { "operationId": "statusPage", "summary": "A published status page: its groups and monitors.", "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }] } },
+    "/api/status-page/heartbeat/{slug}": { "get": { "operationId": "statusPageBeats", "summary": "A published status page's recent beats and uptime per monitor.", "parameters": [{ "name": "slug", "in": "path", "required": true, "schema": { "type": "string" } }] } }
+  }
+}

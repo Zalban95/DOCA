@@ -24,7 +24,7 @@ const DEVICE_TOOLS = new Set([
   'processes_start', 'screen_read', 'screen_press', 'media_control', 'apps_open',                                     // DocaMobile
 ]);
 // A web API's own field names, which a skill quotes from that API's documentation.
-const API_FIELDS = { hi3d: ['request_type', 'cover_url'] };
+const API_FIELDS = { hi3d: ['request_type', 'cover_url'], 'uptime-kuma': ['monitor_status', 'monitor_name', 'monitor_response_time', 'monitor_cert_days_remaining'] };   // Uptime Kuma's metric names
 
 test('every snake_case name a skill puts in backticks is a tool, a device\'s tool or an API field it documents', () => {
   const tools = new Set(require('../modules/harness/tools').TOOLS.map(t => t.name));
