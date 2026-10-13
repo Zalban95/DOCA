@@ -31,7 +31,9 @@ function connect({ host, port = 8009, timeoutMs = 8000 } = {}) {
       clearInterval(beat);
       for (const w of waiting.values()) { clearTimeout(w.timer); w.reject(bad('The Cast device closed the connection.')); }
       waiting.clear();
-      sock.destroy();
+      // Ended, not destroyed: a message just written (DashCast's, which answers nothing) still goes out first.
+      sock.end();
+      setTimeout(() => sock.destroy(), 2000).unref();
     };
     sock.on('data', reader(m => {
       if (m.namespace === NS.heartbeat && m.data?.type === 'PING') return send(m.source, NS.heartbeat, { type: 'PONG' });
