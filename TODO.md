@@ -74,7 +74,8 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
   - [ ] R4a The results' order does not always follow the score shown (Library search).
   - [ ] R4b Ollama's MLX runtime on Windows (its own package, not wired in).
   - [ ] R4c The third GPU (RX 6600, another site, models over Tailscale) — when the owner sets it up.
-- [ ] R5 **Panel search in sections** — Settings, Files, Repos, pages… each a fold inside the search's dropdown; a
+- [x] R5 *2026-10-13: Pages, Settings, Projects and Files, each a fold with its count (kept per browser), the first six
+  and Show all; a file inside a project asks Files or the project; a declared setting reads as words.* **Panel search in sections** — Settings, Files, Repos, pages… each a fold inside the search's dropdown; a
   result opens where it lives, or asks which when several places fit. *3.57.0 did the groundwork: every declared
   setting is a search row with its page.*
 - [~] R6 Meetings: [x] chat inside a meeting (3.17.0, the meeting room's chat); [ ] **meeting notes like Google AI Edge

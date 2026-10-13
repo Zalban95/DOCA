@@ -97,7 +97,7 @@ function rows() {
     if (seen.has(l.path) || [...named].some(p => l.path.startsWith(`${p}.`))) continue;
     const page = pageOf(l.path);
     if (!page) continue;
-    out.push({ id: l.path, label: l.path, paths: [l.path], page, how: howOf(l.path), words: String(l.hint || '').toLowerCase(),
+    out.push({ id: l.path, label: words2(l.path), paths: [l.path], page, how: howOf(l.path), words: String(l.hint || '').toLowerCase(),
       field: `[data-leaf="${l.path}"]`, host: l.on === 'host' || undefined, declared: true });
   }
   return out;
@@ -107,6 +107,10 @@ const hostPage = page => {
   const [top, sub] = String(page || '').split('/'), l = require('../features/pages').lists();
   return top === 'settings' && sub ? l.SUB.some(t => t.id === sub && t.host) : l.HOST_TABS.includes(top);
 };
+
+/** A path in words: library.makeRoom → "Library: make room", cast.doorPort → "Cast: door port". */
+const split = w => w.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase();
+const words2 = path => { const [top, ...rest] = path.split('.'); const t = split(top); return `${t[0].toUpperCase()}${t.slice(1)}${rest.length ? `: ${rest.map(split).join(' ')}` : ''}`; };
 
 const tier = x => (!x.r.declared && x.score >= 6 ? 0 : 1);
 
