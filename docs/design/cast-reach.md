@@ -521,6 +521,16 @@ by the hub's code, held to the OpenAPI schemas and to the clients' copies (`test
 4. Measured on the owner's two devices with the test account: DashCast `force` on the Philips TV, WAV and MP3 on the
    Home Max, open-ended WAV live, time to first sound, a TV in standby.
 
+**Built so far (2026-10-13, asked: "the devices are not seen" in the Cast sheet):** the Cast v2 sender
+(`cast/castv2`), the door (`cast/door.js`, `cast.door` off until the owner's click in the Cast sheet, with the password;
+`cast.doorPort`), one-time media (`cast/media.js`, served at `GET /api/cast/media/:token` through the door only, to the
+one address), speech (`cast/speech.js`: the person's Quick call voice, a hosted voice not yet), the things
+(`cast/things.js`: saved Nearby things that take Cast, allotted as `nearby`; show a page by DashCast `force` through a
+one-time view link, say a sentence through the Default Media Receiver, stop, volume) and the sheet's "Around you" by
+place and room (`public/js/cast-things.js`). Not yet: DLNA, `cast/running.js` and kept casts restored at start, the
+`cast` tool and its approvals, Nearby's per-thing settings, the relay choice. Sounds are under `/api/cast/media/`, not
+`/cast/media/`: the gate reads the rights table for `/api/` paths, and a page path needs a sign-in.
+
 **Phase B — doca-client as looker and relay**: families `nearby` and `cast`, network reports, Look from, relay
 choice across devices, the "away" state. A hosted hive casts through a home mini PC.
 

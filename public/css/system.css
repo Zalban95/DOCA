@@ -337,5 +337,12 @@ html[data-hosted] .harness-add-row { display: none; }
 .app-steps li { margin-bottom: 2px; }
 .disk-row > .app-steps-row { grid-column: 1 / -1; white-space: normal; font-size: 11px; }
 /* Cast (js/cast.js): a screen per row, its state beneath its name, the actions at the end. */
+/* One column, readable on a desk: the sheet borrows .hub-links' frame, whose body wraps QR codes side by side. */
+.cast-sheet .hub-links-body { flex-direction: column; flex-wrap: nowrap; gap: 0; width: 100%; max-width: 640px; margin: 0 auto; }
 .cast-target { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
 .cast-open { flex-shrink: 0; }
+.cast-room { font-size: 12px; color: var(--muted); margin: 12px 0 0; text-transform: none; }
+.cast-thing .cast-say { margin-top: 6px; }
+.cast-thing .cast-say .input { width: 100%; max-width: 360px; }
+.cast-acts { display: flex; gap: 6px; flex-shrink: 0; }
+.cast-door { margin: 6px 0 10px; }

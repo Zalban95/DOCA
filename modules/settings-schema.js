@@ -210,6 +210,10 @@ const SCHEMA = {
       tagMargin: { type: 'number', min: 0, max: 1, default: 0.06, hint: 'How far above the file\'s average tag score a tag must be to be kept.' },
       captions: { type: 'boolean', default: false, hint: 'Write a one-line caption for pictures and video frames with the vision model (vision.model): a model call per file.' },
       captionsPerRun: { type: 'integer', min: 1, max: 100000, default: 200, hint: 'The most captions written in one run.' } } },
+  // Casting to things on this hub's network (cast/door.js; docs/design/cast-reach.md §2.2): a new way in, the owner's.
+  cast:             { is: 'local', home: 'device', on: 'host', note: 'casting to TVs and speakers on this hub\'s network: the plain-HTTP cast door (cast/) — the owner\'s, never proposable',
+    keys: { door: { type: 'string', oneOf: ['off', 'on'], default: 'off', propose: false, hint: 'on: while a cast runs, a plain-HTTP server on this hub\'s address on the device\'s network answers that device alone, with that cast\'s page or sound (Cast TVs and speakers do not open this hub\'s HTTPS).' },
+      doorPort: { type: 'integer', min: 1024, max: 65535, default: 4243, propose: false, hint: 'The cast door\'s port.' } } },
   migrations:       { is: 'travels', home: 'hive', note: 'which prefs migrations this file has had, and what they changed (migrations.js) — the record travels with the file' },
   usagePrices:      { is: 'travels', home: 'hive', note: 'the owner\'s price list for the usage window (harness/prices.js)' },
   // No box in the panel on purpose: learned by harness/contracts.js from a provider's refusals; the file is where an
