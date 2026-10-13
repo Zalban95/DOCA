@@ -60,11 +60,20 @@ async function send({ url, method, body, headers, key, form, files, save_as }, c
       const verb = (method || (payload instanceof FormData ? 'POST' : 'GET')).toUpperCase();
       const go = async () => {
         if (exchange) { token = await keys.token(exchange, { fresh: !!token }); h = { ...h, Authorization: `Bearer ${token}` }; }
-        return fetch(url, { method: verb, body: payload, headers: h, redirect: 'manual', signal: AbortSignal.timeout(save_as ? 300000 : 60000) });
+        const signal = AbortSignal.timeout(save_as ? 300000 : 60000);
+        // A server whose own certificate the owner trusted by name (cert-pins.js): that certificate alone.
+        const pin = /^https:/.test(url) ? require('../../cert-pins').get(new URL(url).origin) : null;
+        if (pin) return require('../../cert-pins').fetchPinned(url, { method: verb, body: payload, headers: h, signal }, pin.pem);
+        return fetch(url, { method: verb, body: payload, headers: h, redirect: 'manual', signal });
       };
       let r;
       try { r = await go(); if (exchange && r.status === 401) r = await go(); }   // a token that ran out: one more, fresh
-      catch (e) { return { error: `Error: ${keys.scrub(e.message, secret, token)}` }; }
+      catch (e) {
+        // Its own certificate (a home server: Proxmox, a NAS): said with where it is trusted, never accepted here.
+        const own = /SELF_SIGNED|DEPTH_ZERO|UNABLE_TO_VERIFY|self.signed/i.test(`${e.cause?.code || ''} ${e.cause?.message || ''} ${e.message}`);
+        if (own && !/not the one you trusted/.test(e.message)) return { error: `Error: ${new URL(url).origin} presents its own certificate (self-signed), which is not trusted. The person trusts it by name — after looking at its fingerprint — in Field → Connectors → Certificates you trust, or gives the server a trusted one.` };
+        return { error: `Error: ${keys.scrub(e.message, secret, token)}` };
+      }
       // Redirects are followed here, each hop checked (security review 2026-10-07): a key never leaves its own origin,
       // and an address read as the owner's own never hands over a page from the open web, which is the reader's.
       const start = new URL(url), stayOwned = !ctx.airlock && owned(url);

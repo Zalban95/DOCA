@@ -22,6 +22,7 @@ function list() {
 }
 
 function mount(app) {
+  require('../cert-pins').mount(app);   // certificates trusted by name — before /:id, which would take "certs"
   app.get('/api/connectors', h(req => ({ callback: callback(req), connectors: list() })));
   app.post('/api/connectors/:id', h(req => {
     const id = req.params.id, b = req.body || {};

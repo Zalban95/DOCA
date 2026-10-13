@@ -105,6 +105,8 @@ const ROUTES = [
   [W, /^\/api\/spending\/(?!permissions\/[^/]+\/decline$).+$/, 'spending: budgets and permissions'],
   // Secrets for devices (TODO P1.3): keeping or forgetting one — a person's own or the hub's — is the person's, typed.
   [W, /^\/api\/connectors\/sealed\/(all|mine(\/[^/]+)?|[^/]+)$/, 'secrets for devices'],
+  // Trusting a server's own certificate by name (cert-pins.js): what it would let speak as that server is the person's.
+  [['POST'], /^\/api\/connectors\/certs$/, 'trusting a server\'s own certificate'],
   [['POST'], /^\/api\/harness\/usage\/prices$/, 'the prices money budgets are counted in', () => moneyBudgets()],
   // Opening the house from the Home page: a lock's unlock, an alarm's disarm (home/actions.js).
   // A test computer (computers/test-mode.js): its browser takes a typed password and a sign-in click without asking.
