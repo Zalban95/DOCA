@@ -60,7 +60,7 @@ test('a mode\'s skills resolve chat → project → hive, and write-good-code on
   assert.deepEqual(names(plain), ['plan-well:hive'], 'planning is planning anywhere');
   const id = chat();
   const p = inProject(id);
-  assert.deepEqual(names(id), ['write-good-code:hive']);
+  assert.deepEqual(names(id).sort(), ['check-until-done:hive', 'write-good-code:hive'], 'building in a project: how to write it, and checking until it holds');
   require('../modules/harness/modes').set(id, 'debug');
   assert.deepEqual(names(id).sort(), ['debug-method:hive', 'write-good-code:hive']);
   require('../modules/projects/store').update(p.id, { modeSkills: { debug: ['plan-well'] } });
@@ -70,7 +70,7 @@ test('a mode\'s skills resolve chat → project → hive, and write-good-code on
   assert.match(use().block(id), /# Skills attached to this conversation \(Debug mode\)[\s\S]*## android-app \(attached by this chat\)/);
   require('../modules/harness/modes').set(id, 'agent');
   require('../modules/projects/store').update(p.id, { modeSkills: null });
-  assert.deepEqual(names(id).sort(), ['android-app:chat', 'write-good-code:hive']);
+  assert.deepEqual(names(id).sort(), ['android-app:chat', 'check-until-done:hive', 'write-good-code:hive']);
 });
 
 test('the hive switches a skill off: out of the manifest, the readings and the skill tool — and on again', async () => {

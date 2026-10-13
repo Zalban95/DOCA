@@ -50,6 +50,7 @@ const OPTIONS = [
   O('Adobe Acrobat', ['pdf'], ['paid', 'popular'], 'https://www.adobe.com/acrobat.html', { mac: ['Adobe Acrobat'], win: ['Adobe\\Acrobat'] }),
   O('Natron', ['motion'], ['open source', 'free'], 'https://natrongithub.github.io/', { bin: ['natron', 'Natron'], mac: ['Natron'], win: ['Natron'] }),
   O('Adobe After Effects', ['motion'], ['paid', 'popular'], 'https://www.adobe.com/products/aftereffects.html', { mac: ['Adobe After Effects'], win: ['Adobe\\Adobe After Effects'] }),
+  O('Remotion', ['motion', 'video'], ['free', 'paid'], 'https://www.remotion.dev/'),   // a library, not an app: per project (skills/video-from-code); companies of 4+ pay
   O('Blender', ['motion', '3d'], ['open source', 'free', 'popular'], 'https://www.blender.org/download/', { bin: ['blender'], mac: ['Blender'], win: ['Blender Foundation'] }),
   O('Scribus', ['layout'], ['open source', 'free'], 'https://www.scribus.net/downloads/', { bin: ['scribus'], mac: ['Scribus'], win: ['Scribus'] }),
   O('Adobe InDesign', ['layout'], ['paid', 'popular'], 'https://www.adobe.com/products/indesign.html', { mac: ['Adobe InDesign'], win: ['Adobe\\Adobe InDesign'] }),
