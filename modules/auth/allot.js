@@ -24,16 +24,20 @@
  * `account` is a provider a person may connect their own accounts of and let their agents use (accounts/, 2026-10-12:
  * `google`, `microsoft`): everyone's until a level lists which — the accounts are the person's own, the app the hive's.
  *
+ * `nearby` is a thing saved in Machines → Nearby (nearby/store.js), by its id or `place:<place>` (every thing saved in
+ * that place): a speaker or a TV in somebody's home, an admin's until allotted (cast-reach.md §5.3; the owner's yes of
+ * 2026-10-12). `cast/things.js mayUse` asks for the thing, then its place.
+ *
  * `home` is a Home Assistant entity on the Home page (home/, TODO H10.10), by its entity id (`light.kitchen`; `light.*`
  * every light): the hive's home is everyone's to see and use until a level lists which of it its people have.
  */
-const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer', 'service', 'device', 'home', 'vnc', 'account'];
+const KINDS = ['model', 'provider', 'key', 'connector', 'login', 'computer', 'service', 'device', 'home', 'vnc', 'account', 'nearby'];
 
 /**
  * Kinds that were an admin's alone before levels could list them: a level that names nothing gives none. Another
  * person's device was never anyone's to use, so it is one too; a service, like a model, was everyone's.
  */
-const ADMIN_FIRST = new Set(['key', 'connector', 'login', 'device', 'vnc']);
+const ADMIN_FIRST = new Set(['key', 'connector', 'login', 'device', 'vnc', 'nearby']);
 
 const host = person => require('./rights').can(person?.role, 'host');
 const match = (pattern, id) => pattern === '*' || pattern === id || (pattern.endsWith('*') && id.startsWith(pattern.slice(0, -1)));
