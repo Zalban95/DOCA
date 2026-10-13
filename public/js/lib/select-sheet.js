@@ -8,7 +8,10 @@ const SELECT_SHEET_MQ = '(max-width: 768px), (pointer: coarse)';
 function selectSheetOpen(sel) {
   document.getElementById('select-sheet')?.remove();
   const back = Object.assign(document.createElement('div'), { id: 'select-sheet', className: 'select-sheet' });
-  const label = sel.labels?.[0]?.textContent || sel.closest('.field, label')?.querySelector('.input-label, label')?.textContent || sel.getAttribute('aria-label') || '';
+  // A label's own words, not the controls inside it: a <label> wrapping the select read its options too ("Show LiveThe
+  // Workstream…", the Cast sheet, 2026-10-13).
+  const words = el => { if (!el) return ''; const c = el.cloneNode(true); c.querySelectorAll('select, input, textarea, button, .info-btn').forEach(x => x.remove()); return c.textContent; };
+  const label = words(sel.labels?.[0]) || words(sel.closest('.field, label')?.querySelector('.input-label, label')) || sel.getAttribute('aria-label') || '';
   back.innerHTML = `<div class="select-sheet-box" role="listbox">${label ? `<div class="select-sheet-title">${escHtml(label.trim())}</div>` : ''}</div>`;
   const box = back.firstElementChild;
   for (const el of sel.children) {

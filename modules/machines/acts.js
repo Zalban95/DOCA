@@ -17,7 +17,7 @@
 const VERB = { start: 'started', stop: 'stopped', restart: 'restarted', reboot: 'rebooted', kill: 'cut the power to', resume: 'resumed',
   remove: 'removed', rm: 'removed', delete: 'deleted', create: 'made', run: 'ran', adopt: 'adopted', archive: 'put away', restore: 'brought back',
   add: 'added', update: 'updated', 'take-over': 'took over', pause: 'paused', unpause: 'resumed' };
-const LABEL = { tool: 'the program', container: 'the container', service: 'the inference service', llamacpp: 'the llama.cpp server', vm: 'the VM',
+const LABEL = { nearby: 'the device', tool: 'the program', container: 'the container', service: 'the inference service', llamacpp: 'the llama.cpp server', vm: 'the VM',
   computer: 'the computer', vnc: 'the VNC screen', stack: '', mcp: 'the MCP server' };
 
 const stackId = () => require('./use').stackProject();

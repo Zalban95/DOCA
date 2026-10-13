@@ -14,7 +14,8 @@ async function castOpen(page = (typeof currentTab !== 'undefined' ? currentTab :
   ov.innerHTML = `<div class="model3d-bar"><b>Cast</b><span style="flex:1"></span><button class="btn btn-xs" type="button">✕</button></div>
     <div class="hub-links-body">
       <label class="input-label">Show <select class="input" id="cast-page" style="width:auto">${Object.entries(d.pages).map(([id, l]) => `<option value="${id}"${id === CAST.page ? ' selected' : ''}>${escHtml(l)}</option>`).join('')}</select></label>
-      <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="cast-keep" checked> 🔒 Keep it there when this phone goes</label>
+      <label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="cast-keep" checked> 🔒 Keep it there when ${matchMedia('(pointer: coarse)').matches ? 'this phone' : 'this screen'} goes</label>
+      <div id="cast-things"></div>
       <div class="input-label">On a screen of yours</div>
       ${others.length ? others.map(t => `<div class="cast-target"><div><b>${escHtml(t.name)}</b>${t.mine ? '' : ' <span class="desc">(someone else\'s)</span>'}<br>
           <span class="desc">${t.cast?.keep ? `🔒 showing ${escHtml(d.pages[t.cast.page] || t.cast.page)}` : t.shows ? `shows ${escHtml(t.shows)}` : 'not open now: it shows the page when it next opens the panel'}</span></div>
@@ -26,6 +27,7 @@ async function castOpen(page = (typeof currentTab !== 'undefined' ? currentTab :
       <button class="btn btn-sm" type="button" onclick="castLink(this)">Make a link</button><div id="cast-link"></div>
     </div>`;
   document.body.append(ov);
+  if (typeof castThingsHtml === 'function') castThingsHtml().then(html => { const box = ov.querySelector('#cast-things'); if (box) box.innerHTML = html; });
   const release = overlayBack(() => ov.remove());
   ov.querySelector('.model3d-bar button').onclick = () => { release(); ov.remove(); };
 }

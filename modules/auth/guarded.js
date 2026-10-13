@@ -83,6 +83,7 @@ const ROUTES = [
   [['POST'], /^\/api\/developer\/releasing$/, 'who may release unasked'],
   [['POST'], /^\/api\/sharing$/, 'sharing with the project'],
   [['POST'], /^\/api\/network$/, 'how the hub listens'],
+  [['POST'], /^\/api\/cast\/door$/, 'the cast door (a plain-HTTP way in for devices on this network)'],
   [['POST'], /^\/api\/logs\/keep$/, 'what is kept of what happened'],
   [W, /^\/api\/auth\/(levels|grants)(\/.*)?$/, 'levels, reach and grants'],
   [W, /^\/api\/auth\/users(\/[^/]+)?$/, 'who has an account, and at what level'],

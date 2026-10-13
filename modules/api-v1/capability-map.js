@@ -101,6 +101,10 @@ const PERSON = [
   { id: 'cast', does: 'send a page to one of my screens, keep it there or stop it, and make a view link for a screen that cannot sign in',
     panel: ['GET /api/cast/targets', 'POST /api/cast/show', 'POST /api/cast/stop', 'POST /api/cast/links'],
     gap: 24, why: 'the Cast button is the panel page\'s in a phone\'s web view today; a phone casting by itself (to a TV on its own Wi-Fi) is phase 2 of the design' },
+  { id: 'cast-things', does: 'show a page on a saved Cast TV, say something on a speaker, stop it or set its volume',
+    panel: ['POST /api/cast/things/:id/show', 'POST /api/cast/things/:id/say', 'POST /api/cast/things/:id/stop', 'POST /api/cast/things/:id/volume'],
+    gap: 25, why: 'the Cast sheet is the panel page\'s in a phone\'s web view today; /api/v1/cast/* waits for its scope (docs/design/cast-reach.md §5.5)' },
+  { id: 'cast-door', does: 'switch the cast door on or off', panel: ['POST /api/cast/door'], only: 'how this hub opens to devices on its network: the owner\'s, with the password' },
   { id: 'cast-open', does: 'open a view link on a screen that cannot sign in', panel: ['GET /api/cast/open/:code'],
     only: 'a TV\'s or a monitor\'s browser opening its one link: it is a screen of the hive only once it has' },
 

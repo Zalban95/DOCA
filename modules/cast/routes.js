@@ -58,6 +58,7 @@ function stop(req) {
 }
 
 function mount(app) {
+  require('./routes-things').mount(app);   // things Nearby saved: TVs and speakers (cast/things.js)
   app.get('/api/cast/targets', h(targets));
   app.post('/api/cast/show', h(show));
   app.post('/api/cast/stop', h(stop));

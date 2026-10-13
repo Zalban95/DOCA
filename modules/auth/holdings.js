@@ -35,6 +35,7 @@ function inUse(person, kind) {
     }
     case 'account':  return quiet(() => require('../accounts/store').list(person.id).filter(a => ok(a.provider)).map(a => a.account || a.provider));   // their own (accounts/)
     case 'login':    return quiet(() => require('../logins').list().filter(l => ok(l.id) || ok(l.label)).map(l => l.label));
+    case 'nearby':   return quiet(() => require('../nearby/store').saved().filter(t => ok(t.id) || ok(`place:${t.place}`)).map(t => t.name));
     case 'vnc':      return quiet(() => require('../vnc-targets/store').list().filter(t => ok(t.id) || ok(t.name)).map(t => t.name));
     case 'service':  return quiet(() => require('../services').INFERENCE_SERVICES.filter(s => s.chat && ok(s.id)).map(s => s.id));   // those a turn can use
     case 'computer': return quiet(() => require('../computers').all().filter(c => !c.archivedAt && !require('../computers/whose').refuse(person, c.id)).map(c => c.id));
