@@ -113,7 +113,7 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
 - [~] R16 Queue 30 (2026-10-12): Proxmox VE as a hypervisor row; "Draw my hive" from DOCA's records; Uptime Kuma and
   TrueNAS as key-pasted services with skills. *3.62.0: Proxmox VE and Uptime Kuma as ready-made API services (templates,
   checked against their docs 2026-10-13) with skills; TrueNAS as a skill over SSH (`midclt call`), since its REST API
-  goes in 26 and its JSON-RPC is a WebSocket. Left: Proxmox in the VMs tab; "Draw my hive". **Ask:** Proxmox makes a
+  goes in 26 and its JSON-RPC is a WebSocket. "Draw my hive": Machines → Map (machines/map.js, hive-map.js). Left: Proxmox in the VMs tab. **Ask:** Proxmox makes a
   self-signed certificate the hub refuses — accepting one for the owner's own addresses would loosen a guard.*
 
 **Plan, in this order** (each a branch, CI on three OSes, released, the live panel switched and swept):

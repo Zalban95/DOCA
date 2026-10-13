@@ -147,6 +147,7 @@ function mount(app) {
   // Shown, so looked at: Live and the status column keep busy.js reading the machines while they ask (nothing otherwise).
   app.get('/api/machines', async (req, res) => { require('./busy').want(); try { res.json(await picture({ shots: req.query.shots === '1' })); } catch (e) { res.status(500).json({ error: e.message }); } });
   // Every machine as one row (rows.js): the status column asks while it is shown.
+  require('./map').mount(app);   // Machines → Map: the hive drawn from its records (map.js)
   app.get('/api/machines/rows', async (req, res) => { require('./busy').want(); try { res.json(await require('./rows').rows()); } catch (e) { res.status(500).json({ error: e.message }); } });
   app.get('/api/machines/vms/:hypervisor/:name/shot', (req, res) => {
     const png = require('./vm-shots').get(`${req.params.hypervisor}:${req.params.name}`);
