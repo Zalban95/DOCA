@@ -69,14 +69,15 @@ test('the panel reports every hypervisor this OS can have, including any that ar
 
   // libvirt and VirtualBox everywhere; Hyper-V on Windows, UTM and Parallels on a Mac (vms-desktop.js).
   const ids = body.hypervisors.map(h => h.id);
-  const expected = { win32: ['libvirt', 'virtualbox', 'hyperv'], darwin: ['libvirt', 'virtualbox', 'utm', 'parallels'] }[process.platform] || ['libvirt', 'virtualbox'];
+  // …and Proxmox VE on every OS, through its API service (vms-proxmox.js).
+  const expected = [...({ win32: ['libvirt', 'virtualbox', 'hyperv'], darwin: ['libvirt', 'virtualbox', 'utm', 'parallels'] }[process.platform] || ['libvirt', 'virtualbox']), 'proxmox'];
   assert.deepEqual(ids, expected);
 
   for (const hv of body.hypervisors) {
     assert.ok(Array.isArray(hv.vms));
     if (!hv.available) {
       assert.deepEqual(hv.vms, [], 'nothing to list without the CLI');
-      assert.match(hv.error, /not found/, 'says why, rather than an empty panel');
+      assert.match(hv.error, /not found|Not set up/, 'says why, rather than an empty panel');
     }
     // Each is reported on its own so one missing CLI cannot hide the other.
     assert.ok(hv.label && hv.bin);

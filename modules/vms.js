@@ -171,6 +171,8 @@ const HYPERVISORS = {
   virtualbox: { label: 'VirtualBox',    bin: 'VBoxManage', list: vboxList,    actions: VBOX_ACTIONS,    flags: () => [] },
   // Hyper-V, UTM, Parallels (vms-desktop.js): each knows how it is found and how an action is invoked.
   ...require('./vms-desktop').hypervisors(normalizeState),
+  // Proxmox VE through its API service, once that is set up (vms-proxmox.js).
+  proxmox: require('./vms-proxmox').hypervisor(normalizeState),
 };
 
 /** Is the CLI on PATH? `--version` is the cheapest question every one answers; a desktop row asks its own way. */
@@ -189,7 +191,7 @@ async function listAll() {
   // A hypervisor that cannot exist on this OS (Hyper-V off Windows, UTM off a Mac) is left out, not reported missing.
   return Promise.all(Object.entries(HYPERVISORS).filter(([, hv]) => !hv.os || hv.os.includes(process.platform)).map(async ([id, hv]) => {
     if (!await present(hv))
-      return { id, label: hv.label, bin: hv.bin, available: false, vms: [], error: `${hv.bin} not found` };
+      return { id, label: hv.label, bin: hv.bin, available: false, vms: [], error: hv.missing || `${hv.bin} not found` };
     try {
       return { id, label: hv.label, bin: hv.bin, available: true, vms: await hv.list(), error: null };
     } catch (e) {

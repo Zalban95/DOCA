@@ -23,6 +23,8 @@ lists its actions.
    fingerprint with Proxmox's own (the node's System → Certificates), Trust — with their password. Or give Proxmox a
    trusted one (its ACME, Let's Encrypt). Say this plainly when a call fails with a certificate error.
 
+Once set up, its guests also show in **Machines → VMs** beside the other hypervisors, with Start, Shut down and Stop.
+
 ## Using it
 
 - What runs: `listResources` (everything, one call) — then name VMs and containers by their `name`, with their node.
