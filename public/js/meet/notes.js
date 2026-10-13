@@ -4,7 +4,7 @@
    notes window: what was said, your own shorthand (kept as you type), "Write it up" (each line made a sentence from
    the transcript by your model, marked as written), and Stop for whoever started. The record is kept when the meeting
    ends (Meetings → the meeting → Notes). */
-const NOTES = { on: false, consent: null, lines: [], mine: '', written: [], by: null, agreed: 0, asked: 0, open: false, ear: null, saveT: null };
+const NOTES = { on: false, consent: null, lines: [], mine: '', written: [], by: null, agreed: 0, asked: 0, open: false, ear: null, saveT: null, answers: [] };
 
 async function meetNotesLoad() {
   if (!MEET.id) return;
@@ -15,7 +15,7 @@ async function meetNotesLoad() {
 
 /** The button in the room's controls (meet/draw.js). */
 function meetNotesBtn() {
-  const label = NOTES.on ? `📝 Notes · ${NOTES.agreed} of ${NOTES.asked}` : '📝 Notes';
+  const label = `${NOTES.on ? `📝 Notes · ${NOTES.agreed} of ${NOTES.asked}` : '📝 Notes'}${NOTES.unread ? ` · ${NOTES.unread} for you` : ''}`;
   return `<button type="button" class="btn${NOTES.on ? ' meet-on' : ''}" onclick="meetNotesOpen()" title="Notes of this meeting: asked of everyone, only who agrees is transcribed">${escHtml(label)}</button>`;
 }
 
@@ -26,12 +26,17 @@ async function meetNotesOpen() {
     });
     return;
   }
-  NOTES.open = true; _notesDraw();
+  NOTES.open = true; NOTES.unread = 0; _notesDraw(); meetDraw();
 }
 
 /** The live feed: notes started (ask), someone answered, a line was heard. */
 function meetNotesHeard(c) {
   if (c.what === 'notes-line') { NOTES.lines.push(c.line); _notesDraw(); return; }
+  if (c.what === 'notes-answer') {   // a question this person said, answered for them alone (notes-answers.js)
+    NOTES.answers.push(c.card); _notesDraw();
+    if (!NOTES.open) { NOTES.unread = (NOTES.unread || 0) + 1; if (typeof meetDraw === 'function') meetDraw(); }   // said on the button
+    return;
+  }
   if (c.what !== 'notes') return;
   meetNotesLoad().then(() => { if (NOTES.on && !NOTES.consent) _notesAsk(); if (typeof meetDraw === 'function') meetDraw(); });
 }
@@ -98,6 +103,7 @@ function _notesDraw() {
       <div class="input-label">Your notes — a few words a line; Write it up makes each a sentence from what was said</div>
       <textarea class="input" rows="6" style="width:100%;box-sizing:border-box" placeholder="budget q4 → ask Marco&#10;deadline 30th?">${escHtml(NOTES.mine || '')}</textarea>
       <div style="display:flex;gap:8px;align-items:center;margin:6px 0"><button class="btn btn-sm btn-teal" type="button" data-write>Write it up</button><span class="status-line" id="notes-status"></span></div>
+      ${NOTES.answers.length ? `<div class="input-label">For you — what your questions found (only you see this)</div>${NOTES.answers.slice(-5).reverse().map(a => `<div class="desc" style="margin:4px 0"><b>${escHtml(a.question)}</b>${a.sources.map(s => `<div style="margin-left:10px">${s.kind === 'file' ? `📄 ${escHtml(s.name)}` : `🗓 ${escHtml(s.title)}`}${s.text ? ` — ${escHtml(s.text)}` : ''}</div>`).join('')}</div>`).join('')}` : ''}
       ${NOTES.written.length ? `<div class="input-label">Written up from the transcript (by your model)</div>${NOTES.written.map(w => `<div class="desc" style="margin:4px 0"><b>${escHtml(w.line)}</b> → ${escHtml(w.text)}</div>`).join('')}` : ''}
       <div class="input-label" style="margin-top:10px">What was said${NOTES.consent === 'no' ? ' — you chose Not me: nothing you say is transcribed' : ''}</div>
       <div class="notes-lines" style="max-height:40vh;overflow:auto">${NOTES.lines.map(l => `<div class="desc"><b>${escHtml(l.name)}</b> ${escHtml(l.text)}</div>`).join('') || '<div class="desc">Nothing yet.</div>'}</div>
@@ -117,4 +123,16 @@ function _notesDraw() {
 }
 
 /** Leaving the room ends this page's part: the ear stops, the window closes. */
-function meetNotesReset() { NOTES.ear?.stop(); Object.assign(NOTES, { on: false, consent: null, lines: [], mine: '', written: [], open: false, ear: null }); document.getElementById('notes-win')?.remove(); document.getElementById('notes-ask')?.remove(); }
+function meetNotesReset() { NOTES.ear?.stop(); Object.assign(NOTES, { on: false, consent: null, lines: [], mine: '', written: [], open: false, ear: null, answers: [] }); document.getElementById('notes-win')?.remove(); document.getElementById('notes-ask')?.remove(); }
+
+/** A past meeting's kept notes (Meetings → 📝 Notes): the record, rendered; Back closes it. */
+async function meetingsNotes(id) {
+  let r;
+  try { r = await apiFetch(`/api/meetings/${encodeURIComponent(id)}/notes/record`); } catch (e) { return appAlert(e.message); }
+  const ov = Object.assign(document.createElement('div'), { className: 'model3d-full hub-links' });
+  ov.innerHTML = '<div class="model3d-bar"><b>Notes</b><span style="flex:1"></span><button class="btn btn-xs" type="button" data-close>✕</button></div><div class="hub-links-body"><div class="md-doc" style="width:100%"></div></div>';
+  if (typeof mdInto === 'function') mdInto(ov.querySelector('.md-doc'), r.markdown); else ov.querySelector('.md-doc').textContent = r.markdown;
+  document.body.append(ov);
+  let back = typeof overlayBack === 'function' ? overlayBack(() => { back = null; ov.remove(); }) : null;
+  ov.querySelector('[data-close]').onclick = () => { ov.remove(); const b = back; back = null; b?.(); };
+}

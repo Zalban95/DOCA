@@ -80,6 +80,8 @@ async function heard(id, person, screen, file) {
   const line = { at: new Date().toISOString(), personId: person.id, name: person.name, text: text.slice(0, 2000), language: r.language || null };
   n.lines.push(line); if (n.lines.length > KEEP_LINES) n.lines.splice(0, n.lines.length - KEEP_LINES);
   tell(id, 'notes-line', { line });
+  // A question said aloud: answered on the asker's own page, from what they may open (notes-answers.js) — not awaited.
+  require('./notes-answers').answer(id, person, line).catch(() => {});
   return { line };
 }
 
@@ -138,6 +140,7 @@ function record(id, title) {
 }
 
 function readRecord(id) { const f = path.join(dir(id), 'notes.md'); return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null; }
+const hasRecord = id => fs.existsSync(path.join(dir(id), 'notes.md'));
 
 let hooked = false;
 function hook() {
@@ -149,4 +152,4 @@ function hook() {
   ev.on('ended', ({ roomId, title }) => { try { record(roomId, title); } catch (e) { console.error('[meetings] notes record failed:', e.message); } });
 }
 
-module.exports = { view, start, consent, stop, heard, mine, writeUp, record, readRecord, hook, left, _notes: notes };
+module.exports = { view, start, consent, stop, heard, mine, writeUp, record, readRecord, hasRecord, hook, left, _notes: notes };

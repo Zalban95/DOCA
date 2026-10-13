@@ -7,7 +7,7 @@ const assert = require('node:assert/strict');
 const http = require('node:http');
 const H = require('./helpers');
 
-let alice, bob, eve, stt, sttHeard = 0;
+let alice, bob, eve, stt, sttHeard = 0, sttText = 'We move the launch to the thirtieth.';
 async function page(who) {
   const ctrl = new AbortController();
   const res = await fetch(`${H.base}/api/live/stream`, { headers: { Cookie: who.cookie }, signal: ctrl.signal });
@@ -27,7 +27,7 @@ const utter = (who, id, screen) => { const fd = new FormData(); fd.append('audio
 test.before(async () => {
   await H.start();
   alice = await H.signIn('member', 'alice@test.local'); bob = await H.signIn('member', 'bob@test.local'); eve = await H.signIn('member', 'eve@test.local');
-  stt = http.createServer((req, res) => { req.resume(); req.on('end', () => { sttHeard++; res.writeHead(200, { 'Content-Type': 'application/json' }); res.end('{"text":"We move the launch to the thirtieth."}'); }); });
+  stt = http.createServer((req, res) => { req.resume(); req.on('end', () => { sttHeard++; res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ text: sttText })); }); });
   await new Promise(r => stt.listen(0, '127.0.0.1', r));
   const u = require('../modules/utils'); u.savePrefs({ ...u.loadPrefs(), voiceServices: { sttUrl: `http://127.0.0.1:${stt.address().port}`, sttModel: 'stub' } });
 });
@@ -85,5 +85,24 @@ test('asked of everyone; only a yes is transcribed; written up; the record kept 
   assert.match(rec.body.markdown, /Written up from the transcript \(by the model\)/);
   assert.match(rec.body.markdown, /Agreed\./, 'the chat is kept with it');
   assert.equal((await as(eve, 'GET', `/api/meetings/${m.id}/notes/record`)).status, 404, 'only its people read it');
+  pa.close(); pb.close();
+});
+
+test('a question said aloud is answered on the asker\'s page alone, from their earlier meetings\' notes', async () => {
+  const m = (await as(alice, 'POST', '/api/meetings', { now: true, people: [bob.user.id], title: 'Follow-up' })).body.meeting;
+  const pa = await page(alice), pb = await page(bob);
+  await as(alice, 'POST', `/api/meetings/${m.id}/join`, { screen: pa.screen });
+  await as(bob, 'POST', `/api/meetings/${m.id}/join`, { screen: pb.screen });
+  await as(alice, 'POST', `/api/meetings/${m.id}/notes/start`, { screen: pa.screen });
+  sttText = 'When is the launch now?';
+  assert.equal((await utter(alice, m.id, pa.screen)).status, 200);
+  const got = await pa.wait(c => c.what === 'notes-answer', 4000);
+  assert.ok(got, 'Alice is answered');
+  assert.equal(got.card.question, 'When is the launch now?');
+  assert.ok(got.card.sources.some(x => x.kind === 'meeting' && x.title === 'Launch sync' && /launch to the thirtieth/.test(x.text)), JSON.stringify(got.card));
+  await H.sleep(300);
+  assert.ok(!pb.heard.some(c => c.what === 'notes-answer'), 'Bob\'s page hears nothing of it');
+  const q = require('../modules/meetings/notes-answers');
+  assert.ok(q.isQuestion('Dove facciamo la cena?') && q.isQuestion('Wann ist der Termin') && !q.isQuestion('We move the launch.'));
   pa.close(); pb.close();
 });

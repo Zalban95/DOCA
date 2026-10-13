@@ -108,7 +108,7 @@ async function view(m, person) {
   const mine = m.ownerId === person?.id;
   return { ...m, base: undefined, link: invite.link(m), organizer: m.ownerId === person?.id,
     people: people.map(p => ({ who: p.who, personId: p.personId, name: p.name, role: p.role, ...(mine ? { via: p.via, status: p.status, note: p.note, email: p.personId ? undefined : p.email } : {}) })),
-    room: rooms.snapshot(m.id), control: require('./control').list(m.id) };
+    room: rooms.snapshot(m.id), control: require('./control').list(m.id), hasNotes: require('./notes').hasRecord(m.id) };
 }
 
 /** The meeting, if this person may see it — else a 404, as if it did not exist. */

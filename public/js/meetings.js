@@ -31,6 +31,7 @@ function _mtRow(m) {
   const acts = [
     ['open', 'scheduled'].includes(m.state) ? `<button class="btn btn-primary btn-xs" onclick="meetJoin('${m.id}')">Join</button>` : '',
     m.state === 'proposed' && m.organizer ? `<button class="btn btn-primary btn-xs" onclick="meetingsDo('${m.id}', 'confirm')">Confirm and invite</button>` : '',
+    m.hasNotes ? `<button class="btn btn-xs" onclick="meetingsNotes('${m.id}')" title="The notes kept when it ended: what was said by who agreed, the notes, the chat">📝 Notes</button>` : '',
     `<button class="btn btn-xs" onclick="navigator.clipboard?.writeText('${escHtml(m.link)}').then(() => appAlert('Link copied'))">Link</button>`,
     m.startsAt && m.state !== 'cancelled' ? `<a class="btn btn-xs" href="/api/meetings/${m.id}/invite.ics" download>Add to calendar</a>` : '',
     m.organizer && !['cancelled', 'ended'].includes(m.state) ? `<button class="btn btn-red btn-xs" onclick="appConfirm('Cancel &quot;${escHtml(m.title).replace(/'/g, '')}&quot; for everyone? Their calendars are told.', () => meetingsDo('${m.id}', 'cancel'))">Cancel</button>` : '',
