@@ -46,7 +46,7 @@ async function convExtras(host, sessionId, redraw) {
   ]);
   const n = att?.skills?.length || 0;
   host.innerHTML = `<button class="btn btn-xs conv-skills" title="${escHtml(n ? `Skills attached here: ${att.skills.map(s => `${s.name} (${s.where})`).join(', ')}` : 'No skill is attached to this chat')}">✦ ${n || ''} skill${n === 1 ? '' : 's'}</button>
-    ${loops.map(l => `<span class="conv-loop" title="${escHtml(`${l.message}\n${l.whenText}, run ${l.runs || 0} of ${l.max}`)}">⟳ ${l.nextAt ? `next ${new Date(l.nextAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'running'}
+    ${loops.map(l => `<span class="conv-loop" title="${escHtml(`${tipText(l.message, 100)} — ${l.whenText}, run ${l.runs || 0} of ${l.max}`)}">⟳ ${l.nextAt ? `next ${new Date(l.nextAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'running'}
       <button class="btn btn-xs conv-loop-stop" data-id="${escHtml(l.id)}" title="Stop this loop">■</button></span>`).join('')}
     <button class="btn btn-xs conv-more" title="This chat's compaction, suggested skills and commands">⋯</button>`;
   host.querySelector('.conv-skills').onclick = e => convSkillsPop(e.currentTarget, sessionId, att, redraw);

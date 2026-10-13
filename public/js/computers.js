@@ -63,7 +63,7 @@ async function computersLoad() {
 function computersCard(c) {
   const on = c.state === 'running';
   const m = c.mission;
-  const who = m ? `<div class="pc-who" title="${escHtml(m.task)}"><b>${escHtml(m.label || m.agentId)}</b> · ${escHtml(m.state)} — ${escHtml(m.task)}</div>`
+  const who = m ? `<div class="pc-who" title="${escHtml(tipText(m.task))}"><b>${escHtml(m.label || m.agentId)}</b> · ${escHtml(m.state)} — ${escHtml(m.task)}</div>`
     : `<div class="pc-who pc-dim">${escHtml(c.purpose || 'No mission yet.')}</div>`;
   const media = (c.media || []).map(f => `<button class="pc-file" title="${escHtml(f.name)}" onclick="computersMedia(${jsArg(f.name)}, ${jsArg(f.mime)})">${
     /^video\//.test(f.mime) ? '▶' : /^image\//.test(f.mime) ? '▣' : '▤'} ${escHtml(f.name.replace(/^computer-[a-f0-9]+-/, '').slice(0, 28))}</button>`).join('');

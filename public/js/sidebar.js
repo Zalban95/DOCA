@@ -303,11 +303,16 @@ function renderModels(models, loadedModels, servers = []) {
 
 
 /** Model servers this machine runs outside Ollama: a router's models loaded, sleeping or working, and for whom. */
+/** Where a server answers, short: ":8000" on this machine, else its host ("X :" read as a blank for a named one, 2026-10-14). */
+function _msWhere(url) {
+  try { const u = new URL(url); return /^(127\.|localhost$|\[::1\]$)/.test(u.hostname) ? (u.port ? `:${u.port}` : '') : u.host; } catch { return ''; }
+}
+
 function sidebarModelServers(servers) {
   const rows = [];
   for (const sv of servers) {
     const states = (sv.models || []).filter(m => m.state !== 'available');
-    if (!states.length) { rows.push(`<div class="model-item" title="${escHtml(sv.url)}"><span class="model-name">${escHtml(sv.label)} <span class="model-sz">:${escHtml(new URL(sv.url).port || '')}</span></span><span class="model-sz">answers · ${(sv.models || []).length} listed</span></div>`); continue; }
+    if (!states.length) { rows.push(`<div class="model-item" title="${escHtml(sv.url)}"><span class="model-name">${escHtml(sv.label)} <span class="model-sz">${escHtml(_msWhere(sv.url))}</span></span><span class="model-sz">answers · ${(sv.models || []).length} listed</span></div>`); continue; }
     for (const m of states) {
       const who = m.state !== 'working' ? '' : sv.doca.length ? `for DOCA: ${sv.doca.map(d => d.text).join('; ')}` : 'for something else on this machine — not DOCA';
       rows.push(`<div class="model-item ${m.state === 'working' || m.state === 'loaded' ? 'loaded' : ''}" title="${escHtml(`${sv.kind} · ${sv.url}${who ? `\n${who}` : ''}`)}">

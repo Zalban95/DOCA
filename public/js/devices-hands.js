@@ -6,13 +6,14 @@
 /* ── Devices as hands (modules/devices-control.js; docs/design/devices-as-hands.md) ── */
 
 const DEV_FAMILY_LABEL = { files: 'Files', shell: 'Shell', processes: 'Processes', screen: 'Screen', input: 'Input',
-  apps: 'Apps', device: 'Device', elevated: 'Admin', mcp: 'MCP' };
+  apps: 'Apps', device: 'Device', elevated: 'Admin', mcp: 'MCP', home: 'Home', nearby: 'Nearby', cast: 'Cast' };
 
 /** What a device lets the harness do, and the actions on it. */
 function devHandsHtml(d) {
   const c = d.control || { grants: {}, revoked: [], history: [], families: Object.keys(DEV_FAMILY_LABEL) };
   const id = jsArg(d.id);
-  const chips = c.families.map(f => {
+  // Home is a home node's family (PROTOCOL §22.4): drawn only for a device that reports it, never as "not reported" on a phone.
+  const chips = c.families.filter(f => f !== 'home' || Object.prototype.hasOwnProperty.call(c.grants || {}, 'home')).map(f => {
     const granted = c.grants?.[f] === true, revoked = c.revoked?.includes(f);
     const state = revoked ? 'revoked here' : granted ? 'granted' : c.grants?.[f] === false ? 'refused on the device' : 'not reported';
     const cls = revoked ? 'dev-fam revoked' : granted ? 'dev-fam on' : 'dev-fam';
@@ -38,7 +39,8 @@ function devHandsHtml(d) {
 /** What stops when a family is taken back, in words (deep test B: one click on a chip revoked it, unasked). */
 const DEV_FAMILY_STOPS = { files: 'reading and changing its files', shell: 'running commands on it', processes: 'seeing and ending its programs',
   screen: 'seeing its screen', input: 'typing and clicking on it', apps: 'opening and listing its apps', device: 'its notifications, clipboard and battery readings',
-  elevated: 'anything that needs its administrator rights', mcp: 'the MCP servers it hosts' };
+  elevated: 'anything that needs its administrator rights', mcp: 'the MCP servers it hosts', home: 'reaching the home it runs',
+  nearby: 'looking at what is around it', cast: 'casting through it to the TVs and speakers near it' };
 
 /** Why a device's MCP server offers no tools, when families were taken back here (its card in MCP; '' otherwise). */
 function devRevokedNote(s) {

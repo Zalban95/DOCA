@@ -27,11 +27,11 @@ async function hcSchedulesLoad() {
     const reminder = s.kind === 'reminder';   // once, then done (schedules/index.js)
     const mark = reminder ? '⏰' : s.state === 'on' ? '●' : s.state === 'proposed' ? '◌' : '○';
     const last = s.last ? ` · last ${s.last.ok ? 'ok' : 'failed'}` : '';
-    if (reminder) return `<div class="hc-agent ${s.state === 'on' ? '' : 'off'}" title="${escHtml(s.text || '')}${s.last ? `\n\n${escHtml(s.last.summary)}` : ''}">
+    if (reminder) return `<div class="hc-agent ${s.state === 'on' ? '' : 'off'}" title="${escHtml(`${tipText(s.text, 100)}${s.last ? ` — ${tipText(s.last.summary, 60)}` : ''}`)}">
       <span class="hc-agent-id">${mark} ${escHtml(s.title)}</span>
       <span class="hc-agent-note">reminder · ${escHtml(hcScheduleWhen(s))}${s.state === 'done' ? ' · done' : ''}${last}</span>
       <button class="btn btn-xs btn-red" onclick="hcScheduleDelete(${jsArg(s.id)})" title="Delete">✕</button></div>`;
-    return `<div class="hc-agent ${s.state === 'on' ? '' : 'off'}" title="${escHtml(s.kind === 'turn' ? s.message : `recipe ${s.recipe}`)}${s.last ? `\n\nLast: ${escHtml(s.last.summary)}` : ''}">
+    return `<div class="hc-agent ${s.state === 'on' ? '' : 'off'}" title="${escHtml(`${tipText(s.kind === 'turn' ? s.message : `recipe ${s.recipe}`, 100)}${s.last ? ` — last: ${tipText(s.last.summary, 60)}` : ''}`)}">
       <span class="hc-agent-id">${mark} ${escHtml(s.title)}</span>
       <span class="hc-agent-note">${escHtml(hcScheduleWhen(s))}${s.state === 'proposed' ? ' · proposed by the agent' : ''}${last}</span>
       ${s.state === 'on' ? `<button class="btn btn-xs" onclick="hcScheduleState(${jsArg(s.id)}, 'paused')" title="Pause">⏸</button>`

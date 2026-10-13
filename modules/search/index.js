@@ -71,10 +71,29 @@ function parseDdg(html, n) {
     return { title: strip(m[2]), url, snippet: strip(snip?.[1]) };
   });
 }
-async function duckduckgo(q, n) {
-  const r = await get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`);
-  if (!r.ok) throw new Error(`DuckDuckGo answered ${r.status}.`);
-  return parseDdg(await r.text(), n);
+// DuckDuckGo's page answers a burst with a bot check (a 202, or a 200 holding its "anomaly" form), which read as no
+// results: five Scouts searching at once were told "No results" for most of an afternoon (2026-10-14). So searches go
+// one at a time, a little apart, and a refusal is said as one.
+const DDG_GAP_MS = 1500;
+let ddgQueue = Promise.resolve(), ddgLast = 0;
+const REFUSED = /anomaly-modal|anomaly\.js|bots use DuckDuckGo too|challenge-form/i;
+
+function duckduckgo(q, n) {
+  const turn = ddgQueue.then(async () => {
+    const wait = ddgLast + DDG_GAP_MS - Date.now();
+    if (wait > 0) await new Promise(r => setTimeout(r, wait));
+    try {
+      const r = await get(`https://html.duckduckgo.com/html/?q=${encodeURIComponent(q)}`);
+      const text = r.ok ? await r.text() : '';
+      if (r.status === 202 || (r.ok && REFUSED.test(text)) || r.status === 429 || r.status === 403)
+        throw Object.assign(new Error('DuckDuckGo is refusing searches from here for now (it took them for a bot). Wait a few minutes, '
+          + 'or set up a search of your own — SearXNG, Brave or Tavily — in Settings → Harness → Web search.'), { refused: true });
+      if (!r.ok) throw new Error(`DuckDuckGo answered ${r.status}.`);
+      return parseDdg(text, n);
+    } finally { ddgLast = Date.now(); }
+  });
+  ddgQueue = turn.catch(() => {});
+  return turn;
 }
 
 /** @returns {Promise<{provider, results: Array<{title, url, snippet}>}>} */
@@ -93,4 +112,4 @@ function status() {
   return { provider: provider(), url: prefs().url || '', keys: { brave: !!k.brave, tavily: !!k.tavily }, providers: PROVIDERS };
 }
 
-module.exports = { search, status, setKey, parseDdg, PROVIDERS };
+module.exports = { search, status, setKey, parseDdg, duckduckgo, PROVIDERS };
