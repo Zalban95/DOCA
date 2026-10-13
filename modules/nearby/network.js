@@ -12,13 +12,25 @@ const crypto = require('crypto');
 
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
 
+/**
+ * The network in CIDR — `192.168.1.0/24`, never Node's `cidr`, which is the address with its prefix
+ * (`192.168.1.212/24`): two machines on one network said two subnets, so `sameNetwork` without a gateway hash never
+ * matched (found 2026-10-13 against DocaDesk and DocaMobile, which say the network).
+ */
+function subnetOf(address, cidr) {
+  const prefix = Math.min(32, Math.max(0, Number(String(cidr || '').split('/')[1]) || 24));
+  const n = address.split('.').reduce((x, o) => (x << 8) + Number(o), 0) >>> 0;
+  const net = prefix ? (n & (0xffffffff << (32 - prefix))) >>> 0 : 0;
+  return `${[24, 16, 8, 0].map(s => (net >>> s) & 255).join('.')}/${prefix}`;
+}
+
 /** This machine's first private IPv4 on a real interface, with its subnet in CIDR. */
 function ownSubnet(ifs = os.networkInterfaces()) {
   const VIRTUAL = (() => { try { return require('./mdns').VIRTUAL; } catch { return /^(docker|br-|veth|virbr|vmnet|vbox|tailscale|utun|zt)/; } })();
   for (const [name, list] of Object.entries(ifs)) {
     if (VIRTUAL.test(name)) continue;
     const a = (list || []).find(x => x.family === 'IPv4' && !x.internal && PRIVATE_V4.test(x.address));
-    if (a) return { iface: name, address: a.address, subnet: a.cidr || `${a.address}/24`, kind: /^(wl|wlan|wi-?fi|en0$|airport)/i.test(name) ? 'wifi' : 'ethernet' };
+    if (a) return { iface: name, address: a.address, subnet: subnetOf(a.address, a.cidr), kind: /^(wl|wlan|wi-?fi|en0$|airport)/i.test(name) ? 'wifi' : 'ethernet' };
   }
   return null;
 }
@@ -41,4 +53,4 @@ function sameNetwork(a, b) {
   return !!a.subnet && a.subnet === b.subnet && !!a.gateway && a.gateway === b.gateway;
 }
 
-module.exports = { network, sameNetwork, ownSubnet, hashMac };
+module.exports = { network, sameNetwork, ownSubnet, hashMac, subnetOf };

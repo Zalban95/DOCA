@@ -104,6 +104,13 @@ test('the LAN: ip -j neigh, arp -a on macOS and Windows, the gateway, makers and
   const win = lan.parseArp('\r\nInterface: 192.168.7.5 --- 0x7\r\n  Internet Address      Physical Address      Type\r\n  192.168.7.1           b8-27-eb-00-00-01     dynamic\r\n  224.0.0.22            01-00-5e-00-00-16     static\r\n');
   assert.deepEqual(win, [{ ip: '192.168.7.1', mac: 'b8:27:eb:00:00:01', dev: '192.168.7.5' }]);
   assert.equal(lan.parseDefaultRoute('[{"dst":"default","gateway":"192.168.7.1","dev":"wlan0"}]'), '192.168.7.1');
+  const it = lan.parseArp('\r\nInterfaccia: 192.168.7.5 --- 0x7\r\n  Indirizzo Internet    Indirizzo fisico      Tipo\r\n  192.168.7.1           b8-27-eb-00-00-01     dinamico\r\n  192.168.7.255         ff-ff-ff-ff-ff-ff     statico\r\n');
+  assert.deepEqual(it, [{ ip: '192.168.7.1', mac: 'b8:27:eb:00:00:01', dev: '192.168.7.5' }], 'a table in Italian reads the same');
+  assert.equal(lan.parseRoutePrint('IPv4 Route Table\r\nActive Routes:\r\nNetwork Destination        Netmask          Gateway       Interface  Metric\r\n          0.0.0.0          0.0.0.0      192.168.7.1     192.168.7.5     35\r\n'), '192.168.7.1');
+  assert.equal(lan.parseRouteGet('   route to: default\ndestination: default\n       mask: default\n    gateway: 192.168.7.1\n  interface: en0\n'), '192.168.7.1');
+  const { subnetOf } = require('../modules/nearby/network');
+  assert.equal(subnetOf('192.168.7.212', '192.168.7.212/24'), '192.168.7.0/24', 'the network, as DocaDesk and DocaMobile say it');
+  assert.equal(subnetOf('10.1.2.3', '10.1.2.3/8'), '10.0.0.0/8');
   assert.deepEqual(oui.vendor('B8-27-EB-12-34-56'), { maker: 'Raspberry Pi', private: false });
   assert.deepEqual(oui.vendor('26:aa:bb:cc:dd:ee'), { maker: null, private: true });
   assert.deepEqual(oui.vendor('d0:00:00:00:00:01'), { maker: null, private: false }, 'unknown maker');

@@ -34,10 +34,12 @@ function parseArp(text) {
   for (const line of String(text || '').split(/\r?\n/)) {
     const bsd = /\((\d{1,3}(?:\.\d{1,3}){3})\)\s+at\s+([0-9a-f:]+)(?:\s+\[\w+\])?\s+on\s+(\S+)/i.exec(line);
     if (bsd) { if (!VIRTUAL.test(bsd[3])) out.push({ ip: bsd[1], mac: oui.normalize(bsd[2]), dev: bsd[3] }); continue; }
-    const head = /^Interface:\s+(\S+)/i.exec(line);
+    const head = /^\S+:\s+(\d{1,3}(?:\.\d{1,3}){3})\s+---/.exec(line);   // "Interface:", "Interfaccia:", "Schnittstelle:"…
     if (head) { iface = head[1]; continue; }
     const win = /^\s+(\d{1,3}(?:\.\d{1,3}){3})\s+([0-9a-f]{2}(?:-[0-9a-f]{2}){5})\s+(\w+)/i.exec(line);
-    if (win && /dynamic/i.test(win[3])) out.push({ ip: win[1], mac: oui.normalize(win[2]), dev: iface });
+    // Not by the word "dynamic": Windows writes the table in its own language ("dinamico"). The static rows are the
+    // multicast and broadcast cards, which isGroup below drops by their address.
+    if (win) out.push({ ip: win[1], mac: oui.normalize(win[2]), dev: iface });
   }
   return out.filter(r => r.mac && !oui.isGroup(r.mac));
 }
@@ -45,6 +47,18 @@ function parseArp(text) {
 /** The default gateway's address (Linux `ip -j route show default`): the router, named as such. */
 function parseDefaultRoute(json) {
   try { return (JSON.parse(json) || []).map(r => r.gateway).find(ipv4) || null; } catch { return null; }
+}
+
+/** Windows' `route print -4 0.0.0.0`: the default route's gateway ("0.0.0.0  0.0.0.0  192.168.1.1  192.168.1.5  35"). */
+function parseRoutePrint(text) {
+  const m = /^\s*0\.0\.0\.0\s+0\.0\.0\.0\s+(\d{1,3}(?:\.\d{1,3}){3})\s/m.exec(String(text || ''));
+  return m && ipv4(m[1]) ? m[1] : null;
+}
+
+/** macOS' `route -n get default`: "gateway: 192.168.1.1". */
+function parseRouteGet(text) {
+  const m = /^\s*gateway:\s*(\d{1,3}(?:\.\d{1,3}){3})\s*$/m.exec(String(text || ''));
+  return m ? m[1] : null;
 }
 
 /** A name for an address by reverse DNS, or null after `ms`. */
@@ -62,6 +76,9 @@ async function neighbours({ platform = process.platform, exec = run, dns } = {})
     gateway = parseDefaultRoute(await exec('ip', ['-j', 'route', 'show', 'default']) || '');
   } else {
     rows = parseArp(await exec('arp', ['-a']) || '');
+    // The gateway too, or a Windows or macOS looker has no router card to hash and is never known as one network.
+    gateway = platform === 'win32' ? parseRoutePrint(await exec('route', ['print', '-4', '0.0.0.0']) || '')
+      : parseRouteGet(await exec('route', ['-n', 'get', 'default']) || '');
   }
   const byIp = new Map();
   for (const r of rows) if (!byIp.has(r.ip)) byIp.set(r.ip, r);
@@ -70,4 +87,4 @@ async function neighbours({ platform = process.platform, exec = run, dns } = {})
   return list.map((r, i) => ({ ...r, ...oui.vendor(r.mac), name: names[i] && !names[i].startsWith(r.ip) ? names[i].replace(/\.$/, '') : null, gateway: r.ip === gateway }));
 }
 
-module.exports = { parseIpNeigh, parseArp, parseDefaultRoute, neighbours, run };
+module.exports = { parseIpNeigh, parseArp, parseDefaultRoute, parseRoutePrint, parseRouteGet, neighbours, run };
