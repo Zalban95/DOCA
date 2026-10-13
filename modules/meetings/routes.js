@@ -88,6 +88,23 @@ function mount(app) {
   app.post('/api/meetings/:id/control/confirm', h(async (req, person) => { await room(req, person); return control.confirm(req.params.id, screenOf(req), req.body?.grant); }));
   app.post('/api/meetings/:id/control/input', h(async (req, person) => { await room(req, person); return control.input(req.params.id, screenOf(req), req.body?.grant, req.body || {}); }));
   app.post('/api/meetings/:id/control/revoke', h(async (req, person) => { await room(req, person); return control.revoke(req.params.id, screenOf(req), req.body?.grant || null); }));
+  // Notes (notes.js; docs/design/meeting-notes.md): asked of everyone, transcribed only for who said yes.
+  const notes = require('./notes');
+  notes.hook();
+  const audio = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 4 * 1024 * 1024 } }).single('audio');
+  app.get('/api/meetings/:id/notes', h(async (req, person) => { await room(req, person); return notes.view(req.params.id, person); }));
+  app.post('/api/meetings/:id/notes/start', h(async (req, person) => { await room(req, person); return notes.start(req.params.id, person, screenOf(req)); }));
+  app.post('/api/meetings/:id/notes/consent', h(async (req, person) => { await room(req, person); return notes.consent(req.params.id, person, req.body?.answer); }));
+  app.post('/api/meetings/:id/notes/stop', h(async (req, person) => { await room(req, person); return notes.stop(req.params.id, person); }));
+  app.post('/api/meetings/:id/notes/heard', audio, h(async (req, person) => { await room(req, person); return notes.heard(req.params.id, person, screenOf(req), req.file); }));
+  app.post('/api/meetings/:id/notes/mine', h(async (req, person) => { await room(req, person); return notes.mine(req.params.id, person, req.body?.text); }));
+  app.post('/api/meetings/:id/notes/write', h(async (req, person) => { await room(req, person); return notes.writeUp(req.params.id, person); }));
+  app.get('/api/meetings/:id/notes/record', h(async (req, person) => {   // the kept record, for the meeting's own people
+    await meetings.reachable(req.params.id, person);
+    const md = notes.readRecord(req.params.id);
+    if (!md) throw bad('No notes were kept for this meeting.', 404);
+    return { markdown: md };
+  }));
 }
 
 /** STUN/TURN for a page: none by default (host candidates: the tailnet and the LAN); meetings.iceUrls adds some. */

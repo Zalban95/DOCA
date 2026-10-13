@@ -37,6 +37,7 @@ async function meetJoin(id) {
     for (const s of MEET.pending.splice(0)) MEET.mesh.signal(s.from, s.data);
     for (const p of r.room.peers) if (p.peer !== MEET.me) { MEET.peers.set(p.peer, { ...p, streams: new Map() }); MEET.mesh.add(p.peer); }
     MEET.grants = r.meeting.control || [];
+    if (typeof meetNotesLoad === 'function') meetNotesLoad().then(() => { if (NOTES.on && !NOTES.consent) _notesAsk(); });   // notes already on: asked
     if (typeof meetAppSay === 'function') meetAppSay(true);   // the app holding the page keeps the call alive (meet/app.js)
     if (!MEET.back && typeof overlayBack === 'function') MEET.back = overlayBack(() => { MEET.back = null; meetFold(true); });
   } catch (e) {
@@ -89,6 +90,7 @@ function _meetHeard(c) {
     case 'media': if (p) p.media = c.media; break;
     case 'shared': if (p) p.sharing = c.sharing; if (c.peer === MEET.me && !c.sharing && MEET.screen) meetShareStop(true); break;
     case 'said': MEET.chat.push(c.line); break;
+    case 'notes': case 'notes-line': if (typeof meetNotesHeard === 'function') meetNotesHeard(c); return;   // meet/notes.js
     case 'closed': { const why = c.why; _meetReset(); appAlert(`The meeting ended: ${why}.`); return; }
     default: if (typeof meetShareHeard === 'function') meetShareHeard(c); return;
   }
@@ -117,6 +119,7 @@ async function meetLeave(forAll = false) {
 }
 
 function _meetReset(keepLocal = false) {
+  if (typeof meetNotesReset === 'function') meetNotesReset();   // its ear stops with the room (meet/notes.js)
   MEET.mesh?.close(); MEET.mesh = null;
   if (!keepLocal) { MEET.local?.getTracks().forEach(t => t.stop()); MEET.local = null; MEET.screen?.getTracks().forEach(t => t.stop()); MEET.screen = null; }
   if (MEET.id && typeof meetAppSay === 'function') meetAppSay(false);

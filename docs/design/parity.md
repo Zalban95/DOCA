@@ -11,7 +11,7 @@ still follows the constitution: consent, visibility that is mechanical, local fi
 | 1 | Direct and group messages, channels | Hive chat (3.16.0): DMs, groups, organisation channels, mentions, notifications per device, compliance export | threads inside a message; reactions; edit and delete with history; pinned messages; read receipts (opt-in) |
 | 2 | Calls and video meetings | Meetings (3.17.0): voice, video, screen sharing, control with two consents, invites in each person's calendar, phone screen sharing (3.23.0) | an SFU for rooms over 6–16; TURN through the edge for calls across the internet; guests by link; raise hand; reactions in the call |
 | 3 | Chat inside a meeting | the meeting room's chat (3.17.0) | its record kept with the meeting's notes (meeting-notes.md) |
-| 4 | Meeting notes, transcript, recall | not yet | **meeting-notes.md** — consent, own-microphone transcript, shorthand written up, live answers, record found again |
+| 4 | Meeting notes, transcript, recall | notes with consent, transcript, write-up and record (3.70.0) | **meeting-notes.md** — consent, own-microphone transcript, shorthand written up, live answers, record found again |
 | 5 | Recording | not yet | a recording of what consenting people sent, kept with the record; the same consent as notes |
 | 6 | Files shared in a conversation | attachments in chats; Files; Projects | a conversation's files tab; a file's versions; who opened it |
 | 7 | Shared documents edited together | project pages (markdown, with a chat about the page) | live co-editing (two cursors) — a CRDT on the page, or the person's own Docs connector (P23) |
