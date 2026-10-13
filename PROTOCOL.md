@@ -1274,8 +1274,8 @@ and `home`, a household's Home Assistant (§22.4), and `nearby`, what is around 
   | `device` | `device_info`, `device_notify`, `device_clipboard_read`, `device_clipboard_write`, `device_camera`, `device_location`, `device_sensors` | — | `device_notify`, `device_camera`, `device_location`, `device_sensors` | `device_info`, `device_notify`, `device_clipboard_read`, `device_clipboard_write` |
   | `media` | `media_control` | — | as canonical | — |
   | `home` | `home_states`, `home_call`, `home_camera` | — | — | as canonical (a home node, §22.4) |
-  | `nearby` | `nearby_network`, `nearby_scan`, `nearby_probe` | — | — | as canonical (§22.5) |
-  | `cast` | `cast_serve`, `cast_send`, `cast_end` | — | — | as canonical (§22.5) |
+  | `nearby` | `nearby_network`, `nearby_scan`, `nearby_probe` | as canonical (§22.5) | as canonical (§22.5) | as canonical (§22.5) |
+  | `cast` | `cast_serve`, `cast_send`, `cast_end` | as canonical (§22.5) | as canonical (§22.5) | as canonical (§22.5) |
 
   A tool that acts on what a person sees or types (`screen_press`, `input_*`) follows the computer's rules: a password
   field is never typed into, and a control that pays, buys, signs in or submits needs `confirm: true` (§22.2).
