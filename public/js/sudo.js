@@ -21,7 +21,13 @@ function sudoAsk(message, onResult) {
     return;
   }
 
-  if (msgEl) msgEl.textContent = message || 'Enter sudo password to continue:';
+  // Not the panel's password (the guarded switches ask for that one, in a dialog that looks alike): the machine's own,
+  // which sudo checks — found 2026-10-13, when the panel's was typed here and the install failed.
+  const say = hub => `${message || 'This needs administrator rights.'} Type the password of your account on ${hub} — the one sudo asks for, not your sign-in to the panel.`;
+  if (msgEl) {
+    msgEl.textContent = say('this machine');
+    apiFetch('/api/auth/me').then(me => { if (me?.hub && modal.classList.contains('open')) msgEl.textContent = say(me.hub); }).catch(() => {});
+  }
   if (input) { input.value = ''; }
   modal.classList.add('open');
   requestAnimationFrame(() => { if (input) input.focus(); });
