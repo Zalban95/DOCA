@@ -94,3 +94,10 @@ test('doca-client\'s family: a probe connects and sends nothing; a scan answers 
   assert.ok('gatewayMacHash' in r.network && !JSON.stringify(r.network).match(/([0-9a-f]{2}:){5}/i), 'the gateway by a hash, never its MAC');
   assert.deepEqual(Object.keys(nearby.TOOLS), require('../modules/api-v1/families').CANONICAL.nearby);
 });
+
+test('a client\'s nearby and cast answers are kept, and can be withdrawn from the panel', () => {
+  const dc = require('../modules/devices-control');
+  const s = dc.reportGrants('d_grants', { nearby: true, cast: true, files: false });
+  assert.ok(s.usable.includes('nearby') && s.usable.includes('cast'), JSON.stringify(s));
+  assert.ok(dc.FAMILIES.includes('nearby') && dc.FAMILIES.includes('cast'), 'askable and revocable by name');
+});

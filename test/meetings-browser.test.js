@@ -34,7 +34,9 @@ async function browser(who, name) {
   const b = { proc, profile, errors: [] };
   browsers.push(b);
   b.page = await headless.connect(await headless.devtools(profile));
+  b.netChanged = 0;   // loads Chromium dropped because the machine's network changed (another test's container)
   b.page.on(m => { if (m.method === 'Runtime.exceptionThrown') b.errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text); });
+  b.page.on(m => { if (m.method === 'Network.loadingFailed' && /ERR_NETWORK_CHANGED/.test(m.params.errorText || '')) b.netChanged++; });
   await b.page.send('Runtime.enable'); await b.page.send('Network.enable'); await b.page.send('Page.enable');
   // A busy machine, on purpose: every signalling POST waits a random 0–150 ms before it leaves, so separate requests
   // overtake each other as they did on a loaded Windows runner. The mesh must keep its own order (meet/mesh.js).
@@ -91,7 +93,10 @@ test('two people meet: voice and video both ways, then a screen shared and seen'
   const { id } = await a.eval(`meetingStart({ people: [${JSON.stringify(bob.user.id)}], title: 'Design sync' })`, true);
   assert.match(id, /^m[0-9a-f]{12}$/);
   await b.page.send('Page.navigate', { url: `${H.base}/meet/${id}` });   // the link opens the panel on the room
-  assert.ok(await b.until(`MEET.id === '${id}' && MEET.peers.size === 1`), 'Bob joined by the link');
+  let joined = await b.until(`MEET.id === '${id}' && MEET.peers.size === 1`);
+  // The machine's network changed under the browser and dropped the page's loads: the link is opened once more.
+  if (!joined && b.netChanged) { b.errors.length = 0; await b.page.send('Page.navigate', { url: `${H.base}/meet/${id}` }); joined = await b.until(`MEET.id === '${id}' && MEET.peers.size === 1`); }
+  assert.ok(joined, `Bob joined by the link${b.netChanged ? ` (the network changed under the browser ${b.netChanged} times)` : ''}`);
   assert.ok(await a.until('MEET.peers.size === 1'), 'Alice sees Bob');
   assert.ok(await a.until("MEET.peers.size === 1 && [...MEET.peers.keys()].every(p => MEET.mesh.state(p) === 'connected')", 90000), `connected — Alice ${await a.why()} Bob ${await b.why()}`);
   assert.ok(await b.until("MEET.peers.size === 1 && [...MEET.peers.keys()].every(p => MEET.mesh.state(p) === 'connected')", 30000), `connected — Bob ${await b.why()}`);

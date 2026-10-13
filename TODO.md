@@ -128,10 +128,10 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
   - [x] R13d One password for a chain of switches, and "Keep it unlocked for" 1–30 minutes (owner yes 2026-10-13; auth/unlock.js, lib/unlock.js).
 - [x] R14 Every declared setting can be found by the header search, the owner's own switches too (3.57.0).
 - [x] R15 A Nearby scan no longer stops on a sighting it cannot name (3.57.0).
-- [~] R16 Queue 30 (2026-10-12): Proxmox VE as a hypervisor row; "Draw my hive" from DOCA's records; Uptime Kuma and
+- [x] R16 Queue 30 (2026-10-12): Proxmox VE as a hypervisor row; "Draw my hive" from DOCA's records; Uptime Kuma and
   TrueNAS as key-pasted services with skills. *3.62.0: Proxmox VE and Uptime Kuma as ready-made API services (templates,
   checked against their docs 2026-10-13) with skills; TrueNAS as a skill over SSH (`midclt call`), since its REST API
-  goes in 26 and its JSON-RPC is a WebSocket. "Draw my hive": Machines → Map (machines/map.js, hive-map.js). Left: Proxmox in the VMs tab. 3.67.0 (the owner left it to my
+  goes in 26 and its JSON-RPC is a WebSocket. "Draw my hive": Machines → Map (machines/map.js, hive-map.js). 3.68.0: Proxmox VE in the VMs tab (vms-proxmox.js). 3.67.0 (the owner left it to my
   judgement): a server's own certificate trusted by name — one exact certificate per address, after its fingerprint is
   looked at, with the password, only the owner's own addresses (cert-pins.js, Field → Connectors).*
 
