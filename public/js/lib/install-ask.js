@@ -13,7 +13,6 @@ const INSTALL_SIZES = {
   'tool:opencv': 'about 60 MB', 'tool:catt': 'about 10 MB', 'tool:libvirt': 'about 100 MB', 'tool:jdk': 'about 200 MB',
   'tool:jdk11': 'about 200 MB', 'tool:jdk21': 'about 200 MB', 'tool:android-sdk': 'about 1 GB', 'tool:android-emulator': 'about 2 GB',
   'tool:dotnet': 'about 250 MB',
-  'tool:openclaw': 'a copy of its repository (about 50 MB) into your home folder; its container images, several GB, when it is started',
   // Models → tools (modules/models.js)
   'model-tool:whisper': 'about 2–3 GB (PyTorch), plus a model on first use', 'model-tool:faster-whisper': 'about 100 MB, plus a model on first use',
   'model-tool:piper': 'about 25 MB, plus a voice (about 60 MB)',

@@ -63,7 +63,6 @@ test('every OpenClaw surface says "not here" instead of failing', async () => {
   await ok('/api/snapshots');
   await ok('/api/chat/status');
   await ok('/api/keys');
-  const tools = (await ok('/api/system/tools')).tools;
-  assert.equal(tools.find(t => t.id === 'openclaw').detected, false);
+  await ok('/api/system/tools');
   assert.equal(fs.existsSync(paths.CONFIG_PATH), false, 'and looking created nothing either');
 });

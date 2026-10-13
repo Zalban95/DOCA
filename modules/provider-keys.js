@@ -26,16 +26,14 @@ const path = require('path');
 
 const { PROVIDER_KEYS_FILE, CONFIG_PATH, COMPOSE_DIR } = require('./paths');
 
+// Through keys-file (power-cut safe, found 2026-10-13): a damaged file used to read as none, and the next read rewrote
+// it from OpenClaw's providers — every key typed here gone. Now it falls back to its earlier copy, or refuses.
 function readOwn() {
-  try { return JSON.parse(fs.readFileSync(PROVIDER_KEYS_FILE, 'utf8')); } catch { return null; }
+  return require('./keys-file').read(PROVIDER_KEYS_FILE, null);
 }
 
 function writeOwn(doc) {
-  fs.mkdirSync(path.dirname(PROVIDER_KEYS_FILE), { recursive: true, mode: 0o700 });
-  const tmp = `${PROVIDER_KEYS_FILE}.tmp`;
-  fs.writeFileSync(tmp, JSON.stringify(doc, null, 2), { mode: 0o600 });
-  fs.renameSync(tmp, PROVIDER_KEYS_FILE);
-  fs.chmodSync(PROVIDER_KEYS_FILE, 0o600);
+  require('./keys-file').write(PROVIDER_KEYS_FILE, doc);
 }
 
 /** OpenClaw's providers, or {} — a file that does not parse is read as none, never rewritten. */
