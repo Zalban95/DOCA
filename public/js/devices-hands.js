@@ -12,7 +12,8 @@ const DEV_FAMILY_LABEL = { files: 'Files', shell: 'Shell', processes: 'Processes
 function devHandsHtml(d) {
   const c = d.control || { grants: {}, revoked: [], history: [], families: Object.keys(DEV_FAMILY_LABEL) };
   const id = jsArg(d.id);
-  const chips = c.families.map(f => {
+  // Home is a home node's family (PROTOCOL §22.4): drawn only for a device that reports it, never as "not reported" on a phone.
+  const chips = c.families.filter(f => f !== 'home' || Object.prototype.hasOwnProperty.call(c.grants || {}, 'home')).map(f => {
     const granted = c.grants?.[f] === true, revoked = c.revoked?.includes(f);
     const state = revoked ? 'revoked here' : granted ? 'granted' : c.grants?.[f] === false ? 'refused on the device' : 'not reported';
     const cls = revoked ? 'dev-fam revoked' : granted ? 'dev-fam on' : 'dev-fam';
