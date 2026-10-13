@@ -74,7 +74,10 @@ async function close() {
  * door's origin as the target reaches it, `http://<this hub's address there>:<port>`.
  */
 async function open(target, { page = null, tokens = [] } = {}) {
-  if (!on()) throw bad('The cast door is off: switch on "Cast to devices on this network" in the Cast sheet or Machines → Nearby (cast.door).');
+  if (!on()) throw require('../switch-off').off('Casting to devices on this network is off (cast.door): switch it on in the Cast sheet or Machines → Nearby.', {
+    what: 'Casting to devices on this network', setting: 'cast.door', route: '/api/cast/door', body: { on: true }, password: true,
+    page: 'nearby', card: 'Casting to devices on this network',
+    why: 'TVs and speakers fetch what they are sent over plain HTTP from this hub\'s address on their network: while a cast runs, a door opens to that device alone, for that page or sound. It travels unencrypted on your Wi-Fi.' });
   if (!_app) throw bad('The cast door is not ready yet.', 503);
   const here = addressFor(target);
   if (!here) throw bad(`This hub has no address on ${plain(target)}'s network, so the device cannot reach it: cast through a device on that network instead.`);

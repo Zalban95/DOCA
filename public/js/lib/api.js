@@ -122,7 +122,8 @@ async function apiFetch(url, opts = {}) {
   let data;
   try { data = JSON.parse(text); }
   catch (e) { throw new Error(`Bad JSON from ${url}: ${e.message}`); }
-  if (!res.ok) throw new Error(data.error || res.statusText);
+  // The answer's own details ride on the error: a switch that is off (`needs`, lib/switch-ask.js) is asked about.
+  if (!res.ok) throw Object.assign(new Error(data.error || res.statusText), { status: res.status, code: data.code || null, needs: data.needs || null });
   return data;
 }
 

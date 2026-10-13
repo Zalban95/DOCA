@@ -83,3 +83,12 @@ test('the header search finds settings, and a member only their own', async () =
   assert.equal(m.status, 200);
   assert.ok(!m.body.results.some(x => x.id === 'developer'), 'developer mode is the machine\'s');
 });
+
+test('every declared setting can be found, the owner\'s own switches too (2026-10-13: "cast door" found nothing)', () => {
+  const f = find();
+  assert.equal(f.find('cast door')[0].id, 'cast-door');
+  assert.equal(f.find('cast door')[0].page, 'nearby');
+  const missing = require('../modules/settings-schema').leaves({}).map(l => l.path)
+    .filter(p => !f.rows().some(r => r.paths.includes(p) || r.paths.some(q => p.startsWith(`${q}.`))));
+  assert.deepEqual(missing, [], 'a declared setting no search row reaches: give its section a page in settings-find PAGE_OF');
+});

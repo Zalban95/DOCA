@@ -15,6 +15,9 @@
  *   host     a machine's setting: offered only to someone holding host
  */
 module.exports = [
+  { id: 'cast-door', label: 'Cast to TVs and speakers on this network (the cast door)', paths: ['cast.door'], page: 'nearby', card: 'Casting to devices on this network',
+    control: 'the switch "Cast to devices on this network" on Machines → Nearby, or in ⎘ Cast', host: true,
+    words: 'cast casting chromecast google home nest mini speaker speakers tv television dashcast door play say network' },
   { id: 'theme', label: 'Colour theme (dark, light…)', paths: ['theme'], page: 'settings/general', card: 'Appearance', field: '#theme-picker-grid',
     control: 'pick the colours under Appearance', words: 'theme colours colors dark light daylight night palette appearance',
     note: 'theme is "daylight" for light, "default" for dark; the others are named themes. Each screen keeps its own.' },

@@ -8,10 +8,7 @@ async function castThingsHtml() {
   try { d = await apiFetch('/api/cast/things'); } catch { return ''; }
   if (!d.things.length) return `<div class="input-label">Around you</div>
     <p class="desc">No TV or speaker saved yet: Machines → Nearby finds them on this network (its Cast source), and Save keeps one with its place and room.</p>`;
-  const door = d.door.on ? '' : d.door.mayChange
-    ? `<div class="cast-door"><p class="desc">TVs and speakers fetch what they are sent over plain HTTP from this hub's address on their network. Switch it on to cast to them: while a cast runs, a door opens to that device alone, for that page or sound — it travels unencrypted on your Wi-Fi.</p>
-        <button class="btn btn-sm btn-teal" type="button" onclick="castDoorOn(this)">Cast to devices on this network</button></div>`
-    : '<p class="desc">Casting to TVs and speakers is off on this hub: an admin switches it on in this sheet.</p>';
+  const door = castDoorHtml(d.door);
   const groups = {};
   for (const t of d.things) (groups[[t.place, t.room].filter(Boolean).join(' · ') || 'Elsewhere'] ||= []).push(t);
   const row = t => `<div class="cast-target cast-thing" data-thing="${escHtml(t.id)}"><div><b>${t.kind === 'speaker' ? '🔊' : '📺'} ${escHtml(t.name)}</b>
@@ -31,7 +28,7 @@ async function castThingShow(id, btn) {
   const st = _castThingSay(btn), page = document.getElementById('cast-page').value;
   setStatus(st, 'casting…', '');
   try { await apiFetch(`/api/cast/things/${encodeURIComponent(id)}/show`, { method: 'POST', body: { page } }); setStatus(st, '✓ on its screen in a few seconds', 'ok'); }
-  catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+  catch (e) { setStatus(st, '', ''); if (switchAsk(e, () => castThingsAgain().then(() => castThingShow(id, document.querySelector(`[data-thing="${id}"] button`))))) return; setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 
 async function castThingSay(id, el) {
@@ -40,7 +37,12 @@ async function castThingSay(id, el) {
   if (!text) { input?.focus(); return setStatus(st, 'Write what it says first.', ''); }
   setStatus(st, 'speaking…', '');
   try { await apiFetch(`/api/cast/things/${encodeURIComponent(id)}/say`, { method: 'POST', body: { text } }); input.value = ''; setStatus(st, '✓ said', 'ok'); }
-  catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+  catch (e) {
+    setStatus(st, '', '');
+    // Switched on, the sheet is drawn again: the sentence goes back in its box and is said.
+    if (switchAsk(e, async () => { await castThingsAgain(); const box = document.querySelector(`[data-thing="${id}"]`); const i = box?.querySelector('.cast-say input'); if (i) { i.value = text; castThingSay(id, i); } })) return;
+    setStatus(st, `✗ ${e.message}`, 'err');
+  }
 }
 
 async function castThingStop(id, btn) {
@@ -49,10 +51,33 @@ async function castThingStop(id, btn) {
   catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 
-/** The owner's switch, with the password (auth/guarded.js asks through apiFetch); then the section is drawn again. */
-async function castDoorOn(btn) {
-  btn.disabled = true;
-  try { await apiFetch('/api/cast/door', { method: 'POST', body: { on: true } }); } catch (e) { btn.disabled = false; return appAlert(e.message); }
+/** The cast door's switch, here and on Machines → Nearby: on, what it does; off, the same words and the switch. */
+function castDoorHtml(door) {
+  if (!door.mayChange) return door.on ? '' : '<p class="desc">Casting to TVs and speakers is off on this hub: an admin switches it on.</p>';
+  return `<div class="cast-door"><label class="switch-row"><span class="switch-text">Cast to devices on this network</span>
+      <input type="checkbox" class="switch" data-leaf="cast.door"${door.on ? ' checked' : ''} onchange="castDoorSet(this)"></label>
+    <p class="desc">TVs and speakers fetch what they are sent over plain HTTP from this hub's address on their network. While a cast runs, a door opens to that device alone, for that page or sound — it travels unencrypted on your Wi-Fi.</p></div>`;
+}
+
+/** The owner's switch, with the password (auth/guarded.js asks through the panel's fetch); every copy is drawn again. */
+async function castDoorSet(box) {
+  const on = box.checked;
+  box.disabled = true;
+  try { await apiFetch('/api/cast/door', { method: 'POST', body: { on } }); } catch (e) { box.checked = !on; appAlert(e.message); }
+  box.disabled = false;
+  await castThingsAgain();
+}
+
+/** Draw the Cast sheet's devices and Nearby's door card again, where they are on screen. */
+async function castThingsAgain() {
   const box = document.getElementById('cast-things');
   if (box) box.innerHTML = await castThingsHtml();
+  const card = document.getElementById('nb-cast-door');
+  if (card) castDoorCard(card);
+}
+
+/** Machines → Nearby's card for the door (settings-find places.js points the search here). */
+async function castDoorCard(el) {
+  try { const d = await apiFetch('/api/cast/things'); el.innerHTML = `<div class="card-title">Casting to devices on this network</div>${castDoorHtml(d.door)}`; }
+  catch { el.remove(); }
 }

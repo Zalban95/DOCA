@@ -33,6 +33,7 @@ async function nearbyLoad() {
       actions: '<button class="btn btn-sm btn-primary nb-scan" onclick="nearbyScan(this)">Scan</button>' })}
       <div class="card mb8"><div class="card-title">Look for things around this hub</div><div class="nb-sources"></div><div class="nb-more"></div></div>
       <div class="card mb8"><div class="card-title">Saved</div><div class="nb-saved"></div></div>
+      <div class="card mb8" id="nb-cast-door"></div>
       <div class="card"><div class="card-title">Seen</div><div class="nb-filter"></div><div class="nb-seen"><div class="placeholder pulse">Loading…</div></div></div>`;
   }
   try { NB.data = await apiFetch('/api/machines/nearby'); }
@@ -41,6 +42,8 @@ async function nearbyLoad() {
 }
 
 function _nbDraw(page) {
+  const door = page.querySelector('#nb-cast-door');
+  if (door && !door.innerHTML && typeof castDoorCard === 'function') castDoorCard(door);   // cast-things.js
   const d = NB.data;
   page.querySelector('.nb-sources').innerHTML = d.sources.map(s => `<label class="nb-source${s.works ? '' : ' off'}">
       <input type="checkbox" class="switch" ${s.on ? 'checked' : ''} ${s.works ? '' : 'disabled'} aria-label="${escHtml(s.label)}" onchange="nearbySource(${jsArg(s.id)}, this.checked)">
