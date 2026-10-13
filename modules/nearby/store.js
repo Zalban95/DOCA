@@ -41,7 +41,7 @@ function saved() {
   return things().map(t => {
     const s = seenOf(t, list);
     return { ...t, seenId: s?.id || null, lastSeen: s?.lastSeen || t.lastSeen || null, addresses: s?.addresses || t.addresses || [],
-      can: s?.can || t.can || [], how: s?.how || t.how || {}, web: s?.web || t.web || null, sources: s?.sources || t.sources || [] };
+      can: s?.can || t.can || [], how: s?.how || t.how || {}, web: s?.web || t.web || null, sources: s?.sources || t.sources || [], seenFrom: s?.seenFrom || [] };
   }).sort((a, b) => a.place.localeCompare(b.place) || a.room.localeCompare(b.room) || a.name.localeCompare(b.name));
 }
 

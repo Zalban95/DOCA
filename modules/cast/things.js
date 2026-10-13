@@ -50,10 +50,15 @@ async function withDevice(t, fn) {
   try { return await fn(s); } finally { s.close(); }
 }
 
+/** The hub reaches it itself (an address on its network), else one of the person's devices that saw it there (relay.js). */
+const via = (who, t) => (require('./door').addressFor(t.how.cast.ip) ? null : require('./relay').pick(who, t));
+
 async function show(who, id, page) {
   const t = thing(who, id);
   if (!require('./views').VIEWS[page]) throw bad(`A screen can be given ${Object.keys(require('./views').VIEWS).join(', ')}.`);
   const link = require('./links').create({ page, name: `${name(t)} — ${require('./views').VIEWS[page].label}`, thing: t.id }, who);
+  const c = via(who, t);
+  if (c) { const r = await require('./relay').show(c, t, link); note(who, t, `cast ${page} to ${name(t)} through ${c.label}`, 'cast'); return { ...r, page }; }
   const origin = await require('./door').open(t.how.cast.ip, { page });
   const url = `${origin}${link.path}`;
   await withDevice(t, async s => {
@@ -69,6 +74,8 @@ async function say(who, id, text) {
   const words = String(text || '').trim().slice(0, 600);
   if (!words) throw bad('Say what?');
   const audio = await require('./speech').speak(words, personOf(who));
+  const c = via(who, t);
+  if (c) { const r = await require('./relay').say(c, t, audio, words.slice(0, 80)); note(who, t, `said a sentence on ${name(t)} through ${c.label}`, 'say'); return r; }
   const media = require('./media');
   const tok = media.token({ buffer: audio.buffer, mime: audio.mime, for: t.how.cast.ip });
   const origin = await require('./door').open(t.how.cast.ip, { tokens: [tok] });
@@ -84,6 +91,8 @@ async function say(who, id, text) {
 
 async function stop(who, id) {
   const t = thing(who, id);
+  const c = via(who, t);
+  if (c) { await require('./relay').stop(c, t); require('./links').forgetThing(t.id); note(who, t, `stopped what played on ${name(t)} through ${c.label}`, 'stop'); return { ok: true }; }
   await withDevice(t, async s => {
     const apps = (await s.status()).applications || [];
     for (const a of apps.filter(x => x.appId === APPS.dashcast || x.appId === APPS.media)) await s.stop(a.sessionId);
@@ -98,6 +107,8 @@ async function volume(who, id, level) {
   const t = thing(who, id);
   const v = Math.max(0, Math.min(1, Number(level)));
   if (!Number.isFinite(v)) throw bad('A volume from 0 to 1.');
+  const c = via(who, t);
+  if (c) return require('./relay').volume(c, t, v);
   await withDevice(t, s => s.volume(v));
   return { ok: true, level: v };
 }

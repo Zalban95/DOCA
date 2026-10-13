@@ -29,7 +29,7 @@ const https = require('https');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
-const FAMILIES = ['files', 'shell', 'screen', 'processes', 'apps', 'device', 'home', 'nearby'];
+const FAMILIES = ['files', 'shell', 'screen', 'processes', 'apps', 'device', 'home', 'nearby', 'cast'];
 const configDir = () => process.env.DOCA_CLIENT_DIR || (process.platform === 'win32' ? path.join(process.env.APPDATA || os.homedir(), 'doca-client') : path.join(os.homedir(), '.config', 'doca-client'));
 const configFile = () => path.join(configDir(), 'config.json');
 const load = () => { try { return JSON.parse(fs.readFileSync(configFile(), 'utf8')); } catch { return null; } };
@@ -130,7 +130,7 @@ const TOOLS = {
       child.on('error', e => { clearTimeout(t); resolve({ code: -1, stdout, stderr: e.message }); });
     }) },
 };
-Object.assign(TOOLS, require('./families')({ within }), require('./home').TOOLS, require('./nearby').TOOLS);   // screen, processes, apps, device (families.js); home (home.js); nearby (nearby.js)
+Object.assign(TOOLS, require('./families')({ within }), require('./home').TOOLS, require('./nearby').TOOLS, require('./cast')({ tlsFor }));   // screen, processes, apps, device (families.js); home (home.js); nearby (nearby.js); cast (cast.js)
 const sealed = require('./sealed');   // secrets the hub hands this machine for one use (PROTOCOL.md §22.3)
 const lent = cfg => Object.entries(TOOLS).filter(([, t]) => cfg.grants?.[t.family] === true && !(cfg.revoked || []).includes(t.family) && (t.family !== 'home' || !!cfg.home));
 

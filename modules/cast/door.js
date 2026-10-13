@@ -73,14 +73,19 @@ async function close() {
  * Let `target` (an IPv4 address) through for a cast: `page` (a view) or none (a sound), `tokens` its media. → the
  * door's origin as the target reaches it, `http://<this hub's address there>:<port>`.
  */
-async function open(target, { page = null, tokens = [] } = {}) {
+/** The owner's switch, asked as a question when off — the hub's door and a device's relay alike (relay.js). */
+function needOn() {
   if (!on()) throw require('../switch-off').off('Casting to devices on this network is off (cast.door): switch it on in the Cast sheet or Machines → Nearby.', {
     what: 'Casting to devices on this network', setting: 'cast.door', route: '/api/cast/door', body: { on: true }, password: true,
     page: 'nearby', card: 'Casting to devices on this network',
     why: 'TVs and speakers fetch what they are sent over plain HTTP from this hub\'s address on their network: while a cast runs, a door opens to that device alone, for that page or sound. It travels unencrypted on your Wi-Fi.' });
+}
+
+async function open(target, { page = null, tokens = [] } = {}) {
+  needOn();
   if (!_app) throw bad('The cast door is not ready yet.', 503);
   const here = addressFor(target);
-  if (!here) throw bad(`This hub has no address on ${plain(target)}'s network, so the device cannot reach it: cast through a device on that network instead.`);
+  if (!here) throw bad(`This hub has no address on ${plain(target)}'s network, so the device cannot reach it: a device of yours on that network that lends Cast (doca-client's cast family) casts there, once it has seen it in Nearby → Look from.`);
   await listen(here);
   const c = _casts.get(plain(target)) || { page: null, tokens: new Set(), until: null };
   c.page = page || c.page; c.until = null;
@@ -107,4 +112,4 @@ function attach(app) { _app = app; }
 
 const state = () => ({ on: on(), listening: _server ? { address: _bound, port: _server.address().port } : null, casts: [..._casts.keys()] });
 
-module.exports = { attach, open, release, allows, addressFor, on, state, close, _casts };
+module.exports = { attach, open, release, allows, addressFor, on, needOn, state, close, _casts };
