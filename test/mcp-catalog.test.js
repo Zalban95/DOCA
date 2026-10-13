@@ -17,10 +17,10 @@ after(() => H.stop());
 test('on Windows a .cmd server runs through cmd.exe, quoted; elsewhere the command is spawned as it is', () => {
   const { spawnSpec } = require('../modules/mcp/spawn-spec');
   const which = () => 'C:\\Program Files\\nodejs\\npx.cmd';
-  const w = spawnSpec('npx', ['-y', '@playwright/mcp@latest', 'a b'], { platform: 'win32', which });
+  const w = spawnSpec('npx', ['-y', '@playwright/mcp@0.0.83', 'a b'], { platform: 'win32', which });
   assert.match(w.file, /cmd(\.exe)?$/i);
   assert.deepEqual(w.args.slice(0, 3), ['/d', '/s', '/c']);
-  assert.equal(w.args[3], '""C:\\Program Files\\nodejs\\npx.cmd" -y @playwright/mcp@latest "a b""');
+  assert.equal(w.args[3], '""C:\\Program Files\\nodejs\\npx.cmd" -y @playwright/mcp@0.0.83 "a b""');
   assert.equal(w.opts.windowsVerbatimArguments, true);
   const exe = spawnSpec('node', ['x.js'], { platform: 'win32', which: () => 'C:\\node\\node.exe' });
   assert.deepEqual([exe.file, exe.args], ['C:\\node\\node.exe', ['x.js']]);
@@ -44,6 +44,18 @@ test('the catalogue lists browser servers; Add makes an ordinary stdio server, n
   assert.equal((await H.api(null, 'POST', '/api/mcp/catalog/nope')).status, 404);
   const member = await H.signIn('member', 'mcp-cat@test.local');
   assert.equal((await H.api(null, 'POST', '/api/mcp/catalog/chrome-devtools', undefined, { Cookie: member.cookie })).status, 403);
+});
+
+test('no catalogue row runs an unpinned package: a version and the day it was checked', () => {
+  for (const c of require('../modules/mcp/catalog').CATALOG) {
+    const words = [...(c.args || []), ...(c.setup || [])];
+    assert.ok(!words.some(w => /@latest\b/.test(w)), `${c.id} names @latest`);
+    if (c.command === 'npx') {
+      const pkg = words.find(w => !w.startsWith('-'));
+      assert.match(pkg, /^(@[^/]+\/)?[^@]+@\d+\.\d+\.\d+$/, `${c.id}: ${pkg} is pinned to a version`);
+      assert.match(c.checked || '', /^\d{4}-\d{2}-\d{2}$/, `${c.id} says the day its pin was checked`);
+    }
+  }
 });
 
 test('a setup that fails adds nothing and says why', async () => {
