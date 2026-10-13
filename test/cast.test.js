@@ -82,7 +82,10 @@ test('every castable page draws through a view link, locked, with no script erro
         where = (await cdp.send('Runtime.evaluate', { expression: "location.pathname + ' ' + document.body.className + ' | ' + location.search + ' | ' + document.title + ' | ' + document.readyState", returnByValue: true })).result.value || '';
       }
       await headless.sleep(1500);
-      assert.match(where, page === 'face' ? /\/face/ : /cast-view/, `${page}: ${where}`);
+      if (!(page === 'face' ? /\/face/ : /cast-view/).test(where)) {   // say why: the page's own state and errors, then fail
+        const why = (await cdp.send('Runtime.evaluate', { expression: "JSON.stringify({ soloOn: typeof soloOn === 'function' ? soloOn() : 'absent', fab: !!document.getElementById('chat-fab'), solo: document.body.classList.contains('solo'), tab: typeof currentTab !== 'undefined' ? currentTab : null, nav: typeof NAV_TABS !== 'undefined' ? NAV_TABS.length : null })", returnByValue: true })).result.value;
+        assert.fail(`${page}: ${where} — ${why} — errors: ${errors.join(' | ') || 'none'}`);
+      }
       const back = (await cdp.send('Runtime.evaluate', { expression: "!!document.querySelector('.solo-bar button[title^=\"Back\"]')", returnByValue: true })).result.value;
       assert.equal(back, false, `${page}: no way back to the whole panel`);
       assert.deepEqual(errors, [], page);

@@ -103,7 +103,10 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     search's Try, the vision and retrieval tries, backups, a connector's own form) — Set it up would open the same card.*
     The set-up cases on their pages: web search's provider, channels' tokens, the vision and retrieval models
     (whose cards hide while their experiment is off), backups' destination, the realtime model, the licence key,
-    OAuth apps, Laya and the wake-word trainer — each a `switch-off.unset` with its page and card.
+    OAuth apps, Laya and the wake-word trainer — each a `switch-off.unset` with its page and card. *3.64.x: Telegram's
+    bot token, the retrieval and vision models, the realtime service's address and this machine's backup destination are
+    questions, and the realtime, channels and machine-backup routes pass them on. Not a case: web search (DuckDuckGo
+    needs no set-up) and speech-to-text (it always has an address). Left: the licence key.*
   - [ ] R13b `network.lanAdmin`'s refusal (auth/gate.js, **ask**: an auth file) as a question with its switch.
   - [x] R13c Model-scout leftovers: the dead experiment refusals removed; Set-up's "Check for newer models" always
     runs (the person asked) and names Harness → Scout for the routine (3.62.0).

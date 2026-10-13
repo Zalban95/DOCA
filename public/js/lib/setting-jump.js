@@ -26,7 +26,9 @@ async function settingJump(r) {
   // as soon as it showed marked the card and never the field on a slow machine (Windows CI, 2026-10-13). The card is
   // the answer only once the field has had its time, or when there is no field to wait for.
   let el = null;
-  for (let i = 0; i < 60 && !el; i++) {
+  // With no card to fall back on, the field alone is waited for longer: a slow page's Advanced fields (the MCP page's
+  // on Windows CI) came after six seconds, and nothing was marked at all.
+  for (let i = 0, most = r.card ? 60 : 150; i < most && !el; i++) {
     let f = null; try { f = r.field ? document.querySelector(r.field) : null; } catch { /* not a selector */ }
     el = (shown(f) && f) || ((!r.field || i >= 40) && byCard()) || null;
     if (!el) await new Promise(res => setTimeout(res, 100));

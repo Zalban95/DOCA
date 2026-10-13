@@ -13,7 +13,7 @@ const schedule = require('./schedule');
 const runner = require('./runner');
 const restic = require('./restic');
 
-const fail = (res, e) => res.status(e.status || 500).json({ error: e.message, code: e.code });
+const fail = (res, e) => res.status(e.status || 500).json(require('../switch-off').body(e, res.req));   // a destination not set yet is asked (switch-off.js)
 const person = req => req.user ? { id: req.user.id, name: req.user.name, email: req.user.email } : null;
 const wrap = fn => async (req, res) => { try { res.json(await fn(req, res)); } catch (e) { fail(res, e); } };
 
