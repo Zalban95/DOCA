@@ -127,7 +127,8 @@ function failure(r) {
 async function run(args, opts = {}) {
   const cfg = require('./config');
   const repo = opts.repo ?? cfg.get().repo;
-  if (!repo) throw Object.assign(new Error('No backup destination is set yet.'), { status: 409 });
+  if (!repo) throw require('../switch-off').unset('No backup destination is set yet.', { what: 'A backup destination', page: 'settings/backups', card: 'This machine\'s files',
+    why: 'This machine\'s files are kept in a place you choose — a disk or a service — with a password of their own: Settings → Backups sets it up.' });
   const password = opts.password ?? cfg.password();
   if (!password) throw Object.assign(new Error('No backup password is kept yet: set the backup up first.'), { status: 409 });
   if (!bin()) throw Object.assign(new Error('restic is not installed on this machine: install it from System tools (or the button in this card).'), { status: 409 });

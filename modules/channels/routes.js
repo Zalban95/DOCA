@@ -9,7 +9,7 @@
  *   mount(app, { name, label, mod, settings(body, next) })   — settings copies the channel's own fields into next,
  *   with secrets kept when the panel sends back the mask.
  */
-const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, req)); } };
 const me = req => req.auth?.user?.id || null;
 const hostOf = req => !!req.auth && require('../auth/rights').can(req.auth.role, 'host');
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });

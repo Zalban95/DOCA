@@ -52,3 +52,21 @@ test('connecting one\'s own account before the hive has its OAuth app: set up by
   const owner = await H.api(null, 'POST', '/api/accounts/connect', { provider: 'google' });
   assert.equal(owner.body.needs?.mayChange, true, 'an admin is offered Set it up');
 });
+
+test('what is not set up yet is a question with its page and card (R13a, 2026-10-13)', async () => {
+  const { loadPrefs, savePrefs } = require('../modules/utils');
+  savePrefs({ ...loadPrefs(), channels: {} });
+  const cases = [
+    [() => require('../modules/retrieval/embed').embed(['x'], { model: '' }), 'settings/harness', 'Retrieval'],
+    [() => require('../modules/channels/telegram/api').call('getMe'), 'settings/channels', 'Telegram'],
+  ];
+  for (const [fn, page, card] of cases) {
+    let e = null;
+    try { await fn(); } catch (x) { e = x; }
+    assert.ok(e, page);
+    assert.equal(e.code, 'switch_off', e.message);
+    assert.deepEqual([e.needs.page, e.needs.card, e.needs.route], [page, card, null], 'set up, not switched: no route to call');
+  }
+  const body = require('../modules/switch-off').body(await require('../modules/retrieval/embed').embed(['x'], { model: '' }).catch(e => e), { auth: { role: 'owner' } });
+  assert.equal(body.needs.mayChange, true, 'the answer carries what the panel needs to ask');
+});

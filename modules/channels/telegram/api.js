@@ -14,7 +14,8 @@ const fail = (method, why, extra = {}) => Object.assign(new Error(`Telegram ${me
 const signalFor = (signal, ms) => (signal ? AbortSignal.any([signal, AbortSignal.timeout(ms)]) : AbortSignal.timeout(ms));
 
 async function call(method, params = {}, { signal, timeoutMs = 30000 } = {}) {
-  if (!token()) throw fail(method, 'no bot token (Settings → Channels)', { status: 409 });
+  if (!token()) throw require('../../switch-off').unset(`Telegram ${method}: no bot token (Settings → Channels)`, { what: 'A Telegram bot', page: 'settings/channels', card: 'Telegram',
+    why: 'Telegram talks to DOCA through a bot of your own: @BotFather makes one and gives its token, pasted in Settings → Channels → Telegram.' });
   let r;
   try {
     r = await fetch(`${base()}/bot${token()}/${method}`, { method: 'POST', headers: { 'Content-Type': 'application/json' },

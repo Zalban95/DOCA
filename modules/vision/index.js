@@ -58,7 +58,8 @@ const model = {
     const png0 = png, question0 = question, main0 = s, main = { provider: s.provider, model: s.model };
     let m = noQuick ? { ...main, quick: false } : await require('./pick').pick(s);
     if (m.quick && person?.id && !require('../auth/allot').allowsModel(person, m)) m = { provider: s.provider, model: s.model, quick: false };
-    if (!m.model) throw Object.assign(new Error('No vision model is set (Settings → Harness → Vision).'), { status: 409 });
+    if (!m.model) throw require('../switch-off').unset('No vision model is set (Settings → Harness → Vision).', { what: 'A vision model', page: 'settings/harness', card: 'Vision',
+      why: 'Reading a screen needs a model that takes pictures: Settings → Harness → Vision names one.' });
     s = { ...s, provider: m.provider, model: m.model };
     const F = require('./frame'), f = F.frame(png, sc().value('vision.maxSide'));   // positions back in the screen's pixels
     png = f.png; question = F.ask(String(question).slice(0, 2000), f);

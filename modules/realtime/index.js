@@ -80,7 +80,8 @@ function target(s = settings()) {
   let ep = null;
   try { ep = require('../harness/providers').endpoint(s.provider); } catch { /* a URL alone may be enough */ }
   const url = s.url || (s.protocol === 'gemini' ? require('./gemini').DEFAULT_URL : ep ? require('./openai').urlFor(ep.baseUrl) : null);
-  if (!url) throw Object.assign(new Error('No address for the realtime service: set realtime.url or a provider with a base URL.'), { status: 409 });
+  if (!url) throw require('../switch-off').unset('No address for the realtime service: set realtime.url or a provider with a base URL.', { what: 'A realtime speech model', page: 'settings/voice', card: 'Realtime speech model',
+    why: 'A live call with a speech-to-speech model goes to its provider: Settings → Voice → Realtime speech model names it and its address.' });
   return { url, key: ep?.apiKey || '' };
 }
 

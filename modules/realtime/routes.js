@@ -17,7 +17,7 @@
  */
 const rt = require('./index');
 
-const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, req)); } };
 const KEYS = { protocol: /^(openai|gemini)$/, provider: /^[\w.-]{0,60}$/, url: /^(wss?:\/\/\S{3,500})?$/, model: /^[\w.:/@-]{0,120}$/, voice: /^[\w.-]{0,60}$/, dialect: /^(ga|beta)$/ };
 
 function mount(app) {

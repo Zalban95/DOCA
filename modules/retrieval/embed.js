@@ -16,7 +16,8 @@ function settings() {
 
 /** Float32Array per text, in order. Throws with the provider's own words when it refuses. */
 async function embed(texts, { provider, model } = settings(), signal) {
-  if (!model) throw Object.assign(new Error('No embedding model is set (Settings → Harness → Retrieval).'), { status: 409 });
+  if (!model) throw require('../switch-off').unset('No embedding model is set (Settings → Harness → Retrieval).', { what: 'An embedding model', page: 'settings/harness', card: 'Retrieval',
+    why: 'Finding by meaning compares texts with an embedding model of your choosing: Settings → Harness → Retrieval names one.' });
   const ep = require('../harness/providers').endpoint(provider);
   const out = [];
   for (let i = 0; i < texts.length; i += BATCH) {

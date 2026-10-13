@@ -59,7 +59,7 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     kit devices, `registry.NEVER`, outward in the risk tiers, in a call's front kit.* Left: the per-thing switches.
     The `cast` tool for the agent (kit devices, `registry.NEVER`, risk rules: sound or a page on a device is
     outward), with Nearby's per-thing switches it reads: may speak unasked (off), quiet hours, max volume (0.6).
-  - [~] R3e DLNA / UPnP AVTransport for TVs without Cast *(3.63.0: cast/dlna.js — say, a story, stop and volume on a DLNA renderer through the door; a page refused, no browser)*; left: `cast/running.js` and kept casts restored at start.
+  - [x] R3e DLNA / UPnP AVTransport for TVs without Cast *(3.63.0: cast/dlna.js — say, a story, stop and volume on a DLNA renderer through the door; a page refused, no browser)*; 3.64.0: kept casts restored at start (cast/running.js: the door again for the page casts of the last day while cast.door is on).
   - [~] R3f **Look from and serve from a client** *(3.60.0: Look from — doca-client's `nearby` family, the hub's chips and `nearby scan {from}`; 3.61.0: casting through a client — doca-client's `cast` family, cast/relay.js; DocaMobile and DocaDesk next)* (asked again 2026-10-13: "devices in the neighbourhood of the client,
     so we can select where to perform the search… the client app serving the page or media… wifi, bluetooth or anything
     else"): Nearby's "Look from" (the hub, this phone, another client), the client reporting what it sees around it
@@ -103,7 +103,10 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     search's Try, the vision and retrieval tries, backups, a connector's own form) — Set it up would open the same card.*
     The set-up cases on their pages: web search's provider, channels' tokens, the vision and retrieval models
     (whose cards hide while their experiment is off), backups' destination, the realtime model, the licence key,
-    OAuth apps, Laya and the wake-word trainer — each a `switch-off.unset` with its page and card.
+    OAuth apps, Laya and the wake-word trainer — each a `switch-off.unset` with its page and card. *3.64.x: Telegram's
+    bot token, the retrieval and vision models, the realtime service's address and this machine's backup destination are
+    questions, and the realtime, channels and machine-backup routes pass them on. Not a case: web search (DuckDuckGo
+    needs no set-up) and speech-to-text (it always has an address). Left: the licence key.*
   - [ ] R13b `network.lanAdmin`'s refusal (auth/gate.js, **ask**: an auth file) as a question with its switch.
   - [x] R13c Model-scout leftovers: the dead experiment refusals removed; Set-up's "Check for newer models" always
     runs (the person asked) and names Harness → Scout for the routine (3.62.0).
