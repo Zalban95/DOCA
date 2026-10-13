@@ -20,14 +20,14 @@ const newCode = () => Array.from(crypto.randomBytes(8), b => ALPHABET[b % ALPHAB
 function sweep() { const now = Date.now(); for (const [c, l] of _codes) if (l.until < now) _codes.delete(c); }
 
 /** A link for `page` (one of cast/views.js), as the person asking: {code, path, until}. */
-function create({ page, focus = null, name = null }, who) {
+function create({ page, focus = null, name = null, thing = null }, who) {
   const views = require('./views').VIEWS;
   if (!views[page]) throw bad(`A screen can be given ${Object.keys(views).join(', ')}.`);
   if (!who?.user?.id) throw bad('Sign in first.', 401);
   sweep();
   const code = newCode();
   _codes.set(code, { page, focus: focus ? String(focus).slice(0, 120) : null, by: { id: who.user.id, orgId: who.orgId || null },
-    name: name ? String(name).slice(0, 60) : null, until: Date.now() + TTL_MS });
+    name: name ? String(name).slice(0, 60) : null, thing: thing ? String(thing) : null, until: Date.now() + TTL_MS });
   return { code, path: `/api/cast/open/${code}`, until: new Date(Date.now() + TTL_MS).toISOString(), page };
 }
 
@@ -44,9 +44,12 @@ function open(code, req) {
   const user = authStore.userById(l.by.id);
   if (!user || user.suspendedAt) throw bad('The person who cast this can no longer sign in.', 410);
   const views = require('./views').VIEWS;
+  // A TV or a speaker Nearby saved has one screen record: the one its last cast made is signed out and goes, so the
+  // Devices list does not fill with "Living room — Live" (2026-10-13).
+  if (l.thing) forgetThing(l.thing);
   const made = devices.create({ name: l.name || `Showing ${views[l.page].label}`, kind: 'browser', scopes: [],
     caps: { formFactor: 'browser', input: { touch: false, text: false } } });
-  devices.update(made.device.id, { userId: user.id, orgId: l.by.orgId, cast: { page: l.page, focus: l.focus, view: true, keep: false, at: new Date().toISOString() } });
+  devices.update(made.device.id, { userId: user.id, orgId: l.by.orgId, cast: { page: l.page, focus: l.focus, view: true, keep: false, ...(l.thing ? { thing: l.thing } : {}), at: new Date().toISOString() } });
   const token = credentials.startSession({ user, orgId: l.by.orgId, req, cap: [`view:${l.page}`] });
   authStore.updateSession(credentials.sha256(token), { screen: made.device.id, stepUpAt: null });
   require('../activity').note({ from: 'cast', what: `a screen opened a view link: ${views[l.page].label}`, why: 'a person cast it', person: { id: user.id, name: user.name || user.email },
@@ -61,4 +64,12 @@ function open(code, req) {
   };
 }
 
-module.exports = { create, open, TTL_MS, _codes };
+/** The screen records a thing's casts made: signed out and gone. → how many. */
+function forgetThing(thing) {
+  const devices = require('../api-v1/devices');
+  const old = devices.list().filter(d => d.kind === 'browser' && d.cast?.thing === thing);
+  for (const d of old) devices.forget(d.id);
+  return old.length;
+}
+
+module.exports = { create, open, forgetThing, TTL_MS, _codes };

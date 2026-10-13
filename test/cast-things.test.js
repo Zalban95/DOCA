@@ -71,6 +71,20 @@ test('a TV shows the page: DashCast opens a one-time view link through the door,
   assert.ok(lines().some(l => l.act === 'cast' && l.machine?.kind === 'nearby' && l.machine.id === tv.id));
 });
 
+test('a TV keeps one screen record however often it is cast to, and Stop signs it out (2026-10-13)', async () => {
+  const devices = require('../modules/api-v1/devices');
+  const records = () => devices.list().filter(d => d.cast?.thing === tv.id);
+  for (const page of ['live', 'home']) {
+    dev.fetched.length = 0;
+    assert.equal((await H.api(null, 'POST', `/api/cast/things/${tv.id}/show`, { page })).status, 200);
+    for (let i = 0; i < 50 && !dev.fetched.length; i++) await H.sleep(20);
+  }
+  assert.equal(records().length, 1, 'the second cast replaced the first record');
+  assert.equal(records()[0].cast.page, 'home');
+  assert.equal((await H.api(null, 'POST', `/api/cast/things/${tv.id}/stop`, {})).status, 200);
+  assert.equal(records().length, 0);
+});
+
 test('a speaker says a sentence in the person\'s voice, fetched once from the door by that device alone', async () => {
   dev.fetched.length = 0;
   const r = await H.api(null, 'POST', `/api/cast/things/${speaker.id}/say`, { text: 'Dinner is ready.' });
