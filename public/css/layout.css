@@ -311,7 +311,8 @@ body.solo .app-body { padding-bottom: 0; }
 .solo-open { flex-shrink: 0; }
 
 /* A <select>'s choices on a phone, drawn by the panel (js/lib/select-sheet.js). */
-.select-sheet { position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
+.select-sheet { position: fixed; inset: 0; z-index: 10045;   /* above whatever holds the select it opened from (the Cast sheet's own was 3500, 2026-10-13); under the toasts */
+  background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
 .select-sheet-box { width: 100%; max-width: 560px; max-height: 70vh; overflow-y: auto; background: var(--surface); border-top: 1px solid var(--border2);
   padding: 6px 0 calc(10px + env(safe-area-inset-bottom, 0px)); }
 .select-sheet-title, .select-sheet-group { padding: 10px 16px 6px; font-family: var(--font-ui); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
