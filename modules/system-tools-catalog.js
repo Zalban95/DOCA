@@ -58,7 +58,10 @@ const androidWin = [
 // 2026-10-12, Ollama 0.40.3), unpacked where install.sh puts Ollama (/usr/local). The Ollama row refreshes it when it is
 // there, so an updated Ollama never runs beside an older runtime.
 const OLLAMA_LIBS = ['/usr/local/lib/ollama', '/usr/lib/ollama'];
-const OLLAMA_MLX = 'curl -fsSL https://ollama.com/download/ollama-linux-amd64-mlx.tar.zst | zstd -d | sudo tar -xf - -C /usr/local';
+// A running Ollama service looks for the runtime only when it starts (found 2026-10-13: unpacked a minute after the
+// service restarted, every pull still answered "requires MLX support"), so it is restarted after.
+const OLLAMA_MLX = 'curl -fsSL https://ollama.com/download/ollama-linux-amd64-mlx.tar.zst | zstd -d | sudo tar -xf - -C /usr/local'
+  + ' && { ! systemctl is-active --quiet ollama 2>/dev/null || sudo systemctl restart ollama; }';
 const OLLAMA_MLX_REFRESH = `{ [ ! -e /usr/local/lib/ollama/mlx_cuda_v13 ] || ${OLLAMA_MLX}; }`;
 const androidHome = process.env.ANDROID_HOME || (process.platform === 'darwin' ? path.join(HOME, 'Library/Android/sdk')
   : process.platform === 'win32' ? path.join(process.env.LOCALAPPDATA || HOME, 'Android', 'Sdk') : path.join(HOME, 'Android/Sdk'));

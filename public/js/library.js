@@ -5,6 +5,7 @@
 
 const LIB_MODEL = { name: 'embeddinggemma-2:740m-mxfp8', size: '1.39 GB' };
 let _libTimer = null;
+let _libLast = null;   // the section's last answer (what the machine has, for the install's messages)
 
 async function libraryTab() {
   let card = document.getElementById('lib-card');
@@ -70,7 +71,7 @@ async function libraryLoad() {
   if (typeof licenceReady === 'function') await licenceReady();
   if (!(typeof licenceFeatureOn !== 'function' || licenceFeatureOn('library'))) { card.style.display = 'none'; return; }   // not licensed here (lib/licence.js)
   let v;
-  try { v = await apiFetch('/api/library'); } catch (e) { card.innerHTML = `<div class="card-title">Library</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }
+  try { v = _libLast = await apiFetch('/api/library'); } catch (e) { card.innerHTML = `<div class="card-title">Library</div><div class="placeholder">${escHtml(e.message)}</div>`; return; }
   if (!v.developer) { card.remove(); return; }
   const s = v.settings;
   const kinds = ['documents', 'images', 'audio', 'video'].map(k => `<label><input type="checkbox" ${s.kinds.includes(k) ? 'checked' : ''} onchange="libraryKinds()" data-kind="${k}"> ${k}</label>`).join(' ');
@@ -148,6 +149,12 @@ async function libraryInstallTool(id) {
   sysdepsInstall(id);
 }
 
+/** Ollama saying it has no MLX while the runtime's files are here: it started before they were unpacked. */
+function _libMlxHint(err) {
+  return /MLX runtime is not available/i.test(String(err || '')) && _libLast?.suggest?.mlx
+    ? ' — Ollama\'s MLX runtime is installed, but Ollama started before it was: restart Ollama (sudo systemctl restart ollama), then Install again.' : '';
+}
+
 /** The suggested model through Ollama's own pull (the Models tab's), asked first with its size. */
 function libraryInstall(name = LIB_MODEL.name, size = LIB_MODEL.size) {
   appConfirm(`Pull ${name} into Ollama on this machine? It is a ${size} download.`, () => {
@@ -155,7 +162,7 @@ function libraryInstall(name = LIB_MODEL.name, size = LIB_MODEL.size) {
     let failed = false;
     sseStream('/api/models/ollama/pull', { name }, {
       onEvent: d => {
-        if (d.error && out) out.textContent = `Not installed: ${typeof d.error === 'string' ? d.error : d.status}`;
+        if (d.error && out) out.textContent = `Not installed: ${typeof d.error === 'string' ? d.error : d.status}${_libMlxHint(d.error)}`;
         if (d.done) { failed = !!d.error; return; }
         if (d.error) { failed = true; return; }
         if (out) out.textContent = d.total ? `${d.status} ${Math.round(((d.completed || 0) / d.total) * 100)}%` : (d.status || '');
