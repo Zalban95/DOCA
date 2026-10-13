@@ -123,7 +123,15 @@ function gate(req, res, next) {
   }
   // From the local network (or anywhere, under `all`), managing the machine is off unless the admin allows it (network.js).
   if (require('../network').limited(req, right))
-    return deny(req, res, 403, 'outside_tailnet', 'From the local network, managing this machine is off: use Tailscale or the machine itself — or an admin allows it in Settings → System → Network.');
+  {
+    // Said as a question the panel can draw with its setting (R13b): what is off and where — never switched from here,
+    // since switching it is itself managing the machine (the right this network lacks), so nobody here may change it.
+    const e = require('../switch-off').off('From the local network, managing this machine is off: use Tailscale or the machine itself — or an admin allows it in Settings → System → Network, from there.', {
+      what: 'Managing this machine from the local network', setting: 'network.lanAdmin', route: null, password: true, page: 'settings/system', card: 'Network',
+      right: 'tailnet-only',   // no role holds it: mayChange is false here, whoever asks
+      why: 'From the local network a person reads and chats; the machine\'s settings, its terminal and its files are managed over Tailscale or at the machine. An admin may allow it from there.' });
+    return res.status(403).json({ ...require('../switch-off').body(e, req), reason: 'outside_tailnet' });
+  }
   // A session a device opened stops at what the device's scopes allow; the
   // person's password lifts it to their role (routes.js, step-up).
   if (right !== 'signed' && who.session.cap && !viewing && !who.session.cap.includes(right))

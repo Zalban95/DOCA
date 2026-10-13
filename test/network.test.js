@@ -50,3 +50,16 @@ test('an inference service answers on this machine only unless the admin opens i
   assert.equal((await H.api(null, 'POST', '/api/network', { services: 'internet' })).status, 400);
   await H.api(null, 'POST', '/api/network', { services: 'local' });
 });
+
+test('from the local network, managing the machine is refused as a question with its setting, which nobody there may switch (R13b)', async () => {
+  const network = require('../modules/network'), was = network.limited;
+  network.limited = (req, right) => right === 'host';
+  try {
+    const r = await H.api(null, 'GET', '/api/settings/leaves');
+    assert.equal(r.status, 403);
+    assert.equal(r.body.code, 'switch_off');
+    assert.equal(r.body.reason, 'outside_tailnet');
+    assert.deepEqual([r.body.needs.setting, r.body.needs.page, r.body.needs.card, r.body.needs.route, r.body.needs.mayChange], ['network.lanAdmin', 'settings/system', 'Network', null, false]);
+    assert.match(r.body.error, /use Tailscale or the machine itself/);
+  } finally { network.limited = was; }
+});

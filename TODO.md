@@ -124,7 +124,7 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     bot token, the retrieval and vision models, the realtime service's address and this machine's backup destination are
     questions, and the realtime, channels and machine-backup routes pass them on. Not a case: web search (DuckDuckGo
     needs no set-up) and speech-to-text (it always has an address). Left: the licence key.*
-  - [ ] R13b `network.lanAdmin`'s refusal (auth/gate.js, **ask**: an auth file) as a question with its switch.
+  - [x] R13b `network.lanAdmin`'s refusal as a question with its setting (3.70.0, the owner left auth calls to my judgement): what is off, why, Settings → System → Network — never switched from there, since switching it is managing the machine.
   - [x] R13c Model-scout leftovers: the dead experiment refusals removed; Set-up's "Check for newer models" always
     runs (the person asked) and names Harness → Scout for the routine (3.62.0).
   - [x] R13d One password for a chain of switches, and "Keep it unlocked for" 1–30 minutes (owner yes 2026-10-13; auth/unlock.js, lib/unlock.js).
