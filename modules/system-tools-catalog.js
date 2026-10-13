@@ -9,7 +9,6 @@
  */
 const os = require('os');
 const path = require('path');
-const { COMPOSE_DIR } = require('./paths');
 
 const HOME = os.homedir();
 
@@ -194,14 +193,6 @@ const SYSTEM_TOOLS = [
     detect: { bin: 'catt', args: ['--version'] }, note: 'Casts a video, a sound or a page address to a Chromecast on the network (skill play-and-cast).',
     repo: 'https://github.com/skorokithakis/catt', repoLabel: 'pip: catt',
     install: { linux: 'python3 -m pip install --user --break-system-packages -U catt', darwin: 'python3 -m pip install --user -U catt', win32: 'py -m pip install --user -U catt' } },
-  { id: 'openclaw', label: 'OpenClaw', category: 'optional', for: 'the OpenClaw harness',
-    // COMPOSE_DIR, not a hardcoded ~/openclaw: a machine that overrides it is still found. A stack that is not a git
-    // checkout reads "installed" rather than offering to clone over it.
-    detect: { file: path.join(COMPOSE_DIR, 'docker-compose.yml'), gitRev: true },
-    note: 'Another agent stack, run with Docker Compose — a peer harness, not a prerequisite. Updating pulls its newest definition and images.',
-    repo: 'https://github.com/openclaw/openclaw', repoLabel: 'openclaw/openclaw',
-    install: { linux: `if [ -d "${COMPOSE_DIR}" ]; then cd "${COMPOSE_DIR}" && git pull; else git clone https://github.com/openclaw/openclaw.git "${COMPOSE_DIR}"; fi && cd "${COMPOSE_DIR}" && docker compose pull && docker compose up -d`,
-      darwin: `if [ -d "${COMPOSE_DIR}" ]; then cd "${COMPOSE_DIR}" && git pull; else git clone https://github.com/openclaw/openclaw.git "${COMPOSE_DIR}"; fi && cd "${COMPOSE_DIR}" && docker compose pull && docker compose up -d` } },
   { id: 'libvirt', label: 'libvirt (virsh)', category: 'optional', for: 'the VMs tab',
     detect: { bin: 'virsh', args: ['--version'] }, note: 'KVM virtual machines in the VMs tab. VirtualBox, Hyper-V, UTM and Parallels are found on their own.',
     repo: 'https://libvirt.org', repoLabel: 'libvirt.org',

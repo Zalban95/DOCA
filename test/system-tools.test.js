@@ -18,7 +18,7 @@ test('every row says what it is for, how it is found, and a link; ids are unique
     assert.ok(t.note && t.for && t.repo && t.detect, t.id);
   }
   for (const id of ['android-sdk', 'dotnet', 'jdk']) assert.equal(SYSTEM_TOOLS.find(t => t.id === id).category, 'clients', `${id}: for the apps, never needed to run DOCA`);
-  assert.equal(SYSTEM_TOOLS.find(t => t.id === 'openclaw').category, 'optional', 'OpenClaw is a peer, not a prerequisite');
+  assert.ok(!SYSTEM_TOOLS.some(t => t.id === 'openclaw'), 'OpenClaw is a harness (Agents → Harness), not something this machine needs');
 });
 
 test('each OS gets its own command: no apt on a Mac, no bash on Windows', () => {

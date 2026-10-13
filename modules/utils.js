@@ -177,19 +177,29 @@ function streamCmd(res, cmd, opts = {}) {
   // — so the askpass helper is simply not built, rather than writing a .sh
   // nothing will run.
   const needsSudo = !shell.WIN && typeof password === 'string' && password.length > 0;
+  let askpassDir = null;
   if (needsSudo) {
     // POSIX-safe single-quote escaping for the password embedded in the helper.
     const quoted = `'${password.replace(/'/g, `'\\''`)}'`;
-    askpassFile = path.join(os.tmpdir(),
-      `.doca-askpass-${Date.now()}-${Math.random().toString(36).slice(2, 10)}.sh`);
+    askpassDir = fs.mkdtempSync(path.join(os.tmpdir(), '.doca-askpass-'));
+    fs.chmodSync(askpassDir, 0o700);
+    askpassFile = path.join(askpassDir, 'askpass.sh');
     fs.writeFileSync(askpassFile, `#!/bin/sh\nprintf '%s\\n' ${quoted}\n`, { mode: 0o700 });
     extraEnv.SUDO_ASKPASS = askpassFile;
     runCmd = cmd.replace(/\bsudo\b(?!\s+-A)/g, 'sudo -A');
+    // A vendor's script calls sudo itself (Ollama's install.sh: "sudo: A terminal is required to authenticate",
+    // 2026-10-13), where the line above cannot reach. A `sudo` first on PATH for this command only hands every such
+    // call to the real one with -A, so it asks the same helper.
+    const realSudo = shell.which('sudo');
+    if (realSudo) {
+      fs.writeFileSync(path.join(askpassDir, 'sudo'), `#!/bin/sh\nexec '${realSudo.replace(/'/g, `'\\''`)}' -A "$@"\n`, { mode: 0o700 });
+      extraEnv.DOCA_SUDO_SHIM = askpassDir;
+    }
   }
   const cleanupAskpass = () => {
-    if (!askpassFile) return;
-    try { fs.rmSync(askpassFile, { force: true }); } catch {}
-    askpassFile = null;
+    if (!askpassDir) return;
+    try { fs.rmSync(askpassDir, { recursive: true, force: true }); } catch {}
+    askpassDir = null; askpassFile = null;
   };
 
   sseWrite({ status: `${label ? `Installing ${label}…\n` : ''}$ ${cmd}\n` });
@@ -207,6 +217,7 @@ function streamCmd(res, cmd, opts = {}) {
       HOME: home,
       DEBIAN_FRONTEND: 'noninteractive',
       PATH: [
+        ...(extraEnv.DOCA_SUDO_SHIM ? [extraEnv.DOCA_SUDO_SHIM] : []),
         ...(shell.WIN ? [] : [path.join(home, '.local', 'bin'), path.join(home, '.npm-global', 'bin')]),
         process.env.PATH || '',
       ].filter(Boolean).join(path.delimiter),
