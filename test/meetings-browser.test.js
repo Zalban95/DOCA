@@ -22,6 +22,9 @@ const SHOTS = process.env.DOCA_SHOTS || null;
 const browsers = [];
 let alice, bob;
 
+/** A browser's page errors, less those a dropped load explains: a script the network change took away is "not defined". */
+const own = b => b.errors.filter(e => !(b.netChanged && /is not defined/.test(e)));
+
 async function browser(who, name) {
   const profile = fs.mkdtempSync(path.join(os.tmpdir(), `doca-meet-${name}-`));
   const proc = spawn(exe, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...headless.ALONE,
@@ -142,7 +145,7 @@ test('two people meet: voice and video both ways, then a screen shared and seen'
   await a.shot('8-meetings-page-folded-call.png');
   await b.eval('meetLeave()');
   assert.ok(await a.until('MEET.peers.size === 0'), 'Bob left');
-  assert.deepEqual([...a.errors, ...b.errors], [], 'no page error');
+  assert.deepEqual([...own(a), ...own(b)], [], 'no page error');
 });
 
 /**
@@ -200,5 +203,5 @@ test('a phone in the app shares its screen through the app, and the app hears th
   assert.ok(await b.until('!MEET.id'), 'Leave in the notification leaves');
   assert.ok(await b.until('window.__app.meeting.at(-1).open === false'), 'the app is told it closed');
   assert.ok(await a.until('MEET.peers.size === 0'), 'Alice sees the phone go');
-  assert.deepEqual([...a.errors, ...b.errors], [], 'no page error');
+  assert.deepEqual([...own(a), ...own(b)], [], 'no page error');
 });
