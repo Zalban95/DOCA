@@ -116,6 +116,9 @@ async function create({ name, purpose = '', missionId = null, by = null, auto = 
     await docker(['run', '-d', '--name', container(c), '--shm-size=1g', '--label', 'doca.computer=1', '--label', `doca.install=${require('./strays').installId()}`,
       '-p', `127.0.0.1:${c.mcpPort}:8765`, '-p', `127.0.0.1:${c.vncPort}:6080`, '-p', `127.0.0.1:${c.servePort}:${SERVE}`,
       '-e', `TOKEN=${c.token}`, '-e', `VNC_PASSWORD=${c.vncPassword}`, '-e', `FILL_KEY=${c.fillKey}`,
+      // The machine DOCA runs on, by one name on Linux, macOS and Windows hosts alike: a computer reaches a model server or
+      // a service the hub's machine serves on all its addresses (an install tested inside one points its model there).
+      '--add-host', 'host.docker.internal:host-gateway',
       '-v', `${container(c)}:/home/agent`, IMAGE]);
   } catch (e) {
     // Made but not started (a port taken, say): no record will name it, so it goes now rather than sit in "created" (strays.js).
@@ -253,6 +256,28 @@ async function put(id, attachmentName, dest = '') {
   return { path: target, bytes: a.bytes };
 }
 
+/**
+ * This DOCA's own code, as it is running, into a computer's work folder: a tarball of the tracked files (`git archive`,
+ * so never a key, a setting or a data folder) — how an agent installs and tests DOCA itself in a computer when its
+ * repository is private and the computer has no credentials. → {path, bytes, version}
+ */
+async function putSource(id) {
+  const c = need(id);
+  const fs = require('fs'), os = require('os'), path = require('path');
+  const root = path.join(__dirname, '..', '..');
+  const version = require(path.join(root, 'package.json')).version;
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-src-'));
+  const local = path.join(tmp, `doca-${version}.tar.gz`);
+  try {
+    await new Promise((resolve, reject) => require('child_process').execFile('git', ['-C', root, 'archive', '--format=tar.gz', `--prefix=doca-${version}/`, '-o', local, 'HEAD'],
+      { timeout: 120000 }, e => (e ? reject(bad(`This DOCA is not a git checkout, so its code cannot be packed (${String(e.message).split('\n')[0]}).`, 409)) : resolve())));
+    const target = require('path').posix.join(WORK, path.basename(local));
+    await docker(['cp', local, `${container(c)}:${target}`]);
+    await docker(['exec', '-u', '0', container(c), 'chown', 'agent:agent', target]).catch(() => {});
+    return { path: target, bytes: fs.statSync(local).size, version };
+  } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
+}
+
 async function fetchFile(id, src) {
   const c = need(id);
   const from = String(src || '').startsWith('/') ? String(src) : require('path').posix.join(WORK, String(src || ''));
@@ -262,7 +287,9 @@ async function fetchFile(id, src) {
     const local = path.join(tmp, path.posix.basename(from) || 'file');
     await docker(['cp', `${container(c)}:${from}`, local]);
     if (!fs.statSync(local).isFile()) throw bad(`${from} is a folder; name a file.`);
-    return require('../attachments').save(fs.readFileSync(local), path.basename(local), { from: `mcp:${serverId(c)}` });
+    // A recording is kept up to what show_media shows (200 MB): a few minutes of desktop video passed the 50 MB upload cap.
+    const att = require('../attachments'), video = att.playableKind(att.mimeFor(path.basename(local))) === 'video';
+    return require('../attachments').save(fs.readFileSync(local), path.basename(local), { from: `mcp:${serverId(c)}`, ...(video ? { maxBytes: 200 * 1024 * 1024 } : {}) });
   } finally { fs.rmSync(tmp, { recursive: true, force: true }); }
 }
 
@@ -275,4 +302,4 @@ async function list({ all = false } = {}) {
   return rows().filter(c => all || !c.archivedAt).map(c => view(c, states[container(c)] || 'missing'));
 }
 
-module.exports = { IMAGE, SERVE, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, archive, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, fetchFile, patch, view, save, rows };
+module.exports = { IMAGE, SERVE, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, archive, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, putSource, fetchFile, patch, view, save, rows };

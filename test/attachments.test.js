@@ -106,3 +106,11 @@ test('an upload with no file is a 400, not a crash', async () => {
   const res = await h.api(null, 'POST', '/api/attachments', new FormData());
   assert.equal(res.status, 400);
 });
+
+test('a caller keeping a video may allow up to 200 MB; the upload limit stays as it was for everyone else', () => {
+  const att = require('../modules/attachments');
+  const big = Buffer.alloc(51 * 1024 * 1024);
+  assert.throws(() => att.save(big, 'clip.mp4'), /upload limit/);
+  assert.equal(att.save(big, 'clip.mp4', { maxBytes: 200 * 1024 * 1024 }).bytes, big.length);
+  assert.throws(() => att.save(Buffer.alloc(201 * 1024 * 1024), 'huge.mp4', { maxBytes: 1e12 }), /upload limit/, 'never past 200 MB');
+});

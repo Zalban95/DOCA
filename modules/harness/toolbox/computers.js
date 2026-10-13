@@ -19,7 +19,8 @@ module.exports = [
         + (dispatch ? ', or pass it as computer: to agent_dispatch (the tester is made for this)' : '') + '; the Orchestrator makes one only '
         + 'to hand on. It stops by itself a few minutes after the mission it was lent to ends, and one you made is removed some days after '
         + 'it stopped unless a person pins it; stop it yourself when you are done with it. list shows them; stop keeps its files, '
-        + 'remove deletes it with its files. put copies an attachment into its work folder (attachment, path); get keeps a file '
+        + 'remove deletes it with its files. put copies an attachment into its work folder (attachment, path) — or, with source: true, '
+        + 'this DOCA\'s own code as a tarball (to install and test DOCA itself in it: tar -xzf, then scripts/install.sh --from that folder); get keeps a file '
         + 'from it as an attachment (path), to show or send on. A server you run inside it on port 8080, listening on 0.0.0.0, is a '
         + 'page the person can open: canvas preview with computer: <id>. A person watches or takes over from the Computers tab; while '
         + 'they drive, your mouse, keys and browser clicks wait. To test a sign-up or a sign-in, create it with test: true: there you '
@@ -30,6 +31,7 @@ module.exports = [
       properties: {
         action: { type: 'string', enum: ['list', 'create', 'start', 'stop', 'remove', 'put', 'get'] },
         attachment: { type: 'string', description: 'put: the attachment\'s name.' },
+        source: { type: 'boolean', description: 'put: true copies this DOCA\'s own code (tracked files only) instead of an attachment.' },
         path: { type: 'string', description: 'put: where in its work folder (default: the attachment\'s name); get: the file, relative to the work folder or absolute.' },
         id: { type: 'string', description: 'start / stop / remove: the computer.' },
         name: { type: 'string', description: 'create: a short name, e.g. "test-install".' },
@@ -38,7 +40,7 @@ module.exports = [
       },
       required: ['action'],
     },
-    run: async ({ action, id, name, purpose, test, attachment, path }, ctx = {}) => {
+    run: async ({ action, id, name, purpose, test, attachment, path, source }, ctx = {}) => {
       const computers = require('../../computers');
       const line = c => `- ${c.id} "${c.name}" ${c.state || ''}${c.pinned ? ' pinned' : ''}${c.test ? ' — test computer: sign-ins without asking' : ''}${c.purpose ? ` — ${c.purpose}` : ''}; tools ${c.tools}`;
       const whose = require('../../computers/whose');
@@ -57,6 +59,7 @@ module.exports = [
       if (action === 'start') return `Started.\n${line(await computers.start(id))}`;
       if (action === 'stop') { await computers.stop(id); return `Stopped ${id}; its files stay until it is removed.`; }
       if (action === 'remove') { await computers.remove(id); return `Removed ${id} and its files.`; }
+      if (action === 'put' && source === true) { const r = await computers.putSource(id); return `This DOCA's code (${r.version}) copied into ${id} at ${r.path} (${r.bytes} bytes): tar -xzf it, then run its scripts/install.sh --from the folder it makes.`; }
       if (action === 'put') { const r = await computers.put(id, attachment, path); return `Copied into ${id} at ${r.path} (${r.bytes} bytes).`; }
       if (action === 'get') { const a = await computers.fetchFile(id, path); return `Kept as an attachment: ${a.path} (${a.bytes} bytes) — show it with show_media or read it.`; }
       return 'Error: action is list, create, start, stop, remove, put or get.';
