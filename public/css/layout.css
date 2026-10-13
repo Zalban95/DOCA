@@ -130,7 +130,7 @@ header {
   left: 0;
   right: 0;
   min-width: 320px;
-  max-height: 360px;
+  max-height: min(70vh, 520px);
   overflow-y: auto;
   background: var(--raised);
   border: 1px solid var(--border2);
@@ -154,7 +154,7 @@ header {
 .header-search-item:hover,
 .header-search-item.active { background: var(--dim); }
 .header-search-item-icon { font-size: 12px; flex-shrink: 0; width: 16px; text-align: center; }
-.header-search-item-name { font-weight: 500; white-space: nowrap; }
+.header-search-item-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .header-search-item-path {
   font-size: 9px;
   color: var(--muted);
@@ -164,6 +164,18 @@ header {
   margin-left: auto;
   max-width: 160px;
 }
+/* Its sections (global-search.js): a heading each with its count, folded by a tap; the first few, then Show all; a
+   result that opens in more than one place asks which under it. */
+.header-search-section > summary { display: flex; align-items: center; gap: 6px; padding: 6px 10px 4px; cursor: pointer; list-style: none;
+  font-size: 10px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); background: var(--surface, var(--raised)); position: sticky; top: 0; z-index: 1; }
+.header-search-section > summary::-webkit-details-marker { display: none; }
+.header-search-section > summary::before { content: '▾'; font-size: 9px; transition: transform var(--t-fast); }
+.header-search-section:not([open]) > summary::before { transform: rotate(-90deg); }
+.header-search-count { margin-left: auto; font-variant-numeric: tabular-nums; }
+.header-search-all { display: block; width: 100%; padding: 6px 10px; border: 0; border-bottom: 1px solid var(--border); background: none; color: var(--accent);
+  font: inherit; font-size: 10px; text-align: left; cursor: pointer; }
+.header-search-more { color: var(--muted); font-weight: 400; }
+.header-search-choices { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 10px 8px 34px; border-bottom: 1px solid var(--border); font-size: 10px; }
 /* A setting opened from the search: outlined for a moment where it is edited (global-search.js settingJump) — above a
    field's own `outline: none`, hence the longer selector. */
 html body .setting-found { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 6px; animation: setting-found 2.6s ease-out; }

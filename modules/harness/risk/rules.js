@@ -77,6 +77,8 @@ const TOOLS = {
   memory_forget: [{ tier: 'reversible', way: WAY.none }],
   memory_rules_write: [{ tier: 'reversible', way: 'the rules can be put back to their defaults' }],
   tell_device: [{ tier: 'reversible', way: WAY.devices }],
+  // A page or a sound on a TV or a speaker lands in a room: heard and seen by whoever is there (cast/things.js).
+  cast: [{ when: { action: ['list'] }, tier: 'read' }, { tier: 'outward', why: 'a page or a sound on a device in a room' }],
   ask_device: [{ tier: 'reversible', way: WAY.devices }],
   remind: [{ tier: 'reversible', way: WAY.devices }],
   agent_dispatch: [{ tier: 'reversible', way: WAY.work }],

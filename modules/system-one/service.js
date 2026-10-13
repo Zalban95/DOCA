@@ -37,7 +37,8 @@ const secret = () => _proc?.secret || '';
 /** Install (or refresh) the environment: a person's click — it downloads PyTorch, 1–6 GB. */
 function setup() {
   const uv = require('../shell').which('uv');
-  if (!uv) throw Object.assign(new Error('Laya\'s environment is made by uv: Settings → System → System tools → uv.'), { status: 409 });
+  if (!uv) throw require('../switch-off').unset('Laya\'s environment is made by uv: Settings → System → System tools → uv.', { what: 'uv (Python environments)', page: 'settings/system', field: '#tool-row-sysdep-uv',
+    why: 'uv makes the Python environment this needs: its row in System tools installs it.' });
   const d = dir(), py = python(), env = { UV_HTTP_TIMEOUT: '600' };
   fs.mkdirSync(d, { recursive: true });
   const steps = [];

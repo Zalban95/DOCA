@@ -42,3 +42,13 @@ test('specialists off is a question with its own switch', async () => {
   assert.equal(r.status, 409);
   assert.deepEqual([r.body.code, r.body.needs.route, r.body.needs.body], ['switch_off', '/api/harness/agents/enable', { enabled: true }]);
 });
+
+test('connecting one\'s own account before the hive has its OAuth app: set up by an admin, and a member is told so', async () => {
+  const member = await H.signIn('member');
+  const r = await H.api(null, 'POST', '/api/accounts/connect', { provider: 'google' }, { Cookie: member.cookie });
+  assert.equal(r.status, 409, JSON.stringify(r.body));
+  assert.equal(r.body.code, 'switch_off');
+  assert.deepEqual([r.body.needs.route, r.body.needs.page, r.body.needs.mayChange], [null, 'connectors', false]);
+  const owner = await H.api(null, 'POST', '/api/accounts/connect', { provider: 'google' });
+  assert.equal(owner.body.needs?.mayChange, true, 'an admin is offered Set it up');
+});

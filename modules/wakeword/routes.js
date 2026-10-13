@@ -12,7 +12,7 @@ const actions = require('./actions');
 const job = require('./job');
 
 function mount(app) {
-  const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+  const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, res.req)); } };
   const word = req => String(req.query.word || req.body?.word || '');
   app.get('/api/wakeword', h(req => ({ ...ww.state(), samples: word(req) ? samples.counts(word(req)) : null })));
   app.post('/api/wakeword/setup', h(() => actions.setup()));

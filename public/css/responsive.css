@@ -205,7 +205,7 @@
 
   .header-search-input { width: 80px; font-size: 9px; padding: 3px 8px 3px 22px; }
   .header-search-input:focus { width: 130px; }
-  .header-search-results { min-width: 200px; right: 0; left: auto; }
+  .header-search-results { left: 8px; right: 8px; min-width: 0; }   /* as system.css des 11: this file loads after it, and right: 0 with left: auto let a long result push the list off the left edge */
 
   .tab-page { padding: 8px; gap: 8px; }
 

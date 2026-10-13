@@ -55,7 +55,9 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     Live"), and the Devices list fills.
   - [ ] R3c Music and media links and a file to a speaker or a TV (the Default Media Receiver; a media token for an
     attachment or a file the person may read; Range).
-  - [ ] R3d The `cast` tool for the agent (kit devices, `registry.NEVER`, risk rules: sound or a page on a device is
+  - [~] R3d *2026-10-13: the `cast` tool (list, show, say, stop, volume) on the person's own request only (`asked`),
+    kit devices, `registry.NEVER`, outward in the risk tiers, in a call's front kit.* Left: the per-thing switches.
+    The `cast` tool for the agent (kit devices, `registry.NEVER`, risk rules: sound or a page on a device is
     outward), with Nearby's per-thing switches it reads: may speak unasked (off), quiet hours, max volume (0.6).
   - [ ] R3e DLNA / UPnP AVTransport for TVs without Cast; `cast/running.js` and kept casts restored at start.
   - [ ] R3f **Look from and serve from a client** (asked again 2026-10-13: "devices in the neighbourhood of the client,
@@ -72,7 +74,8 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
   - [ ] R4a The results' order does not always follow the score shown (Library search).
   - [ ] R4b Ollama's MLX runtime on Windows (its own package, not wired in).
   - [ ] R4c The third GPU (RX 6600, another site, models over Tailscale) — when the owner sets it up.
-- [ ] R5 **Panel search in sections** — Settings, Files, Repos, pages… each a fold inside the search's dropdown; a
+- [x] R5 *2026-10-13: Pages, Settings, Projects and Files, each a fold with its count (kept per browser), the first six
+  and Show all; a file inside a project asks Files or the project; a declared setting reads as words.* **Panel search in sections** — Settings, Files, Repos, pages… each a fold inside the search's dropdown; a
   result opens where it lives, or asks which when several places fit. *3.57.0 did the groundwork: every declared
   setting is a search row with its page.*
 - [~] R6 Meetings: [x] chat inside a meeting (3.17.0, the meeting room's chat); [ ] **meeting notes like Google AI Edge
@@ -90,7 +93,11 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
 - [~] R13 **A switch that is off is a question where it was hit** (3.57.0: Switch it on and go on, Open its settings;
   apiFetch asks by itself; developer mode, every experiment, specialists, a harness, sharing, the cast door; set-up
   cases for the Library's model, the project hub, the speech service). Left from the audit of 2026-10-13 (72 places):
-  - [ ] R13a The set-up cases on their pages: web search's provider, channels' tokens, the vision and retrieval models
+  - [~] R13a *2026-10-13: an account's or a calendar's OAuth app (an admin's, so a member is told so) and uv for Laya and
+    the wake-word trainer are questions; the routes of search, vision, retrieval, backups, connectors, accounts,
+    meetings, Laya and wake words pass a question on. Left on purpose: a refusal shown on the card that fixes it (web
+    search's Try, the vision and retrieval tries, backups, a connector's own form) — Set it up would open the same card.*
+    The set-up cases on their pages: web search's provider, channels' tokens, the vision and retrieval models
     (whose cards hide while their experiment is off), backups' destination, the realtime model, the licence key,
     OAuth apps, Laya and the wake-word trainer — each a `switch-off.unset` with its page and card.
   - [ ] R13b `network.lanAdmin`'s refusal (auth/gate.js, **ask**: an auth file) as a question with its switch.

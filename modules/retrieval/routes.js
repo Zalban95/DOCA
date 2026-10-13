@@ -5,7 +5,7 @@
  * a try against memory, and emptying the index (it is rebuilt on the next search). The switch itself is
  * Settings → Developer (`experiments.retrieval`).
  */
-const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, res.req)); } };
 
 function view() {
   const E = require('./embed');

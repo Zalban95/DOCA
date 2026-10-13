@@ -21,7 +21,7 @@
  * `assistant.front` (default on) switches it off: a spoken turn then holds what any turn holds, as before 2.304.0.
  */
 const FRONT = new Set(['remind', 'today', 'memory_write', 'memory_search', 'memory_list', 'recall_conversations', 'tell_device',
-  'screen', 'recipe', 'skill', 'effort', 'settings_read', 'settings_propose', 'system_status', 'doca_clients', 'show_media', 'web_search',
+  'screen', 'cast', 'recipe', 'skill', 'effort', 'settings_read', 'settings_propose', 'system_status', 'doca_clients', 'show_media', 'web_search',
   'work_chats', 'agent_dispatch', 'agent_results', 'background']);
 const STEPS = 6;        // tool steps a front turn may take at most
 const WORK_STEPS = 2;   // steps of real work before the rest moves to a work chat
