@@ -39,6 +39,10 @@ function draft({ name, origin, place = 'header', field, prefix, note, docs: sour
     definition.server ||= o;
     if (new URL(definition.server).origin !== o) throw bad(`The document's server is ${new URL(definition.server).origin}, not ${o}: the key goes only to one address.`);
   } else if (specUrl) { try { spec = new URL(String(specUrl)).toString(); } catch { throw bad('openapi_url: the document\'s address.'); } }
+  // Everything but the key is kept and shown; a key written into the note, the skill or the document would not be
+  // the person's paste (secret-scan.js) — refused, naming where.
+  require('./secret-scan').guard([{ name: 'note', text: String(note || '') }, { name: 'field', text: `${field || ''} ${prefix || ''}` },
+    { name: 'skill', text: sk ? `${sk.description || ''}\n${sk.body}` : '' }, { name: 'openapi', text: openapi ? JSON.stringify(openapi, null, 1) : '' }], 'The draft');
   const d = { id: `svc_${crypto.randomBytes(4).toString('hex')}`, name, origin: o, place,
     ...(definition ? { definition } : {}), ...(spec ? { spec } : {}),
     field: field ? String(field).slice(0, 300) : null, prefix: prefix === undefined || prefix === null ? null : String(prefix).slice(0, 30),

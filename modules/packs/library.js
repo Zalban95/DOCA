@@ -42,7 +42,8 @@ function get(id) {
 
 /** Publish a pack to hubs holding packs:read (the registry, experiments.packRegistry), or take it back. */
 function publish(id, on = true) {
-  const { meta } = get(id);
+  const { meta, buffer } = get(id);
+  if (on) require('../secret-scan').refuse(require('../secret-scan').scanZip(buffer), `Publishing "${meta.name}"`);   // other hubs download it
   meta.published = !!on;
   fs.writeFileSync(path.join(dir(), `${id}.json`), JSON.stringify(meta, null, 2));
   return meta;
