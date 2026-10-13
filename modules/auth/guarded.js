@@ -27,6 +27,7 @@ const PREFS = [
   ['experiments', 'an experiment'],
   ['sharing', 'sharing with the project'],
   ['network', 'how the hub listens'],
+  ['cast.door', 'the cast door (a plain-HTTP way in for devices on this network)'],   // its own route asks too; this closes /api/prefs
   ['tracing', 'what is kept of each turn'],
   ['logs', 'what is kept of what happened'],
   ['usagePrices', 'the prices money budgets are counted in', () => moneyBudgets()],

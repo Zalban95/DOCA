@@ -12,7 +12,7 @@
  */
 const things = require('./things');
 const isHost = who => require('../auth/rights').can(who?.role, 'host');
-const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, req)); } };
 
 function mount(app) {
   require('./door').attach(app);

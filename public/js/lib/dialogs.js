@@ -98,6 +98,8 @@ function appConfirm(message, onConfirm, onCancel) {
  * @param {Function} [onClose]
  */
 function appAlert(message, onClose) {
+  // A switch that is off was just asked about (lib/switch-ask.js): its refusal is not said again on top of the answer.
+  if (typeof switchAskedJust === 'function' && switchAskedJust(message)) { onClose?.(); return; }
   const modal  = document.getElementById('app-confirm-modal');
   const msgEl  = document.getElementById('app-confirm-message');
   const btnOk  = document.getElementById('app-confirm-ok');

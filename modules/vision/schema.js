@@ -22,7 +22,7 @@ module.exports = { is: 'travels', home: 'hive', note: 'how a computer\'s screen 
       maxTokens: { type: 'number', min: 64, max: 8192, default: 600, hint: 'The longest answer a vision model gives when it is not thinking: a few sentences. A model that runs on stops here.' },
       maxSide: { type: 'number', min: 256, max: 8192, default: 1024, hint: 'A screen is shrunk by a whole factor until its longer side is at most this many pixels before a vision model reads it; positions come back in the screen\'s own pixels.' },
       warmMain: { type: 'boolean', default: true, hint: 'When the quick model answers, wake the vision model in the background so the next look is its.' },
-      detectorUrl: { type: 'string', default: 'http://127.0.0.1:9001', hint: 'Roboflow Inference: the local server (Settings → Services) or https://detect.roboflow.com.' },
+      detectorUrl: { type: 'string', default: 'http://127.0.0.1:9001', hint: 'Roboflow Inference: the local server (Field → Models → its Services row) or https://detect.roboflow.com.' },
       detectorModel: { type: 'string', default: '', hint: 'The detection model, as project/version (Roboflow Universe or your own). Empty: no detector.' },
       apiKey: { type: 'string', default: '', hint: 'The Roboflow API key, when the model or the hosted API needs one.' },
       ocrLang: { type: 'string', default: 'eng', hint: 'Tesseract\'s languages, e.g. eng or eng+ita (each needs its language pack).' } } };

@@ -11,7 +11,8 @@ async function speak(text, person = {}) {
   const engines = require('../tts-engines');
   let vs = mine?.engine;
   if (!vs || vs.hosted) vs = engines.hive();
-  if (!vs?.ttsUrl) throw Object.assign(new Error('No speech service is set up (Settings → Voice).'), { status: 409 });
+  if (!vs?.ttsUrl) throw require('../switch-off').unset('No speech service is set up (Settings → Voice).', { what: 'A speech service', page: 'settings/voice',
+    why: 'The hub speaks with a text-to-speech service: Settings → Voice sets its address, or Settings → Set-up installs one.' });
   const chosen = await require('../tts-voices').resolve(mine?.voice || '', vs, { host: false }).catch(() => ({ voice: mine?.voice || '' }));
   const sent = engines.body(vs, text, { voice: chosen.voice, speed: mine?.speed || null, format: 'mp3' });
   if (!sent.input) throw Object.assign(new Error('Nothing to say.'), { status: 400 });

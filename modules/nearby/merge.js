@@ -25,6 +25,8 @@ const clash = (a, b) => { const ma = a.filter(x => x.startsWith('mac:')), mb = b
 
 /** Sightings of one scan → things (without ids from before). */
 function group(sightings) {
+  // A sighting with no key can never be named again, nor joined: it is left out rather than stopping the scan.
+  sightings = sightings.filter(s => (s.keys || []).length);
   const parent = sightings.map((_, i) => i);
   const find = i => (parent[i] === i ? i : (parent[i] = find(parent[i])));
   const owner = new Map();

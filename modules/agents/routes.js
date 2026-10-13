@@ -15,7 +15,7 @@ const path = require('path');
 const registry = require('./registry');
 const md = require('./markdown');
 
-const fail = (res, e) => res.status(e.status || 500).json({ error: e.message });
+const fail = (res, e) => res.status(e.status || 500).json(require('../switch-off').body(e, res.req));
 
 function importOne(text, fileName, { overwrite = true } = {}) {
   const def = md.parse(text, { fallbackId: String(fileName || '').replace(/\.md$/i, '') });

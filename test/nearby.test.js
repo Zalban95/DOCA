@@ -112,3 +112,12 @@ test('the agent: list, find and scan only — what is saved, where, and how to u
   assert.equal(require('../modules/harness/turn/fits').inventory(new Set(['nearby']), { ...member.user, role: 'member' }), '', 'not in a member\'s readings');
   assert.ok(!require('../modules/harness/turn/tool-shape').switches().some(x => x.name === 'nearby'), 'offered once something is on');
 });
+
+test('a sighting with no key does not stop the scan, and a tailnet address keys one (2026-10-13)', () => {
+  const merge = require('../modules/nearby/merge'), sight = require('../modules/nearby/sightings');
+  const things = merge.group([{ source: 'mdns', name: 'Nothing to know it by', keys: [] }, { source: 'lan', name: 'A', keys: ['ip:192.168.1.5'], addresses: ['192.168.1.5'] }]);
+  assert.deepEqual(things.map(t => t.name), ['A']);
+  assert.doesNotThrow(() => merge.into([], things, new Date().toISOString()));
+  const tailnet = sight.mdns({ name: 'Home', addresses: ['100.115.89.4'], type: '_http._tcp', txt: {} });
+  assert.deepEqual(tailnet.keys, ['ip:100.115.89.4']);
+});

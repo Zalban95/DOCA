@@ -262,8 +262,7 @@ function dispatch({ agentId, task, context, by, chainId, plan, computer = null, 
   if (by && require('../harness/organization').session(by).kind === 'specialist')
     throw Object.assign(new Error('A specialist cannot delegate further. Report to its work leader.'), { status: 403 });
   if (!registry.enabled())
-    throw Object.assign(new Error(
-      'Specialist agents are switched off (agents.enabled). Ask the user to turn them on.'), { status: 409 });
+    throw require('./off')('Specialist agents are switched off (agents.enabled). Ask the user to turn them on.');
 
   const def = registry.get(agentId);
   if (!def) throw Object.assign(new Error(
@@ -385,7 +384,7 @@ function resume(id, { go } = {}) {
   }
 
   if (!registry.enabled())
-    throw Object.assign(new Error('Specialist agents are switched off (agents.enabled).'), { status: 409 });
+    throw require('./off')('Specialist agents are switched off (agents.enabled).');
   const def = registry.get(row.agentId);
   if (!def || def.broken) throw Object.assign(new Error(
     `The "${row.agentId}" agent ${def ? 'cannot be read' : 'no longer exists'}, so ${id} cannot resume.`), { status: 409 });

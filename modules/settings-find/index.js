@@ -65,6 +65,14 @@ const PAGE_OF = [
   ['features', 'settings/system'], ['theme', 'settings/general'], ['customTheme', 'settings/general'], ['hiddenTabs', 'settings/general'],
   ['sidebarStats', 'settings/general'], ['sidebarSections', 'settings/general'], ['agents', 'harness'], ['limits', 'settings/experiments'],
   ['llamacpp', 'models'], ['services', 'settings/system'],
+  // Every section has a page, so every declared setting can be found (2026-10-13: "cast door" found nothing).
+  ['call', 'settings/voice'], ['realtime', 'settings/voice'], ['wakeword', 'models'], ['skillSuggest', 'settings/harness'],
+  ['home', 'home'], ['meetings', 'meetings'], ['teams', 'teams'], ['people', 'people'], ['devices', 'apikeys'],
+  ['developer', 'settings/experiments'], ['experiments', 'settings/experiments'], ['work', 'settings/experiments'],
+  ['setup', 'settings/guided'], ['sharing', 'settings/packs'], ['tracing', 'settings/system'], ['logs', 'settings/system'],
+  ['network', 'settings/system'], ['library', 'models'], ['systemOne', 'models'], ['cast', 'nearby'], ['nearby', 'nearby'],
+  ['harness', 'settings/harness'], ['backup', 'settings/backups'], ['machineBackup', 'settings/backups'], ['licence', 'settings/general'],
+  ['workstream', 'workstream'], ['machines', 'live'], ['channels', 'settings/channels'],
 ];
 const pageOf = path => PAGE_OF.filter(([p]) => path === p || path.startsWith(`${p}.`)).sort((a, b) => b[0].length - a[0].length)[0]?.[1] || null;
 
@@ -80,6 +88,18 @@ function rows() {
     out.push({ id: r.path, label: r.path, paths: [r.path], page: pageOf(r.path), how: howOf(r.path), words: r.section,
       field: `[data-leaf="${r.path}"]`, ...(r.path.startsWith('harness.config.') ? { open: 'harnessParams', field: `#hcfg-${r.path.split('.').pop()}-doca`, host: true } : {}) });
   }
+  // Then every other declared setting, the person's and the owner's alike — one the agent may never propose (the cast
+  // door) is still the person's to find: where it is, and that it is theirs to switch.
+  const seen = new Set(out.flatMap(r => r.paths));
+  let all = [];
+  try { all = require('../settings-schema').leaves({}); } catch { /* the rest still answer */ }
+  for (const l of all) {
+    if (seen.has(l.path) || [...named].some(p => l.path.startsWith(`${p}.`))) continue;
+    const page = pageOf(l.path);
+    if (!page) continue;
+    out.push({ id: l.path, label: l.path, paths: [l.path], page, how: howOf(l.path), words: String(l.hint || '').toLowerCase(),
+      field: `[data-leaf="${l.path}"]`, host: l.on === 'host' || undefined, declared: true });
+  }
   return out;
 }
 
@@ -88,6 +108,8 @@ const hostPage = page => {
   return top === 'settings' && sub ? l.SUB.some(t => t.id === sub && t.host) : l.HOST_TABS.includes(top);
 };
 
+const tier = x => (!x.r.declared && x.score >= 6 ? 0 : 1);
+
 /** Settings matching `q`, best first. `host: false` leaves out the machine's (they are not that person's to find). */
 function find(q, { host = true, limit = 6 } = {}) {
   const { base, all } = words(q);
@@ -95,9 +117,11 @@ function find(q, { host = true, limit = 6 } = {}) {
   return rows().filter(r => host || (!r.host && !hostPage(r.page))).map(r => {
     const strong = `${r.id} ${r.label} ${r.paths.join(' ')}`.toLowerCase(), weak = `${r.words || ''} ${r.control || ''}`.toLowerCase();
     // The person's own words count most; a synonym's a little, so "dark" finds the theme and not every dark corner.
-    const score = all.reduce((s, w) => s + (base.includes(w) ? 3 : 1) * ((strong.includes(w) ? 2 : 0) + (weak.split(/[^a-z0-9.+-]+/).includes(w) ? 1 : 0)), 0);
+    const score = (r.declared ? base : all).reduce((s, w) => s + (base.includes(w) ? 3 : 1) * ((strong.includes(w) ? 2 : 0) + (weak.split(/[^a-z0-9.+-]+/).includes(w) ? 1 : 0)), 0);
     return { r, score };
-  }).filter(x => x.score >= 3).sort((a, b) => b.score - a.score || (a.r.paths.length ? 0 : 1)).slice(0, limit).map(x => x.r);
+    // What people ask for by name (places.js, the agent's settings) and matches well comes before a setting found only by
+    // its declaration — counted by the person's own words, no synonyms — however its name happens to repeat their words.
+  }).filter(x => x.score >= 3).sort((a, b) => tier(a) - tier(b) || b.score - a.score || (a.r.paths.length ? 0 : 1)).slice(0, limit).map(x => x.r);
 }
 
 const where = r => [r.page && require('../features/pages').label(r.page), r.control].filter(Boolean).join(' → ') || 'the panel';

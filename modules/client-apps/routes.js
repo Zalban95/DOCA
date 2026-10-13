@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * DOCA's apps on the hub (index.js): the panel lists, uploads and builds them (Settings → DOCA apps); a device asks
+ * DOCA's apps on the hub (index.js): the panel lists, uploads and builds them (Field → API keys → DOCA apps); a device asks
  * what the newest is and downloads it.
  *
  *   GET  /api/clients/apps                       what is kept, where each repo is, whether a signing key is held (read)

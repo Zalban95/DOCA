@@ -5,7 +5,7 @@
  * run first, then only what was chosen. Host only: a pack can carry MCP commands this host would spawn,
  * specialists' tool lists and memory, each of which already needs host here.
  */
-const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); } };
+const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, req)); } };
 const upload = require('multer')({ storage: require('multer').memoryStorage(), limits: { fileSize: 50 * 1024 * 1024 } }).single('file');
 const file = req => { if (!req.file?.buffer) throw Object.assign(new Error('Send the pack as "file".'), { status: 400 }); return req.file.buffer; };
 
@@ -41,7 +41,7 @@ function mount(app) {
   app.post('/api/packs/library/:id/send', h(req => require('./send').send(String(req.body?.hub || ''), req.params.id)));
   app.post('/api/packs/hubs', h(req => require('./send').add(req.body || {})));
   // The registry (experiments.packRegistry): publishing from this library, browsing and fetching from another hub's.
-  const reg = () => { if (!require('../experiments').on('packRegistry')) throw Object.assign(new Error('The pack registry is an experiment that is off (Settings → Developer).'), { status: 409 }); };
+  const reg = () => require('../experiments').need('packRegistry', 'The pack registry');
   app.post('/api/packs/library/:id/publish', h(req => { reg(); return lib().publish(req.params.id, req.body?.on !== false); }));
   app.get('/api/packs/hubs/:id/published', h(req => { reg(); return require('./send').browse(req.params.id); }));
   app.post('/api/packs/hubs/:id/fetch', h(req => { reg(); return require('./send').fetchPack(req.params.id, String(req.body?.pack || '')); }));

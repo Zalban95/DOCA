@@ -61,7 +61,7 @@ function plan(id) {
 /** POST /api/harness/:id/enabled {on} */
 function handleEnabled(req, res) {
   try { res.json({ ok: true, ...setDisabled(req.params.id, req.body?.on === false) }); }
-  catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+  catch (e) { res.status(e.status || 500).json(require('../switch-off').body(e, req)); }
 }
 
 /** GET /api/harness/:id/delete — what deleting would do. POST — does it (an uninstall streams). */
