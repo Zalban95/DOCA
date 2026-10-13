@@ -304,7 +304,7 @@ function mcpNew() {
   document.getElementById('mcp-origin-kind').value = 'server';
   document.getElementById('mcp-name').disabled = false;
   setStatus(document.getElementById('mcp-form-status'), '', '');
-  _mcpLoadDevices(null); mcpKeyField(null); mcpFormPlace(null);
+  _mcpLoadDevices(null); mcpKeyField(null); mcpKeyEnvField(null); mcpFormPlace(null);
   mcpShowForm(true);
 }
 
@@ -330,7 +330,7 @@ async function mcpEdit(id) {
   // would create a second server rather than rename this one.
   document.getElementById('mcp-name').disabled = true;
   document.getElementById('mcp-name').dataset.editing = id;
-  await mcpKeyField(s.key); mcpFormPlace(id); mcpShowForm(true);   // its token, if it names a key; the form under its row (mcp-key.js)
+  await mcpKeyField(s.key); mcpKeyEnvField(s.keyEnv); mcpFormPlace(id); mcpShowForm(true);   // its token, if it names a key; the form under its row (mcp-key.js)
 }
 
 async function mcpSave() {
@@ -344,7 +344,7 @@ async function mcpSave() {
     transport,
     command:   document.getElementById('mcp-command').value.trim(),
     args:      document.getElementById('mcp-args').value,
-    env:       document.getElementById('mcp-env').value,
+    env:       document.getElementById('mcp-env').value, keyEnv: mcpKeyEnvRead(),   // keys for services in its env (mcp-key.js)
     cwd:       document.getElementById('mcp-cwd').value.trim(),
     url:       document.getElementById('mcp-url').value.trim(),
     headers:   parseHeaderLines(document.getElementById('mcp-headers').value),
