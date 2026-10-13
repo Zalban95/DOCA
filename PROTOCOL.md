@@ -1275,6 +1275,7 @@ and `home`, a household's Home Assistant (§22.4), and `nearby`, what is around 
   | `media` | `media_control` | — | as canonical | — |
   | `home` | `home_states`, `home_call`, `home_camera` | — | — | as canonical (a home node, §22.4) |
   | `nearby` | `nearby_network`, `nearby_scan`, `nearby_probe` | — | — | as canonical (§22.5) |
+  | `cast` | `cast_serve`, `cast_send`, `cast_end` | — | — | as canonical (§22.5) |
 
   A tool that acts on what a person sees or types (`screen_press`, `input_*`) follows the computer's rules: a password
   field is never typed into, and a control that pays, buys, signs in or submits needs `confirm: true` (§22.2).
@@ -1390,7 +1391,21 @@ when a person picks that client under Machines → Nearby → Look from (or the 
 - `nearby_probe {address, port}` → `{open, ms}` — a TCP connect, nothing sent.
 
 doca-client runs the hub's own readers (shipped beside it as `nearby/*.js` by `doca-client update`, which asks
-`GET /clients/node?dirs=1`). The `cast` family (serving a page or a sound to a thing on the client's network) follows.
+`GET /clients/node?dirs=1`).
+
+**The `cast` family** (hub 3.61.0): the client as the relay to a TV or speaker on its own network, when the hub has no
+address there (cast-reach.md §2.3). The hub picks the person's own connected client that saw the thing most recently.
+
+- `cast_serve {cast, target, page?, media?: [{token, mime, data (base64)}], ttlSec?}` → `{base: 'http://<lan>:<port>'}`
+  — a plain-HTTP door on the client's address on the target's network, a random port, answering **the target's
+  address only**. With `page`, every other request is forwarded byte for byte to the hub over the pinned connection,
+  adding no token or cookie of the client's (Host and Origin become the hub's, Set-Cookie loses `Secure`, answers
+  stream). `media` is served from the client at `/api/cast/media/<token>` (at most 10 MB in a cast); a sound-only
+  cast forwards nothing. The door closes at `cast_end`, or after `ttlSec` (a page 3 h; a sound 10 min after its last
+  fetch).
+- `cast_send {target: {address, port}, do: page|media|stop|volume, url?, contentType?, title?, value?}` →
+  `{ok, state}` — the client's own Cast v2 sender (the hub's `castv2/`, shipped beside it).
+- `cast_end {cast}` → `{ok}`.
 
 ## 23. Talking to the agent (`/harness`)
 

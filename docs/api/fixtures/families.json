@@ -56,6 +56,11 @@
       "nearby_network",
       "nearby_scan",
       "nearby_probe"
+    ],
+    "cast": [
+      "cast_serve",
+      "cast_send",
+      "cast_end"
     ]
   },
   "decides": [

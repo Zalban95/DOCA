@@ -99,7 +99,7 @@ test('the agent: list, find and scan only — what is saved, where, and how to u
   const owner = { ...H.owner.user, role: 'owner', orgId: H.owner.orgId };
   const call = args => tools.call('nearby', args, [], { user: owner, sessionId: null });
   const list = await call({ action: 'list' });
-  assert.match(list, /Saved by the person:\n- Kitchen speaker — Lab \(speaker, Google Nest Mini, 192\.168\.7\.34; seen just now by cast, lan\): cast: `catt -d "Study speaker" cast <url>`/);
+  assert.match(list, /Saved by the person:\n- Kitchen speaker — Lab \(speaker, Google Nest Mini, 192\.168\.7\.34; seen from the hub just now by cast, lan\): cast: `catt -d "Study speaker" cast <url>`/);
   assert.match(await call({ action: 'find', query: 'speaker lab' }), /Kitchen speaker/);
   assert.match(await call({ action: 'find', query: 'printer' }), /Nothing nearby matches/);
   assert.match(await call({ action: 'scan' }), process.platform !== 'win32'

@@ -12,11 +12,13 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DIR = path.join(__dirname, '..', '..', 'clients', 'node');
-const FILES = ['doca-client.js', 'families.js', 'sealed.js', 'discover.js', 'boot.js', 'update.js', 'socket.js', 'ws-lite.js', 'home.js', 'home-shared.js', 'nearby.js', 'README.md'];
+const FILES = ['doca-client.js', 'families.js', 'sealed.js', 'discover.js', 'boot.js', 'update.js', 'socket.js', 'ws-lite.js', 'home.js', 'home-shared.js', 'nearby.js', 'cast.js', 'README.md'];
 // The hub's own nearby readers, unchanged, in a folder beside the client (clients/node/nearby.js). Listed only to an
 // updater that makes folders (`?dirs=1`, update.js since 3.60.0): an older one would fail writing into one.
 const NEARBY_DIR = path.join(__dirname, '..', 'nearby');
-const SUB = Object.fromEntries(require('../../clients/node/nearby').SHIPPED.map(f => [`nearby/${f}`, path.join(NEARBY_DIR, f)]));
+const CAST_DIR = path.join(__dirname, '..', 'cast', 'castv2');   // the hub's Cast sender, for the client's cast family (clients/node/cast.js)
+const SUB = Object.fromEntries([...require('../../clients/node/nearby').SHIPPED.map(f => [`nearby/${f}`, path.join(NEARBY_DIR, f)]),
+  ...require('../../clients/node/cast').SHIPPED.map(f => [`castv2/${f}`, path.join(CAST_DIR, f)])]);
 const fileOf = name => (FILES.includes(name) ? path.join(DIR, name) : SUB[name] || null);
 
 function manifest({ dirs = false } = {}) {
