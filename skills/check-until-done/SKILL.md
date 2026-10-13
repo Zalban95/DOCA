@@ -1,8 +1,6 @@
 ---
 name: check-until-done
-description: Keep going until the work is really done — build, grade it against what "done" means here (the plan step's contract, the project's own tests, the page as it renders), fix what fails, and repeat; stop when every check holds, or after three rounds without progress, and say plainly what still fails. Attached in Agent mode in project conversations.
-attach-modes: [agent]
-attach-where: project
+description: Keep going until the work is really done — build, grade it against what "done" means here (the plan step's contract, the project's own tests, the page as it renders), fix what fails, and repeat; stop when every check holds, or after three rounds without progress, and say plainly what still fails. For when the person asks for work done until it holds.
 triggers: [until it works, until done, make the tests pass, keep fixing, verify, check it works, "is it done", finché funziona, fino a che passa, verifica, controlla che funzioni, fai passare i test]
 ---
 
