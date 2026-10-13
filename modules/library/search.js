@@ -94,11 +94,13 @@ async function search(person, query, { kinds = null, folder = null, tags = null,
     }
   }
   const keyword = [...kw.entries()].sort((a, b) => b[1].hit - a[1].hit).map(([p]) => p);
-  const order = require('../retrieval').hybrid(semantic, keyword).slice(0, Math.min(50, Math.max(1, limit)));
-  const results = order.map(p => {
+  // The order is the merge (meaning, each kind against its own mean, and words); the score shown is the merge's own, so
+  // it falls as the order does — the raw cosine, which the order does not follow, is `similarity` (R4a, 2026-10-13).
+  const order = require('../retrieval').hybridScored(semantic, keyword).slice(0, Math.min(50, Math.max(1, limit)));
+  const results = order.map(({ ref: p, score }) => {
     const it = items.get(p), b = best.get(p), k = kw.get(p);
     const piece = (k?.piece && (!b || k.hit >= want.length)) ? k.piece : b?.piece;
-    return { path: p, name: path.basename(p), kind: it.kind, score: b ? Math.round(b.score * 1000) / 1000 : null,
+    return { path: p, name: path.basename(p), kind: it.kind, score, similarity: b ? Math.round(b.score * 1000) / 1000 : null, words: k?.hit || 0,
       match: piece ? { kind: piece.kind, at: piece.at, end: piece.end, text: piece.text ? piece.text.slice(0, 300) : null } : null,
       about: it.meta.about || path.basename(p), tags: it.meta.tags || [], caption: it.meta.caption || null,
       meta: { duration: it.meta.duration ?? null, width: it.meta.width ?? null, height: it.meta.height ?? null, peaks: it.meta.peaks || null } };

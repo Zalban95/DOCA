@@ -125,3 +125,12 @@ test('choosing the model is a host\'s; anyone signed in may read it', async () =
   assert.ok(Array.isArray(t.body.hits));
   assert.equal((await H.api(null, 'DELETE', '/api/retrieval/index')).body.index.length, 0);
 });
+
+test('the merged score falls as the merged order does, 0 to 1 (the Library shows it, R4a)', () => {
+  const { hybridScored, hybrid } = require('../modules/retrieval');
+  const r = hybridScored(['a', 'b', 'c', 'd'], ['c', 'a', 'x']);
+  assert.deepEqual(r.map(x => x.ref), hybrid(['a', 'b', 'c', 'd'], ['c', 'a', 'x']));
+  for (let i = 1; i < r.length; i++) assert.ok(r[i - 1].score >= r[i].score, `${r[i - 1].ref} ≥ ${r[i].ref}`);
+  assert.ok(r[0].score <= 1 && r.at(-1).score > 0);
+  assert.equal(hybridScored(['only'])[0].score, 1, 'first in every list is 1');
+});

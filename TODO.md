@@ -75,7 +75,7 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
 - [x] R4 **EmbeddingGemma 2 for the Library, verified** (3.52.1–3.55.0, proven live 2026-10-13: 740m on MLX, 9 files in
   20 s, searches right first, the index follows adds, changes and removals). Ollama's MLX runtime is a System tools row,
   restarted with Ollama; the Library makes room on the GPU (`library.makeRoom`) and suggests the model by machine.
-  - [ ] R4a The results' order does not always follow the score shown (Library search).
+  - [x] R4a The results' order does not always follow the score shown (Library search): the score shown is now the merged ranking's own, 0–1, the raw similarity in its tooltip (3.62.0).
   - [ ] R4b Ollama's MLX runtime on Windows (its own package, not wired in).
   - [ ] R4c The third GPU (RX 6600, another site, models over Tailscale) — when the owner sets it up.
 - [x] R5 *2026-10-13: Pages, Settings, Projects and Files, each a fold with its count (kept per browser), the first six
