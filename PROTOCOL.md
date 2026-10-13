@@ -1223,7 +1223,7 @@ otherwise. `headers` exists so the host can carry a bearer token you require.
 A paired client can offer the harness the same **tool families** the host has —
 `files`, `shell`, `processes`, `screen`, `input`, `apps`, `device`, `elevated`,
 `mcp` — as far as its operating system allows (docs/design/devices-as-hands.md) —
-and `home`, a household's Home Assistant (§22.4).
+and `home`, a household's Home Assistant (§22.4), and `nearby`, what is around the client (§22.5).
 
 - The client asks its person **once per family**, in its own UI, and reports the
   result: `PUT /devices/self/grants { grants: { files: true, shell: false, … } }`.
@@ -1274,6 +1274,7 @@ and `home`, a household's Home Assistant (§22.4).
   | `device` | `device_info`, `device_notify`, `device_clipboard_read`, `device_clipboard_write`, `device_camera`, `device_location`, `device_sensors` | — | `device_notify`, `device_camera`, `device_location`, `device_sensors` | `device_info`, `device_notify`, `device_clipboard_read`, `device_clipboard_write` |
   | `media` | `media_control` | — | as canonical | — |
   | `home` | `home_states`, `home_call`, `home_camera` | — | — | as canonical (a home node, §22.4) |
+  | `nearby` | `nearby_network`, `nearby_scan`, `nearby_probe` | — | — | as canonical (§22.5) |
 
   A tool that acts on what a person sees or types (`screen_press`, `input_*`) follows the computer's rules: a password
   field is never typed into, and a control that pays, buys, signs in or submits needs `confirm: true` (§22.2).
@@ -1373,6 +1374,23 @@ address and long-lived token **itself**, holds HA's WebSocket on the home networ
   are used). While the node is away the page shows what it last said, greyed, with when it was last seen, and every
   call is refused (409 `node_away`). The agent uses the node's tools narrowed to its person as the page is; an unlock
   or a disarm through `home_call` is always asked of a person.
+
+### 22.5 What is around a client: the `nearby` family (hub 3.60.0; the owner's yes of 2026-10-13)
+
+So the hub can look from where a person is — a desk at home while the hub is at the office — a client lends what its
+own network and radio see (docs/design/cast-reach.md §1, §6.2). Asked once, like every family; the hub calls it only
+when a person picks that client under Machines → Nearby → Look from (or the agent's `nearby scan {from}`).
+
+- `nearby_network {}` → `{subnet, address, gateway, gatewayMacHash, kind: wifi|ethernet|null, ssid: null, at}` — a
+  hash of the gateway's MAC, never the MAC: two lookers with the same hash are on one network.
+- `nearby_scan {sources?: ['cast','mdns','ssdp','lan','bluetooth']}` → `{things: [sighting…], sources, network, why:
+  {source: text}, at}` — sightings in the hub's own shape (`modules/nearby/sightings.js`), which the hub merges
+  unchanged; `why` says why a source saw nothing it could. Private addresses seen from another network than the
+  hub's are kept apart from the hub's own (the same 192.168.1.5 is two things on two networks).
+- `nearby_probe {address, port}` → `{open, ms}` — a TCP connect, nothing sent.
+
+doca-client runs the hub's own readers (shipped beside it as `nearby/*.js` by `doca-client update`, which asks
+`GET /clients/node?dirs=1`). The `cast` family (serving a page or a sound to a thing on the client's network) follows.
 
 ## 23. Talking to the agent (`/harness`)
 

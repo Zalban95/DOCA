@@ -12,12 +12,18 @@ const path = require('path');
 const crypto = require('crypto');
 
 const DIR = path.join(__dirname, '..', '..', 'clients', 'node');
-const FILES = ['doca-client.js', 'families.js', 'sealed.js', 'discover.js', 'boot.js', 'update.js', 'socket.js', 'ws-lite.js', 'home.js', 'home-shared.js', 'README.md'];
+const FILES = ['doca-client.js', 'families.js', 'sealed.js', 'discover.js', 'boot.js', 'update.js', 'socket.js', 'ws-lite.js', 'home.js', 'home-shared.js', 'nearby.js', 'README.md'];
+// The hub's own nearby readers, unchanged, in a folder beside the client (clients/node/nearby.js). Listed only to an
+// updater that makes folders (`?dirs=1`, update.js since 3.60.0): an older one would fail writing into one.
+const NEARBY_DIR = path.join(__dirname, '..', 'nearby');
+const SUB = Object.fromEntries(require('../../clients/node/nearby').SHIPPED.map(f => [`nearby/${f}`, path.join(NEARBY_DIR, f)]));
+const fileOf = name => (FILES.includes(name) ? path.join(DIR, name) : SUB[name] || null);
 
-function manifest() {
+function manifest({ dirs = false } = {}) {
+  const names = [...FILES, ...(dirs ? Object.keys(SUB) : [])];
   return { client: 'doca-client', version: require('../../package.json').version,
-    files: FILES.filter(f => fs.existsSync(path.join(DIR, f))).map(f => {
-      const b = fs.readFileSync(path.join(DIR, f));
+    files: names.filter(f => fs.existsSync(fileOf(f))).map(f => {
+      const b = fs.readFileSync(fileOf(f));
       return { name: f, bytes: b.length, sha256: crypto.createHash('sha256').update(b).digest('hex') };
     }) };
 }
@@ -36,11 +42,14 @@ function mountPanel(app) { app.get('/api/clients/browser.zip', sendZip); }
 
 function mount(router) {
   router.get('/clients/browser.zip', sendZip);
-  router.get('/clients/node', (_req, res) => res.json(manifest()));
-  router.get('/clients/node/:file', (req, res) => {
-    if (!FILES.includes(req.params.file)) return res.status(404).json({ error: { code: 'not_found', message: `No client file ${req.params.file}.` } });
-    res.type(req.params.file.endsWith('.md') ? 'text/markdown' : 'application/javascript').send(fs.readFileSync(path.join(DIR, req.params.file)));
-  });
+  router.get('/clients/node', (req, res) => res.json(manifest({ dirs: req.query.dirs === '1' })));
+  const send = (name, res) => {
+    const f = fileOf(name);
+    if (!f) return res.status(404).json({ error: { code: 'not_found', message: `No client file ${name}.` } });
+    res.type(name.endsWith('.md') ? 'text/markdown' : 'application/javascript').send(fs.readFileSync(f));
+  };
+  router.get('/clients/node/:file', (req, res) => send(req.params.file, res));
+  router.get('/clients/node/:dir/:file', (req, res) => send(`${req.params.dir}/${req.params.file}`, res));
 }
 
 module.exports = { mount, mountPanel, browserZip, manifest, FILES };

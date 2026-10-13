@@ -44,8 +44,8 @@ Every request of that conversation, with what shipped and what is left. `ask` ma
 first (an `/api/v1` contract, a guard); everything else goes ahead in the order of the plan below.
 
 - [x] R1 The Live call's circle above, beside or centred under the chat button (3.52.0).
-- [x] R2 Craft App Suite suggested, installed checked against its sums (3.51.0). [ ] R2b the "not affiliated with the
-  Craft App Suite's authors" line — **waits for the owner's yes**.
+- [x] R2 Craft App Suite suggested, installed checked against its sums (3.51.0). [x] R2b no disclaimer: software for a job,
+  open or proprietary side by side, marked, Connect / Install / Download (owner's answer 2026-10-13; mcp/software.js).
 - [~] R3 **Cast to the things Nearby saved** (docs/design/cast-reach.md). *3.56.0–3.57.0: the Cast v2 sender, the cast
   door (owner's switch, password), one-time sounds through the door only, a TV shows a page (DashCast), a speaker says
   a sentence in the person's Quick call voice, Stop, volume; the Cast sheet's "Around you" by place and room; the
@@ -60,7 +60,7 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     The `cast` tool for the agent (kit devices, `registry.NEVER`, risk rules: sound or a page on a device is
     outward), with Nearby's per-thing switches it reads: may speak unasked (off), quiet hours, max volume (0.6).
   - [ ] R3e DLNA / UPnP AVTransport for TVs without Cast; `cast/running.js` and kept casts restored at start.
-  - [ ] R3f **Look from and serve from a client** (asked again 2026-10-13: "devices in the neighbourhood of the client,
+  - [~] R3f **Look from and serve from a client** *(3.60.0: Look from — doca-client's `nearby` family, the hub's chips and `nearby scan {from}`; serving through a client, DocaMobile and DocaDesk next)* (asked again 2026-10-13: "devices in the neighbourhood of the client,
     so we can select where to perform the search… the client app serving the page or media… wifi, bluetooth or anything
     else"): Nearby's "Look from" (the hub, this phone, another client), the client reporting what it sees around it
     (its own Wi-Fi, Bluetooth), and the client as the relay that serves the page or the sound to a thing on its network.

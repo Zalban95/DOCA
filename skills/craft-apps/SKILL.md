@@ -9,7 +9,10 @@ triggers: [photocraft, vectorcraft, filmcraft, lightcraft, pdfcraft, effectcraft
 Twelve open-source desktop apps (ArtCraft, Apache-2.0, github.com/storytold), each built on one registry of hundreds of
 commands that its menus, its CLI and its MCP server all call — so whatever a person can click, you can do, exactly.
 They are a suggestion, never a requirement: a person or a company may prefer other tools, and their way wins (ask once
-if it is not clear, then keep the answer in memory).
+if it is not clear, then keep the answer in memory). When a person asks what to use for a job, name the choices side
+by side — open or proprietary (Office, Adobe, Google's, LibreOffice, GIMP, Blender, these apps…), each said for what it
+is (open source, free, paid, widely used) — and never push one; Field → MCP → "Software for a job" shows the same list
+with Connect for what is here or an account, Install, or the maker's download page.
 
 | For | App | Server (catalogue id) |
 |---|---|---|

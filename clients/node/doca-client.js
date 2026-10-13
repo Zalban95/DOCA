@@ -4,7 +4,7 @@
 /**
  * doca-client — this machine joins the hive (docs/design/hive.md §4; TODO H6.2, H6.6). Linux, macOS and Windows,
  * Node 22, no dependency. It pairs with a hub, asks its person once per tool family, and lends the granted ones —
- * `files`, `shell`, and screen, processes, apps and device (families.js) — to the hub's agents as an MCP server the
+ * `files`, `shell`, and screen, processes, apps and device (families.js), and what is around it (nearby.js) — to the hub's agents as an MCP server the
  * hub connects to (PROTOCOL.md §22, §22.1). Keep the other files of its folder beside it.
  *
  *   doca-client pair https://hub:4242 641-598 [--name desk]     with a code from Settings → API Keys → Pair a device
@@ -29,7 +29,7 @@ const https = require('https');
 const crypto = require('crypto');
 const { spawn } = require('child_process');
 
-const FAMILIES = ['files', 'shell', 'screen', 'processes', 'apps', 'device', 'home'];
+const FAMILIES = ['files', 'shell', 'screen', 'processes', 'apps', 'device', 'home', 'nearby'];
 const configDir = () => process.env.DOCA_CLIENT_DIR || (process.platform === 'win32' ? path.join(process.env.APPDATA || os.homedir(), 'doca-client') : path.join(os.homedir(), '.config', 'doca-client'));
 const configFile = () => path.join(configDir(), 'config.json');
 const load = () => { try { return JSON.parse(fs.readFileSync(configFile(), 'utf8')); } catch { return null; } };
@@ -130,7 +130,7 @@ const TOOLS = {
       child.on('error', e => { clearTimeout(t); resolve({ code: -1, stdout, stderr: e.message }); });
     }) },
 };
-Object.assign(TOOLS, require('./families')({ within }), require('./home').TOOLS);   // screen, processes, apps, device (families.js); home (home.js)
+Object.assign(TOOLS, require('./families')({ within }), require('./home').TOOLS, require('./nearby').TOOLS);   // screen, processes, apps, device (families.js); home (home.js); nearby (nearby.js)
 const sealed = require('./sealed');   // secrets the hub hands this machine for one use (PROTOCOL.md §22.3)
 const lent = cfg => Object.entries(TOOLS).filter(([, t]) => cfg.grants?.[t.family] === true && !(cfg.revoked || []).includes(t.family) && (t.family !== 'home' || !!cfg.home));
 
