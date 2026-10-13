@@ -33,7 +33,7 @@ const until = async (expression, ms = 15000) => {
 // Chromium drops every load in flight when this machine's network changes (net::ERR_NETWORK_CHANGED — another test
 // making a Docker network does it), which left the panel without half its scripts now and then under a full run: a
 // load that lost a file is loaded again, and the page errors it caused are not this page's.
-let failedLoads = 0;
+let failedLoads = 0, netChanged = 0;
 const open = async () => {
   for (let attempt = 1; ; attempt++) {
     failedLoads = 0;
@@ -60,6 +60,7 @@ before(async () => {
   for (const sig of ['SIGTERM', 'SIGINT']) process.once(sig, () => { killBrowser(); process.exit(1); });
   page = await headless.connect(await headless.devtools(profile));
   page.on(m => { if (m.method === 'Network.loadingFailed' && !m.params.canceled && ['Document', 'Script', 'Stylesheet'].includes(m.params.type)) failedLoads++; });
+  page.on(m => { if (m.method === 'Network.loadingFailed' && /ERR_NETWORK_CHANGED/.test(m.params.errorText || '')) netChanged++; });   // any request, a page's data too
   page.on(m => { if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text); });
   await page.send('Runtime.enable'); await page.send('Network.enable');
   const [name, value] = H.owner.cookie.split('=');
@@ -136,8 +137,12 @@ test('its open state is remembered per browser per id, and a fold of existing el
 
 for (const p of PAGES) {
   test(`every field still drawn: ${p.name}`, { skip }, async () => {
+    const before = netChanged;
     await evaluate(`(async () => { ${p.go} })()`);
-    assert.ok(await until(`!!document.querySelector(${JSON.stringify(p.ready)})`), `${p.name} drew (${p.ready})`);
+    let drew = await until(`!!document.querySelector(${JSON.stringify(p.ready)})`);
+    // The machine's network changed under the browser and dropped the page's data (another test's container): once more.
+    if (!drew && netChanged > before) { await open(); await evaluate(`(async () => { ${p.go} })()`); drew = await until(`!!document.querySelector(${JSON.stringify(p.ready)})`); }
+    assert.ok(drew, `${p.name} drew (${p.ready})`);
     await headless.sleep(400);
     const r = await evaluate(`(() => {
       const q = sel => document.querySelector(sel);

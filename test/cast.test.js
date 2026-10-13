@@ -62,37 +62,57 @@ test('a link is for a page a screen can show; a person casts only to their own s
 // In a real browser, as a TV opens it: each page a screen can be given draws through its view link alone, locked to
 // it, with no script error — the list of what it reads (cast/views.js) is held to what the page really reads.
 const headless = require('../modules/headless');
-test('every castable page draws through a view link, locked, with no script error', { skip: !headless.findBrowser() && 'no browser here', timeout: 600000 }, async () => {
+test('every castable page draws through a view link, locked, with no script error', { skip: !headless.findBrowser() && 'no browser here', timeout: 900000 }, async () => {
   const fs = require('node:fs'), os = require('node:os'), path = require('node:path'), { spawn } = require('node:child_process');
-  for (const page of Object.keys(require('../modules/cast/views').VIEWS)) {
+  /** One try at a page through a fresh view link: what it shows, its errors and the loads that failed. */
+  const attempt = async page => {
     const l = (await H.api(null, 'POST', '/api/cast/links', { page })).body;
     const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-cast-'));
     const proc = spawn(headless.findBrowser(), ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', ...headless.ALONE,
       '--disable-gpu', '--window-size=1400,900', ...(process.platform === 'linux' ? ['--no-sandbox'] : []), 'about:blank'], { stdio: 'ignore' });
     try {
       const cdp = await headless.connect(await headless.devtools(profile));
-      const errors = [];
-      cdp.on(m => { if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text); });
+      const errors = [], failed = [], urls = new Map();   // failed: loads the network dropped (a cast screen's refused routes are its rule, not a failure)
+      cdp.on(m => {
+        if (m.method === 'Runtime.exceptionThrown') errors.push(m.params.exceptionDetails.exception?.description || m.params.exceptionDetails.text);
+        if (m.method === 'Network.requestWillBeSent') urls.set(m.params.requestId, m.params.request.url);
+        if (m.method === 'Network.loadingFailed' && !m.params.canceled) failed.push(`${m.params.errorText} ${String(urls.get(m.params.requestId) || '').replace(H.base, '')}`);
+      });
       await cdp.send('Runtime.enable');
+      await cdp.send('Network.enable');
       await cdp.send('Page.navigate', { url: `${H.base}${l.path}` });
+      const ask = e => cdp.send('Runtime.evaluate', { expression: e, returnByValue: true }).then(r => r.result.value);
       let where = '';
-      // Up to a minute: under a full run's load, or on Windows CI, the panel's boot took past thirty seconds ('live: / ').
+      // Up to a minute: under a full run's load, or on Windows CI, the panel's boot took past thirty seconds.
       for (let i = 0; i < 200 && !/cast-view|face/.test(where); i++) {
         await headless.sleep(300);
-        where = (await cdp.send('Runtime.evaluate', { expression: "location.pathname + ' ' + document.body.className + ' | ' + location.search + ' | ' + document.title + ' | ' + document.readyState", returnByValue: true })).result.value || '';
+        where = await ask("location.pathname + ' ' + document.body.className + ' | ' + location.search + ' | ' + document.title + ' | ' + document.readyState") || '';
       }
       await headless.sleep(1500);
-      if (!(page === 'face' ? /\/face/ : /cast-view/).test(where)) {   // say why: the page's own state and errors, then fail
-        const why = (await cdp.send('Runtime.evaluate', { expression: "JSON.stringify({ soloOn: typeof soloOn === 'function' ? soloOn() : 'absent', fab: !!document.getElementById('chat-fab'), solo: document.body.classList.contains('solo'), tab: typeof currentTab !== 'undefined' ? currentTab : null, nav: typeof NAV_TABS !== 'undefined' ? NAV_TABS.length : null })", returnByValue: true })).result.value;
-        assert.fail(`${page}: ${where} — ${why} — errors: ${errors.join(' | ') || 'none'}`);
-      }
-      const back = (await cdp.send('Runtime.evaluate', { expression: "!!document.querySelector('.solo-bar button[title^=\"Back\"]')", returnByValue: true })).result.value;
-      assert.equal(back, false, `${page}: no way back to the whole panel`);
-      assert.deepEqual(errors, [], page);
+      const why = await ask("JSON.stringify({ soloOn: typeof soloOn === 'function' ? soloOn() : 'absent', fab: !!document.getElementById('chat-fab'), solo: document.body.classList.contains('solo'), tab: typeof currentTab !== 'undefined' ? currentTab : null })");
+      const back = await ask("!!document.querySelector('.solo-bar button[title^=\"Back\"]')");
       cdp.close?.();
+      return { where, why, back, errors, failed };
     } finally {
       const gone = new Promise(r => proc.once('exit', r)); proc.kill(); await gone;
       try { fs.rmSync(profile, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 }); } catch { /* left in the temp folder */ }
     }
+  };
+  for (const page of Object.keys(require('../modules/cast/views').VIEWS)) {
+    // The machine's network changing under the browser (another test starting a container adds an interface) cancels
+    // its loads with net::ERR_NETWORK_CHANGED — not the panel: that page is tried again, at most twice.
+    let r;
+    for (let i = 0; i < 3; i++) { r = await attempt(page); if (!r.failed.some(f => /ERR_NETWORK_CHANGED/.test(f))) break; }
+    assert.ok((page === 'face' ? /\/face/ : /cast-view/).test(r.where), `${page}: ${r.where} — ${r.why} — errors: ${r.errors.join(' | ') || 'none'} — failed loads: ${r.failed.slice(0, 12).join(' | ') || 'none'}`);
+    assert.equal(r.back, false, `${page}: no way back to the whole panel`);
+    assert.deepEqual(r.errors, [], page);
   }
+});
+
+test('a cast screen with no session is told so, never sent to sign in (a receiver that keeps no cookie, 2026-10-13)', async () => {
+  const r = await fetch(`${H.base}/?view=ambient&cast=1`, { redirect: 'manual' });
+  assert.equal(r.status, 401);
+  assert.match(await r.text(), /no longer signed in to show the page/);
+  const plain = await fetch(`${H.base}/?view=ambient`, { redirect: 'manual' });
+  assert.equal(plain.status, 302, 'anyone else is still sent to sign in');
 });

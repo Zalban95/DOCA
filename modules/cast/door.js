@@ -3,7 +3,7 @@
 /**
  * The hub's cast door (docs/design/cast-reach.md §2.2; the owner's yes of 2026-10-12): a Cast TV or speaker fetches
  * what it is given over plain HTTP from an address on its own network — it never loads a self-signed HTTPS address
- * (measured on the Kitchen speaker) and the hub listens on the tailnet only. So, while a cast runs, a second plain-HTTP
+ * (measured on a Google Home Mini) and the hub listens on the tailnet only. So, while a cast runs, a second plain-HTTP
  * server listens on this hub's private address on the target's network (`cast.doorPort`, 4250) and serves a request only
  * when its peer is the address of a cast running now (and 60 s after), and the path is one that cast needs:
  *   the view link (`GET /api/cast/open/:code`), the page's static files, what that page reads (cast/views.js), the

@@ -14,6 +14,17 @@ const _rawFetch = typeof window !== 'undefined' && window.fetch ? window.fetch.b
 let _stepUp = null;   // one password prompt at a time, however many requests hit it
 
 function _toLogin() {
+  // A cast screen (a TV opened by a view link, ?cast=1) has nobody to sign in, and its door serves no sign-in page:
+  // its session ended or was never kept (a Cast receiver may keep no cookie) — said on the screen, in words.
+  if (/[?&]cast=1\b/.test(location.search)) {
+    if (!document.getElementById('cast-ended')) {
+      const d = Object.assign(document.createElement('div'), { id: 'cast-ended' });
+      d.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;padding:32px;background:var(--bg,#0d0f12);color:var(--text,#ddd);font:20px/1.5 system-ui,sans-serif;z-index:99999';
+      d.textContent = 'This screen is no longer signed in to show the page. Cast it again from the panel.';
+      document.body.append(d);
+    }
+    return new Promise(() => {});
+  }
   location.assign(`/login?next=${encodeURIComponent(location.pathname + location.search + location.hash)}`);
   return new Promise(() => {});   // the page is leaving; nothing after this should run
 }
