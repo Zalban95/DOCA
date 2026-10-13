@@ -76,7 +76,9 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     is told so in words. 3.66.0 (the owner left it to my judgement, 2026-10-13): the view session in the link's fragment
     (`#vs=`), sent as `X-Cast-View` (`vs=` on a live stream) and taken only for a view session; through the door alone
     the page and its code load without a session. Shown by a browser that keeps no cookie. A relay's cast keeps cookies.
-  - [ ] R3j **The phone as the source, on any network** (the owner, 2026-10-13): from DocaMobile on another Wi-Fi, show
+  - [~] R3j **The phone as the source, on any network** *(DocaMobile 1.7.0 relays a page or a sound from the hub to a
+    TV on its network, and the Orchestrator's `cast` reaches it through the phone; 3.69.0: a thing seen in the last day,
+    from the hub or the person's device, is cast to without saving it first. Left: a page rendered on the phone itself.)* (the owner, 2026-10-13): from DocaMobile on another Wi-Fi, show
     something of the panel on a TV there by streaming it from the app — a page rendered on the phone, no pairing of the TV
     in the panel, no input (for now); the phone controls the TV, and the Orchestrator's instructions for it go to the
     phone, which carries them out — the panel controls it indirectly. "Look from" a client adds what that client sees,

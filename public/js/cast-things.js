@@ -16,9 +16,9 @@ async function castThingsHtml() {
       <option value="">Tone</option>${d.tones.map(x => `<option value="${escHtml(x)}">${escHtml(x)}</option>`).join('')}</select>` : '';
   _castTones = d.tones || [];
   const groups = {};
-  for (const t of d.things) (groups[[t.place, t.room].filter(Boolean).join(' · ') || 'Elsewhere'] ||= []).push(t);
+  for (const t of d.things) (groups[t.seenOnly ? 'Seen nearby, not saved' : [t.place, t.room].filter(Boolean).join(' · ') || 'Elsewhere'] ||= []).push(t);
   const row = t => `<div class="cast-target cast-thing" data-thing="${escHtml(t.id)}"><div><b>${t.kind === 'speaker' ? '🔊' : '📺'} ${escHtml(t.name)}</b>
-      <br><span class="desc">${escHtml([t.model, t.address].filter(Boolean).join(' · '))}</span>
+      <br><span class="desc">${escHtml([t.model, t.address, t.seenOnly && t.seenFrom ? `seen from ${t.seenFrom}` : ''].filter(Boolean).join(' · '))}</span>
       ${t.shows ? '' : `<div class="cast-say">${tones}<input class="input" placeholder="Say something here…" aria-label="What ${escHtml(t.name)} says" onkeydown="if(event.key==='Enter')castThingSay('${escHtml(t.id)}', this)"></div>`}
       <span class="status-line"></span></div>
     <span class="cast-acts">${t.shows ? `<button class="btn btn-sm btn-teal" type="button" onclick="castThingShow('${escHtml(t.id)}', this)">Cast</button>`

@@ -116,3 +116,20 @@ test('stop and volume go through the desk too; stop closes its door', async () =
   assert.deepEqual(calls.map(c => c.name), ['cast_send', 'cast_send', 'cast_end']);
   assert.ok(!require('../clients/node/cast')._doors.has(`cast-${speaker.id}`));
 });
+
+test('a TV only seen from the desk, not saved, is listed as such and cast to through it (R3j)', async () => {
+  const store = require('../modules/nearby/store');
+  const now = new Date().toISOString();
+  store.writeSeen([...store.seen(), { id: 's3', name: 'Hotel TV', kind: 'tv', keys: ['cast:cc'], addresses: ['127.0.0.1'], can: ['cast'], sources: ['cast'],
+    how: { cast: { name: 'stub', ip: '127.0.0.1', port: dev.port } }, lastSeen: now, seenFrom: [{ by: 'd_home', label: 'Desk at home', at: now }] }]);
+  const list = (await H.api(null, 'GET', '/api/cast/things')).body.things;
+  const t = list.find(x => x.id === 's3');
+  assert.deepEqual([t.seenOnly, t.seenFrom, t.shows], [true, 'Desk at home', true]);
+  assert.ok(list.indexOf(t) > list.findIndex(x => !x.seenOnly), 'after the saved ones');
+  calls.length = 0;
+  const r = await H.api(null, 'POST', '/api/cast/things/s3/show', { page: 'live' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.via, 'Desk at home');
+  assert.deepEqual(calls.map(c => c.name), ['cast_serve', 'cast_send']);
+  await H.api(null, 'POST', '/api/cast/things/s3/stop', {});
+});

@@ -29,16 +29,31 @@ const dlnaOnly = t => !hasCast(t) && (t.can || []).includes('dlna-play') && !!t.
 const castable = t => hasCast(t) || dlnaOnly(t);
 const ipOf = t => t.how?.cast?.ip || t.how?.dlna?.ip || (() => { try { return new URL(t.how.dlna.control).hostname; } catch { return null; } })();
 
+const SEEN_MS = 24 * 3600e3;
+
+/**
+ * What may be cast to: the things Nearby saved, and — so a TV on a network the person just walked into needs no saving
+ * first (the owner, 2026-10-13, R3j) — the castable things seen in the last day and not saved, marked `seenOnly`.
+ */
+function pool() {
+  const store = require('../nearby/store');
+  const saved = store.saved();
+  const savedSeen = new Set(saved.map(t => t.seenId).filter(Boolean));
+  const seen = store.seen().filter(t => !savedSeen.has(t.id) && t.lastSeen && Date.now() - Date.parse(t.lastSeen) < SEEN_MS).map(t => ({ ...t, seenOnly: true }));
+  return [...saved, ...seen];
+}
+
 function list(who) {
-  return require('../nearby/store').saved().filter(t => castable(t) && mayUse(who, t)).map(t => ({
+  return pool().filter(t => castable(t) && mayUse(who, t)).map(t => ({
     id: t.id, name: name(t), kind: t.kind || 'thing', place: t.place || null, room: t.room || null, model: t.model || null,
-    shows: t.kind !== 'speaker' && hasCast(t), speaks: true, address: ipOf(t), via: hasCast(t) ? 'cast' : 'dlna', lastSeen: t.lastSeen || null }))
-    .sort((a, b) => String(a.place || '~').localeCompare(String(b.place || '~')) || String(a.room || '~').localeCompare(String(b.room || '~')) || a.name.localeCompare(b.name));
+    shows: t.kind !== 'speaker' && hasCast(t), speaks: true, address: ipOf(t), via: hasCast(t) ? 'cast' : 'dlna', lastSeen: t.lastSeen || null,
+    ...(t.seenOnly ? { seenOnly: true, seenFrom: (t.seenFrom || [])[0]?.label || null } : {}) }))
+    .sort((a, b) => Number(!!a.seenOnly) - Number(!!b.seenOnly) || String(a.place || '~').localeCompare(String(b.place || '~')) || String(a.room || '~').localeCompare(String(b.room || '~')) || a.name.localeCompare(b.name));
 }
 
 function thing(who, id) {
-  const t = require('../nearby/store').saved().find(x => x.id === id);
-  if (!t || !castable(t)) throw bad('Not a saved Cast or DLNA device of this hive.', 404);
+  const t = pool().find(x => x.id === id);
+  if (!t || !castable(t)) throw bad('Not a Cast or DLNA device saved or seen in the last day.', 404);
   if (!mayUse(who, t)) throw bad('Not a device allotted to you: an admin allots it (Settings → Users).', 403);
   return t;
 }
