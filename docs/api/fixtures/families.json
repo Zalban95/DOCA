@@ -51,6 +51,11 @@
       "home_states",
       "home_call",
       "home_camera"
+    ],
+    "nearby": [
+      "nearby_network",
+      "nearby_scan",
+      "nearby_probe"
     ]
   },
   "decides": [

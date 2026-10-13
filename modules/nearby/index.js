@@ -10,7 +10,7 @@
  *   GET    /api/machines/nearby                  sources, seen, saved, places, last scan, schedule
  *   POST   /api/machines/nearby/sources          {id, on}         a source's switch
  *   POST   /api/machines/nearby/schedule         {everyMin}       scan by itself (0: never)
- *   POST   /api/machines/nearby/scan             {only?}          look now
+ *   POST   /api/machines/nearby/scan             {only?, from?}   look now — from this hub, or one of your clients (lookers.js)
  *   POST   /api/machines/nearby/saved            {seenId, name, place, room}
  *   PUT    /api/machines/nearby/saved/:id        {name, place, room, kind}
  *   DELETE /api/machines/nearby/saved/:id        (the page offers Undo, POST …/saved/restore)
@@ -24,9 +24,11 @@
 const scan = require('./scan');
 const store = require('./store');
 
-function view() {
+function view(person = null) {
+  let lookers = [];
+  try { lookers = require('./lookers').list(person); } catch { /* no registry yet */ }
   return { sources: scan.sources(), seen: store.seen(), saved: store.saved(), places: store.places(), lastScan: store.lastScan(), scanning: scan.scanning(),
-    everyMin: require('../settings-schema').value('nearby.everyMin'), platform: process.platform };
+    everyMin: require('../settings-schema').value('nearby.everyMin'), platform: process.platform, lookers };
 }
 
 /** Whether there is anything for the agent: a source on, or something seen or saved. */
@@ -60,25 +62,26 @@ function start() {
 function mount(app) {
   const fail = (res, e) => res.status(e.status || 500).json({ error: e.message });
   const who = req => { const u = req.auth?.user; return u ? { id: u.id, name: u.name || u.email } : null; };
-  app.get('/api/machines/nearby', (req, res) => { try { res.json(view()); } catch (e) { fail(res, e); } });
+  app.get('/api/machines/nearby', (req, res) => { try { res.json(view(who(req))); } catch (e) { fail(res, e); } });
   app.post('/api/machines/nearby/sources', (req, res) => {
     const { id, on } = req.body || {};
     if (!scan.SOURCES.some(s => s.id === id)) return res.status(400).json({ error: `No source "${id}". One of: ${scan.SOURCES.map(s => s.id).join(', ')}.` });
     setPref(`nearby.sources.${id}`, on === true);
-    res.json(view());
+    res.json(view(who(req)));
   });
   app.post('/api/machines/nearby/schedule', (req, res) => {
     const n = Number(req.body?.everyMin);
     if (!Number.isInteger(n) || n < 0 || n > 1440) return res.status(400).json({ error: 'Minutes between scans: a whole number from 0 (never) to 1440.' });
     setPref('nearby.everyMin', n);
     last = Date.now();
-    res.json(view());
+    res.json(view(who(req)));
   });
   app.post('/api/machines/nearby/scan', async (req, res) => {
     try {
       const only = Array.isArray(req.body?.only) ? req.body.only.map(String) : null;
-      const r = await scan.scan({ only, why: 'a person pressed Scan', person: who(req) });
-      res.json({ ...view(), found: r.found, bySource: r.bySource, why: r.why, none: !!r.none });
+      const from = typeof req.body?.from === 'string' && req.body.from ? req.body.from : 'hub';
+      const r = await scan.scan({ only, from, why: 'a person pressed Scan', person: who(req) });
+      res.json({ ...view(who(req)), found: r.found, bySource: r.bySource, why: r.why, none: !!r.none, from: r.from || 'this hub', sameNetwork: r.sameNetwork ?? null });
     } catch (e) { fail(res, e); }
   });
   app.post('/api/machines/nearby/saved', (req, res) => { try { res.status(201).json(store.save({ ...req.body, id: undefined })); } catch (e) { fail(res, e); } });

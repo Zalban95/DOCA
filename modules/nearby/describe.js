@@ -23,9 +23,13 @@ function howTo(t) {
 const where = t => (t.place ? ` — ${t.place}${t.room ? ` → ${t.room}` : ''}` : '');
 const ago = iso => { if (!iso) return 'never'; const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 2 ? 'just now' : m < 120 ? `${m} min ago` : m < 2880 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; };
 
+/** "from the hub 2 min ago, from Al's desk 3 h ago" — who saw it (cast-reach.md §1.2). */
+const seenFrom = t => (t.seenFrom || []).map(x => `from ${x.by === 'hub' ? 'the hub' : x.label || x.by} ${ago(x.at)}`).join(', ');
+
 function line(t) {
   const how = howTo(t);
-  return `- ${t.name}${where(t)} (${t.kind}${t.model ? `, ${t.model}` : ''}${t.addresses?.length ? `, ${t.addresses.slice(0, 2).join(', ')}` : ''}; seen ${ago(t.lastSeen)} by ${(t.sources || []).join(', ') || '—'})${how ? `: ${how}` : ''}`;
+  const from = seenFrom(t);
+  return `- ${t.name}${where(t)} (${t.kind}${t.model ? `, ${t.model}` : ''}${t.addresses?.length ? `, ${t.addresses.slice(0, 2).join(', ')}` : ''}; seen ${from || ago(t.lastSeen)} by ${(t.sources || []).join(', ') || '—'})${how ? `: ${how}` : ''}`;
 }
 
 /** The saved things in one compact group, for "What you have" (turn/fits.js): re-sent each step, so short. */
@@ -36,4 +40,4 @@ function inventory(max = 12) {
   return `- Things nearby, saved (\`nearby\` list says how to use each): ${saved.slice(0, max).map(short).join('; ')}${saved.length > max ? `; and ${saved.length - max} more` : ''}.`;
 }
 
-module.exports = { howTo, where, ago, line, inventory };
+module.exports = { howTo, where, ago, line, inventory, seenFrom };

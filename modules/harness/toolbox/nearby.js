@@ -19,19 +19,30 @@ module.exports = [{
   description: 'See the things around this hub — speakers, TVs, printers, lights, computers, phones, Bluetooth devices — that Machines → Nearby has '
     + 'seen or the person saved with a place and a room, and how to use each (cast, DLNA, AirPlay, print, its page, ssh, Home Assistant) — use it '
     + 'before playing, casting or printing to something in the room. list: saved, then the rest seen; find: by name, kind, place or ability; '
-    + 'scan: look again with the sources the person switched on. It never saves, forgets or pairs: those are the person\'s, in Machines → Nearby.',
+    + 'scan: look again with the sources the person switched on, from the hub or from one of the person\'s devices (from). It never saves, forgets or pairs: those are the person\'s, in Machines → Nearby.',
   parameters: {
     type: 'object',
     properties: {
       action: { type: 'string', enum: ['list', 'find', 'scan'] },
       query: { type: 'string', description: 'find: words to match — a name ("kitchen"), a kind (speaker, tv, printer), a place or room, or an ability (cast, print).' },
+      from: { type: 'string', description: 'scan: where to look from — "hub" (default), or one of the person\'s own devices that lends Nearby, by its name or id (a desk at home while the hub is elsewhere).' },
     },
     required: ['action'],
   },
-  run: async ({ action, query }, ctx = {}) => {
+  run: async ({ action, query, from }, ctx = {}) => {
     if (!isHost(ctx.user)) return bad('what is around the hub is an admin\'s to see — this turn\'s person does not hold host.');
     const store = require('../../nearby/store'), scan = require('../../nearby/scan');
     const on = scan.sources().filter(s => s.on && s.works).map(s => s.id);
+    if (action === 'scan' && from && !/^(hub|this hub)$/i.test(from)) {
+      const person = ctx.user?.id ? { id: ctx.user.id, name: ctx.user.name } : null;
+      const lookers = require('../../nearby/lookers').clients(person);
+      const f = String(from).toLowerCase();
+      const c = lookers.find(x => x.id === from || x.deviceId === from || x.label.toLowerCase() === f) || lookers.find(x => x.label.toLowerCase().includes(f));
+      if (!c) return bad(`no device of the person's called "${from}" lends Nearby now. ${lookers.length ? `Ones that do: ${lookers.map(x => x.label).join(', ')}.` : 'None does: a client lends it once its person says yes to the nearby family and it is connected.'}`);
+      const r = await scan.scan({ from: c.id, why: 'the agent asked', person });
+      const misses = Object.entries(r.why || {}).map(([s, w]) => `${s}: ${String(w).replace(/\.$/, '')}`);
+      return `Scanned from ${c.label}${r.sameNetwork === false ? ' (on another network than the hub\'s)' : ''}: ${r.found} found (${Object.entries(r.bySource).map(([s, n]) => `${s} ${n}`).join(', ') || 'nothing'}).${misses.length ? ` Not seen: ${misses.join('; ')}.` : ''} \`nearby\` list shows them.`;
+    }
     if (action === 'scan') {
       if (!on.length) return bad('no source is switched on: the person switches them on in Machines → Nearby (say so in one line, with the link #nearby).');
       const r = await scan.scan({ why: 'the agent asked', person: ctx.user?.id ? { id: ctx.user.id, name: ctx.user.name } : null });

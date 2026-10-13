@@ -11,7 +11,10 @@
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
 // A private address, or a tailnet one (100.64.0.0/10): a Bonjour announcement over the tailnet had no key at all, and
 // the scan stopped on it (2026-10-13).
-const ipKey = ip => (PRIVATE_V4.test(ip || '') || require('../listen').isTailnet(ip || '') ? [`ip:${ip}`] : []);
+// Also shipped to doca-client (clients/node/nearby/), where ../listen is not there: the same test, written out.
+const TAILNET = /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./;
+const isTailnet = ip => { try { return require('../listen').isTailnet(ip); } catch { return TAILNET.test(ip); } };
+const ipKey = ip => (PRIVATE_V4.test(ip || '') || isTailnet(ip || '') ? [`ip:${ip}`] : []);
 const k = (kind, w) => ({ kind, w });
 
 /** Cast devices from mDNS (`_googlecast._tcp`) or catt. A Home/Nest speaker is a speaker; a Chromecast a TV. */

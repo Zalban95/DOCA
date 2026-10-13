@@ -58,6 +58,7 @@ function _nbDraw(page) {
   }
   const scanBtn = page.querySelector('.nb-scan');
   if (scanBtn) { scanBtn.disabled = !!d.scanning || !d.sources.some(s => s.on && s.works); scanBtn.textContent = d.scanning ? 'Scanning…' : 'Scan'; }
+  if (typeof nearbyFromDraw === 'function') nearbyFromDraw(page);   // Look from (nearby-from.js)
   _nbSavedDraw(page);
   _nbSeenDraw(page);
 }
@@ -122,7 +123,7 @@ function _nbSeenRow(t, isSaved) {
   const canPair = t.bt && !t.paired && NB.data.platform === 'linux';
   return `<div class="nb-row"><span class="m-pt ${Date.now() - Date.parse(t.lastSeen) < 3600000 ? 'up' : 'down'}"></span>
     <span class="nb-name"><span>${escHtml(t.name)}${isSaved ? ' <span class="nb-chip nb-saved-chip">saved</span>' : ''}</span><span class="nb-sub">${escHtml(sub)}</span>
-      <span class="nb-sub">by ${escHtml((t.sources || []).map(s => NB_SOURCE[s] || s).join(', '))} · first ${escHtml(_nbAgo(t.firstSeen))}, last ${escHtml(_nbAgo(t.lastSeen))}</span></span>
+      <span class="nb-sub">by ${escHtml((t.sources || []).map(s => NB_SOURCE[s] || s).join(', '))} · ${t.seenFrom?.length && typeof nearbySeenFrom === 'function' ? escHtml(nearbySeenFrom(t)) : `first ${escHtml(_nbAgo(t.firstSeen))}, last ${escHtml(_nbAgo(t.lastSeen))}`}</span></span>
     <span class="nb-cans">${_nbCanChips(t)}</span>
     <span class="nb-acts">${isSaved ? '' : `<button class="btn btn-xs btn-blue" onclick="nearbySaveOpen(${id})">Save…</button>`}
       ${canPair ? `<button class="btn btn-xs" title="Pair it with this machine's Bluetooth" onclick="nearbyPair(${id})">Pair</button>` : ''}
@@ -138,7 +139,7 @@ async function nearbySource(id, on) {
 async function nearbyScan(btn) {
   const b = btn || document.querySelector('#tab-nearby .nb-scan');
   if (b) { b.disabled = true; b.textContent = 'Scanning…'; }
-  try { NB.data = await apiFetch('/api/machines/nearby/scan', { method: 'POST', body: {} }); }
+  try { NB.data = await apiFetch('/api/machines/nearby/scan', { method: 'POST', body: typeof _nbFrom === 'string' && _nbFrom !== 'hub' ? { from: _nbFrom } : {} }); }
   catch (e) { appAlert(e.message); }
   nearbyLoad();
 }

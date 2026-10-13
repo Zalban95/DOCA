@@ -80,6 +80,13 @@ function same(a, b) {
  * Join this scan's things to those seen before. Returns the whole list: the ones seen now (with `lastSeen` = now), and
  * the earlier ones not seen this time, as they were. `scanned` are the sources this scan looked with.
  */
+/** Who saw a thing, newest per looker (scan.js tags each scan's things; cast-reach.md §1.2). */
+function seenBy(before = [], now = []) {
+  const m = new Map((before || []).map(x => [x.by, x]));
+  for (const x of now || []) m.set(x.by, x);
+  return [...m.values()].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).slice(0, 6);
+}
+
 function into(before, things, now = new Date().toISOString()) {
   const out = before.map(t => ({ ...t }));
   for (const t of things) {
@@ -87,7 +94,8 @@ function into(before, things, now = new Date().toISOString()) {
     if (was) {
       const strong = was.keys.filter(x => !x.startsWith('ip:'));
       Object.assign(was, { ...t, id: was.id, firstSeen: was.firstSeen, lastSeen: now, keys: uniq([...t.keys, ...strong]),
-        sources: uniq([...t.sources, ...(was.sources || [])]), can: uniq([...t.can, ...(was.can || [])]) });
+        sources: uniq([...t.sources, ...(was.sources || [])]), can: uniq([...t.can, ...(was.can || [])]),
+        ...(t.seenFrom || was.seenFrom ? { seenFrom: seenBy(was.seenFrom, t.seenFrom) } : {}) });
     } else {
       out.push({ ...t, id: idFor(mainKey(t.keys)), firstSeen: now, lastSeen: now });
     }

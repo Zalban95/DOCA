@@ -92,7 +92,7 @@ For a cast to thing T, the hub builds the candidates, in this order, and takes t
 2. **The hub**, when a TCP connection to T's control port (Cast 8009, the DLNA control URL's port) opens within
    800 ms and T's address is on one of the hub's LAN interfaces (so T can reach the door back).
 3. **An always-on client** (DocaDesk, doca-client) online now whose `seenFrom` for T is under 24 h old, asked to
-   probe the same way (`cast_probe`, §6.2).
+   probe the same way (`nearby_probe`, §6.2).
 4. **A phone** online now with a fresh `seenFrom`, likewise. Last because a phone sleeps, leaves and runs on battery.
 
 A **kept** cast (`keep: true`, the standing screen of cast-and-devices.md) prefers a relay that stays (2, 3); one that
@@ -468,7 +468,7 @@ Family **`nearby`** (asked once per device, like every family):
 - `nearby_scan {sources?: ['cast','mdns','ssdp','bluetooth'], ms?}` → `{things: [sighting…], network, why: {source: text}}`
   — sightings in the hub's own shape (`nearby/sightings.js`; a test holds the clients' fixtures to it), so `merge.js`
   joins them unchanged.
-- `cast_probe {address, port}` → `{open: bool, ms}` — a TCP connect, nothing sent.
+- `nearby_probe {address, port}` → `{open: bool, ms}` — a TCP connect, nothing sent.
 - Pushes: `notifications/doca/nearby {what: 'network', network}` when the device changes network (the hub moves its
   relays at once), `{what: 'seen', things}` after a scan the person started on the device.
 

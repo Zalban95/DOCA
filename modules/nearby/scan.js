@@ -52,15 +52,32 @@ const READ = {
 
 const own = () => new Set(Object.values(os.networkInterfaces()).flat().filter(Boolean).map(a => a.address));
 
-let running = null;
+const running = new Map();   // by looker: one scan at a time from each
+
+const tag = (things, by, network, at) => things.map(t => ({ ...t, seenFrom: [{ by, label: network?.label || null, network: network?.gatewayMacHash || null, address: t.addresses?.[0] || null, at }] }));
+
+/** A scan from one of the person's clients (lookers.js): its sightings, merged here like the hub's. */
+async function fromClient({ from, only, why, person }) {
+  const at = new Date().toISOString();
+  const r = await require('./lookers').fromClient(from, person, only);
+  const things = tag(merge.group(r.things), r.by, { ...r.network, label: r.label }, at);
+  const all = merge.into(store.seen(), things, at);
+  const bySource = {};
+  for (const t of r.things) bySource[t.source] = (bySource[t.source] || 0) + 1;
+  store.writeSeen(all, { at, sources: r.sources, found: things.length, bySource, why: r.why, from: { by: r.by, label: r.label } });
+  require('../activity').note({ from: 'nearby', what: `looked for things nearby from ${r.label}: ${things.length} found`, why: `${why}; with ${r.sources.join(', ') || 'its sources'}`, person });
+  return { things: all, found: things.length, bySource, why: r.why, at, from: r.label, sameNetwork: r.sameNetwork };
+}
 
 /**
- * Scan with the sources that are on (or `only` those of them). Returns {things, found, bySource, why, at}. One scan at a
- * time: a second ask while one runs gets the same answer.
+ * Scan with the sources that are on (or `only` those of them) — from this hub, or `from` one of the person's clients
+ * (lookers.js; the client's own switch is its family). Returns {things, found, bySource, why, at}. One scan at a time
+ * from each looker: a second ask while one runs gets the same answer.
  */
-function scan({ only = null, why = 'asked', person = null, read = READ } = {}) {
-  if (running) return running;
-  running = (async () => {
+function scan({ only = null, why = 'asked', person = null, read = READ, from = 'hub' } = {}) {
+  const key = from || 'hub';
+  if (running.has(key)) return running.get(key);
+  const p = (key !== 'hub' ? fromClient({ from: key, only, why, person }) : (async () => {
     const at = new Date().toISOString();
     const ids = SOURCES.filter(s => isOn(s.id) && s.os.includes(process.platform) && (!only || only.includes(s.id))).map(s => s.id);
     if (!ids.length) return { things: store.seen(), found: 0, bySource: {}, why: {}, at, none: true };
@@ -68,15 +85,17 @@ function scan({ only = null, why = 'asked', person = null, read = READ } = {}) {
     const bySource = {}, whys = {};
     ids.forEach((id, i) => { bySource[id] = results[i].list.length; if (!results[i].list.length && results[i].why) whys[id] = results[i].why; });
     const mine = own();
-    const things = merge.group(results.flatMap(r => r.list)).map(t => (t.addresses.some(a => mine.has(a)) ? { ...t, self: true, name: `${t.name} (this hub)` } : t));
+    const hubNet = await require('./lookers').hubNetwork().catch(() => null);
+    const things = tag(merge.group(results.flatMap(r => r.list)).map(t => (t.addresses.some(a => mine.has(a)) ? { ...t, self: true, name: `${t.name} (this hub)` } : t)), 'hub', { ...hubNet, label: 'this hub' }, at);
     const all = merge.into(store.seen(), things, at);
     store.writeSeen(all, { at, sources: ids, found: things.length, bySource, why: whys });
     require('../activity').note({ from: 'nearby', what: `looked for things nearby: ${things.length} found`, why: `${why}; with ${ids.join(', ')}`, person });
     return { things: all, found: things.length, bySource, why: whys, at };
-  })();
-  return running.finally(() => { running = null; });
+  })()).finally(() => running.delete(key));
+  running.set(key, p);
+  return p;
 }
 
-const scanning = () => !!running;
+const scanning = () => running.size > 0;
 
 module.exports = { SOURCES, sources, scan, scanning, isOn, READ, MDNS_TYPES };
