@@ -64,8 +64,12 @@ first (an `/api/v1` contract, a guard); everything else goes ahead in the order 
     so we can select where to perform the search… the client app serving the page or media… wifi, bluetooth or anything
     else"): Nearby's "Look from" (the hub, this phone, another client), the client reporting what it sees around it
     (its own Wi-Fi, Bluetooth), and the client as the relay that serves the page or the sound to a thing on its network.
-    Order: doca-client first (this repo, `clients/node`), then DocaMobile (its own repo), then DocaDesk. **ask**: the
-    `/api/v1` contracts (families `nearby` and `cast`, a `cast:send` scope) — listed for the owner (design §5.5, §6).
+    Order: doca-client first (this repo, `clients/node`), then DocaMobile (its own repo), then DocaDesk. The `/api/v1`
+    contracts (families `nearby` and `cast`, a `cast:send` scope; design §5.5, §6) — **approved by the owner 2026-10-13**.
+  - [ ] R3h **Tones to choose** (asked 2026-10-13, after the Kitchen speaker spoke): beside Say, a dropdown of the tone
+    (calm, excited, whispers, sad…) when the voice takes tags; and, as a tool of its own, a **story mode** — a longer text
+    with several tones marked through it, read on a speaker. *3.58.1: the agent is told the tags exist and whether the
+    person's voice speaks them.*
   - [ ] R3g The page's own sound, a call or Ambient's assistant on a speaker; a headset as a work station (design §4,
     phase D).
 - [x] R4 **EmbeddingGemma 2 for the Library, verified** (3.52.1–3.55.0, proven live 2026-10-13: 740m on MLX, 9 files in
