@@ -70,10 +70,11 @@ function upnp(x) {
   if (/Printer/i.test(dt)) kinds.push(k('printer', 7));
   if (/hue|philips/i.test(words) && /Basic/i.test(dt)) kinds.push(k('light', 7));
   const avt = (x.services || []).find(s => /AVTransport/i.test(s.type));
+  const rc = (x.services || []).find(s => /RenderingControl/i.test(s.type));   // its volume (cast/dlna.js)
   const can = [...(avt ? ['dlna-play'] : []), ...(x.presentationURL ? ['web'] : [])];
   return { source: 'ssdp', name: x.friendlyName || null, keys: [...(x.udn ? [`udn:${x.udn.toLowerCase()}`] : []), ...ipKey(x.from)], addresses: x.from ? [x.from] : [],
     maker: x.manufacturer || null, model: [x.modelName, x.modelNumber].filter(Boolean).join(' ') || null, kinds, can,
-    web: x.presentationURL && /^https?:/.test(x.presentationURL) ? x.presentationURL : null, how: avt ? { dlna: { control: avt.control, description: x.location } } : {} };
+    web: x.presentationURL && /^https?:/.test(x.presentationURL) ? x.presentationURL : null, how: avt ? { dlna: { control: avt.control, ...(rc ? { volume: rc.control } : {}), description: x.location, ip: x.from || null } } : {} };
 }
 
 // Makers whose cards say what the thing most likely is.
