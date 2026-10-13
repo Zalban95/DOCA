@@ -17,15 +17,27 @@
  * calls `close`. Returns `release(fromBack)`: call it when the overlay closes
  * any other way, and the entry is taken back off so the history stays clean.
  */
+const _overlayTags = [];   // the overlays open now, in the order they were opened
+
 function overlayBack(close) {
   const tag = `ov${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
   let done = false;
   try { history.pushState({ ...(history.state || {}), overlay: tag }, ''); } catch { return () => {}; }
-  const onPop = () => { if (done) return; done = true; window.removeEventListener('popstate', onPop); close(); };
+  _overlayTags.push(tag);
+  const forget = () => { const i = _overlayTags.indexOf(tag); if (i >= 0) _overlayTags.splice(i, 1); };
+  // A step back closes only the overlays above where history now stands: one overlay closing itself on another (a
+  // select's sheet on the Cast sheet, 2026-10-13) steps back once, and every overlay hears it — the one beneath stays.
+  const onPop = () => {
+    if (done) return;
+    const now = _overlayTags.indexOf(history.state?.overlay);
+    if (_overlayTags.indexOf(tag) <= now) return;
+    done = true; forget(); window.removeEventListener('popstate', onPop); close();
+  };
   window.addEventListener('popstate', onPop);
   return () => {
     if (done) return;
     done = true;
+    forget();
     window.removeEventListener('popstate', onPop);
     if (history.state?.overlay === tag) history.back();
   };

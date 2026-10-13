@@ -213,7 +213,7 @@ const SCHEMA = {
   // Casting to things on this hub's network (cast/door.js; docs/design/cast-reach.md §2.2): a new way in, the owner's.
   cast:             { is: 'local', home: 'device', on: 'host', note: 'casting to TVs and speakers on this hub\'s network: the plain-HTTP cast door (cast/) — the owner\'s, never proposable',
     keys: { door: { type: 'string', oneOf: ['off', 'on'], default: 'off', propose: false, hint: 'on: while a cast runs, a plain-HTTP server on this hub\'s address on the device\'s network answers that device alone, with that cast\'s page or sound (Cast TVs and speakers do not open this hub\'s HTTPS).' },
-      doorPort: { type: 'integer', min: 1024, max: 65535, default: 4243, propose: false, hint: 'The cast door\'s port.' } } },
+      doorPort: { type: 'integer', min: 1024, max: 65535, default: 4250, propose: false, hint: 'The cast door\'s port (not the panel\'s, nor the previews\' next to it).' } } },
   migrations:       { is: 'travels', home: 'hive', note: 'which prefs migrations this file has had, and what they changed (migrations.js) — the record travels with the file' },
   usagePrices:      { is: 'travels', home: 'hive', note: 'the owner\'s price list for the usage window (harness/prices.js)' },
   // No box in the panel on purpose: learned by harness/contracts.js from a provider's refusals; the file is where an

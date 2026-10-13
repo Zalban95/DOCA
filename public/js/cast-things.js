@@ -18,8 +18,8 @@ async function castThingsHtml() {
       <br><span class="desc">${escHtml([t.model, t.address].filter(Boolean).join(' · '))}</span>
       ${t.shows ? '' : `<div class="cast-say"><input class="input" placeholder="Say something here…" aria-label="What ${escHtml(t.name)} says" onkeydown="if(event.key==='Enter')castThingSay('${escHtml(t.id)}', this)"></div>`}
       <span class="status-line"></span></div>
-    <span class="cast-acts">${t.shows ? `<button class="btn btn-sm btn-teal" type="button" ${d.door.on ? '' : 'disabled'} onclick="castThingShow('${escHtml(t.id)}', this)">Cast</button>`
-      : `<button class="btn btn-sm btn-teal" type="button" ${d.door.on ? '' : 'disabled'} onclick="castThingSay('${escHtml(t.id)}', this)">Say</button>`}
+    <span class="cast-acts">${t.shows ? `<button class="btn btn-sm btn-teal" type="button" onclick="castThingShow('${escHtml(t.id)}', this)">Cast</button>`
+      : `<button class="btn btn-sm btn-teal" type="button" onclick="castThingSay('${escHtml(t.id)}', this)">Say</button>`}
       <button class="btn btn-sm" type="button" onclick="castThingStop('${escHtml(t.id)}', this)">Stop</button></span></div>`;
   return `<div class="input-label">Around you</div>${door}${Object.entries(groups).map(([g, list]) =>
     `<div class="cast-room">${escHtml(g)}</div>${list.map(row).join('')}`).join('')}`;
