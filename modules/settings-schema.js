@@ -205,6 +205,7 @@ const SCHEMA = {
       transcribe: { type: 'boolean', default: true, hint: 'Transcribe audio and video with the hub\'s speech-to-text, so their words are searched with their times.' },
       maxFileMB: { type: 'number', min: 1, max: 100000, default: 2000, hint: 'Files larger than this are listed, not read.' },
       idleLoad: { type: 'number', min: 0.1, max: 64, default: 0.8, hint: 'Indexing waits while the machine\'s load per core is above this.' },
+      makeRoom: { type: 'boolean', default: false, hint: 'When the GPU is full, free models nothing uses now — another Ollama model, a service DOCA starts when needed, a llama.cpp router\'s idle model — while the Library works; each comes back when asked (library/room.js).' },
       tags: { type: 'array', default: [], hint: 'Tags of your own, added to the shipped vocabulary (library/tags.json) that files are labelled with.' },
       tagMargin: { type: 'number', min: 0, max: 1, default: 0.06, hint: 'How far above the file\'s average tag score a tag must be to be kept.' },
       captions: { type: 'boolean', default: false, hint: 'Write a one-line caption for pictures and video frames with the vision model (vision.model): a model call per file.' },

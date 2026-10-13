@@ -54,6 +54,12 @@ const androidWin = [
     + `else { 1..20 | ForEach-Object { "y" } | & "$bin\\sdkmanager.bat" --licenses | Out-Null; & "$bin\\sdkmanager.bat" ${ANDROID_PKGS} }`,
   '[Environment]::SetEnvironmentVariable("ANDROID_HOME", $sdk, "User"); "Android SDK in $sdk (ANDROID_HOME set for this user)"',
 ].join('; ');
+// Ollama's MLX runtime for Linux on an NVIDIA card (amd64): a package of its own that install.sh does not fetch (checked
+// 2026-10-12, Ollama 0.40.3), unpacked where install.sh puts Ollama (/usr/local). The Ollama row refreshes it when it is
+// there, so an updated Ollama never runs beside an older runtime.
+const OLLAMA_LIBS = ['/usr/local/lib/ollama', '/usr/lib/ollama'];
+const OLLAMA_MLX = 'curl -fsSL https://ollama.com/download/ollama-linux-amd64-mlx.tar.zst | zstd -d | sudo tar -xf - -C /usr/local';
+const OLLAMA_MLX_REFRESH = `{ [ ! -e /usr/local/lib/ollama/mlx_cuda_v13 ] || ${OLLAMA_MLX}; }`;
 const androidHome = process.env.ANDROID_HOME || (process.platform === 'darwin' ? path.join(HOME, 'Library/Android/sdk')
   : process.platform === 'win32' ? path.join(process.env.LOCALAPPDATA || HOME, 'Android', 'Sdk') : path.join(HOME, 'Android/Sdk'));
 const sdkmanager = path.join(androidHome, 'cmdline-tools', 'latest', 'bin', process.platform === 'win32' ? 'sdkmanager.bat' : 'sdkmanager');
@@ -142,7 +148,12 @@ const SYSTEM_TOOLS = [
   { id: 'ollama', label: 'Ollama', category: 'optional', for: 'local models',
     detect: { bin: 'ollama', args: ['--version'] }, note: 'Runs language and vision models on this machine — the Models tab\'s Ollama, and the default for local embeddings.',
     repo: 'https://ollama.com/download', repoLabel: 'ollama.com',
-    install: { linux: 'curl -fsSL https://ollama.com/install.sh | sh', darwin: brew('ollama'), win32: winget('Ollama.Ollama') }, needsSudo: true },
+    install: { linux: `curl -fsSL https://ollama.com/install.sh | sh && ${OLLAMA_MLX_REFRESH}`, darwin: brew('ollama'), win32: winget('Ollama.Ollama') }, needsSudo: true },
+  { id: 'ollama-mlx', label: 'Ollama\'s MLX runtime', category: 'optional', for: 'EmbeddingGemma 2 and other MLX models on an NVIDIA card (Linux)',
+    detect: { any: OLLAMA_LIBS.map(dir => ({ file: path.join(dir, 'mlx_cuda_v13', 'libmlx.so') })) },
+    note: 'Ollama\'s installer leaves it out: models such as EmbeddingGemma 2 (the Library\'s) answer "requires MLX support" without it. About 1.3 GB, beside Ollama in /usr/local; installing Ollama again here refreshes it. A Mac\'s Ollama has MLX already.',
+    repo: 'https://github.com/ollama/ollama/releases', repoLabel: 'Ollama releases',
+    install: { linux: OLLAMA_MLX }, needsSudo: true },
   { id: 'llama-server', label: 'llama-server', category: 'optional', for: 'the llama.cpp servers',
     detect: { bin: 'llama-server', args: ['--version'], stderr: true, match: /version/i }, version: /version:\s*(\d+)/,
     note: 'llama.cpp\'s server — the Models tab runs GGUF files with it.',
