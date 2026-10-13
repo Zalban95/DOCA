@@ -111,7 +111,8 @@ async function middleware(req, res, next) {
   res.json = body => { answer = body; return json(body); };
   res.write = (chunk, ...rest) => {   // a streamed start (services, llama.cpp) says how it ended in its last lines
     const t = String(chunk || '');
-    if (/"ok"\s*:\s*false|"error"\s*:/.test(t)) failed = (/"(?:error|status)"\s*:\s*"([^"]{0,200})/.exec(t) || [])[1] || 'it said so';
+    // `"error": false` is a stream that ended well (utils.streamCmd's last frame): only true or words are a failure.
+    if (/"ok"\s*:\s*false|"error"\s*:\s*(true|")/.test(t)) failed = (/"(?:error|status)"\s*:\s*"([^"]{0,200})/.exec(t) || [])[1] || 'it said so';
     return write(chunk, ...rest);
   };
   res.on('finish', () => {

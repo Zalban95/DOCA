@@ -157,3 +157,21 @@ test('the panel asks one question before a stop, naming what uses the machine; a
   assert.equal(ctx.message, 'Stop Kokoro TTS?\n\nIn use right now:\n• Kokoro TTS is the hive\'s voice; 2 screens use it');
   assert.deepEqual(ran, ['stop']);
 });
+
+test('a streamed act that ended well is a success, whatever its last frame calls `error` (2026-10-13: "failed: ✓ Done")', async () => {
+  await H.start();
+  const acts = require('../modules/machines/acts');
+  const run = async frames => {
+    const { EventEmitter } = require('node:events');
+    const res = Object.assign(new EventEmitter(), { statusCode: 200, json() {}, write() { return true; } });
+    const req = { method: 'POST', path: '/api/system/tools/restart', body: { id: 'ollama' }, auth: { user: H.owner.user || { id: 'u1', email: 'owner@test.local' } }, headers: {} };
+    await acts.middleware(req, res, () => {});
+    for (const f of frames) res.write(`data: ${JSON.stringify(f)}\n\n`);
+    res.emit('finish');
+    return require('../modules/activity').list({ limit: 5 }).find(l => l.machine?.id === 'ollama' && l.act === 'restart');
+  };
+  const good = await run([{ status: '$ sudo systemctl restart ollama\n' }, { done: true, ok: true, error: false, status: '✓ Done' }]);
+  assert.equal(good.ok, true, JSON.stringify(good));
+  const bad = await run([{ done: true, ok: false, error: true, status: '✗ Exit 1' }]);
+  assert.equal(bad.ok, false);
+});
