@@ -9,7 +9,9 @@
  */
 
 const PRIVATE_V4 = /^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/;
-const ipKey = ip => (PRIVATE_V4.test(ip || '') ? [`ip:${ip}`] : []);
+// A private address, or a tailnet one (100.64.0.0/10): a Bonjour announcement over the tailnet had no key at all, and
+// the scan stopped on it (2026-10-13).
+const ipKey = ip => (PRIVATE_V4.test(ip || '') || require('../listen').isTailnet(ip || '') ? [`ip:${ip}`] : []);
 const k = (kind, w) => ({ kind, w });
 
 /** Cast devices from mDNS (`_googlecast._tcp`) or catt. A Home/Nest speaker is a speaker; a Chromecast a TV. */
