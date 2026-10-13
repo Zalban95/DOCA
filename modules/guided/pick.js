@@ -17,8 +17,13 @@ const SPLIT = 1.1;       // a model split over cards repeats some buffers on eac
 const OS_ROOM_GB = 2;    // memory the system keeps for itself
 const SPLITS = new Set(['ollama', 'llama.cpp']);
 
+// Ollama's MLX engine (checked 2026-10-12, Ollama 0.40.3): Apple silicon, or an NVIDIA card on Linux with its runtime
+// package (plan.js adds that row). Nowhere else, the processor included.
+const mlxCan = a => (a.os?.platform === 'darwin' && a.os?.arch === 'arm64') || (a.os?.platform === 'linux' && (a.gpus || []).some(g => g.vendor === 'nvidia'));
+
 function fit(m, a) {
   const n = m.needs || {};
+  if (m.engine === 'mlx' && !mlxCan(a)) return { where: null, why: 'runs only on Ollama\'s MLX engine: a Mac with Apple silicon, or an NVIDIA card on Linux' };
   if (a.diskGB != null && (n.diskGB || 0) * 1.1 > a.diskGB) return { where: null, why: `needs ${n.diskGB} GB of disk, ${a.diskGB} GB free` };
   const ramOk = (n.ramGB || 0) <= a.ramGB;
   if (a.gpuGB && n.vramGB * MARGIN <= a.gpuGB && ramOk) return { where: 'gpu' };
@@ -76,4 +81,4 @@ function shapeOf(a, doc) {
   return pickRole('chat', a, doc, { providers: [] }).local ? 'local' : 'preset';
 }
 
-module.exports = { fit, pickRole, pickAll, shapeOf, providersFor, MARGIN, SPLIT };
+module.exports = { mlxCan, fit, pickRole, pickAll, shapeOf, providersFor, MARGIN, SPLIT };

@@ -27,7 +27,9 @@ function diskFreeBytes(dir) {
 /** The programs that matter for running models here, found on PATH (no subprocess). */
 function runtimes(which) {
   const has = b => !!which(b);
-  return { docker: has('docker') || has('podman'), ollama: has('ollama'), llamacpp: has('llama-server') };
+  // Ollama's MLX runtime (Linux): a package of its own beside Ollama, found by its library (system-tools-catalog.js).
+  const mlx = ['/usr/local/lib/ollama', '/usr/lib/ollama'].some(d => require('fs').existsSync(require('path').join(d, 'mlx_cuda_v13', 'libmlx.so')));
+  return { docker: has('docker') || has('podman'), ollama: has('ollama'), llamacpp: has('llama-server'), mlx };
 }
 
 /** gpu.js's rows → {name, vendor, vramGB, unified, approx}. memTotal is MiB there (a string from nvidia-smi). */
