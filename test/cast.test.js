@@ -132,3 +132,19 @@ test('the remote: a key reaches only the screen it is for, as its live feed; a w
   assert.equal((await H.api(null, 'POST', '/api/cast/remote', { screen: mine.id, key: 'ok' }, { Cookie: member.cookie })).status, 404, 'not theirs');
   assert.equal((await H.api(null, 'POST', '/api/cast/things/nope/remote', { key: 'ok' })).status, 404, 'no such TV');
 });
+
+test('from the Wi-Fi, a cast screen reads its one page; anything else of the machine\'s is still refused there', async () => {
+  const link = await H.api(null, 'POST', '/api/cast/links', { page: 'live', name: 'TV on the Wi-Fi' });
+  const tv = await openLink(link.body.path);
+  const network = require('../modules/network'), was = { limited: network.limited, rightsFrom: network.rightsFrom };
+  network.limited = (req, right) => network.MACHINE.has(right);   // every request as if from the local network
+  network.rightsFrom = (req, rights) => rights.filter(r => !network.MACHINE.has(r));
+  try {
+    assert.equal((await as(tv.cookie, 'GET', '/api/machines/rows')).status, 200, 'what Live reads, from the Wi-Fi');
+    assert.ok((await as(tv.cookie, 'GET', '/api/auth/me')).body.rights.includes('host'), 'drawn with the caster\'s rights');
+    assert.equal((await as(tv.cookie, 'GET', '/api/settings/leaves')).status, 403, 'not its page');
+    const owner = await H.api(null, 'GET', '/api/machines/rows');
+    assert.equal(owner.status, 403, 'an ordinary session from the Wi-Fi is limited as before');
+    assert.equal(owner.body.reason, 'outside_tailnet');
+  } finally { Object.assign(network, was); }
+});

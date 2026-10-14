@@ -122,7 +122,9 @@ function gate(req, res, next) {
     return deny(req, res, 403, 'forbidden', `Your role (${who.role}) cannot do this; it needs the "${right}" right.`);
   }
   // From the local network (or anywhere, under `all`), managing the machine is off unless the admin allows it (network.js).
-  if (require('../network').limited(req, right))
+  // A cast screen is not managing anything: it reads only its one page's reads (cast/views.js, checked above) as the
+  // person who cast it — from a TV on the Wi-Fi, the case it exists for (the owner's yes of 2026-10-14, S11).
+  if (!viewing && require('../network').limited(req, right))
   {
     // Said as a question the panel can draw with its setting (R13b): what is off and where — never switched from here,
     // since switching it is itself managing the machine (the right this network lacks), so nobody here may change it.

@@ -184,8 +184,10 @@ function handleLogout(req, res) {
 function handleMe(req, res) {
   const m = me(req.auth);
   // From outside loopback and the tailnet the machine's rights are not offered (network.js): the panel leaves out what it would refuse.
-  res.json({ ...m, rights: require('../network').rightsFrom(req, m.rights), outside: require('../network').outside(req),
-    view: require('../cast/views').pageOf(req.auth?.session?.cap) });   // a cast screen: the one page it shows (cast/)
+  const view = require('../cast/views').pageOf(req.auth?.session?.cap);
+  // A cast screen keeps the caster's rights for drawing its one page: the gate lets it read only that page (cast/views.js).
+  res.json({ ...m, rights: view ? m.rights : require('../network').rightsFrom(req, m.rights), outside: require('../network').outside(req),
+    view });   // a cast screen: the one page it shows (cast/)
 }
 
 /** POST { current, password } — and every other session of this user ends. */
