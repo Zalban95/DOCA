@@ -48,6 +48,10 @@ async function pjEnvSection(body) {
     btn(v.local.nodeModules ? '⟳ npm install' : '⬇ npm install', 'Install the project\'s Node dependencies into node_modules', () => pjEnvSetup('npm'));
   if (actions.childElementCount) box.appendChild(actions);
   if (v.local.files.length) box.appendChild(el('div', { className: 'pj-meta', textContent: `Project files: ${v.local.files.join(', ')}${v.local.nodeModules ? ', node_modules' : ''}` }));
+  // Where the blocks of ports each git worktree gets start (modules/projects/ports.js): every project's, folded.
+  const ports = el('div', { id: 'pj-env-ports' });
+  box.appendChild(ports);
+  leafFieldsDraw(ports, ['projects.portBase'], { label: 'Advanced — ports for worktrees', id: 'pj-worktree-ports' });
 }
 
 async function pjEnvSetup(action) {

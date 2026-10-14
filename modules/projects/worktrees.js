@@ -9,7 +9,8 @@
  *
  * It sits beside the repository (`<repo>.worktrees/<branch>`), inside the same allowed root as the repository
  * itself and outside its tree, so `git status` in the main folder stays clean. Merging the branch back is the
- * person's call (or a git step the agent asks for); removing refuses uncommitted work unless told.
+ * person's call (or a git step the agent asks for); removing refuses uncommitted work unless told. Each worktree
+ * holds a block of ports of its own while it exists (ports.js), given back when it is removed.
  */
 const fs = require('fs');
 const path = require('path');
@@ -42,7 +43,9 @@ async function add(dir, { branch, base = null } = {}) {
   const from = await git(dir, ['rev-parse', base || 'HEAD']);   // HEAD of the folder asked for: a worktree's own
   fs.mkdirSync(path.dirname(at), { recursive: true });
   await git(root, ['worktree', 'add', '-b', name, at, from]);
-  return { path: at, branch: name, base: from, repo: root, createdAt: new Date().toISOString() };
+  // Ports of its own (ports.js), so its dev server does not take another worktree's; none free leaves it without.
+  const ports = await require('./ports').take(at).catch(() => null);
+  return { path: at, branch: name, base: from, repo: root, ...(ports ? { ports } : {}), createdAt: new Date().toISOString() };
 }
 
 /** Give this conversation its own worktree, on a new branch from the main folder's HEAD. */
@@ -74,6 +77,7 @@ async function remove(sessionId, { force = false } = {}) {
     if (st.uncommitted && !force) throw bad(`${st.uncommitted} uncommitted change(s) in ${st.path}: commit them, or remove with force to drop them.`, 409);
     await git(st.repo, ['worktree', 'remove', ...(force ? ['--force'] : []), st.path]);
   }
+  await require('./ports').release(st.path);
   require('../harness/memory').updateSession(sessionId, { worktree: null });
   return { removed: st.path, branch: st.branch, commits: st.commits || 0 };
 }
