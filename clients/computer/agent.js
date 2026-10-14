@@ -12,7 +12,9 @@
 const http = require('http');
 const { TOOLS } = require('./tools');
 
-const PORT = Number(process.env.PORT) || 8765;
+// Its own variable, not PORT: everything the agent runs inherits this environment, and a dev server (or DOCA's own installer,
+// test run 2026-10-14) read PORT=8765 and took the control server's port.
+const PORT = Number(process.env.AGENT_PORT) || 8765;
 const TOKEN = process.env.TOKEN || '';
 if (!TOKEN) { console.error('TOKEN is required: the hub passes it, and nothing answers without it.'); process.exit(2); }
 

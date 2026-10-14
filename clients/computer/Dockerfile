@@ -17,6 +17,6 @@ COPY agent.js tools.js cdp.js procs.js start.sh /opt/doca-computer/
 RUN chmod +x /opt/doca-computer/start.sh
 USER agent
 WORKDIR /home/agent
-ENV DISPLAY=:1 SCREEN=1280x800 PORT=8765 CDP_PORT=9222 WORKDIR=/home/agent/work
+ENV DISPLAY=:1 SCREEN=1280x800 AGENT_PORT=8765 CDP_PORT=9222 WORKDIR=/home/agent/work
 EXPOSE 8765 6080
 CMD ["/opt/doca-computer/start.sh"]
