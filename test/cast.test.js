@@ -116,3 +116,19 @@ test('a cast screen with no session is told so, never sent to sign in (a receive
   const plain = await fetch(`${H.base}/?view=ambient`, { redirect: 'manual' });
   assert.equal(plain.status, 302, 'anyone else is still sent to sign in');
 });
+
+test('the remote: a key reaches only the screen it is for, as its live feed; a wrong key or someone else\'s screen is refused', async () => {
+  await H.api(null, 'GET', '/api/screen');
+  const mine = (await H.api(null, 'GET', '/api/cast/targets')).body.targets.find(t => t.mine);
+  const heard = [];
+  const on = c => { if (c.topic === 'screen' && c.what === 'key') heard.push(c); };
+  require('../modules/live').feed.on('change', on);
+  const r = await H.api(null, 'POST', '/api/cast/remote', { screen: mine.id, key: 'down' });
+  require('../modules/live').feed.off('change', on);
+  assert.equal(r.status, 200);
+  assert.deepEqual(heard.map(c => [c.id, c.key]), [[mine.id, 'down']]);
+  assert.equal((await H.api(null, 'POST', '/api/cast/remote', { screen: mine.id, key: 'reboot' })).status, 400);
+  const member = await H.signIn('member', 'cast-remote@test.local');
+  assert.equal((await H.api(null, 'POST', '/api/cast/remote', { screen: mine.id, key: 'ok' }, { Cookie: member.cookie })).status, 404, 'not theirs');
+  assert.equal((await H.api(null, 'POST', '/api/cast/things/nope/remote', { key: 'ok' })).status, 404, 'no such TV');
+});

@@ -22,6 +22,7 @@ function mount(app) {
   app.post('/api/cast/things/:id/say', h(req => things.say(req.auth, req.params.id, req.body?.text, { story: req.body?.story === true })));
   app.post('/api/cast/things/:id/stop', h(req => things.stop(req.auth, req.params.id)));
   app.post('/api/cast/things/:id/volume', h(req => things.volume(req.auth, req.params.id, req.body?.level)));
+  app.post('/api/cast/things/:id/remote', h(req => require('./remote').press(req.auth, { thing: req.params.id, key: String(req.body?.key || '') })));
   app.post('/api/cast/door', h(req => {
     const on = req.body?.on === true;
     const { loadPrefs, savePrefs } = require('../utils');

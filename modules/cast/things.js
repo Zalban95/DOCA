@@ -150,4 +150,4 @@ async function volume(who, id, level) {
   return { ok: true, level: v };
 }
 
-module.exports = { list, show, say, stop, volume, mayUse };
+module.exports = { list, show, say, stop, volume, mayUse, thing };

@@ -18,6 +18,11 @@ function switchAskWait(err) {
   const n = err?.needs;
   if (err?.code !== 'switch_off' || !n) return Promise.resolve(false);
   _switchAsked = { message: err.message, at: Date.now() };
+  // A cast screen has nobody at it to answer (cast-remote.js): said at its foot, never a dialog in the way.
+  if (typeof castViewOn === 'function' && castViewOn()) {
+    castRemoteNote(`${n.what} ${n.route === null ? 'is not set up' : 'is off'} here, so part of this page cannot show on this screen.`);
+    return Promise.resolve(false);
+  }
   return new Promise(resolve => {
     const back = Object.assign(document.createElement('div'), { className: 'app-confirm-backdrop open switch-ask' });
     back.innerHTML = `<div class="app-confirm-box" role="dialog" aria-modal="true">

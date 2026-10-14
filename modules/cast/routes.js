@@ -62,6 +62,7 @@ function mount(app) {
   app.get('/api/cast/targets', h(targets));
   app.post('/api/cast/show', h(show));
   app.post('/api/cast/stop', h(stop));
+  app.post('/api/cast/remote', h(req => require('./remote').press(req.auth, { screen: req.body?.screen, key: String(req.body?.key || '') })));
   // The link with each address this hub answers on, and its QR code, for the screen to open (network.links).
   app.post('/api/cast/links', async (req, res) => {
     try {
