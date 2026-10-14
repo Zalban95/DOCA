@@ -122,7 +122,7 @@ function send(options, waitingItem = {}) {
   return turn({ ...options, sessionId: id });
 }
 
-async function runTurn({ message, sessionId, emit, signal, client, attachments: attached, profile, read = [] }) {
+async function runTurn({ message, sessionId, emit, signal, client, attachments: attached, profile, read = [], auto = false }) {
   const say = evt => {
     try { emit(evt); } catch {}
     try { events.emit('event', { sessionId, ...evt }); } catch {}
@@ -176,7 +176,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   if (front?.delegate) return { sessionId: session.id, text: require('./turn/front').delegate({ session, message, client, say, deep: front.deep, attachments: attached }),
     steps: 0, usage: budget.report(budget.ledger(), p), handedOff: true };
   // How much work this turn does before the job moves to a work chat, by the request's size (turn/handoff.js).
-  const hand = require('./turn/handoff').counter({ p, profile, front, message, client, session: memory.getSession(session.id) });
+  const hand = require('./turn/handoff').counter({ p, profile, front, message, client, session: memory.getSession(session.id), auto });
 
   let summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
   // An allowlist is expressed as its complement, because `schemas()` filters by
@@ -345,9 +345,9 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
 
     // The Orchestrator does a few steps of real work at most; the rest moves to a work chat (turn/handoff.js).
     const note = require('./turn/handoff').step(hand, { reply, session, message, from, say, step, person: client?.user, attachments: attached });
-    if (note) return { sessionId: session.id, text: text + note, steps: step, usage: spend, handedOff: true, ...(fallbacks.length ? { fallbacks } : {}) };
+    if (typeof note === 'string') return { sessionId: session.id, text: text + note, steps: step, usage: spend, handedOff: true, ...(fallbacks.length ? { fallbacks } : {}) };
 
-    await runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read });
+    await runToolCalls({ reply: note ? { ...reply, tool_calls: note.run } : reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read });
 
     // Token pressure folds the conversation early, before the message count
     // would have. `compactTokens` is the honest trigger — a window nobody

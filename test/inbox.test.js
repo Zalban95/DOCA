@@ -107,6 +107,22 @@ test('the Orchestrator does N steps of work, then the job moves to a work chat a
   require('../modules/harness/catalog').saveConfig('doca', { orchestratorWorkSteps: 0 });
 });
 
+test('a turn the hub started to pass on a report does no work and hands nothing on', async () => {
+  require('../modules/harness/catalog').saveConfig('doca', { orchestratorWorkSteps: 1 });
+  const main = memory.mainSession();
+  const before = memory.listSessions().sessions.filter(x => x.kind === 'work').length;
+  script = [{ tool: 'shell', args: { command: 'echo fixing it myself' } }, { text: 'The job is done; nothing else needs you.' }];
+  const r = await agent.turn({ message: '[panel] Work reported back. Tell the owner what matters.\n- Job (s_x) — done: ok', sessionId: main.id, auto: true });
+  assert.notEqual(r.handedOff, true);
+  assert.match(r.text, /nothing else needs you/);
+  const tool = memory.messages(main.id).filter(m => m.role === 'tool').at(-1);
+  assert.match(tool.content, /^Not run: this turn only passes on what came back/);
+  assert.equal(memory.listSessions().sessions.filter(x => x.kind === 'work').length, before, 'no work chat made');
+  assert.ok(!memory.listSessions().sessions.some(x => /^\[panel\]/.test(x.title || '')), 'no title is the wake text');
+  assert.equal(require('../modules/harness/turn/handoff').jobTitle('[panel] The panel restarted'), 'Work the Orchestrator carried on');
+  require('../modules/harness/catalog').saveConfig('doca', { orchestratorWorkSteps: 0 });
+});
+
 test('reading, memory and coordinating are not work', () => {
   const { isWork } = require('../modules/harness/turn/handoff');
   const call = (name, args = {}) => ({ function: { name, arguments: JSON.stringify(args) } });
