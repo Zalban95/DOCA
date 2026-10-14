@@ -75,6 +75,14 @@ function _settingsSubnavRender() {
       g === 'others' ? _cliHarnesses.map(c => pill({ id: `cli-${c.id}`, label: c.label })).join('') : _SETTINGS_SUBTABS.filter(t => t.group === g && mine(t)).map(pill).join('')}`).join('');
 }
 
+/** A pill centred in its own row, sideways only. */
+function _settingsPillCentre(btn) {
+  const row = btn.parentElement;
+  if (!row || !(row.scrollWidth > row.clientWidth) || !btn.getBoundingClientRect) return;
+  const b = btn.getBoundingClientRect(), r = row.getBoundingClientRect();
+  row.scrollTo?.({ left: row.scrollLeft + (b.left - r.left) - (row.clientWidth - b.width) / 2, behavior: 'smooth' });
+}
+
 function settingsSubNav(panelId) {
   // A section that is a page of its own now (Field → Connectors, API keys): every old link lands there.
   const moved = _SETTINGS_SUBTABS.find(t => t.id === panelId && t.page);
@@ -91,8 +99,9 @@ function settingsSubNav(panelId) {
   document.querySelectorAll('#settings-subnav .settings-subnav-btn, #settings-subnav2 .settings-subnav-btn').forEach(btn => {
     const active = btn.dataset.subtab === panelId || (btn.dataset.subtab === 'harnesses' && inHarnesses);
     btn.classList.toggle('active', active);
-    // Keep the active pill visible when the sub-nav scrolls horizontally (mobile)
-    if (active && btn.scrollIntoView) btn.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
+    // Keep the active pill visible when the sub-nav scrolls sideways (mobile) — by scrolling the row alone: the
+    // pill's scrollIntoView also scrolled the page up to it, undoing a link that brought a card into view (a12).
+    if (active) _settingsPillCentre(btn);
   });
 
   document.querySelectorAll('#tab-settings .settings-panel').forEach(p => {
