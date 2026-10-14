@@ -364,10 +364,7 @@ html[data-hosted] .harness-add-row { display: none; }
 .cast-room { font-size: 12px; color: var(--muted); margin: 12px 0 0; text-transform: none; }
 .cast-thing .cast-say { margin-top: 6px; }
 .cast-thing .cast-say .input { width: 100%; max-width: 360px; }
-/* The cast remote (cast-remote.js): the pad, the outline a cast screen draws, and its note at the foot. */
-.cast-remote-pad { display: grid; grid-template-columns: repeat(3, 72px); grid-template-rows: repeat(3, 72px); gap: 10px; }
-.cast-remote-key { font-size: 22px; min-width: 72px; min-height: 56px; touch-action: manipulation; }
-.cast-remote-pad .cast-remote-key { width: 72px; height: 72px; border-radius: 50%; }
+/* A cast screen and a remote (cast-remote.js): the outline it draws, and its note at the foot. */
 body.cast-view :focus { outline: 4px solid var(--accent); outline-offset: 4px; border-radius: 6px; }
 .cast-view-note { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); max-width: 80vw; padding: 10px 18px; border-radius: 10px; background: var(--card-bg, var(--bg)); color: var(--text); border: 1px solid var(--border); font-size: 18px; z-index: 9999; }
 .cast-acts { display: flex; gap: 6px; flex-shrink: 0; }

@@ -1,44 +1,12 @@
-/* A remote for a cast screen (modules/cast/remote.js; asked 2026-10-14). Two halves:
-   · on the screen that casts (a phone, a desk): castRemoteOpen() draws a pad — ▲ ▼ ◀ ▶, OK, Back — whose presses go
-     through the hub to the screen showing the page; arrow keys, Enter and Escape work on it too;
-   · on the cast screen (body.cast-view, solo.js): a press — from the pad, or from the TV's own remote when its keys reach
-     the page — moves a large focus outline to the nearest thing in that direction and OK presses it; Back answers an
-     open question with its own "Not now" or ✕. With nothing further that way, the page scrolls.
+/* A cast screen answers a remote (asked 2026-10-14: "nothing on screen about the remote, just respond to the real
+   one"): on the cast screen (body.cast-view, solo.js) a press — the TV's own remote when its keys reach the page, or
+   a key sent through the hub (POST /api/cast/remote, modules/cast/remote.js: for a device's own remote later) — moves a
+   large focus outline to the nearest thing in that direction and OK presses it; Back answers an open question with its
+   own "Not now" or ✕. With nothing further that way, the page scrolls.
    A cast screen never stops on a question it cannot answer: lib/switch-ask.js only notes it there (castRemoteNote). */
 
 const CR_KEYS = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', Enter: 'ok', Escape: 'back', Backspace: 'back', GoBack: 'back', BrowserBack: 'back' };
 const CR_SEL = 'a[href],button:not([disabled]),input:not([type=hidden]):not([disabled]),select,textarea,[tabindex]:not([tabindex="-1"]),[onclick]';
-
-/* ── The pad ── */
-
-function castRemoteOpen(target, name) {
-  document.querySelector('.cast-remote')?.remove();
-  const ov = Object.assign(document.createElement('div'), { className: 'model3d-full hub-links cast-remote' });
-  const k = (key, label, title) => `<button class="btn cast-remote-key" type="button" data-key="${key}" title="${title}" aria-label="${title}">${label}</button>`;
-  ov.innerHTML = `<div class="model3d-bar"><b>Remote — ${escHtml(name || 'cast screen')}</b><span style="flex:1"></span><button class="btn btn-xs" type="button">✕</button></div>
-    <div class="hub-links-body" style="display:flex;flex-direction:column;align-items:center;gap:14px">
-      <div class="cast-remote-pad">
-        <span></span>${k('up', '▲', 'Up')}<span></span>
-        ${k('left', '◀', 'Left')}${k('ok', 'OK', 'Press what is outlined')}${k('right', '▶', 'Right')}
-        <span></span>${k('down', '▼', 'Down')}<span></span>
-      </div>
-      ${k('back', '↩ Back', 'Back: answer an open question with Not now, or close it')}
-      <span class="status-line"></span>
-      <p class="desc" style="text-align:center;max-width:320px">An outline on the screen shows where you are. On a keyboard: the arrows, Enter and Esc.</p>
-    </div>`;
-  document.body.append(ov);
-  const st = ov.querySelector('.status-line');
-  const send = async key => {
-    try { await apiFetch(target.thing ? `/api/cast/things/${encodeURIComponent(target.thing)}/remote` : '/api/cast/remote', { method: 'POST', body: { key, ...(target.screen ? { screen: target.screen } : {}) } }); setStatus(st, '', ''); }
-    catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
-  };
-  ov.querySelectorAll('[data-key]').forEach(b => { b.onclick = () => send(b.dataset.key); });
-  const onKey = e => { const key = CR_KEYS[e.key]; if (!key || e.key === 'Backspace') return; e.preventDefault(); send(key); };
-  document.addEventListener('keydown', onKey);
-  const close = () => { document.removeEventListener('keydown', onKey); ov.remove(); };
-  const release = overlayBack(close);
-  ov.querySelector('.model3d-bar button').onclick = () => { release(); close(); };
-}
 
 /* ── On the cast screen ── */
 
