@@ -13,6 +13,9 @@
 .undo-text { flex: 1; min-width: 0; font-size: 13px; line-height: 1.35; }
 .undo-btn { font-weight: 600; color: var(--accent); border-color: var(--accent); }
 .undo-x { width: 28px; height: 28px; font-size: 13px; }
+/* With a dialog open the toasts step aside from its box (js/lib/toast-aside.js): to the top, else under its shade. */
+.undo-toasts.aside-top { top: 16px; bottom: auto; }
+.undo-toasts.under { z-index: 900; }
 @keyframes undo-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @media (max-width: 600px) { .undo-toasts { bottom: 76px; } .undo-toast { flex-wrap: wrap; } .undo-text { flex-basis: 100%; } }
 
