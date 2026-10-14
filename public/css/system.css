@@ -4,6 +4,11 @@
    Each rule names the audit item it answers ("des N"). The shared parts' markup is js/lib/ui-parts.js.
    ═══════════════════════════════════════════════════════ */
 
+/* The hidden attribute always hides. A class that sets display (flex, grid) beat the browser's own [hidden] rule, so an
+   element the code had hidden still showed: Harness's Teams list read "Loading…" forever on a core-only install, and
+   Nearby's switches stayed visible (test run 2026-10-14; earlier, local fixes in focused.css, service-add.css…). */
+[hidden] { display: none !important; }
+
 /* ── des 6: native controls drawn from the theme ── */
 :root { accent-color: var(--accent); }
 input[type="file"]::file-selector-button {
