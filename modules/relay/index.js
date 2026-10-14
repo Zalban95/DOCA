@@ -109,7 +109,7 @@ function state() {
   return { enabled: enabled(), computers: forComputers(), devices: false,
     devicesNote: 'Paired devices need an /api/v1 scope of their own for this, which waits for the owner\'s yes (CONSTITUTION S11).',
     listening: bound ? { address: bound.host, port: bound.port, url: computerUrl(bound.port) } : null, reason: bound ? null : why,
-    models: value('models'), offered: offered() };
+    models: value('models'), port: value('port'), address: value('address'), offered: offered() };
 }
 
 module.exports = { enabled, forComputers, offered, allowedFor, resolve, address, computerUrl, sync, close, state };
