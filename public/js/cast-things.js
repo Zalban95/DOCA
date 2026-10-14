@@ -24,6 +24,7 @@ async function castThingsHtml() {
       <span class="status-line"></span></div>
     <span class="cast-acts">${t.shows ? `<button class="btn btn-sm btn-teal" type="button" onclick="castThingShow('${escHtml(t.id)}', this)">Cast</button>`
       : `<button class="btn btn-sm btn-teal" type="button" onclick="castThingSay('${escHtml(t.id)}', this)">Say</button><button class="btn btn-sm" type="button" title="A longer text, a tone for each part" onclick="castStoryOpen('${escHtml(t.id)}', ${jsArg(t.name)})">Story…</button>`}
+      ${t.shows ? `<button class="btn btn-sm" type="button" title="Arrows, OK and Back for the page on its screen" onclick="castRemoteOpen({ thing: '${escHtml(t.id)}' }, ${jsArg(t.name)})">🎮 Remote</button>` : ''}
       <button class="btn btn-sm" type="button" onclick="castThingStop('${escHtml(t.id)}', this)">Stop</button></span></div>`;
   return `<div class="input-label">Around you</div>${door}${Object.entries(groups).map(([g, list]) =>
     `<div class="cast-room">${escHtml(g)}</div>${list.map(row).join('')}`).join('')}`;

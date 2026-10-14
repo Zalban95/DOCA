@@ -142,8 +142,8 @@ const TABLE = [
   R(ANY, '/api/live/watch', 'host'),
   R(ANY, '/api/screens/.*', 'host'),
   R(GET, '/api/cast/open/[^/]+', 'public'),                    // a screen that cannot sign in opening its view link: once, ten minutes (cast/links.js)
-  R(ANY, '/api/cast/(targets|show|stop|links)', 'chat'),       // casting to one's own screens (a host's: any); what a view shows is cast/views.js
-  R(ANY, '/api/cast/things(/[^/]+/(show|say|stop|volume))?', 'chat'),   // a saved Cast TV or speaker: an admin's any, anyone else's what is allotted (`nearby`, cast/things.js)
+  R(ANY, '/api/cast/(targets|show|stop|links|remote)', 'chat'),     // casting to one's own screens (a host's: any); what a view shows is cast/views.js
+  R(ANY, '/api/cast/things(/[^/]+/(show|say|stop|volume|remote))?', 'chat'),   // a saved Cast TV or speaker: an admin's any, anyone else's what is allotted (`nearby`, cast/things.js)
   R(ANY, '/api/cast/door', 'host'),                             // the owner's switch for the plain-HTTP cast door (cast/door.js; password, auth/guarded.js)
   R(GET, '/api/cast/media/[^/]+', 'public'),                           // a one-time sound, served only to the device it was made for (cast/media.js)
   R(ANY, '/api/archive(/.*)?', 'chat'),
