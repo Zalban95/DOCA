@@ -43,7 +43,8 @@ function soloFull() {
 }
 
 /** ⧉ in the header: the page in use, by itself, in a new tab or window. */
-function soloOpen(page = currentTab) {
+function soloOpen(page) {
+  if (typeof page !== 'string' || !page) page = currentTab;
   // Inside an app's web view (DocaMobile, DocaDesk) or on a phone there is no second window: window.open would load the
   // page over this one and cut off whatever it was doing — a conversation's answer included (found 2026-10-06). There
   // the page opens here; on a desk, in a window of its own.
@@ -74,7 +75,7 @@ if (typeof document !== 'undefined' && typeof window !== 'undefined') {
       if (page && NAV_TABS.includes(page)) { nav(page); if (sub && page === 'settings' && typeof settingsSubNav === 'function') settingsSubNav(sub); }
     }
     const open = Object.assign(document.createElement('button'), { className: 'btn btn-xs solo-open', textContent: '⧉', title: 'Open this page by itself — for a screen of its own' });
-    open.onclick = soloOpen;
+    open.onclick = () => soloOpen();   // never the click event: it became the page ("?view=[object PointerEvent]", test run 2026-10-14)
     document.getElementById('header-search')?.before(open);
     if (typeof liveOn === 'function') liveOn('screen', _soloShow);
   });
