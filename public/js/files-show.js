@@ -19,9 +19,11 @@ function fmWantedSelect() {
   if (!w || fm.cwd !== w.path) return;
   fm.wanted = null;
   if (!w.select) return;
-  const row = [...document.querySelectorAll('.fm-row')].find(r => r.dataset.path === w.select);
+  // Windows: the search says C:\\…\\a.txt, the list may say C:\\…/a.txt — the same file either way.
+  const same = p => String(p).replace(/\\/g, '/');
+  const row = [...document.querySelectorAll('.fm-row')].find(r => same(r.dataset.path) === same(w.select));
   if (!row) return;
-  fm.selected = new Set([w.select]);
+  fm.selected = new Set([row.dataset.path]);
   row.classList.add('selected');
   row.scrollIntoView({ block: 'center' });
   if (typeof fmUpdateStatus === 'function') fmUpdateStatus();

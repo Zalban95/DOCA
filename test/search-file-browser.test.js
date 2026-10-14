@@ -23,11 +23,12 @@ after(async () => { await B.stop(); fs.rmSync(dir, { recursive: true, force: tru
 
 test('a file result opens its own folder with the file selected, on a Files tab never opened before', { skip: B.skip }, async () => {
   await B.evaluate(`globalSearchGo(${JSON.stringify(file)}, false)`);
-  assert.ok(await B.until(`fm.cwd === ${JSON.stringify(dir)} && document.querySelector('.fm-row.selected')?.dataset.path === ${JSON.stringify(file)}`, 15000),
+  const same = p => `String(${p}).replace(/\\\\/g, '/')`;
+  assert.ok(await B.until(`${same('fm.cwd')} === ${JSON.stringify(dir.replace(/\\/g, '/'))} && ${same("document.querySelector('.fm-row.selected')?.dataset.path")} === ${JSON.stringify(file.replace(/\\/g, '/'))}`, 15000),
     await B.evaluate('JSON.stringify({ cwd: fm.cwd, sel: [...fm.selected] })'));
-  assert.deepEqual(await B.evaluate('[...fm.selected]'), [file]);
+  assert.deepEqual((await B.evaluate('[...fm.selected]')).map(p => p.replace(/\\/g, '/')), [file.replace(/\\/g, '/')]);
   // And again once the tab is drawn: another file, in another folder (here the same), selected.
   const other = path.join(dir, 'note-05.txt');
   await B.evaluate(`globalSearchGo(${JSON.stringify(other)}, false)`);
-  assert.ok(await B.until(`document.querySelector('.fm-row.selected')?.dataset.path === ${JSON.stringify(other)}`, 10000));
+  assert.ok(await B.until(`${same("document.querySelector('.fm-row.selected')?.dataset.path")} === ${JSON.stringify(other.replace(/\\/g, '/'))}`, 10000));
 });
