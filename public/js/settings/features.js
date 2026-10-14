@@ -34,7 +34,7 @@ function featuresFilter(q) {
     const text = [f.id, f.name, f.use, f.words || '', ...f.tools, ...f.settings, ...f.pageLabels].join(' ').toLowerCase();
     return want.every(w => text.includes(w));
   });
-  const state = f => f.state === 'experiment' ? `experiment ${f.flag}` : f.hidden ? 'hidden from the default' : _featuresData.states[f.state];
+  const state = f => f.licensed === false ? 'not in this licence' : f.state === 'experiment' ? `experiment ${f.flag}` : f.hidden ? 'hidden from the default' : _featuresData.states[f.state];
   list.innerHTML = rows.length ? rows.map(f => `<div class="tool-row" style="grid-template-columns:1fr auto;align-items:start">
       <span><b style="font-size:12px">${escHtml(f.name)}</b> <span class="tool-note" style="white-space:normal">${escHtml(f.use)}</span>
         <span class="tool-note" style="display:block;white-space:normal">${escHtml([f.pageLabels.join(', '), f.tools.join(', ')].filter(Boolean).join(' · '))}</span></span>

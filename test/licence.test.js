@@ -114,7 +114,7 @@ test('no licence: the core only — routes, tools, pages, settings and experimen
     assert.equal(require('../modules/experiments').on('riskTiers'), false, 'the lab is not licensed: no experiment turns on');
     assert.equal(require('../modules/experiments').list().length, 0);
     const p = loadPrefs(); delete p.experiments; p.developer = { mode: false }; savePrefs(p);
-    assert.match(require('../modules/features').describe(require('../modules/features').get('vms')), /Not in this hive's licence/, 'the agents still know it exists');
+    assert.match(require('../modules/features').describe(require('../modules/features').get('vms')), /not in this hive's licence/, 'the agents still know it exists');
   });
 });
 

@@ -116,11 +116,12 @@ function offeredLately(sessionId) {
   } catch { return false; }
 }
 
-/** The four, for one step — with the steps of a skill this turn read (skill-steps.js). */
+/** The four, for one step — with the steps of a skill this turn read (skill-steps.js), and what the request names that
+ *  this hive's licence leaves out (licence-cues.js). */
 function block({ message, schemas = [], rows = [], person = null, sessionId = null, turnRow = null }) {
   const held = new Set(schemas.map(s => s.function?.name || s.name));
   const attached = turnRow?.attachedSkills || [];   // attached to this request (skill-next.js): steps followed, not suggested again
-  return [likely(message, held, sessionId, attached.map(a => a.name), schemas), inventory(held, person), require('./skill-steps').block(rows, attached), keepHint(rows, held, sessionId, turnRow)].filter(Boolean).join('\n');
+  return [likely(message, held, sessionId, attached.map(a => a.name), schemas), require('./licence-cues').block(message), inventory(held, person), require('./skill-steps').block(rows, attached), keepHint(rows, held, sessionId, turnRow)].filter(Boolean).join('\n');
 }
 
 module.exports = { block, likely, inventory, keepHint };
