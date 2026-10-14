@@ -112,4 +112,4 @@ function start() {
   timer.unref?.();
 }
 
-module.exports = { checkIn, accept, start, stop: () => clearInterval(timer), base };
+module.exports = { checkIn, accept, start, stop: () => clearInterval(timer), base, call, detail };
