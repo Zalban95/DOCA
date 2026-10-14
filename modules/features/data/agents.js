@@ -27,7 +27,7 @@ module.exports = [
     routes: ['/api/harness/missions/teams*'], words: 'team project members who is working worktree branch teams here crew roster' },
   { id: 'harness-teams', licence: 'agents', name: 'Outside harnesses on a team', page: 'projects', tools: ['team'], settings: ['teams.outside.maxWorkers', 'teams.outside.allow'],
     use: 'When the person names one (Claude Code, Codex, dsh): team tasks run that CLI in its own computer on a git branch; Projects → Team branches shows the diff, with Merge.',
-    routes: ['/api/projects/*'], words: 'claude code codex dsh deepseek harness gemini outside cli workers opus team branches merge computer headless' },
+    routes: ['/api/projects/:id/team-branches*'], words: 'claude code codex dsh deepseek harness gemini outside cli workers opus team branches merge computer headless' },
   { id: 'missions-tidy', licence: 'agents', name: 'Finished missions put away', page: ['harness', 'settings/harness'], settings: ['missions.archiveSeenAfterMin', 'missions.archiveAfterHours'],
     routes: ['/api/harness/missions/tidy', '/api/harness/missions/:id/pin'],
     use: 'Finished missions go to the Archive by themselves once seen a while ago or a day after they finished, unless unread, waiting for a person or kept with 📌.',
