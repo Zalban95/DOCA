@@ -22,8 +22,12 @@ async function retrievalCardRender(panel) {
     <button class="btn btn-sm" onclick="retrievalTry()" ${r.model ? '' : 'disabled'}>Try on memory</button>
     <button class="btn btn-sm" onclick="retrievalClear()">Empty the index</button>
     <input class="input" id="retrieval-q" placeholder="something to look for" style="width:220px;margin-left:6px">${infoBtn('Words to look for with Try on memory, to see what finding by meaning returns. Empty: a sample question. Nothing is saved.')}
-    <pre class="terminal" id="retrieval-out" style="display:none;margin-top:8px;max-height:200px;white-space:pre-wrap"></pre>`;
+    <pre class="terminal" id="retrieval-out" style="display:none;margin-top:8px;max-height:200px;white-space:pre-wrap"></pre>
+    <div id="retrieval-rerank-fields" style="margin-top:8px"></div>`;
   panel.append(card);
+  // The reranker (experiment retrievalRerank): its model and provider, folded, saved like any declared setting.
+  if (r.rerankExperiment) leafFieldsDraw(document.getElementById('retrieval-rerank-fields'), ['retrieval.rerankProvider', 'retrieval.rerankModel'],
+    { label: 'Advanced — the reranker (experiment retrievalRerank)', id: 'retrieval-rerank' });
 }
 
 async function retrievalSave() {

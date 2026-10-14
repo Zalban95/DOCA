@@ -120,10 +120,10 @@ module.exports = [
       },
       required: ['query'],
     },
-    run: async ({ query, limit }) => {
+    run: async ({ query, limit }, ctx) => {
       const n = Math.min(Number(limit) || 8, 30);
       // Retrieval (an experiment, retrieval/): keyword and meaning merged, over the same entries.
-      const { hits, note } = require('../../retrieval').on() ? await require('../../retrieval/sources').memory(query, n) : { hits: memory.memSearch(query, n), note: null };
+      const { hits, note } = require('../../retrieval').on() ? await require('../../retrieval/sources').memory(query, n, { person: ctx?.user || null }) : { hits: memory.memSearch(query, n), note: null };
       memory.memTouch(hits);
       if (!hits.length) return `Nothing in memory matches "${query}".${note ? ` ${note}` : ''}`;
       return clip(hits.map(e => `- ${e.key}: ${e.value}`).join('\n') + (note ? `\n${note}` : ''));
