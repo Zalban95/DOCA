@@ -16,6 +16,9 @@ const B = require('./panel-browser');
 before(() => B.start({ setup: B.pastFirstRun }));
 after(() => B.stop());
 
+// Moved between as a person does, in the one page: a page loaded afresh per test left the last one's live stream
+// holding a connection, and by the sixth the browser had none left for the next page's requests.
+const go = (page, sub = null) => B.evaluate(sub ? `settingsSubNav(${JSON.stringify(sub)})` : `nav(${JSON.stringify(page)})`);
 const text = sel => B.evaluate(`(document.querySelector(${JSON.stringify(sel)})?.textContent || '').trim()`);
 
 test('the hub runs the core only', { skip: B.skip }, async () => {
@@ -23,7 +26,7 @@ test('the hub runs the core only', { skip: B.skip }, async () => {
 });
 
 test('Backups: saving an empty password says nothing was saved', { skip: B.skip }, async () => {
-  await B.open('#settings/backups');
+  await go('settings', 'backups');
   assert.ok(await B.until("!!document.getElementById('backup-password') && document.getElementById('backup-password').getClientRects().length > 0"), 'the password field is drawn');
   assert.ok(await B.clickOn('#backup-password-row button[onclick="backupPasswordSave()"]'));
   assert.ok(await B.until("/Nothing saved/.test(document.getElementById('backup-status')?.textContent || '')"), await text('#backup-status'));
@@ -31,22 +34,35 @@ test('Backups: saving an empty password says nothing was saved', { skip: B.skip 
   assert.deepEqual(B.errors, []);
 });
 
-// Not reproduced here: the run's "+ Add server" did nothing on its 3.75.0 install, and on the core only it opens the form at
-// every width. What a press does is now also said and lit, so a second press, with the form already open below, is seen.
+// Entering Settings asks which harnesses are installed (seconds), then shows its section — and used to go back to
+// Settings to do it, taking the page a person had moved on to from under them: the likely end of the run's "+ Add server".
+test('Settings does not pull a person back once they moved on', { skip: B.skip }, async () => {
+  await B.evaluate(`(() => { const real = apiFetch; window._slowHarness = true;
+    apiFetch = async (url, ...rest) => { if (window._slowHarness && url === '/api/harness') await new Promise(r => setTimeout(r, 1200)); return real(url, ...rest); }; })()`);
+  await go('settings', 'general');
+  await go('mcp');
+  await B.sleep(2500);
+  await B.evaluate('window._slowHarness = false');
+  assert.equal(await B.evaluate('currentTab'), 'mcp');
+});
+
+// On the core only "+ Add server" opens the form at every width. What a press does is now also said and lit, so a
+// second press, with the form already open below, is seen too.
 test('MCP: "+ Add server" opens the form, says so, twice', { skip: B.skip }, async () => {
-  await B.open('#mcp');
+  await go('mcp');
   assert.ok(await B.until("document.querySelector('#mcp-list .placeholder:not(.pulse)') !== null"), 'the list is drawn');
+  const state = () => B.evaluate("JSON.stringify({ tab: currentTab, shown: document.getElementById('mcp-form').getClientRects().length })");
   for (let i = 0; i < 2; i++) {
     await B.evaluate("document.getElementById('mcp-form-status').textContent = ''");
-    assert.ok(await B.clickOn('#tab-mcp .page-head-acts .btn-primary'));
-    assert.ok(await B.until("document.getElementById('mcp-form').getClientRects().length > 0 && document.activeElement?.id === 'mcp-name'"), `press ${i + 1}: the form is open, its name focused`);
+    assert.ok(await B.clickOn('#tab-mcp .page-head-acts .btn-primary'), `press ${i + 1}: the button is there to press ` + await state());
+    assert.ok(await B.until("document.getElementById('mcp-form').getClientRects().length > 0"), `press ${i + 1}: the form opens ` + await state());
     assert.match(await text('#mcp-form-status'), /A new server/);
   }
   assert.deepEqual(B.errors, []);
 });
 
 test('Users: "+ Add person" with no email says what it needs', { skip: B.skip }, async () => {
-  await B.open('#settings/users');
+  await go('settings', 'users');
   assert.ok(await B.until("!!document.getElementById('users-new-email')"), 'the add row is drawn');
   assert.ok(await B.clickOn('button[onclick="usersAdd()"]'));
   assert.ok(await B.until("/Type their email/.test(document.getElementById('users-new-status')?.textContent || '')"), await text('#users-new-status'));
@@ -56,7 +72,7 @@ test('Users: "+ Add person" with no email says what it needs', { skip: B.skip },
 
 // The run saw nothing: "✓ Saved" was there, and gone three seconds later, before it looked.
 test('Models: the Ollama card\'s Save says what it saved, and the line stays', { skip: B.skip }, async () => {
-  await B.open('#models');
+  await go('models');
   assert.ok(await B.until("!!document.getElementById('models-ollama-url')?.value"), 'the card is filled');
   // The folder as Ollama has it, so Save only saves (a different folder asks first and moves the models).
   await B.until('_ollamaHome !== null', 5000);

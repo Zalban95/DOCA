@@ -51,6 +51,9 @@ async function settingsInit() {
     _harnessesInstalled.others = _cliHarnesses.length > 0;
   } catch { /* shown with DOCA's own harness only; nothing of DOCA's depends on the others */ }
   _settingsSubnavRender();
+  // The harnesses' detection takes seconds: a person who went on to another page meanwhile is not pulled back to
+  // Settings (it took the MCP page from under a press of "+ Add server", newcomer run 2026-10-14). Their next visit inits again.
+  if (typeof pageShown === 'function' && !pageShown('settings')) return;
   const entry = _SETTINGS_SUBTABS.find(t => t.id === _settingsActiveSubtab);
   settingsSubNav(_settingsActiveSubtab.startsWith('cli-') ? _settingsActiveSubtab : entry && (!entry.group || _harnessesInstalled[entry.group]) ? entry.id : 'general');
 }

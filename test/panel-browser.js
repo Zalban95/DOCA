@@ -102,13 +102,24 @@ async function click(x, y) {
   await headless.sleep(120);
 }
 
-/** A real click at the centre of the first element matching `selector`, scrolled into view first; false when none is drawn. */
+/**
+ * A real click at the centre of the first element matching `selector`, once it is in view and nothing covers it (a
+ * smooth scroll the page started may still be moving it); false when none is drawn or something else stays on top.
+ */
 async function clickOn(selector) {
-  const at = await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e || !e.getClientRects().length) return null;
-    e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
-  if (!at) return false;
-  await click(at.x, at.y);
-  return true;
+  let last = null;
+  for (let i = 0; i < 20; i++) {
+    const at = await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e || !e.getClientRects().length) return null;
+      const r = e.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+      if (y < 0 || y > innerHeight || x < 0 || x > innerWidth) { e.scrollIntoView({ block: 'center', behavior: 'instant' }); return { wait: true }; }
+      const top = document.elementFromPoint(x, y);
+      return top && (top === e || e.contains(top)) ? { x, y } : { wait: true }; })()`);
+    if (!at) return false;
+    if (!at.wait && last && last.x === at.x && last.y === at.y) { await click(at.x, at.y); return true; }   // still for 200 ms
+    last = at.wait ? null : at;
+    await headless.sleep(200);
+  }
+  return false;
 }
 
 /** The page at another size, as a phone (390) or a desk (1300) shows it; `mobile` for touch-sized media queries. */
