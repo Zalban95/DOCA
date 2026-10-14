@@ -21,6 +21,7 @@ async function mcpSoftwareRender() {
     if (c.state === 'connected') return '<span class="desc">✓ connected</span>';
     if (c.state === 'here') return '<span class="desc" title="Installed on the hub. DOCA has no way into it yet: the agent can still open files with it on this machine.">installed here</span>';
     if (c.state === 'connect' && c.mcp) return `<button class="btn btn-xs btn-teal" onclick="mcpCatalogAdd(${jsArg(c.mcp)}, 'stdio')">Connect</button>`;
+    if (c.state === 'connect' && c.account && !licencePageOn('connectors')) return `<a class="btn btn-xs" href="${escHtml(c.site)}" target="_blank" rel="noopener noreferrer" title="Its maker's own page">Open ↗</a>`;   // no Connectors here (lib/licence.js)
     if (c.state === 'connect' && c.account) return `<button class="btn btn-xs btn-teal" onclick="nav('connectors')" title="Your own account, through Field → Connectors">Connect your account</button>`;
     if (c.state === 'install') return `<button class="btn btn-xs" onclick="mcpCatalogInstall(${jsArg(c.mcp)}, this)">Install</button>`;
     return `<a class="btn btn-xs" href="${escHtml(c.site)}" target="_blank" rel="noopener noreferrer" title="Its maker's own page">Download ↗</a>`;

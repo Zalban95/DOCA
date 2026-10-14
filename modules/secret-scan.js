@@ -97,7 +97,7 @@ const scanZip = buffer => scanFiles(require('./packs/zip').read(buffer));
 function sentence(findings, doing = 'This') {
   const where = findings.slice(0, 5).map(f => `${f.file ? `${f.file} ` : ''}line ${f.line} (${KINDS[f.kind] || f.kind})`);
   const more = findings.length > 5 ? ` and ${findings.length - 5} more` : '';
-  return `${doing} was stopped: ${where.join('; ')}${more} looks like a secret. Take it out — keep keys in Field → Connectors → Keys for services or Secrets for your devices — and try again.`;
+  return `${doing} was stopped: ${where.join('; ')}${more} looks like a secret. Take it out${require('./license/where').where('connectors', ' — keep keys in Field → Connectors → Keys for services or Secrets for your devices —', '')} and try again.`;
 }
 
 /** Throw a 422 naming the findings when there are any; return nothing otherwise. */

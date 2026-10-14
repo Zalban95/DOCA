@@ -118,3 +118,52 @@ test('"Models in use" names only roles and places this hive has', async () => {
   assert.ok(['assistant', 'specialists', 'vision', 'wakeword', 'library'].every(id => r.some(x => x.id === id)));
   assert.match(r.find(x => x.id === 'stt').where, /^Settings → Voice; /);
 });
+
+test('words written for every hive name no page this one lacks: the MCP catalogue, the agent\'s readings, the notes', async () => {
+  const said = () => {
+    const ha = require('../modules/mcp/catalog').list().find(c => c.id === 'home-assistant').about;
+    const secret = require('../modules/secret-scan').sentence([{ file: 'a.txt', line: 1, kind: 'bearer' }]);
+    const why = require('../modules/harness/turn/tool-shape').switches().filter(o => o.name === 'vnc_look').map(o => o.why);
+    const cast = require('../modules/settings-find').find('cast to tv speakers nearby').map(r => r.page);
+    const note = require('../modules/guided/pick').pickRole('stt', { gpus: [], ramGB: 4, diskGB: 10 }, require('../modules/guided/suggested-models.json')).providersNote;
+    const keyParam = require('../modules/harness/tools').TOOLS.find(t => t.name === 'api_call').parameters.properties.key.description;
+    return { ha, secret, why, cast, note, keyParam };
+  };
+  await coreOnly(() => {
+    const s = said();
+    assert.doesNotMatch(s.ha, /Field → Connectors/); assert.match(s.ha, /Authorization: Bearer/);
+    assert.doesNotMatch(s.secret, /Field → Connectors/); assert.match(s.secret, /Take it out and try again/);
+    assert.equal(s.why.length, 1); assert.match(s.why[0], /not in this hive's licence/, 'one reason, never Machines → VNC');
+    assert.ok(!s.cast.includes('nearby'), 'a setting on a page the hive lacks is not found');
+    if (s.note) assert.doesNotMatch(s.note, /Settings → Voice/);
+    assert.doesNotMatch(s.keyParam, /Field → Connectors/);
+  });
+  const s = said();
+  assert.match(s.ha, /Field → Connectors → Keys for services/);
+  assert.match(s.secret, /Field → Connectors → Keys for services/);
+  assert.match(s.keyParam, /Field → Connectors/);
+  if (s.note) assert.match(s.note, /Settings → Voice/);
+});
+
+test('the MCP page: no token field, note or step sends a core-only hive to Connectors', async () => {
+  const run = off => {
+    const ctx = panel(['mcpKeyNoteHtml'], off, { appLinkHtml: () => '' });
+    vm.runInContext(F.read('lib/app-links.js'), ctx);
+    vm.runInContext(F.read('mcp-key.js'), ctx);
+    const note = vm.runInContext('mcpKeyNoteHtml({ key: "home-assistant", url: "http://ha.local:8123/api/mcp" })', ctx);
+    const steps = vm.runInContext('APP_LINKS["home-assistant"].flows.mcp.join(" ")', ctx);
+    let fetched = 0;
+    ctx.apiFetch = async () => { fetched++; return { keys: [] }; };
+    ctx.document.createElement = () => ({});
+    return vm.runInContext('mcpKeyField("home-assistant")', ctx).then(() => ({ note, steps, fetched, keep: vm.runInContext('_mcpKeyName', ctx) }));
+  };
+  const core = await coreOnly(async () => run(offNow()));
+  assert.doesNotMatch(core.note + core.steps, /Field → Connectors/);
+  assert.match(core.steps, /Authorization: Bearer/);
+  assert.equal(core.fetched, 0, 'no call to keys for services, which are not here');
+  assert.equal(core.keep, null, 'nothing to keep a token as');
+  const full = await run(offNow());
+  assert.match(full.note, /Field → Connectors → API services/);
+  assert.match(full.steps, /Field → Connectors/);
+  assert.equal(full.fetched, 1); assert.equal(full.keep, 'home-assistant');
+});
