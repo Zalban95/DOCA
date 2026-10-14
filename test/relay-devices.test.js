@@ -4,7 +4,8 @@
  * The model relay for paired devices (relay/device.js, relay/v1.js; the owner's yes of 2026-10-14): a device with
  * `relay:use` and its own switch on asks the hub's models at /api/v1/relay with its own token; switching on a device
  * that can send text asks for the password, an extension of a phone or an output-only device does not; every request
- * is tagged `relay:device:<id>` in the usage ledger and Chronicle.
+ * is tagged `relay:device:<id>` in the usage ledger and Chronicle; and a provider count no request explains is an
+ * activity warning (relay/leak.js).
  */
 const test   = require('node:test');
 const assert = require('node:assert/strict');
@@ -149,4 +150,37 @@ test('a device asks with its own token over the panel\'s HTTPS; refused without 
     assert.equal(r.status, 403);
     assert.match((await r.json()).error.message, /off for paired devices/);
   } finally { await H.api(null, 'POST', '/api/computers/relay', { devices: true }); }
+});
+
+test('tokens the provider counts beyond what the request explains are a warning line, once in ten minutes', async () => {
+  const dev = H.mkDevice('Relay leak glasses', 'viewer', { formFactor: 'glasses' });
+  await H.api(null, 'POST', `/api/computers/relay/devices/${dev.device.id}`, { on: true });
+  const via = `relay:device:${dev.device.id}`;
+  const warns = () => require('../modules/activity').list({ limit: 200 }).filter(l => l.via === via && l.level === 'warn');
+  let r = await ask(dev.token, '/chat/completions', { ...hi, model: 'm1' });
+  assert.equal(r.status, 200);
+  assert.equal(warns().length, 0, 'an ordinary request explains its count');
+  r = await ask(dev.token, '/chat/completions', { ...hi, model: 'greedy' });
+  assert.equal(r.status, 200);
+  await r.text();
+  assert.equal(warns().length, 1);
+  assert.match(warns()[0].what, /90000 prompt tokens/);
+  assert.ok(!warns()[0].what.includes('hi'.repeat(2)) && !JSON.stringify(warns()).includes(SECRET));
+  r = await ask(dev.token, '/chat/completions', { ...hi, model: 'greedy', stream: true });
+  await r.text();
+  assert.equal(warns().length, 1, 'quiet for ten minutes, counted');
+});
+
+test('the leak check\'s bound holds for ordinary text in any script, and skips what it cannot count', () => {
+  const leak = require('../modules/relay/leak');
+  const ok = (content, usage, body = hi) => leak.check({ via: 'relay:test:x', provider: 'p', model: 'm', body, content, usage });
+  assert.equal(ok('Hello there', { prompt_tokens: 11, completion_tokens: 3 }).ok, true);
+  const cjk = '你好世界'.repeat(100);
+  assert.equal(ok(cjk, { prompt_tokens: 20, completion_tokens: 400 }).ok, true, 'one token a character is within the bound');
+  const hex = 'deadbeef'.repeat(200);
+  assert.equal(ok('x', { prompt_tokens: 700, completion_tokens: 1 }, { messages: [{ role: 'user', content: hex }] }).ok, true, 'hex at three characters a token');
+  assert.equal(ok('x', { prompt_tokens: 50000, completion_tokens: 1 }, { messages: [{ role: 'user', content: [{ type: 'image_url', image_url: { url: 'data:' } }] }] }).prompt.explained, null, 'a picture is not counted from its bytes');
+  assert.equal(ok('x', { prompt_tokens: 10, completion_tokens: 900, completion_tokens_details: { reasoning_tokens: 880 } }).ok, true, 'reasoning a provider hides is its own count');
+  assert.equal(ok('x', undefined), null, 'no usage: nothing to hold');
+  assert.equal(leak.replyText({ choices: [{ message: { content: 'a', tool_calls: [{ function: { name: 'f', arguments: '{"x":1}' } }] } }] }), 'af{"x":1}');
 });

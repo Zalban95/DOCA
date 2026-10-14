@@ -10,7 +10,8 @@
  * what goes back (scrubbed, should a provider ever echo it).
  *
  * Every request is a usage row tagged with where it came from — `relay:computer:<id>` or `relay:device:<id>` — for the
- * caller's person (never a word of the prompt), which the Usage page groups by and Chronicle lists (source `relay`).
+ * caller's person (never a word of the prompt), which the Usage page groups by and Chronicle lists (source `relay`);
+ * and the provider's own count of it is held against what the request explains (leak.js).
  */
 const MAX_BODY = 32 * 1024 * 1024;
 
@@ -92,11 +93,12 @@ async function chat(req, res, who) {
     const r = await require('../harness/turn/transport').post(ep, fwd, ctrl.signal, params);
     const record = (u, content) => {
       require('../harness/usage').record({ ...meta, provider: ep.id, model: pick.model, usage: u, body: fwd, reply: { content } });
+      require('./leak').check({ via: who.via, person: who.person, provider: ep.id, model: pick.model, body: fwd, content, usage: u });
     };
     if (!(r.headers.get('content-type') || '').includes('event-stream')) {
       const text = await r.text();
       let json = null; try { json = JSON.parse(text); } catch { /* passed on as it came */ }
-      record(json?.usage || null, json?.choices?.[0]?.message?.content || '');
+      record(json?.usage || null, require('./leak').replyText(json));
       res.writeHead(r.status, { 'Content-Type': r.headers.get('content-type') || 'application/json' });
       return res.end(scrub(text));
     }
@@ -109,7 +111,7 @@ async function chat(req, res, who) {
       let f = null; try { f = payload && payload !== '[DONE]' ? JSON.parse(payload) : null; } catch { /* not ours to read */ }
       if (!f) return res.write(`${scrub(l)}\n`);
       if (f.usage) usage = f.usage;
-      content += f.choices?.[0]?.delta?.content || '';
+      content += require('./leak').deltaText(f);
       if (f.usage && !wantUsage) {   // asked for the ledger's sake, not the caller's: their stream is as they asked for it
         if (!f.choices?.length) return undefined;
         delete f.usage;
