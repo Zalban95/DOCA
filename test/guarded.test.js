@@ -106,9 +106,9 @@ test('which switches ask what', async () => {
   assert.equal(switchOf(req('/api/harness/guards/rules', { blockAt: 1 })).password, true);
   assert.equal(switchOf(req('/api/harness/guards/x', {}, 'DELETE')).password, true);
   for (const [path, method] of [['/api/auth/grants/g1', 'DELETE'], ['/api/backups/b1/restore'], ['/api/versions/use'], ['/api/restart'],
-    ['/api/connectors/sealed/all'], ['/api/licence/key'], ['/api/auth/users'], ['/api/backups/remote'], ['/api/packs/import']])
+    ['/api/connectors/sealed/all'], ['/api/licence/key'], ['/api/auth/users'], ['/api/backups/remote'], ['/api/packs/import'], ['/api/network']])
     assert.equal(switchOf(req(path, {}, method || 'POST'))?.password, true, path);
-  for (const path of ['/api/harness/agents/enable', '/api/experiments/x', '/api/sharing', '/api/network', '/api/logs/keep', '/api/spending/budget'])
+  for (const path of ['/api/harness/agents/enable', '/api/experiments/x', '/api/sharing', '/api/logs/keep', '/api/spending/budget'])
     assert.equal(switchOf(req(path))?.password, false, path);
 });
 
