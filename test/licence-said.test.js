@@ -85,3 +85,24 @@ test('Settings → System → Features marks what the licence leaves out, and na
   assert.equal(full.teams.licensed, true); assert.ok(full.teams.pageLabels.length);
   assert.doesNotMatch(full.html, /not in this licence/);
 });
+
+test('a project page draws no Teams here or Team branches fold where the licence leaves teams out', async () => {
+  const draw = async () => {
+    const o = require('../modules/license/gate').off();
+    const boxes = { 'pj-teams': { innerHTML: '' }, 'pj-team-branches': { innerHTML: '' } };
+    for (const b of Object.values(boxes)) b.querySelector = () => ({ addEventListener: () => {} });
+    let asked = [];
+    const ctx = vm.createContext({ console, PJ: { project: { project: { id: 'prj_1' } } }, PJC: {}, localStorage: { getItem: () => null, setItem: () => {} },
+      document: { getElementById: id => boxes[id] || null, querySelectorAll: () => [] },
+      apiFetch: async url => { asked.push(url); return { teams: [], branches: [], current: 'main' }; }, teamCardHtml: () => '' });
+    vm.runInContext(F.source('lib/html.js', 'lib/licence.js', 'projects/teams.js', 'projects/team-branches.js'), ctx);
+    vm.runInContext(`LICENCE = ${JSON.stringify({ off: { pages: o.pages, features: o.features }, banner: null })}; licenceReady = async () => LICENCE;`, ctx);
+    await vm.runInContext('Promise.all([pjTeamsLoad(), pjTeamBranchesLoad()])', ctx);
+    return { teams: boxes['pj-teams'].innerHTML, branches: boxes['pj-team-branches'].innerHTML, asked };
+  };
+  const core = await coreOnly(draw);
+  assert.equal(core.teams, ''); assert.equal(core.branches, '');
+  assert.deepEqual(core.asked, [], 'no call to routes that are not there');
+  const full = await draw();
+  assert.match(full.teams, /Teams here/); assert.match(full.branches, /Team branches/);
+});
