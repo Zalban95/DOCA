@@ -88,7 +88,7 @@ function write(doc, cur, patch) {
   const keys = screenKeys();
   const unknown = Object.keys(patch).filter(k => !keys.includes(k));
   if (unknown.length) throw bad(`Not a setting a screen keeps: ${unknown.join(', ')}. A screen keeps: ${keys.join(', ')}.`);
-  for (const [k, v] of Object.entries(patch)) { if (v === null) delete cur[k]; else cur[k] = v; }
+  for (const [k, v] of Object.entries(patch)) { if (v === null) delete cur[k]; else cur[k] = k === 'experience' ? require('../experience').normalize(v) : v; }
   const size = JSON.stringify(cur).length;
   if (size > 200000) throw bad('That is more than a screen keeps (200 KB).', 413);
   store.writeJson(doc, { settings: cur, updatedAt: new Date().toISOString() });

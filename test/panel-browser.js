@@ -128,6 +128,12 @@ async function viewport(width, height = 900, mobile = width < 600) {
   await headless.sleep(300);
 }
 
+/** CSS media features as a screen would report them, e.g. [{ name: 'prefers-reduced-motion', value: 'reduce' }]; [] puts them back. */
+async function media(features) {
+  await page.send('Emulation.setEmulatedMedia', { features });
+  await headless.sleep(150);
+}
+
 /** A picture of the page as it is now, to a file — for a person to look at, never checked. */
 async function shot(file) {
   await headless.sleep(700);   // a smooth scroll lands first
@@ -141,4 +147,4 @@ const pastFirstRun = () => {
   savePrefs({ ...loadPrefs(), setup: { ...(loadPrefs().setup || {}), mode: 'advanced' } });
 };
 
-module.exports = { start, stop, open, evaluate, until, key, click, clickOn, shot, viewport, pastFirstRun, errors, sleep: headless.sleep, skip: !exe && 'no browser here' };
+module.exports = { start, stop, open, evaluate, until, key, click, clickOn, shot, viewport, media, pastFirstRun, errors, sleep: headless.sleep, skip: !exe && 'no browser here' };

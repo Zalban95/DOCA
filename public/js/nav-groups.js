@@ -50,6 +50,7 @@ function navGroupsMark(tab) {
     el.classList.toggle('active', el.dataset.tab ? el.dataset.tab === tab : el.dataset.group === g.id));
   document.getElementById('nav-group-menu')?.remove();
   if (typeof presenceNow === 'function') presenceNow();   // what this screen shows (Devices)
+  if (typeof flowRailDraw === 'function') flowRailDraw(tab);   // Flow's side rail (flow/rail.js)
 }
 
 /** The row of pages shows only while the open group has more than one page to offer. */
@@ -69,7 +70,7 @@ function navGroupTap(id, btn) {
   const g = NAV_GROUPS.find(x => x.id === id), shown = g ? _navShownIn(g) : [];
   const open = document.getElementById('nav-group-menu');
   if (open) { const same = open.dataset.group === id; open.remove(); if (same) return; }
-  if (shown.length <= 1) return navGroup(id);
+  if (shown.length <= 1 || (typeof flowPhoneGroups === 'function' && flowPhoneGroups())) return navGroup(id);   // Flow: its pages are chips (flow/rail.js)
   const menu = Object.assign(document.createElement('div'), { id: 'nav-group-menu', className: 'nav-group-menu' });
   menu.dataset.group = id;
   menu.innerHTML = shown.map(t => `<button class="${t === currentTab ? 'active' : ''}" onclick="nav('${t}')">${NAV_LABELS[t]}</button>`).join('');
@@ -85,4 +86,5 @@ function navGroupsVisibility() {
     document.querySelectorAll(`[data-group="${g.id}"]`).forEach(el => { if (el.matches('.nav-group, .mobile-nav-item')) el.style.display = none ? 'none' : ''; });
   }
   if (typeof currentTab !== 'undefined') _navPagesRow();
+  if (typeof flowRailDraw === 'function') flowRailDraw();
 }

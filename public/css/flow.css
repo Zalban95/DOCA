@@ -1,0 +1,83 @@
+/* ═══════════════════════════════════════════════════════
+   Flow — the experience beside the looks (js/flow/*, docs/design/flow-experience.md). Every rule is under
+   html[data-experience="flow"], so Standard is untouched; colours are the theme's variables only, so Flow wears
+   whatever look and palette the screen has. Motion: the old page fades and drops 4 px (0–120 ms), the new one fades
+   in and settles up 8 px (60–220 ms) — sideways 12 px when the group changes; "quick" halves it, "none" and a screen
+   asking for reduced motion never move.
+   ═══════════════════════════════════════════════════════ */
+
+html[data-experience="flow"] { --flow-in: 160ms; --flow-in-delay: 60ms; --flow-out: 120ms; --flow-rail-w: 184px; }
+html[data-experience="flow"][data-flow-motion="quick"] { --flow-in: 90ms; --flow-in-delay: 30ms; --flow-out: 80ms; }
+
+/* ── Moving between pages ── */
+html[data-experience="flow"] .content { position: relative; }
+html[data-experience="flow"]:not([data-flow-motion="none"]) .content > .tab-page.active {
+  animation: flow-page-in var(--flow-in) cubic-bezier(.2, .7, .2, 1) var(--flow-in-delay) both; }
+html[data-experience="flow"][data-flow-move="group"]:not([data-flow-motion="none"]) .content > .tab-page.active { animation-name: flow-group-in; }
+html[data-experience="flow"] .content > .tab-page.flow-leaving {
+  display: flex; position: absolute; inset: 0; pointer-events: none; animation: flow-page-out var(--flow-out) ease-in both; }
+@keyframes flow-page-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes flow-group-in { from { opacity: 0; transform: translateX(var(--flow-dx, 12px)); } to { opacity: 1; transform: none; } }
+@keyframes flow-page-out { from { opacity: 1; } to { opacity: 0; transform: translateY(4px); } }
+html[data-experience="flow"] [data-flow-title], html[data-experience="flow"] .page-title:focus, html[data-experience="flow"] .card-title:focus { outline: none; }
+
+/* ── The groups on a side rail (desk) ── */
+.flow-rail { display: none; }
+@media (min-width: 769px) {
+  html[data-experience="flow"][data-flow-groups="rail"]:not([data-mode="focused"]) body:not(.solo) .flow-rail {
+    display: flex; flex-direction: column; justify-content: space-between; width: var(--flow-rail-w); flex-shrink: 0;
+    padding: 12px 8px; gap: 12px; overflow-y: auto; background: var(--surface); border-right: 1px solid var(--border2); }
+  html[data-experience="flow"][data-flow-groups="rail"]:not([data-mode="focused"]) header .nav-tabs { display: none; }
+  html[data-experience="flow"][data-flow-groups="rail"]:not([data-mode="focused"]) header .logo { margin-right: auto; }   /* the rest packs to the right */
+}
+.flow-rail-groups, .flow-rail-foot { display: flex; flex-direction: column; gap: 2px; }
+.flow-rail-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 8px 10px; border: 0; border-radius: var(--radius, 6px);
+  background: transparent; color: var(--muted); font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.flow-rail-item:hover { color: var(--text); background: var(--raised); }
+.flow-rail-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.flow-rail-item .pt { --pt: var(--faint, var(--border2)); }
+.flow-rail-item.active { color: var(--bright); background: var(--raised); }
+.flow-rail-item.active .pt { --pt: var(--accent); }
+.flow-rail-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.flow-rail-count { font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.flow-readout { padding: 6px 10px 0; font-family: var(--font-mono); font-size: 10px; color: var(--muted); min-height: 1.4em; }
+
+/* The open group's pages: tabs under the header, the open one underlined in the accent. */
+html[data-experience="flow"] .nav-pages .nav-tab.active { color: var(--bright); background: transparent; box-shadow: inset 0 -2px 0 var(--accent); }
+
+/* ── Phone: the pages as chips at the top, the groups as the bottom bar ── */
+@media (max-width: 768px) {
+  html[data-experience="flow"]:not([data-mode="focused"]) body:not(.solo) .nav-pages.shown {
+    display: flex; height: auto; padding: 8px 12px; gap: 6px; overflow-x: auto; border-bottom: 1px solid var(--border); }
+  html[data-experience="flow"] .nav-pages .nav-tab { flex: none; padding: 5px 12px; border: 1px solid var(--border2); border-radius: 999px; box-shadow: none; }
+  html[data-experience="flow"] .nav-pages .nav-tab.active { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); box-shadow: none; }
+}
+
+/* ── The opening ── */
+.flow-opening { position: fixed; inset: 0; z-index: 5000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 14px; padding: 24px 16px; background: var(--bg); color: var(--text); text-align: center; animation: flow-fade 200ms ease-out both; }
+.flow-opening.leaving { animation: flow-fade 200ms ease-in reverse both; }
+@keyframes flow-fade { from { opacity: 0; } to { opacity: 1; } }
+.flow-opening-mark { position: relative; width: 160px; height: 160px; display: grid; place-items: center; }
+.flow-opening-mark canvas { width: 120px; height: 120px; }
+.flow-ring { position: absolute; inset: 0; animation: flow-turn 24s linear infinite; }
+.flow-ring i { position: absolute; left: 50%; top: 50%; width: 3px; height: 3px; margin: -1.5px; border-radius: 50%; background: var(--muted);
+  opacity: .55; transform: rotate(calc(var(--i) * 15deg)) translateY(-74px); }
+@keyframes flow-turn { to { transform: rotate(360deg); } }
+.flow-opening-name { font-family: var(--font-display, var(--font-ui, inherit)); font-size: 22px; color: var(--bright); letter-spacing: .02em; }
+.flow-opening-say { max-width: 420px; font-size: 13px; color: var(--muted); }
+.flow-opening-bar { width: min(320px, 80vw); height: 2px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.flow-opening-bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 160ms ease-out; }
+.flow-opening-groups { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 16px; margin: 0; padding: 0; list-style: none;
+  font-family: var(--font-mono); font-size: 11px; color: var(--muted); }
+.flow-opening-groups li { display: flex; align-items: center; gap: 6px; }
+.flow-opening-groups li.ready { color: var(--text); }
+.flow-opening-groups li.ready .pt { --pt: var(--accent); }
+.flow-opening-skip { margin-top: 6px; }
+
+/* Reduced motion, whatever the Motion choice: nothing moves. */
+@media (prefers-reduced-motion: reduce) {
+  html[data-experience="flow"] .content > .tab-page, html[data-experience="flow"] .content > .tab-page.active { animation: none !important; }
+  html[data-experience="flow"] .content > .tab-page.flow-leaving { display: none; }
+  .flow-ring, .flow-opening, .flow-opening.leaving { animation: none !important; }
+}
