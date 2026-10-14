@@ -60,7 +60,13 @@ async function main() {
     let tabs = null;
     for (let i = 0; i < 60 && !tabs; i++) {
       await sleep(500);
-      tabs = (await cdp.send('Runtime.evaluate', { expression: "typeof NAV_TABS !== 'undefined' && document.readyState === 'complete' ? JSON.stringify(NAV_TABS) : ''", returnByValue: true })).result.value || null;
+      // The licence is read after the page loads: until it answers every page counts as there, so the list is taken once it
+      // has, and only the pages it leaves in (a slower Windows runner visited the core's absent pages, CI 3.80.0).
+      tabs = (await cdp.send('Runtime.evaluate', { awaitPromise: true, returnByValue: true, expression: `(async () => {
+        if (typeof NAV_TABS === 'undefined' || document.readyState !== 'complete') return '';
+        if (typeof licenceReady === 'function') await licenceReady();
+        return JSON.stringify(NAV_TABS.filter(t => typeof licencePageOn !== 'function' || licencePageOn(t)));
+      })()` })).result.value || null;
     }
     await sleep(1000);
     if (!tabs) throw new Error('The panel did not load (no NAV_TABS).');
