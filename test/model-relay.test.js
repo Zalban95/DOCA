@@ -19,6 +19,10 @@ let stub, seen = [], relayUrl;
 test.before(async () => {
   await H.start();
   stub = http.createServer((req, res) => {
+    if (req.method === 'GET' && /\/models$/.test(req.url)) {   // the hub's provider says its models' windows
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      return res.end(JSON.stringify({ data: [{ id: 'm1', context_length: 40960 }, { id: 'm2' }] }));
+    }
     let raw = ''; req.on('data', d => { raw += d; });
     req.on('end', () => {
       const body = JSON.parse(raw || '{}');
@@ -212,4 +216,22 @@ test('the relay never takes one of the panel\'s own ports (the canvas origin is 
   assert.equal(s.listening, null);
   assert.match(String(s.reason), /one of the panel's own/);
   await relay.sync({ address: '127.0.0.1', port: 0 });   // back as the other tests had it
+});
+
+test('a DOCA inside the computer paces itself by the relay: each model\'s window, /props and /slots as llama.cpp says them', async () => {
+  relayUrl = `http://127.0.0.1:${(await H.api(null, 'GET', '/api/computers/relay')).body.listening.port}`;   // the test before moved it
+  const { token } = await computer(H.owner, 'cc11dd22');
+  const list = await (await ask('/v1/models', { token })).json();
+  assert.equal(list.data.find(m => m.id === 'm1')?.context_length, 40960, 'the window, so it folds before it is full');
+  const props = await (await ask('/props')).json();
+  assert.equal(props.default_generation_settings.n_ctx, 40960);
+  assert.deepEqual(await (await ask('/slots')).json(), [{ id: 0, is_processing: false }]);
+  const end = require('../modules/harness/inflight').start({ provider: 'stub', model: 'm1', kind: 'relay' });
+  assert.equal((await (await ask('/slots')).json())[0].is_processing, true, 'a request passed on reads as the server at work');
+  end();
+  // The relay's address inside a computer is this machine: a local provider, paced as one (provider-pace.js).
+  require('fs').writeFileSync(process.env.CONFIG_PATH, JSON.stringify({ models: { providers: {
+    stub: { baseUrl: JSON.parse(require('fs').readFileSync(process.env.CONFIG_PATH, 'utf8')).models.providers.stub.baseUrl, apiKey: SECRET },
+    inside: { baseUrl: 'http://host.docker.internal:4244/v1', apiKey: 'x' } } } }));
+  assert.equal(require('../modules/harness/providers').endpoint('inside').local, true);
 });

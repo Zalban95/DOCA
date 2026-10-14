@@ -128,7 +128,7 @@ test('a project\'s chat leads its helpers: their reports and its specialists wak
   assert.equal(supervisor.decide(helper, { steps: 2 }), 'woken');
   await settle();
   assert.deepEqual(woken.map(w => w.sessionId), [lead], 'the leader, not the Orchestrator');
-  assert.match(woken[0].message, /^\[panel\] Helpers you started reported back/);
+  assert.match(woken[0].message, /^\[panel\] Helpers or a team you started reported back/);
   assert.match(woken[0].message, /Helper .* — question: I need the tester/);
   assert.equal(supervisor.deliver(ceo()), 'nothing due', 'a grandchild does not reach the Orchestrator');
 
@@ -407,4 +407,21 @@ test('stopped work waits: the Orchestrator is told and asks; restart carries on,
   assert.equal(supervisor.decide(other, { steps: 1 }), 'dropped', 'nothing wakes a dropped job');
   assert.doesNotMatch(stopped.block(main), /Dropped/);
   assert.equal((await H.api(null, 'POST', `/api/harness/work/${other}/restart`)).body.state, 'dropped', 'decided already: nothing to do');
+});
+
+test('a team\'s end wakes its idle leader with what came of it; a team that finished under the Orchestrator is told without a model', async () => {
+  fresh();
+  const lead = org.create({ title: 'Team leader chat', fields: { projectId: 'p_team' } }).id;
+  const team = { id: 'team_t1', title: 'Copy and HTML check', by: lead, state: 'failed', progress: { done: 0, total: 2, percent: 0 }, tasks: [] };
+  require('../modules/teams/announce').changed(team, [{ id: 't1', title: 'Copy', agent: 'coder', state: 'failed', why: 'no first token in 90 s' }], { ended: true });
+  await settle(); await settle();
+  assert.deepEqual(woken.map(w => w.sessionId), [lead]);
+  assert.match(woken[0].message, /Team "Copy and HTML check" failed: 0 of 2 tasks done/);
+
+  woken = [];
+  const done = { id: 'team_t2', title: 'Release notes', by: ceo(), state: 'done', progress: { done: 1, total: 1, percent: 100 }, tasks: [] };
+  require('../modules/teams/announce').changed(done, [], { ended: true });
+  await settle(); await settle();
+  assert.equal(woken.length, 0, 'done needs no model');
+  assert.match(memory.messages(ceo()).at(-1).content, /is done: Team "Release notes" done/);
 });

@@ -57,8 +57,11 @@ function changed(team, views, { changed = [], ended = false, title = id => id, f
     line(team, text);
     // To the leader itself (organization.report sends upward, to the leader's own leaders): an unread report, read in its next step.
     try {
-      const note = { id: require('crypto').randomUUID(), from: team.id, type: 'team', text: text.slice(0, 4000), by: 'panel', at: new Date().toISOString() };
+      const note = { id: require('crypto').randomUUID(), from: team.id, type: 'team', outcome: team.state, text: text.slice(0, 4000), by: 'panel', at: new Date().toISOString() };
       require('../harness/memory').updateSessions([team.by], row => ({ reports: [...(row.reports || []), note] }));
+      // An idle leader is woken for it (2026-10-14 demo: a project's chat said its team was "up and running" after both
+      // tasks had failed, and never spoke again) — or, when it is working, its turn's end delivers it (supervisor.js).
+      setImmediate(() => { try { require('../harness/supervisor').deliver(team.by); } catch (e) { console.warn(`[teams] ${team.id} leader: ${e.message}`); } });
     } catch { /* the leader is gone */ }
   }
 }

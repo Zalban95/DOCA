@@ -52,10 +52,41 @@ function deviceCaller(device) {
   return { device, person: require('./computer').personOf(device.userId || null), sessionId: null, via: require('./device').via(device), label: 'this device' };
 }
 
+/** A model's window, as the hub's own provider reports it (context-window.js, cached there); null when it says nothing. */
+async function windowOf(e) {
+  try { return (await require('../harness/context-window').discover(e.provider, e.model))?.tokens || null; } catch { return null; }
+}
+
+/**
+ * Each model with its window (`context_length`, the field OpenRouter uses and context-window.js reads): without it a
+ * DOCA inside a computer took the relay's model for a million-token one and never folded its conversations — the
+ * 2026-10-14 demo's project chat filled a 40,960-token window and answered nothing.
+ */
 async function models(req, res, who) {
   const list = require('./index').allowedFor(who.person);
+  const windows = await Promise.all(list.map(windowOf));
   res.writeHead(200, { 'Content-Type': 'application/json' });
-  res.end(JSON.stringify({ object: 'list', data: list.map(e => ({ id: e.model, object: 'model', owned_by: e.provider, created: 0 })) }));
+  res.end(JSON.stringify({ object: 'list', data: list.map((e, i) => ({ id: e.model, object: 'model', owned_by: e.provider, created: 0,
+    ...(windows[i] ? { context_length: windows[i] } : {}) })) }));
+}
+
+/**
+ * What a local model server says about itself, in llama.cpp's words, so a DOCA inside a computer paces itself as it
+ * does for a server on its own network (provider-pace.js, turn/busy-server.js): `/props` the first offered model's
+ * window, `/slots` whether the relay is passing a request on right now — a queued request reads as the server at work,
+ * so its wait goes on instead of ending at 90 s as a stall (the same demo: the hub's model took three minutes to start).
+ * Facts only, never a word of a request; answered on the bridge without a token, as llama.cpp answers them.
+ */
+async function props(req, res) {
+  const first = require('./index').offered()[0];
+  const n = first ? await windowOf(first) : null;
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify({ default_generation_settings: { n_ctx: n || 0 }, ...(n ? { n_ctx: n } : {}) }));
+}
+function slots(req, res) {
+  const busy = require('../harness/inflight').list().some(r => r.kind === 'relay');
+  res.writeHead(200, { 'Content-Type': 'application/json' });
+  res.end(JSON.stringify([{ id: 0, is_processing: busy }]));
 }
 
 /** Its budget and the harness's daily ceiling, as a turn's start checks them; a money budget needs a priced model. */
@@ -138,8 +169,10 @@ async function handle(req, res) {
   if (!listen.isLoopback(peer) && !listen.isPrivate(peer)) { req.socket.destroy(); return; }   // the bridge and this machine only
   const url = String(req.url || '').split('?')[0].replace(/\/+$/, '');
   try {
+    if (req.method === 'GET' && url === '/props') return await props(req, res);
+    if (req.method === 'GET' && url === '/slots') return slots(req, res);
     const route = req.method === 'GET' && url === '/v1/models' ? models : req.method === 'POST' && url === '/v1/chat/completions' ? chat : null;
-    if (!route) return fail(res, 404, `The relay answers GET /v1/models and POST /v1/chat/completions; not ${req.method} ${url}.`, 'not_found');
+    if (!route) return fail(res, 404, `The relay answers GET /v1/models and POST /v1/chat/completions (and /props, /slots as llama.cpp does); not ${req.method} ${url}.`, 'not_found');
     await route(req, res, caller(req));
   } catch (e) { refuse(res, e); }
 }

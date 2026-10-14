@@ -17,7 +17,8 @@
 const { loadModelsPrefs, resolveEnvVars } = require('../utils');
 
 /** True for an endpoint on this machine or a private network — no key expected. */
-const LOCAL_URL = /^https?:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0|\[::1\]|172\.|192\.168\.|10\.)/;
+// `host.docker.internal` is the machine a container runs on: inside an agents' computer, the hub's model relay.
+const LOCAL_URL = /^https?:\/\/(127\.0\.0\.1|localhost|0\.0\.0\.0|\[::1\]|172\.|192\.168\.|10\.|host\.docker\.internal[:/])/;
 
 /** …or at this hub's own tailnet name (a server here reached through `tailscale serve`) — this machine's name only. */
 function isLocalUrl(url) {

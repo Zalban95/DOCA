@@ -18,9 +18,10 @@ const memory = require('./memory');
 
 const short = (v, n) => { const t = String(v || '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t; };
 
-const LEAD_REPORTS = '[panel] Helpers you started reported back. Read each report. Where one asks for a specialist or for '
-  + 'something only you may start, decide: dispatch it (agent_dispatch) and, when it is back, send the helper what it '
-  + 'needs with work_chats send. Do not redo a helper\'s work yourself. Tell the person only what needs them.';
+const LEAD_REPORTS = '[panel] Helpers or a team you started reported back. Read each report. Where one asks for a specialist '
+  + 'or for something only you may start, decide: dispatch it (agent_dispatch) and, when it is back, send the helper what it '
+  + 'needs with work_chats send. Do not redo a helper\'s work yourself. Tell the person what came of it in a few lines — '
+  + 'a team that failed included, with why — and ask what only they can decide.';
 const LEAD_RESULTS = '[panel] The specialists you sent have finished; their results are in your context. Pass on what a '
   + 'helper of yours asked for with work_chats send, and tell the person only what needs them.';
 
@@ -30,16 +31,20 @@ function isLeader(s) {
     && require('./org-depth').level(s) === 2;
 }
 
-/** The final reports from `s`'s own helpers (not grandchildren) it has not been woken or told for. */
+/** The final reports from `s`'s own helpers (not grandchildren), and the end of a team it leads, it has not been woken or told for. */
 function due(s) {
   const FINAL = require('./organization').FINAL;
-  return (s.reports || []).filter(n => FINAL.includes(n.type) && !n.readAt && !n.wokeAt && memory.getSession(n.from)?.parentId === s.id);
+  return (s.reports || []).filter(n => !n.readAt && !n.wokeAt
+    && (n.type === 'team' || (FINAL.includes(n.type) && memory.getSession(n.from)?.parentId === s.id)));
 }
+
+/** A team's end reads as its outcome: done, or failed for any other end (stopped, failed). */
+const outcomeOf = n => (n.type === 'team' ? (n.outcome === 'done' ? 'done' : 'failed') : n.type);
 
 /** One per job: a work chat that reported "done" twice (a short one, then one with timings) is one outcome, the latest. */
 const latestOf = notes => [...new Map(notes.map(n => [n.from, n])).values()];
 
-const lineOf = n => `- ${short(memory.getSession(n.from)?.title, 80)} (${n.from}) — ${n.type}: ${short(n.text, 500)}`;
+const lineOf = n => (n.type === 'team' ? `- ${short(n.text, 500)} (${n.from})` : `- ${short(memory.getSession(n.from)?.title, 80)} (${n.from}) — ${n.type}: ${short(n.text, 500)}`);
 
 /** Mark the reports from these jobs as handled, so nobody is woken or told for them again. */
 function markWoken(id, notes) {
@@ -52,12 +57,13 @@ function markWoken(id, notes) {
  * conversation. → the reports handled (every report of those jobs in `notes`), marked.
  */
 function tellDone(ceo, notes) {
-  const done = latestOf(notes).filter(n => n.type === 'done');
+  const done = latestOf(notes).filter(n => outcomeOf(n) === 'done');
   if (!done.length) return [];
   const notice = require('./reach-notice');
   for (const n of done) {
-    const title = memory.getSession(n.from)?.title || 'A job';
-    const personId = require('./session-access').ownerOf(n.from) || null;
+    const team = n.type === 'team' ? (() => { try { return require('../teams/store').get(n.from); } catch { return null; } })() : null;
+    const title = team?.title || (n.type === 'team' ? (/Team "([^"]+)"/.exec(n.text) || [])[1] : memory.getSession(n.from)?.title) || 'A job';
+    const personId = (() => { try { return require('./session-access').ownerOf(n.type === 'team' ? ceo.id : n.from) || null; } catch { return null; } })();
     try {
       notice.deliver({ personId, title: `Done: ${short(title, 60)}`, text: short(n.text, 300),
         ...(personId ? { to: notice.ownIds(personId) } : {}), from: 'work' });
@@ -71,4 +77,4 @@ function tellDone(ceo, notes) {
   return handled;
 }
 
-module.exports = { isLeader, due, latestOf, lineOf, markWoken, tellDone, LEAD_REPORTS, LEAD_RESULTS };
+module.exports = { isLeader, due, outcomeOf, latestOf, lineOf, markWoken, tellDone, LEAD_REPORTS, LEAD_RESULTS };
