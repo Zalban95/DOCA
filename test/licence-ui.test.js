@@ -70,3 +70,36 @@ test('Settings → Packs: other hubs, Send and Add are left out unless pack-hubs
   const full = await draw(offNow());
   assert.match(full, /Other hubs to send to/); assert.match(full, /packsHubAdd/); assert.match(full, /Send to…/);
 });
+
+test('pages the hive does not have are absent from every list of pages: the layout, its refusals, General, the search', async () => {
+  const layout = async () => (await H.api(null, 'GET', '/api/screen/layout')).body.resolved;
+  const refusal = async () => (await H.api(null, 'POST', '/api/screen/layout', { scope: 'person', ops: [{ op: 'hide', page: 'nothing-here' }] })).body;
+  const general = off => {
+    const el = { innerHTML: '' };
+    const ctx = panel([], off, { advancedFold: h => h });
+    vm.runInContext(F.read('settings.js'), ctx);
+    ctx.document.getElementById = id => (id === 'settings-tabs-list' ? el : null);
+    vm.runInContext('_settingsRender()', ctx);
+    return el.innerHTML;
+  };
+  const search = off => {
+    const ctx = panel(['globalSearchPlaces'], off, { nav: () => {}, settingsSubNav: () => {} });
+    vm.runInContext(F.read('settings/subnav.js').match(/const _SETTINGS_SUBTABS = \[[\s\S]*?\n\];/)[0], ctx);
+    return vm.runInContext('globalSearchPlaces("")', ctx).map(p => p.label);
+  };
+  await coreOnly(async () => {
+    const r = await layout(), off = offNow();
+    for (const p of ['computers', 'docker', 'vms', 'live', 'connectors']) assert.ok(r.absent.includes(p), `${p} is absent`);
+    const said = await refusal();
+    assert.match(said.error, /No page "nothing-here"/);
+    assert.doesNotMatch(said.error, /computers \(|docker \(|vms \(/, 'a refusal lists only the pages this hive has');
+    const g = general(off);
+    assert.match(g, /Projects/); assert.doesNotMatch(g, /Computers|Docker|VMs/);
+    const s = search(off);
+    assert.ok(s.includes('General') && !s.includes('Voice') && !s.includes('Connectors'), s.join());
+  });
+  assert.ok(!(await layout()).absent, 'the full licence leaves nothing absent');
+  assert.match(general(offNow()), /Computers[\s\S]*Docker[\s\S]*VMs/);
+  const s = search(offNow());
+  assert.ok(s.includes('Voice') && s.includes('Connectors'), s.join());
+});
