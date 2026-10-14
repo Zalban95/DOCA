@@ -144,6 +144,7 @@ function _hcTurnUi() {
     note: (kind, text, cls) => _hcAppend(kind === 'waiting' ? 'waiting' : 'failover', text, cls),
     removeNote: el => el.parentElement?.remove(),   // _hcAppend returns the row's body
     image: img => _hcAppendImage(img),
+    mention: x => agentMentionAppend(box, x, scroll),
     approval: evt => _hcApproval(evt, box, scroll),
     error: msg => _hcAppend('error', msg, 'error'),
     context: evt => _hcContext(evt),

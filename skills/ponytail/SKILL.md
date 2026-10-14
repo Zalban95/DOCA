@@ -1,7 +1,7 @@
 ---
 name: ponytail
-description: The smallest change that fully solves a coding task, and a reply a busy person understands in one read — reuse what the project has, add nothing nobody asked for, never cut validation, security or the tests a change needs. For when the person says "ponytail", "be lazy", "simplest solution", "yagni", or complains about over-engineering or bloat. Levels lite, full (the default) and ultra.
-triggers: [ponytail, be lazy, simplest solution, yagni, over-engineered, overengineering, too much code, bloat, soluzione più semplice, troppo codice]
+description: The smallest change that fully solves a coding task, and a reply a busy person understands in one read — reuse what the project has, add nothing nobody asked for, never cut validation, security or the tests a change needs. Suggested on everyday coding requests (implement, fix, refactor, add a feature, write a script) and when the person says "ponytail", "be lazy", "simplest solution", "yagni", or complains about over-engineering or bloat. Levels lite, full (the default) and ultra.
+triggers: [ponytail, be lazy, simplest solution, yagni, over-engineered, overengineering, too much code, bloat, implement, refactor, fix the bug, add a feature, write the code, write a script, code change, build the app, soluzione più semplice, troppo codice, implementa, correggi il bug, aggiungi una funzione, scrivi il codice, scrivi uno script]
 license: MIT
 source: https://github.com/DietrichGebert/ponytail (MIT, © 2026 DietrichGebert; adapted for this hub — see LICENSE beside this file)
 ---

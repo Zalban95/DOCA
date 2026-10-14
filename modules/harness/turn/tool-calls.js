@@ -119,6 +119,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     // event and is kept on the tool row, so a reloaded transcript draws it
     // again; the model only ever reads the result text.
     const shown = [];
+    const made = [];   // what the call made — a work chat, a team, a mission — as a chip that opens it (mentions.js)
     const tiers = require('./tool-tiers');
     const result = failures.note(signal, name, args, refused !== null
       ? refused
@@ -128,18 +129,19 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
       ? `Error: could not parse the arguments as JSON: ${args._raw}`
       : !schemas.some(sc => sc.function.name === name) && !tiers.heldNotSent(name, stepDisabled)
         ? `Error: the "${name}" tool is switched off for this conversation${(w => (w ? `: ${w}` : ''))(require('./tool-shape').whyOff(name, profile))}.`
-        : await tools.call(name, args, stepDisabled, { disabled: stepDisabled, profile, show: image => shown.push(image), emit: evt => say({ ...evt, step }), sessionId: session.id, signal, approved: !!gate, screen: require('../screen-proposals').screenOf(client), airlock: !!profile?.airlock,
+        : await tools.call(name, args, stepDisabled, { disabled: stepDisabled, profile, show: image => shown.push(image), mention: m => made.push(m), emit: evt => say({ ...evt, step }), sessionId: session.id, signal, approved: !!gate, screen: require('../screen-proposals').screenOf(client), airlock: !!profile?.airlock,
           // A person's own turn (S1: their request is the decision) — not an automatic turn, a mission or a specialist;
           // or an automatic turn that read their queued message, for what they asked (askerOf, above).
           ...(asker && ASKED_TOOLS.has(name) ? { user: asker, byPerson: true }
             : { user: client?.user, byPerson: byPerson({ client, isMission, profile, sessionId: session.id }) }) }));
     tiers.afterCall(session.id, profile, name, result, stepDisabled, args);   // tiers: what was called or read about stays loaded
     for (const image of shown) say({ type: 'image', image, step });
+    for (const mention of made) say({ type: 'mention', mention, step });
     say({ type: 'tool_result', name, result, step, ...failures.typed(result) });
 
     memory.append(session.id, {
       role: 'tool', tool_call_id: tc.id || name, name, content: result, ...failures.typed(result),
-      ...(shown.length ? { images: shown } : {}),
+      ...(shown.length ? { images: shown } : {}), ...(made.length ? { mentions: made } : {}),
     });
 
     // A settings proposal is the one tool result the user has to act on, so it

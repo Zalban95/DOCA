@@ -155,6 +155,10 @@ function list({ all = false, offset = 0, limit = 40 } = {}, viewer = null) {
 // self-test 2026-10-08: it was made as a "Work chat"). Both lead what they start; only a work chat has a job.
 const leads = kind => kind === 'work' || kind === 'chat';
 
+/** Why conversation `id` may not make `what` (work | team | dispatch) — null when it may; where it goes (org-depth.js). */
+const mayCreate = (id, what) => require('./org-depth').refusal(session(id), what);
+const under = id => require('./org-depth').under(session(id));
+
 function canManage(actor, target) {
   const s = session(actor);
   return actor === target || s.kind === 'orchestrator' ||
@@ -167,10 +171,10 @@ function canManage(actor, target) {
  * plan out in the same chat, as a Projects tab in Plan mode does. `planning` is the older note-only planning work chat
  * the Orchestrator may still ask for (work_chats create {planning}), whose plan was meant for another chat.
  */
-function create({ title, planning = false, kind = 'work', mode = null, fields = null } = {}) {   // fields: where it works (projectId: fork.js)
+function create({ title, planning = false, kind = 'work', mode = null, fields = null, parentId = null } = {}) {   // fields: where it works (projectId: fork.js); parentId + fields.level: org-depth.under
   const chat = kind === 'chat' && !planning;
   const s = memory.createSession(short(title, 100) || (chat ? 'New conversation' : planning || mode === 'plan' ? 'Planning work' : 'Work chat'), {
-    activate: false, kind: chat ? 'chat' : 'work', parentId: memory.mainSession().id, fields,
+    activate: false, kind: chat ? 'chat' : 'work', parentId: parentId || memory.mainSession().id, fields,
   });
   memory.updateSession(s.id, { planning: !!planning, titleLocked: !!title });
   if (mode && mode !== 'agent') require('./modes').set(s.id, mode);
@@ -318,7 +322,8 @@ function block(id, pending = []) {
     s.parentId ? `Reports to ${s.parentId}. Use work_chats report for decisions, blockers and results.` : '',
     s.planning ? 'This is a planning work chat. Develop a plan and propose it; execution belongs in a separate work chat.' : '',
     s.kind === 'chat' ? 'This is a conversation a person started (level 2): answer the person who writes here; nothing wakes you between turns. Delegate narrow errands with agent_dispatch when specialists are enabled.' : '',
-    s.kind === 'work' ? 'You lead this work chat (level 2). Own its detailed work and plan. Delegate narrow errands with agent_dispatch when specialists are enabled. You cannot create another leader layer. '
+    s.kind === 'work' ? (require('./org-depth').level(s) === 3 ? 'You lead this work chat at level 3: a project\'s chat made it, and you report to that chat. Own its detailed work and plan; you make no work chats, teams or specialists — say in a report what is needed. '
+      : `You lead this work chat (level 2). Own its detailed work and plan. Delegate narrow errands with agent_dispatch when specialists are enabled. ${s.projectId ? 'As a project\'s chat you may also create work chats (work_chats create) and teams (team create) for this project; what you make is level 3, reports to you, and makes nothing below itself. ' : 'You cannot create another leader layer. '}`)
       // The job contract only where there is a job: a chat opened by a person has none, and nothing re-prompts it
       // (supervisor.js) — telling it otherwise left it unsure whether to answer or report (its own feedback, 2026-10-07).
       + (s.job ? 'Your job ends only when you say so: work_chats report with outcome done, failed, blocked (you cannot go on without a decision from above) or question (one only the owner can answer). Until then the panel keeps you going: a turn that ends short of a final report is followed by another, and when your specialists finish you are woken with their results, so end your turn while they work instead of waiting. Progress reports are optional and wake nobody.'
@@ -355,9 +360,11 @@ async function tool(args, ctx) {
     return { ...view(s), reportTotal: (s.reports || []).length, reports, messages };
   }
   if (args.action === 'create') {
-    if (actor.kind !== 'orchestrator') throw error('Only the Orchestrator creates work leaders.', 403);
-    const s = create({ ...args, kind: 'work' });   // what the Orchestrator creates is a work chat, whatever else it passed
+    const no = mayCreate(actor.id, 'work');   // the Orchestrator, or a project's chat (org-depth.js)
+    if (no) throw error(no, 403);
+    const s = create({ title: args.title, planning: args.planning, kind: 'work', ...under(actor.id) });   // a work chat, one level down; nothing else the call passed
     if (args.message) start(s.id, args.message, actor.id);
+    ctx.mention?.(require('./mentions').work(s.id));   // a chip in this transcript that opens it (mentions.js)
     return view(s);
   }
   if (args.action === 'report') {
@@ -387,4 +394,4 @@ async function tool(args, ctx) {
 }
 
 module.exports = { FINAL, leads, session, ancestors, report, notices, acknowledge, view, list, create, start, carryOut, setAside,
-  archive, plan, profileFor, block, tool, canManage };
+  archive, plan, profileFor, block, tool, canManage, mayCreate, under };

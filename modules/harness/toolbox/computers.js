@@ -5,6 +5,20 @@
  * (modules/computers) — for missions to work in. Held by the Orchestrator and work chats; a specialist
  * never makes one (agents/registry NEVER), it is given one (agent_dispatch computer:).
  */
+/** A test licence for the install inside a computer (computers/licence.js); a refusal is said, never thrown at the turn.
+ *  The seats are the owner's licence, so a turn acting for someone without host does not spend them. */
+async function licence(id, { fingerprint, path, release }, ctx) {
+  const l = require('../../computers/licence');
+  if (ctx.user?.id && !require('../../auth/rights').can(ctx.user.role, 'host')) return 'Error: the licence for test computers is an admin\'s: ask one to give this computer a seat.';
+  try {
+    if (release === true) {
+      const r = await l.release(require('../../computers').need(id).id, 'given back by an agent');
+      return !r ? `${id} held no seat of the licence for test computers.` : r.freed ? `The seat ${id} held is free again.` : `Not freed yet: ${r.why}. The hub tries again before the next seat is given.`;
+    }
+    return await l.give(id, { fingerprint, path });
+  } catch (e) { return `Error: ${e.message}`; }
+}
+
 module.exports = [
   {
     name: 'computer',
@@ -24,32 +38,41 @@ module.exports = [
         + 'from it as an attachment (path), to show or send on. A server you run inside it on port 8080, listening on 0.0.0.0, is a '
         + 'page the person can open: canvas preview with computer: <id>. A person watches or takes over from the Computers tab; while '
         + 'they drive, your mouse, keys and browser clicks wait. To test a sign-up or a sign-in, create it with test: true: there you '
-        + 'type the test account\'s password you chose and click sign-in without confirm; paying is still asked, and no saved login goes in.';
+        + 'type the test account\'s password you chose and click sign-in without confirm; paying is still asked, and no saved login goes in. '
+        + 'relay (id, on) — or create with relay: true — lets programs inside use this hub\'s models through the model relay (OPENAI_BASE_URL '
+        + 'and OPENAI_API_KEY, or ~/work/relay.env), never a provider key. '
+        + `A ${require('../../branding').name('product')} you installed inside one gets a test licence`
+        + ' with licence (id; its data folder as path when not ~/doca/.doca): the hub '
+        + 'takes a seat of the owner\'s licence for test computers and puts the file in place — restart that install after; release: true gives the seat back.';
     },
     parameters: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['list', 'create', 'start', 'stop', 'remove', 'put', 'get'] },
+        action: { type: 'string', enum: ['list', 'create', 'start', 'stop', 'remove', 'put', 'get', 'relay', 'licence'] },
         attachment: { type: 'string', description: 'put: the attachment\'s name.' },
         source: { type: 'boolean', description: 'put: true copies this DOCA\'s own code (tracked files only) instead of an attachment.' },
-        path: { type: 'string', description: 'put: where in its work folder (default: the attachment\'s name); get: the file, relative to the work folder or absolute.' },
-        id: { type: 'string', description: 'start / stop / remove: the computer.' },
+        path: { type: 'string', description: 'put: where in its work folder (default: the attachment\'s name); get: the file, relative to the work folder or absolute; licence: the inner install\'s data folder (default /home/agent/doca/.doca).' },
+        id: { type: 'string', description: 'start / stop / remove / relay / licence: the computer.' },
+        relay: { type: 'boolean', description: 'create: true lets programs inside use the hub\'s models through the model relay.' },
+        on: { type: 'boolean', description: 'relay: true switches the relay on for the computer, false off.' },
+        fingerprint: { type: 'string', description: 'licence: the inner install\'s fingerprint (its Settings → System → Licence); omitted, the hub reads it in the computer.' },
+        release: { type: 'boolean', description: 'licence: true gives the computer\'s seat back without removing it.' },
         name: { type: 'string', description: 'create: a short name, e.g. "test-install".' },
         purpose: { type: 'string', description: 'create: what it is for, in a line.' },
         test: { type: 'boolean', description: 'create: true when it is for testing a site or an app as a person would — a test computer: sign-ins without asking, with a test account you make. Only when made; never for one holding anyone\'s real accounts.' },
       },
       required: ['action'],
     },
-    run: async ({ action, id, name, purpose, test, attachment, path, source }, ctx = {}) => {
+    run: async ({ action, id, name, purpose, test, attachment, path, source, relay, on, fingerprint, release }, ctx = {}) => {
       const computers = require('../../computers');
-      const line = c => `- ${c.id} "${c.name}" ${c.state || ''}${c.pinned ? ' pinned' : ''}${c.test ? ' — test computer: sign-ins without asking' : ''}${c.purpose ? ` — ${c.purpose}` : ''}; tools ${c.tools}`;
+      const line = c => `- ${c.id} "${c.name}" ${c.state || ''}${c.pinned ? ' pinned' : ''}${c.test ? ' — test computer: sign-ins without asking' : ''}${c.relay?.on ? ' — model relay on' : ''}${c.purpose ? ` — ${c.purpose}` : ''}; tools ${c.tools}`;
       const whose = require('../../computers/whose');
       if (action === 'list') {   // only the ones this person's agents may act on (computers/whose.js)
         const l = (await computers.list()).filter(c => !whose.refuse(ctx.user, c.id));
         return l.length ? l.map(line).join('\n') : 'No computers. create makes one.';
       }
       if (action === 'create') {
-        const c = await computers.create({ name, purpose, test: test === true, by: ctx.sessionId || null, auto: true });
+        const c = await computers.create({ name, purpose, test: test === true, relay: relay === true, by: ctx.sessionId || null, auto: true });
         const send = require('../../agents/registry').enabled() ? `; or send a specialist with agent_dispatch { agent: "tester", computer: "${c.id}", task: … }` : '';
         return `Computer ${c.id} "${c.name}" is up. Its tools (mcp__computer-${c.id}__*) are yours from your next step${send}.\n${line(c)}`;
       }
@@ -61,8 +84,10 @@ module.exports = [
       if (action === 'remove') { await computers.remove(id); return `Removed ${id} and its files.`; }
       if (action === 'put' && source === true) { const r = await computers.putSource(id); return `This DOCA's code (${r.version}) copied into ${id} at ${r.path} (${r.bytes} bytes): tar -xzf it, then run its scripts/install.sh --from the folder it makes.`; }
       if (action === 'put') { const r = await computers.put(id, attachment, path); return `Copied into ${id} at ${r.path} (${r.bytes} bytes).`; }
+      if (action === 'relay') { const rc = require('../../relay/computer'); return rc.said(await rc.set(id, on !== false)); }
       if (action === 'get') { const a = await computers.fetchFile(id, path); return `Kept as an attachment: ${a.path} (${a.bytes} bytes) — show it with show_media or read it.`; }
-      return 'Error: action is list, create, start, stop, remove, put or get.';
+      if (action === 'licence') return licence(id, { fingerprint, path, release }, ctx);
+      return 'Error: action is list, create, start, stop, remove, put, get, relay or licence.';
     },
   },
   {

@@ -224,5 +224,5 @@ test('the Orchestrator can give a task to a work chat; its job decides the task'
   const done = await until(() => (board(t.id).state === 'done' ? board(t.id) : null), 8000, 'the work chat\'s task');
   assert.equal(done.tasks[0].percent, 100);
   const chat = require('../modules/harness/organization').create({ title: 'Not the Orchestrator', kind: 'chat' }).id;
-  await assert.rejects(teams().create({ title: 'x', tasks: [{ agent: 'work', task: 'x' }] }, { by: chat }), /only the Orchestrator gives a task to a work chat/);
+  await assert.rejects(teams().create({ title: 'x', tasks: [{ agent: 'work', task: 'x' }] }, { by: chat }), /only the Orchestrator and a project's chats give a task to a work chat/);
 });

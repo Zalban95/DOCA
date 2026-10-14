@@ -81,6 +81,9 @@ module.exports = [
   { id: 'computers', licence: 'machines', name: 'Computers for agents', page: 'computers', tools: ['computer'], settings: ['computers.maxRunning'], since: '2.153.0',
     use: 'A Linux desktop in a container for risky work, a real browser or a demo; a person watches or takes over.',
     routes: ['/computers/:id/vnc/*', '/ws/computer/*', '/api/computers*'], words: 'container desktop vnc sandbox take over browser test computer sign-in sign-up password stray containers' },
+  { id: 'model-relay', licence: 'machines', name: 'Model relay', page: 'apikeys', tools: ['computer'], settings: ['relay.enabled', 'relay.computers', 'relay.models'], since: '3.79.0',
+    use: 'Programs inside an agents\' computer use the hub\'s models by an OpenAI-compatible address and a token of its own; the provider\'s key stays on the hub.',
+    routes: ['/api/computers/relay', '/api/computers/:id/relay'], words: 'relay openai base url api key models inside computer container sdk proxy forward llama.cpp local model token' },
   { id: 'sealed-secrets', licence: 'devices', tables: ['sealed_secrets', 'sealed_uses'], name: 'Secrets used on a device, never read', page: 'connectors', tools: ['secret_use'], since: '2.286.0',
     use: 'Type or paste a password or key into a device (a computer with doca-client, the browser extension) for a set number of uses, always asked, never seen by the agent.',
     routes: ['/api/connectors/sealed*'], words: 'password clipboard paste type secret device sealed' },
@@ -173,4 +176,7 @@ module.exports = [
   { id: 'licence', licence: 'core', name: 'The licence', page: 'settings/system', settings: ['licence.server', 'licence.account', 'licence.graceDays'], since: '3.0.0',
     use: 'Which features this hive may run, until when, and checking in with the licence server or uploading a licence file to renew it.',
     routes: ['/api/licence*'], words: 'license licence key keygen edition entitlement expiry renew offline activate fingerprint read-only grace' },
+  { id: 'computer-licences', licence: 'machines', name: 'Licences for test installs in agents\' computers', page: 'settings/system', tools: ['computer'], since: '3.79.0',
+    use: 'A hive installed in an agents\' computer gets a seat of the licence for test computers; removing the computer frees it — to try a new way before settling on it.',
+    routes: ['/api/licence/computers*'], words: 'test licence demo licence seats computer install doca inside sandbox trial pool' },
 ];

@@ -7,7 +7,7 @@
  * in one sentence of at most 150 characters. The schema still carries the whole description.
  */
 const LEADS = {
-  work_chats: 'Start, brief, read and stop level-2 work chats — use it to hand a job with several steps to a work chat and stay free.',
+  work_chats: 'Start, brief, read and stop work chats (a project\'s chat makes them for its project too) — use it to hand on a job with several steps and stay free.',
   work_plan: 'Read, draft or propose a durable plan — use it when a job needs the person\'s approval before work starts.',
   team: 'Run specialists as a team: tasks that wait on each other, each with a contract — use it when a job needs several specialists.',
   team_note: 'Post a short finding to your team\'s board — use it when a teammate needs a path, a decision or a pitfall you found.',

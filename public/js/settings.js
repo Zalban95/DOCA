@@ -52,7 +52,7 @@ function _subtabSystemInit() {
   checkpointsRender();   // settings checkpoints (settings/checkpoints.js)
   logKeepCard();         // what is kept of what happened, and its bounds (settings/log-keep.js)
   featuresRender();      // every feature, and the kept alternatives' use (settings/features.js)
-  licenceCard();         // the licence: what this hive runs, renewing it (settings/licence.js) — drawn first in System
+  licenceCard().catch(() => {}).then(() => licencePoolCard());   // the licence (settings/licence.js) — drawn first in System — then the one for test computers
 }
 
 async function _subtabVoiceInit() {

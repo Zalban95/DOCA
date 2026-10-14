@@ -20,7 +20,7 @@ const bad = (m, status = 400) => Object.assign(new Error(m), { status });
 const MAX_TASKS = 12, NOTE_MAX = 400, NOTES_KEEP = 60, NOTES_PER_TRY = 8;
 
 /** Check what the leader asked for, and shape it into tasks. Throws a sentence that says what to fix. */
-function shape({ title, goal, tasks, context } = {}, { orchestrator = false } = {}) {
+function shape({ title, goal, tasks, context } = {}, { workChats = false } = {}) {   // workChats: its leader may make work chats (harness/org-depth.js)
   if (!String(title || '').trim()) throw bad('A team needs a title.');
   if (!Array.isArray(tasks) || !tasks.length) throw bad('A team needs at least one task.');
   tasks = require('./outside').expand(tasks);   // count: several alike (an outside harness's "5 on Opus")
@@ -31,11 +31,11 @@ function shape({ title, goal, tasks, context } = {}, { orchestrator = false } = 
     if (!/^[A-Za-z0-9_-]{1,20}$/.test(id)) throw bad(`Task ids are letters, digits, _ and - ("${id}").`);
     const agent = String(t?.agent || '').trim();
     let extra = {};
-    if (agent === 'work') { if (!orchestrator) throw bad(`Task ${id}: only the Orchestrator gives a task to a work chat; give it to a specialist.`); }
+    if (agent === 'work') { if (!workChats) throw bad(`Task ${id}: only the Orchestrator and a project's chats give a task to a work chat; give it to a specialist.`); }
     else if (require('./outside').isOutside(agent)) extra = require('./outside').check(id, t);   // an outside harness (outside.js)
     else {
       const def = registry.get(agent);
-      if (!def || def.broken) throw bad(`Task ${id}: no specialist called "${agent}". Available: ${registry.list().filter(a => !a.broken).map(a => a.id).join(', ') || 'none'}${orchestrator ? ', or "work" for a work chat' : ''}.`);
+      if (!def || def.broken) throw bad(`Task ${id}: no specialist called "${agent}". Available: ${registry.list().filter(a => !a.broken).map(a => a.id).join(', ') || 'none'}${workChats ? ', or "work" for a work chat' : ''}.`);
     }
     const text = String(t?.task || '').trim();
     if (!text) throw bad(`Task ${id} needs its errand in "task", written for somebody who was not in this conversation.`);
@@ -60,9 +60,9 @@ function shape({ title, goal, tasks, context } = {}, { orchestrator = false } = 
 /** Make a team led by conversation `by`, and start every task with nothing before it. */
 async function create(args, { by, keepGoing = false, maxRounds = null, asked = false, person = null } = {}) {   // asked: the person named an outside harness (outside.js)
   const org = require('../harness/organization');
-  const lead = org.session(by);
-  if (lead.kind === 'specialist') throw bad('A specialist cannot make a team. Report to your work leader.', 403);
-  const shaped = shape(args, { orchestrator: lead.kind === 'orchestrator' });
+  const no = org.mayCreate(by, 'team');   // the depth rule (harness/org-depth.js): level 3 makes no team
+  if (no) throw bad(no, 403);
+  const shaped = shape(args, { workChats: !org.mayCreate(by, 'work') });
   // The project it works on (place.js): named, else the one its leading conversation works in.
   const project = require('./place').resolve(args.project, by);
   require('./outside').gate(shaped.tasks, { asked, person, project });

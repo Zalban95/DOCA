@@ -74,6 +74,23 @@ With `doca-licensing` (its README is the step-by-step):
 5. **Revoke**: `npm run revoke -- <licence>` (or `suspend`). An online hive learns it at its next check-in and turns
    licensed features read-only; an offline hive's file runs until it expires — keep offline files short-lived.
 
+## Licences for test computers
+
+A DOCA an agent installs inside one of its computers — to test a release, or a new way of working before settling on
+it — needs a licence of its own: it is another hive. The owner (or a customer, with seats of their own licence) keeps a
+**licence for test computers** in Settings → System → Licence: a key with N seats and its server's address, kept in
+`keys/licence-pool.json`. When an agent asks (`computer {action: licence, id}`), the hub reads the inner hive's
+fingerprint in the computer, activates that machine with the pool's key, checks out a plain machine file, verifies it
+against `VENDOR_KEYS`, and copies it into the inner install's `keys/licence.lic`. The computer never calls the licence
+server. At most N seats are held; removing or archiving a computer deactivates its machine so the seat is free again
+(`modules/license/pool.js`, `modules/computers/licence.js`).
+
+The trade-off: Keygen includes the licence — its key among its attributes — in every machine file it checks out, and an
+encrypted file is opened with that same key. So a test computer's licence file carries the pool's key, readable by
+whatever works in that computer. That is why the pool is a licence of its own, made for test computers, never the
+hive's licence: its key can activate no more than its N seats. A licence the hub signs itself for its computers would
+keep the key out, but it means a second trust anchor in `keys.js` — a change that asks the admin first (S11).
+
 ## Existing installs, and the owner's hive
 
 An install set up before licensing is given every feature for **30 days** from the first start of a release with

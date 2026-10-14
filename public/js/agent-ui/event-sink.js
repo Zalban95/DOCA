@@ -15,7 +15,7 @@
  *   stream: { feed(t), feedThinking?(t), finish(), resetText?(), startWaiting?() },
  *   fold(kind, body, name, opts?): { setActive(on) } | null,   // a tool call or result row
  *   note(kind, text, cls?): HTMLElement,                         // waiting / failover / warning / error rows
- *   removeNote?(el), image(img), approval(evt), error(text),
+ *   removeNote?(el), image(img), mention?(m), approval(evt), error(text),
  *   context?(usage), onText?(text), onSession?(id), onProposal?(evt), userAdded?(evt),
  * }} ui
  */
@@ -49,6 +49,7 @@ function agentEventSink(ui) {
       case 'usage': spend = evt; clearWait(); ui.context?.(evt); break;
       case 'approval': ui.approval(evt); break;
       case 'image': ui.image(evt.image); break;
+      case 'mention': ui.mention?.(evt.mention); break;   // what the turn made — a work chat, a team, a mission — as a chip (mention.js)
       case 'form_fill': if (typeof formHelpFill === 'function') formHelpFill(evt); break;   // a draft in a form on screen
       case 'error': settleCall(); ui.stream.finish(); ui.error(evt.text); break;
       case 'stderr': ui.stream.finish(); ui.error(evt.text); break;

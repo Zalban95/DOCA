@@ -86,6 +86,7 @@ async function pjChatActivate(id) {
       else if (m.role === 'user' || (m.role === 'assistant' && m.content)) _pjChatRow(m.role, m.content, t.box);
       for (const tc of m.tool_calls || []) _pjChatRow('tool', tc.function?.name || tc.name || 'tool', t.box);
       for (const img of m.images || []) t.box.appendChild(agentImageEl(img));
+      for (const x of m.mentions || []) agentMentionAppend(t.box, x);
     }
     if (!t.box.children.length) t.box.innerHTML = `<div class="placeholder">${view?.sub
       ? 'A sub-agent working for another tab. Writing here speaks to it directly; its parent hears about it.'
@@ -155,13 +156,14 @@ function _pjTurnUi(t) {
     fold: (kind, _body, name) => { if (kind === 'tool-call') _pjChatRow('tool', name, box); return null; },
     note: (_kind, text) => _pjChatRow('warning', text, box),
     image: img => { box.appendChild(agentImageEl(img)); scroll(); },
+    mention: x => agentMentionAppend(box, x, scroll),
     approval: evt => agentApprovalEvent(evt, box, { note: text => _pjChatRow('warning', text, box), scroll }),
     error: msg => _pjChatRow('error', msg, box),
     userAdded: evt => { _pjChatRow('user', evt.text, box); if (PJC.active === t.id) PJC.fold?.refresh(); },
     context: evt => { t.usage = evt; _pjMeter(t); },
   });
   return {
-    onEvent: e => { sink.onEvent(e); if (['work_plan', 'agent_dispatch', 'work_chats'].includes(e.name) && e.type === 'tool_result') pjTabsSync(); },
+    onEvent: e => { sink.onEvent(e); if (['work_plan', 'agent_dispatch', 'work_chats', 'team'].includes(e.name) && e.type === 'tool_result') pjTabsSync(); },
     onError: sink.onError,
     finish: async () => {
       sink.finish();
