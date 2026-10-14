@@ -34,7 +34,8 @@ function refusal(s, what) {
     : what === 'team' ? 'A specialist cannot make a team (level 3 makes nothing below itself). Report to your work leader.'
     : 'A specialist cannot delegate further (level 3 makes nothing below itself). Report to its work leader.';
   if (n === 3) return `This conversation is level 3 — it was made by a project's chat — and level 3 makes no ${WHAT[what]} of its own. `
-    + 'Say what is needed in a work_chats report; the chat that made it creates it.';
+    + 'Ask your leader: work_chats report with outcome question, naming what you need (which specialist and the errand, say). '
+    + 'It is woken by your report, decides, and sends you the results.';
   if (what === 'work' && !s.projectId) return 'Only the Orchestrator and a project\'s chats create work chats; this conversation (level 2) '
     + 'is not a project\'s chat — give the errand to a specialist (agent_dispatch) or a team, or ask the Orchestrator in a report.';
   return null;

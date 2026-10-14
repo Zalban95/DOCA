@@ -77,31 +77,75 @@ test('turns that do nothing, or too many turns, end as "stalled" — told to the
   assert.match(woken.at(-1).message, /taken 2 turns on its own \(autoTurnsPerJob\)/);
 });
 
-test('a final report ends the job and wakes the Orchestrator once, and its reply reaches the devices', async () => {
+test('a final report that needs a decision ends the job and wakes the Orchestrator once, and its reply reaches the devices', async () => {
   fresh();
   const phone = H.mkDevice('Phone', 'phone');
   const id = job('Laya MCP server');
-  await org.tool({ action: 'report', outcome: 'done', message: 'MCP server up on :8765, handshake verified.' }, { sessionId: id });
-  assert.equal(jobOf(id).state, 'done');
+  await org.tool({ action: 'report', outcome: 'question', message: 'MCP server up on :8765 — keep it on port 8765 or move it?' }, { sessionId: id });
+  assert.equal(jobOf(id).state, 'question');
   assert.equal(supervisor.decide(id, { steps: 3 }), 'woken');
   await settle(); await settle();
   assert.equal(woken.length, 1, 'the work chat itself is not continued');
   assert.equal(woken[0].sessionId, ceo());
-  assert.match(woken[0].message, /Laya MCP server .* — done: MCP server up on :8765/);
+  assert.match(woken[0].message, /Laya MCP server .* — question: MCP server up on :8765/);
 
   const toDevice = bus.drain(phone.device.id, 0).events.filter(e => e.type === 'agent.turn' && e.payload.by === 'panel');
   assert.equal(toDevice.length, 1, 'the owner hears it on their devices, not only in the chat');
-  assert.equal(toDevice[0].payload.state, 'done');
+  assert.equal(toDevice[0].payload.state, 'done');   // the Orchestrator's automatic turn ended
 
   woken = [];
   assert.equal(supervisor.deliver(ceo()), 'nothing due', 'woken once per report');
 });
 
-test('a job that reports "done" twice is one line to the Orchestrator, the latest', async () => {
+test('"done" needs no decision: told in fixed words and written in the Orchestrator\'s conversation, no model woken', async () => {
+  fresh();
+  const id = job('Thumbnails');
+  await org.tool({ action: 'report', outcome: 'done', message: 'All 40 thumbnails made, in /work/thumbs.' }, { sessionId: id });
+  assert.equal(supervisor.decide(id, { steps: 3 }), 'told');
+  await settle();
+  assert.equal(woken.length, 0, 'no model asked');
+  const row = memory.messages(ceo()).at(-1);
+  assert.equal(row.role, 'assistant');
+  assert.match(row.content, /Thumbnails\*\* is done: All 40 thumbnails made/);
+  assert.equal(supervisor.deliver(ceo()), 'nothing due', 'told once');
+  // Done beside a failure: the done one is told, only the failure wakes it.
+  const a = job('Fine'), b = job('Broken');
+  await org.tool({ action: 'report', outcome: 'done', message: 'ok' }, { sessionId: a });
+  await org.tool({ action: 'report', outcome: 'failed', message: 'the build broke' }, { sessionId: b });
+  assert.equal(supervisor.deliver(ceo()), 'woken');
+  await settle();
+  assert.doesNotMatch(woken[0].message, /Fine/);
+  assert.match(woken[0].message, /Broken .* — failed: the build broke/);
+});
+
+test('a project\'s chat leads its helpers: their reports and its specialists wake it, never the Orchestrator', async () => {
+  fresh();
+  const lead = org.create({ title: 'Site project chat', fields: { projectId: 'p_site' } }).id;
+  const helper = org.create({ title: 'Helper', parentId: lead, fields: { level: 3 } }).id;
+  memory.updateSession(helper, { job: { state: 'working', since: new Date().toISOString(), autoTurns: 0, idleTurns: 0 } });
+  assert.match(org.mayCreate(helper, 'dispatch'), /Ask your leader: work_chats report with outcome question/);
+  await org.tool({ action: 'report', outcome: 'question', message: 'I need the tester to try the sign-up form.' }, { sessionId: helper });
+  assert.equal(supervisor.decide(helper, { steps: 2 }), 'woken');
+  await settle();
+  assert.deepEqual(woken.map(w => w.sessionId), [lead], 'the leader, not the Orchestrator');
+  assert.match(woken[0].message, /^\[panel\] Helpers you started reported back/);
+  assert.match(woken[0].message, /Helper .* — question: I need the tester/);
+  assert.equal(supervisor.deliver(ceo()), 'nothing due', 'a grandchild does not reach the Orchestrator');
+
+  woken = [];
+  const spec = memory.createSession('Tester', { activate: false, kind: 'specialist', parentId: lead });
+  store.writeJson('agents/missions', { missions: [{ id: 'msn_t', agentId: 'tester', label: 'Tester', by: lead, state: 'done', sessionId: spec.id }] });
+  assert.equal(supervisor.missionEnded(org.session(spec.id)), 'woken');
+  await settle();
+  assert.deepEqual(woken.map(w => [w.sessionId, w.message]), [[lead, require('../modules/harness/leaders').LEAD_RESULTS]]);
+  store.writeJson('agents/missions', { missions: [] });
+});
+
+test('a job that reports twice is one line to the Orchestrator, the latest', async () => {
   fresh();
   const id = job('Twice');
-  await org.tool({ action: 'report', outcome: 'done', message: 'first' }, { sessionId: id });
-  await org.tool({ action: 'report', outcome: 'done', message: 'second, with timings' }, { sessionId: id });
+  await org.tool({ action: 'report', outcome: 'blocked', message: 'first' }, { sessionId: id });
+  await org.tool({ action: 'report', outcome: 'blocked', message: 'second, with timings' }, { sessionId: id });
   supervisor.deliver(ceo());
   await settle();
   const msg = woken.at(-1).message;
