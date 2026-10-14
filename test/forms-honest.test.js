@@ -44,3 +44,12 @@ test('MCP: "+ Add server" opens the form, says so, twice', { skip: B.skip }, asy
   }
   assert.deepEqual(B.errors, []);
 });
+
+test('Users: "+ Add person" with no email says what it needs', { skip: B.skip }, async () => {
+  await B.open('#settings/users');
+  assert.ok(await B.until("!!document.getElementById('users-new-email')"), 'the add row is drawn');
+  assert.ok(await B.clickOn('button[onclick="usersAdd()"]'));
+  assert.ok(await B.until("/Type their email/.test(document.getElementById('users-new-status')?.textContent || '')"), await text('#users-new-status'));
+  assert.equal(await B.evaluate('document.activeElement?.id'), 'users-new-email');
+  assert.deepEqual(B.errors, []);
+});
