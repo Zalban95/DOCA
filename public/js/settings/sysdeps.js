@@ -29,6 +29,16 @@ async function sysdepsLoad() {
 
 function sysdepsRefresh() { sysdepsLoad(); }
 
+/** Every "Settings → System → System tools" link: the section, with its card brought into view — the Models page's
+    link only changed the section and left the card a screen and a half below (newcomer run 2026-10-14, a12). Taken
+    again once the cards above it have drawn, since they move it down. */
+function sysdepsShow() {
+  settingsSubNav('system');
+  const bring = () => document.getElementById('sysdeps-list')?.closest('.card')?.scrollIntoView({ block: 'start' });
+  bring();
+  setTimeout(bring, 400);
+}
+
 function _sysdepsRender(tools) {
   const list = document.getElementById('sysdeps-list');
   if (!list) return;
