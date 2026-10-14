@@ -66,7 +66,8 @@ test("on a phone: Settings' pill row fades the edge it has more past", { skip: B
   assert.ok(start.more, 'the pills are wider than the phone');
   await B.sleep(300);
   assert.equal(await B.evaluate("document.getElementById('settings-subnav').dataset.scrollMore"), 'right');
-  await B.evaluate("(() => { const n = document.getElementById('settings-subnav'); n.scrollLeft = n.scrollWidth; })()");
+  // Jump, not glide: a smooth scroll still under way when the mark is read leaves it at "both" (seen under a full run's load).
+  await B.evaluate("(() => { const n = document.getElementById('settings-subnav'); n.style.scrollBehavior = 'auto'; n.scrollLeft = n.scrollWidth; n.dispatchEvent(new Event('scroll')); })()");
   await B.sleep(300);
   assert.equal(await B.evaluate("document.getElementById('settings-subnav').dataset.scrollMore"), 'left');
   assert.match(await B.evaluate("getComputedStyle(document.getElementById('settings-subnav')).maskImage || getComputedStyle(document.getElementById('settings-subnav')).webkitMaskImage"), /gradient/);

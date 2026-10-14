@@ -19,7 +19,15 @@ function _pjTeamsShown() {
 
 async function pjTeamsLoad() {
   const id = PJ.project?.project.id;
-  if (!id || (typeof licenceFeatureOn === 'function' && !licenceFeatureOn('teams'))) { PJTM.teams = []; return pjTeamsRender(); }
+  // Not in this hive's licence: the fold is left out, not drawn as "none" with an invitation to ask for a team.
+  if (typeof licenceReady === 'function') await licenceReady();
+  if (typeof licenceFeatureOn === 'function' && !licenceFeatureOn('project-teams')) {
+    PJTM.teams = [];
+    const box = document.getElementById('pj-teams');
+    if (box) box.innerHTML = '';
+    return;
+  }
+  if (!id) { PJTM.teams = []; return pjTeamsRender(); }
   if (PJTM.project !== id) { PJTM.project = id; PJTM.teams = []; }
   try { PJTM.teams = (await apiFetch(`/api/harness/missions/teams?project=${encodeURIComponent(id)}`)).teams || []; } catch { PJTM.teams = []; }
   if (PJTM.project !== id) return;   // another project opened meanwhile

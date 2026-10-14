@@ -58,9 +58,16 @@ function find(q, { limit = 8 } = {}) {
   }).filter(x => x.score > 0.5).sort((a, b) => b.score - a.score).slice(0, limit).map(x => x.f);
 }
 
-/** One feature in a few lines, for the agent. */
+/** One feature in a few lines, for the agent. One this hive's licence leaves out says so in place of its state, and names
+ *  none of its pages (they are not here): a core-only run's agent read "Teams — on by default", told the person only
+ *  "no specialists are enabled here" and never why (2026-10-14). */
 function describe(f, pages = require('./pages')) {
   const off = hidden().has(f.id);
+  const lic = require('../license');
+  if (!lic.featureOn(f)) {
+    const code = require('../license/codes').CODES[f.licence];
+    return `• ${f.name} (${f.id}) — ${notLicensed(f)}. ${f.use}${code ? `\n  licence: ${code.label} (${f.licence})` : ''}`;
+  }
   const state = f.state === 'experiment' ? `an experiment — on only with developer mode and experiments.${f.flag}`
     : f.state === 'alternative' ? `an alternative kept beside ${get(f.beside)?.name || f.beside}${off ? '; hidden from the default by the admin, still works' : ''}`
     : STATES[f.state];
@@ -70,9 +77,11 @@ function describe(f, pages = require('./pages')) {
     f.settings.length && `settings: ${f.settings.join(', ')}`,
     f.flag && f.state !== 'experiment' && `experiment: ${f.flag}`,
   ].filter(Boolean).join('; ');
-  const unlicensed = require('../license').featureOn(f) ? '' : ` Not in this hive's licence (code ${f.licence}): it is not here until a licence adds it (Settings → System → Licence).`;
-  return `• ${f.name} (${f.id}) — ${state}. ${f.use}${unlicensed}${where ? `\n  ${where}` : ''}`;
+  return `• ${f.name} (${f.id}) — ${state}. ${f.use}${where ? `\n  ${where}` : ''}`;
 }
+
+/** The words for a feature this hive's licence leaves out: not here, and how it comes (the owner's licence). */
+const notLicensed = () => 'not in this hive\'s licence: it is not here — say so plainly; the owner adds it with a licence in Settings → System → Licence';
 
 function setHidden(id, on) {
   const f = get(id);
@@ -89,7 +98,7 @@ function setHidden(id, on) {
 function mount(app) {
   app.get('/api/features', (_req, res) => {
     const off = hidden(), pages = require('./pages');
-    res.json({ states: STATES, features: all().map(f => ({ ...f, hidden: off.has(f.id), licensed: require('../license').featureOn(f), pageLabels: f.page.map(pages.label) })),
+    res.json({ states: STATES, features: all().map(f => ({ ...f, hidden: off.has(f.id), licensed: require('../license').featureOn(f), pageLabels: require('../license').featureOn(f) ? f.page.map(pages.label) : [] })),
       review: require('./review').review() });
   });
   app.post('/api/features/:id/hidden', (req, res) => {
@@ -97,4 +106,4 @@ function mount(app) {
   });
 }
 
-module.exports = { all, get, find, describe, hidden, setHidden, mount, STATES };
+module.exports = { all, get, find, describe, notLicensed, hidden, setHidden, mount, STATES };

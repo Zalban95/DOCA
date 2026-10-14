@@ -12,6 +12,9 @@ async function pjTeamBranchesLoad() {
   const id = PJ.project?.project.id;
   const box = document.getElementById('pj-team-branches');
   if (!id || !box) return;
+  // Not in this hive's licence: no fold at all (its route is not there either).
+  if (typeof licenceReady === 'function') await licenceReady();
+  if (typeof licenceFeatureOn === 'function' && !licenceFeatureOn('harness-teams')) { PJTB.rows = []; box.innerHTML = ''; return; }
   if (PJTB.project !== id) { PJTB.project = id; PJTB.rows = []; }
   try { const r = await apiFetch(`/api/projects/${encodeURIComponent(id)}/team-branches`); PJTB.rows = r.branches || []; PJTB.current = r.current || ''; }
   catch { PJTB.rows = []; }
