@@ -53,3 +53,17 @@ test('Users: "+ Add person" with no email says what it needs', { skip: B.skip },
   assert.equal(await B.evaluate('document.activeElement?.id'), 'users-new-email');
   assert.deepEqual(B.errors, []);
 });
+
+// The run saw nothing: "✓ Saved" was there, and gone three seconds later, before it looked.
+test('Models: the Ollama card\'s Save says what it saved, and the line stays', { skip: B.skip }, async () => {
+  await B.open('#models');
+  assert.ok(await B.until("!!document.getElementById('models-ollama-url')?.value"), 'the card is filled');
+  // The folder as Ollama has it, so Save only saves (a different folder asks first and moves the models).
+  await B.until('_ollamaHome !== null', 5000);
+  await B.evaluate("document.getElementById('models-ollama-path').value = _ollamaHome?.current || ''");
+  assert.ok(await B.clickOn('button[onclick="modelsSaveSettings()"]'));
+  assert.ok(await B.until("/Saved — Ollama is asked at http/.test(document.getElementById('models-settings-status').textContent)"), await text('#models-settings-status'));
+  await B.sleep(4000);
+  assert.match(await text('#models-settings-status'), /Saved/, 'still there after four seconds');
+  assert.deepEqual(B.errors, []);
+});
