@@ -2,7 +2,7 @@
    Settings → Spending (modules/spending; CONSTITUTION S12, docs/design/spending.md): what was spent — tokens from
    the usage ledger, money from the owner's price list — per person, per day and per month; budgets, which are
    opt-in (yours, an admin's for you, your level's: the tightest wins; the owner only their own); the spending
-   permissions (settings/spending-permits.js). Every change asks for the password; the panel asks (lib/api.js).
+   permissions (settings/spending-permits.js). Every change shows a notice of why it matters first; the panel shows it (lib/api.js).
    ═══════════════════════════════════════════════════════ */
 
 let _spendingMonth = null;

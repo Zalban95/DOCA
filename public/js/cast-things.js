@@ -67,7 +67,7 @@ function castDoorHtml(door) {
     <p class="desc">TVs and speakers fetch what they are sent over plain HTTP from this hub's address on their network. While a cast runs, a door opens to that device alone, for that page or sound — it travels unencrypted on your Wi-Fi.</p></div>`;
 }
 
-/** The owner's switch, with the password (auth/guarded.js asks through the panel's fetch); every copy is drawn again. */
+/** The owner's switch, after its notice (auth/guarded.js, shown by the panel's fetch); every copy is drawn again. */
 async function castDoorSet(box) {
   const on = box.checked;
   box.disabled = true;

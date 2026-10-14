@@ -1,7 +1,7 @@
 /* Boxes for declared settings, drawn by name (modules/settings-leaves.js): a page lists the dotted paths it owns and
    gets a box for each with its hint and default, folded under Advanced, and one Save. Deep test B found the agents'
    computers' limits, the MCP timeouts, the adaptive step ceiling, the feature index's thresholds and the update source
-   with no control anywhere. Saved through POST /api/prefs, so a guarded switch still asks for the password. */
+   with no control anywhere. Saved through POST /api/prefs, so a guarded switch still asks first (a notice, or the password). */
 
 /** The box's place: `#id`, made after `#afterId` the first time (index.html is at its line ceiling). */
 function leafFieldsSlot(afterId, id) {
