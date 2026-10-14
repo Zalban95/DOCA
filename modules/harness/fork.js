@@ -59,7 +59,7 @@ function taskFor({ session, message, deep, spoken, done, attachments }) {
  */
 function make({ session, message, person = null, deep = false, spoken = false, attachments = [], done = null, title = null }) {
   const organization = require('./organization');
-  const name = title || titleOf(message);
+  const name = title || (/^\[panel\]/.test(String(message || '')) ? require('./turn/handoff').jobTitle(message) : titleOf(message));
   let projectId = null;
   try { projectId = require('../projects/store').forSession(session.id)?.id || null; } catch { /* no project */ }
   const chat = organization.create({ title: name, fields: projectId ? { projectId } : null });

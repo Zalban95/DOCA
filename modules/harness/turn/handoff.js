@@ -47,6 +47,20 @@ const LOOK = new Set(['today', 'web_search']);
 const QUICK = new Set(['remind']);
 const free = () => require('../../experiments').on('alwaysFree');
 
+/**
+ * A turn the hub started to pass on what came back — a work chat's report, a service job's end (supervisor.deliver,
+ * api-services/jobs.js) — reads and reports, and never takes the work up (the owner's screenshot, 2026-10-14: such a
+ * turn did work and then handed itself to a work chat named after the hub's own wake text). Its work calls are
+ * answered, not run, and nothing moves anywhere: more work is the person's call, or the work chat's that owns it.
+ */
+const REPORT = /^\[panel\] (Work reported back|Service job)/;
+const isReport = message => REPORT.test(String(message || ''));
+const NOT_IN_REPORT = 'Not run: this turn only passes on what came back. If more is needed, say so to the person and ask, '
+  + 'or send it to the work chat that owns the job with work_chats send.';
+
+/** A work chat's title: the person's words, never the hub's own wake text. */
+const jobTitle = message => (/^\[panel\]/.test(String(message || '')) ? 'Work the Orchestrator carried on' : short(message, 80));
+
 /** One quick visible action (see QUICK): the call may run in the front turn, once. */
 function isQuick(tc) {
   const name = tc.function?.name || '';
@@ -64,7 +78,8 @@ function isQuick(tc) {
  * This turn's count of work, and whether it hands work on at all: a front turn (a call's) or the Orchestrator's —
  * with `orchestratorWorkSteps` above 0, or under alwaysFree whatever it says.
  */
-function counter({ p, profile, front, message, client, session }) {
+function counter({ p, profile, front, message, client, session, auto = false }) {
+  if (auto && isReport(message)) return { on: true, report: true };
   const free_ = free() && (profile?.level === 'orchestrator' || !!front);
   const on = !!front || free_ || (profile?.level === 'orchestrator' && Number(p.orchestratorWorkSteps) > 0);
   return { on, free: free_, quickLeft: 1, work: 0, spoken: !!front,
@@ -79,6 +94,14 @@ function step(c, { reply, session, message, from, say, step: n, person, attachme
   if (!c.on) return null;
   const work = reply.tool_calls.filter(isWork);
   if (!work.length) return null;
+  if (c.report) {
+    for (const tc of work) {
+      const name = tc.function?.name || '';
+      memory.append(session.id, { role: 'tool', tool_call_id: tc.id || name, name, content: NOT_IN_REPORT });
+      say({ type: 'tool_result', name, result: NOT_IN_REPORT, step: n });
+    }
+    return { run: reply.tool_calls.filter(tc => !isWork(tc)) };   // the rest (telling, asking, reading) runs as ever
+  }
   if (c.free) {
     if (work.every(isQuick) && c.quickLeft > 0) { c.quickLeft--; return null; }
   } else if (c.work < c.limit) { c.work++; return null; }
@@ -119,7 +142,7 @@ function doneSince(sessionId, from) {
 function handOff({ session, message, from, reply, say, step, person = null, spoken = false, attachments = [] }) {
   if (free()) return require('../fork').fromSafetyNet({ session, message, from, reply, say, step, person, spoken, attachments });
   const organization = require('../organization');
-  const chat = organization.create({ title: short(message, 80) || 'Handed-off job' });
+  const chat = organization.create({ title: jobTitle(message) || 'Handed-off job' });
   require('../session-access').claim(person, chat.id);   // the person's work, under their level — not the Orchestrator's owner's
   const mention = { ...require('../mentions').work(chat.id), state: 'running' };   // started below; the first row carries a chip that opens it (mentions.js)
   reply.tool_calls.forEach((tc, i) => {
@@ -141,4 +164,4 @@ function handOff({ session, message, from, reply, say, step, person = null, spok
     + 'and I will tell you when it reports.' + manual;
 }
 
-module.exports = { isWork, isQuick, handOff, doneSince, limitFor, counter, step, callLine, COORD, LOOK, QUICK, SMALL_STEPS, LARGE_STEPS };
+module.exports = { isWork, isQuick, isReport, jobTitle, handOff, doneSince, limitFor, counter, step, callLine, COORD, LOOK, QUICK, SMALL_STEPS, LARGE_STEPS };
