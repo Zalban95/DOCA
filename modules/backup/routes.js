@@ -48,6 +48,10 @@ async function handleList(_req, res) {
 function handleSettings(req, res) {
   try {
     const b = req.body || {};
+    // A password field sent empty saved nothing, and the panel said "Password saved" (newcomer run 2026-10-14).
+    if (typeof b.password === 'string' && !b.password.trim() && !b.forget && typeof b.encrypt !== 'boolean') {
+      return res.status(400).json({ error: 'Nothing saved: type a password first.', code: 'password_empty' });
+    }
     if (typeof b.encrypt === 'boolean') secret.setEncrypt(b.encrypt);
     if (b.forget) secret.forget();
     if (b.password) secret.save(b.password);

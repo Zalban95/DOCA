@@ -96,6 +96,21 @@ async function key(k) {
   await headless.sleep(120);
 }
 
+/** A real mouse click at a point of the page, as a person's would land: on whatever is drawn on top there. */
+async function click(x, y) {
+  for (const type of ['mousePressed', 'mouseReleased']) await page.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
+  await headless.sleep(120);
+}
+
+/** A real click at the centre of the first element matching `selector`, scrolled into view first; false when none is drawn. */
+async function clickOn(selector) {
+  const at = await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e || !e.getClientRects().length) return null;
+    e.scrollIntoView({ block: 'center' }); const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+  if (!at) return false;
+  await click(at.x, at.y);
+  return true;
+}
+
 /** The page at another size, as a phone (390) or a desk (1300) shows it; `mobile` for touch-sized media queries. */
 async function viewport(width, height = 900, mobile = width < 600) {
   await page.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile });
@@ -115,4 +130,4 @@ const pastFirstRun = () => {
   savePrefs({ ...loadPrefs(), setup: { ...(loadPrefs().setup || {}), mode: 'advanced' } });
 };
 
-module.exports = { start, stop, open, evaluate, until, key, shot, viewport, pastFirstRun, errors, sleep: headless.sleep, skip: !exe && 'no browser here' };
+module.exports = { start, stop, open, evaluate, until, key, click, clickOn, shot, viewport, pastFirstRun, errors, sleep: headless.sleep, skip: !exe && 'no browser here' };
