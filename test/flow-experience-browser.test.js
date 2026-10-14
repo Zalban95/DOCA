@@ -57,10 +57,12 @@ test('Flow: every page opens with no page error, and moves in', { skip: B.skip, 
     await B.sleep(t === 'settings' ? 900 : 300);
     assert.equal(await B.evaluate(`document.getElementById('tab-${t}').classList.contains('active')`), true, t);
   }
+  await B.media([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);   // a CI Mac reports reduce: movement is what is checked here
   await B.evaluate("nav('harness')"); await B.evaluate("nav('teams')");
   assert.equal(await B.evaluate(anim('#tab-teams')), 'flow-page-in', 'a page within its group lifts');
   await B.evaluate("nav('models')");
   assert.equal(await B.evaluate(anim('#tab-models')), 'flow-group-in', 'another group slides');
+  await B.media([]);
   assert.deepEqual(B.errors, []);
 });
 
@@ -82,10 +84,11 @@ test('Flow: a screen asking for reduced motion never moves, nor with Motion none
   await B.evaluate("nav('harness')"); await B.evaluate("nav('models')");
   assert.equal(await B.evaluate(anim('#tab-models')), 'none');
   assert.equal(await B.evaluate("document.querySelectorAll('.flow-leaving').length"), 0, 'the old page is gone at once');
-  await B.media([]);
+  await B.media([{ name: 'prefers-reduced-motion', value: 'no-preference' }]);
   await B.evaluate("experienceSave({ motion: 'none' })");
   await B.evaluate("nav('harness')");
   assert.equal(await B.evaluate(anim('#tab-harness')), 'none');
+  await B.media([]);
   await B.evaluate("experienceSave({ mode: 'standard' })");
   assert.equal(await B.evaluate('document.documentElement.dataset.experience ?? null'), null, 'one click back');
   assert.equal(await B.evaluate("!!document.getElementById('flow-rail')"), false);
