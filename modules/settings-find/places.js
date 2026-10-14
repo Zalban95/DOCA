@@ -83,6 +83,8 @@ module.exports = [
     control: 'Settings → Users', words: 'users people accounts account level levels member admin grant grants invite password', host: true },
   { id: 'computers', label: 'Agents\' computers: how many, when they stop', paths: ['computers'], page: 'computers', field: '[data-leaf="computers.maxRunning"]',
     control: 'the Advanced fold on Computers', words: 'computers computer container desktop idle stop remove', host: true },
+  { id: 'model-relay', label: 'Model relay: the hub\'s models for agents\' computers', paths: ['relay'], page: 'apikeys', card: 'Model relay', how: 'person',
+    control: 'the Model relay card in Field → API keys (each computer\'s own switch is on its card)', words: 'relay model relay openai base url api key computer container sdk proxy forward', host: true },
   { id: 'mcp-timeouts', label: 'MCP timeouts', paths: ['mcpSettings'], page: 'mcp', field: '[data-leaf="mcpSettings.callTimeoutMs"]',
     control: 'the Advanced fold on MCP', words: 'mcp timeout tool server wait', host: true },
 ];
