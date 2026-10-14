@@ -33,8 +33,10 @@
   -webkit-mask-composite: source-in; mask-image: linear-gradient(to bottom, transparent 0, #000 70px), linear-gradient(to right, transparent 0, #000 90px); mask-composite: intersect;
   font-family: var(--font-mono); font-size: 11.5px; line-height: 1.5; scrollbar-width: none; pointer-events: auto; }
 .ws-console::-webkit-scrollbar { display: none; }
-.ws-act { white-space: pre-wrap; word-break: break-word; margin-bottom: 3px; }
-.ws-who { color: #888; margin-right: 8px; font-size: 10px; }
+.ws-act { display: flex; gap: 8px; white-space: pre-wrap; word-break: break-word; margin-bottom: 3px; }
+.ws-who { flex: 0 0 8.5em; color: #888; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding-top: 1px; }
+.ws-who.again { visibility: hidden; }   /* the same speaker as the line above: its column stays, its name once */
+.ws-body { flex: 1; min-width: 0; }
 .ws-act.thinking { color: #aaa; font-style: italic; }
 .ws-act.command { color: #fff; font-weight: 600; }
 .ws-tier { font-size: 9px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; border: 1px solid #555; border-radius: 3px; padding: 0 4px; margin-right: 6px; color: #aaa; }
