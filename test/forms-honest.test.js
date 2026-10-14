@@ -30,3 +30,17 @@ test('Backups: saving an empty password says nothing was saved', { skip: B.skip 
   assert.doesNotMatch(await text('#backup-status'), /Password saved/);
   assert.deepEqual(B.errors, []);
 });
+
+// Not reproduced here: the run's "+ Add server" did nothing on its 3.75.0 install, and on the core only it opens the form at
+// every width. What a press does is now also said and lit, so a second press, with the form already open below, is seen.
+test('MCP: "+ Add server" opens the form, says so, twice', { skip: B.skip }, async () => {
+  await B.open('#mcp');
+  assert.ok(await B.until("document.querySelector('#mcp-list .placeholder:not(.pulse)') !== null"), 'the list is drawn');
+  for (let i = 0; i < 2; i++) {
+    await B.evaluate("document.getElementById('mcp-form-status').textContent = ''");
+    assert.ok(await B.clickOn('#tab-mcp .page-head-acts .btn-primary'));
+    assert.ok(await B.until("document.getElementById('mcp-form').getClientRects().length > 0 && document.activeElement?.id === 'mcp-name'"), `press ${i + 1}: the form is open, its name focused`);
+    assert.match(await text('#mcp-form-status'), /A new server/);
+  }
+  assert.deepEqual(B.errors, []);
+});
