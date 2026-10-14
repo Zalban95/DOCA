@@ -20,7 +20,7 @@ async function licenceCard() {
   card.innerHTML = `<div class="card-title">Licence</div>
     <p class="desc">Which features this hive runs. Without a licence it runs the core; a licence adds the rest. A change takes effect when the hub next starts.</p>
     ${row('State', state)}
-    ${row('Mode', `${L.mode === 'production' ? 'production — every safety applies to everyone; DOCA itself is not changed from inside' : 'development — DOCA may be debugged and changed from within'} <span style="opacity:.6">(${escHtml(L.modeWhy || '')})</span>`)}
+    ${row('Mode', `${L.mode === 'production' ? 'production — every safeguard applies to everyone, admins included, and nobody (no agent either) changes the panel\'s own code from inside it; your projects and workspace work as ever' : 'development — the panel\'s own code may be debugged and changed from within'} <span style="opacity:.6">(${escHtml(L.modeWhy || '')})</span>`)}
     ${L.problem ? row('Problem', escHtml(L.problem.why)) : ''}
     ${L.customer ? row('For', escHtml(L.customer)) : ''}
     ${L.edition ? row('Edition', escHtml(L.edition)) : ''}
