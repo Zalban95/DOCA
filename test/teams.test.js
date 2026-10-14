@@ -226,3 +226,14 @@ test('the Orchestrator can give a task to a work chat; its job decides the task'
   const chat = require('../modules/harness/organization').create({ title: 'Not the Orchestrator', kind: 'chat' }).id;
   await assert.rejects(teams().create({ title: 'x', tasks: [{ agent: 'work', task: 'x' }] }, { by: chat }), /only the Orchestrator and a project's chats give a task to a work chat/);
 });
+
+test('a task may name the one before it by its title, or a word only one title holds; else the ids are listed', () => {
+  const { shape } = require('../modules/teams');
+  const t = shape({ title: 'Page', tasks: [
+    { id: 't1', agent: 'coder', title: "Improve the page's text", task: 'Rewrite the copy.' },
+    { id: 't2', agent: 'coder', title: 'Check the HTML', task: 'Validate it.', after: ['text'] }] });
+  assert.deepEqual(t.tasks[1].after, ['t1']);
+  assert.throws(() => shape({ title: 'Page', tasks: [
+    { id: 't1', agent: 'coder', title: 'One', task: 'a' }, { id: 't2', agent: 'coder', title: 'Two', task: 'b', after: ['nothing'] }] }),
+  /Name one by its id: t1 "One", t2 "Two"/);
+});
