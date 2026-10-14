@@ -26,7 +26,7 @@ test('sysdepsShow opens Settings → System and brings the System tools card int
 });
 
 test('every button that names System tools goes there by sysdepsShow', () => {
-  assert.match(read('js/models.js'), /onclick="sysdepsShow\(\)">Settings → System → System tools</);
+  assert.match(read('js/models.js'), /onclick="sysdepsShow\(\)">Open System tools</);
   assert.match(read('js/lib/pty-banner.js'), /onclick="sysdepsShow\(\)">Open Settings → System → System tools</);
 });
 

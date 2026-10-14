@@ -18,6 +18,6 @@ async function modelsRolesCard() {
       <td style="padding:3px 8px;${r.current ? '' : 'color:var(--muted)'}">${escHtml(r.current || 'nothing set')}</td>
       <td style="padding:3px 0;color:var(--muted);font-size:11px">${escHtml(r.where)}</td></tr>`).join('');
   card.innerHTML = `<div class="card-title">Models in use</div>
-    <p style="font-size:11px;color:var(--muted);margin-bottom:6px">Which model does each job, and where to change it.</p>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:6px">Which model does each job, and where to change it. A model is shown as provider / model and answers wherever that provider is — Field → API keys lists the providers; Ollama, below, is only one of them.</p>
     <div style="overflow-x:auto"><table style="width:100%;font-size:12px;border-collapse:collapse">${rows}</table></div>`;
 }
