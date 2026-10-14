@@ -16,6 +16,7 @@ function mount(app) {
     res.end();
   });
   app.post('/api/computers', h(req => computers.create({ ...(req.body || {}), by: req.auth?.user?.id || null })));
+  require('../relay/routes').mount(app);   // the model relay: the owner's card and each computer's switch (relay/)
   // Containers no record names (strays.js): listed for a person to archive or delete, and what the tidy-up does with them.
   const strays = require('./strays');
   app.get('/api/computers/strays', h(async () => ({ strays: await strays.list(), policy: require('../settings-schema').value('computers.strays'), choices: strays.POLICIES })));

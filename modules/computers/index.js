@@ -98,6 +98,7 @@ async function connect(c) {
   }
   const started = await registry.start(serverId(c));
   if (c.test) await require('./test-mode').apply(c);   // a restarted control server starts ordinary: told again
+  if (c.relayOn) require('../relay/computer').writeFile(c).catch(() => {});   // where the model relay is, as of now (relay/)
   return started;
 }
 
@@ -105,17 +106,20 @@ async function connect(c) {
  * `auto`: an agent made it, so it is tidied away after it stops (lifecycle.js) unless a person pins it. `test`: made for
  * testing a site or an app — sign-ins without asking (test-mode.js); never on a computer a specialist keeps.
  */
-async function create({ name, purpose = '', missionId = null, by = null, auto = false, agentType = null, keptFor = null, test = false } = {}) {
+async function create({ name, purpose = '', missionId = null, by = null, auto = false, agentType = null, keptFor = null, test = false, relay = false } = {}) {
   if (!(await imageReady())) throw bad('The computer image is not built yet: build it once (Computers → Build the image).', 409);
   await require('./lifecycle').roomForOne();
   const c = { id: crypto.randomBytes(4).toString('hex'), name: String(name || 'computer').replace(/[^\w .-]/g, '').slice(0, 40) || 'computer',
     purpose: String(purpose).slice(0, 300), missionId, by, auto: !!auto, pinned: false, ...(agentType ? { agentType } : test === true ? { test: true } : {}), ...(keptFor ? { keptFor } : {}), token: crypto.randomBytes(24).toString('hex'),
     fillKey: crypto.randomBytes(24).toString('hex'),   // the hub's alone: it unlocks browser_fill_secret (logins.js)
     vncPassword: crypto.randomBytes(6).toString('hex'), mcpPort: await freePort(), vncPort: await freePort(), servePort: await freePort(), createdAt: new Date().toISOString() };
+  // The hub's models through the model relay (relay/): its token and address in the environment, fixed when it is made.
+  const relayEnv = relay === true ? require('../relay/computer').dockerEnv(c) : [];
+  if (relayEnv.length) Object.assign(c, { relayOn: true, relayEnv: true });
   try {
     await docker(['run', '-d', '--name', container(c), '--shm-size=1g', '--label', 'doca.computer=1', '--label', `doca.install=${require('./strays').installId()}`,
       '-p', `127.0.0.1:${c.mcpPort}:8765`, '-p', `127.0.0.1:${c.vncPort}:6080`, '-p', `127.0.0.1:${c.servePort}:${SERVE}`,
-      '-e', `TOKEN=${c.token}`, '-e', `VNC_PASSWORD=${c.vncPassword}`, '-e', `FILL_KEY=${c.fillKey}`,
+      '-e', `TOKEN=${c.token}`, '-e', `VNC_PASSWORD=${c.vncPassword}`, '-e', `FILL_KEY=${c.fillKey}`, ...relayEnv,
       // The machine DOCA runs on, by one name on Linux, macOS and Windows hosts alike: a computer reaches a model server or
       // a service the hub's machine serves on all its addresses (an install tested inside one points its model there).
       '--add-host', 'host.docker.internal:host-gateway',
@@ -127,6 +131,7 @@ async function create({ name, purpose = '', missionId = null, by = null, auto = 
     throw e;
   }
   save([...rows(), c]);
+  if (c.relayOn) require('../relay').sync().catch(() => {});
   await connect(c);
   return view(c);
 }
@@ -182,7 +187,7 @@ function view(c, state = null) {
     serve: c.servePort ? { inside: SERVE, port: c.servePort } : null,   // a computer made before H10.18 has none: make a new one
     // Through the hub, so any signed-in host's browser can watch — the phone on the tailnet included (vnc.js).
     vnc: { url: require('./vnc').watchUrl(c), drive: require('./vnc').driveUrl(c), local: `http://127.0.0.1:${c.vncPort}/vnc.html`, password: c.vncPassword },
-    driving: require('./vnc').driving(c.id) };
+    driving: require('./vnc').driving(c.id), relay: require('../relay/computer').status(c) };   // never its relay token
 }
 
 /** A mission is lent this computer (agents/missions dispatch): remembered, so the view can say who works in it. */
