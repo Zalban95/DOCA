@@ -69,7 +69,9 @@ function missingScopes(d) {
   const preset = presetFor(d);
   if (!preset || d.revokedAt) return [];
   const { hasScope } = require('./api-v1/scopes');
-  return PRESETS[preset].filter(sc => !hasScope(d.scopes, sc));
+  // The model relay's scope comes with the device's own relay switch (relay/device.js), which may ask the password:
+  // offering it here would be a second way round that question.
+  return PRESETS[preset].filter(sc => !sc.startsWith('relay:') && !hasScope(d.scopes, sc));
 }
 
 function handleList(req, res) {

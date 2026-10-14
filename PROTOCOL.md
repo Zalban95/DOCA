@@ -208,6 +208,7 @@ A scope is `family:target`; `target` may be `*` or a dotted prefix ending in
 | `devices` | `admin` | list/create/pair/patch/revoke devices |
 | `harness` | `chat`, `sessions`, `memory` | talk to the agent: post a message and receive turns / manage conversations / read what it remembers (§23) |
 | `agent` | — | the `/agent/*` API (raise prompts and alerts, request sensors, deliver outcomes and artifacts, read devices/vars/sensors/media) |
+| `relay` | `use` | the hub's models through the model relay, `/relay/*`, while the device's own relay switch is on (§23.5) |
 
 `harness:*` and `agent` are opposite directions, not degrees of the same thing:
 `harness:*` is a client asking the agent for something, `agent` is the agent
@@ -225,7 +226,7 @@ Presets (returned by `GET /devices` and used by the CLI):
 | `admin` | `*` |
 | `agent` | `agent read:* artifacts:* media:* sensors:* vars:* profile:*` |
 | `watch` | `read:* interact profile:self vars:self sensors:report media:upload artifacts:self harness:chat` |
-| `phone` | `read:* command:* interact profile:* vars:self sensors:report media:upload artifacts:self devices:admin mcp:self harness:chat harness:sessions` |
+| `phone` | `read:* command:* interact profile:* vars:self sensors:report media:upload artifacts:self devices:admin mcp:self harness:chat harness:sessions relay:use` |
 | `viewer` | `read:*` |
 
 A device may `PATCH /devices/me` its own `name` and `caps`, never its scopes.
@@ -1674,6 +1675,27 @@ else may join (404 as if absent), an admin included.
   the sharer stopping it). While a person controls a machine, the agent's own `input_*` on it wait.
 - Native call screens and calling from a watch are later work in each app (TODO).
 
+### 23.5 The hub's models, through the model relay (hub 3.80; the owner's yes of 2026-10-14)
+
+`/api/v1/relay` is an OpenAI base URL: `GET /relay/models` and `POST /relay/chat/completions` (streamed with
+`stream: true`, as server-sent events), answered with the device's **own** bearer token over the hub's HTTPS. The hub
+sends the body on as written through its own provider with the model it picked — `model` is one of `/relay/models`, or
+empty for the first — and the provider's key never reaches the device or the answer. Refusals are OpenAI's error shape
+(`{error: {message, type, code}}`): 401 `invalid_token`, 403 `scope_required` or `relay_off`, 404 `model_not_found`,
+429 `budget_reached`. JSON bodies up to 2 MB.
+
+It answers only while three things hold: the owner's relay is on and open to paired devices (Field → API keys → Model
+relay), the token holds `relay:use`, and **the device's own relay switch** is on. The switch is the owner's, on the same
+card: turning it on grants `relay:use` to a token paired before the scope existed. It asks for the owner's password
+unless the device is an **extension of a phone** (paired through one — its `pairedBy` is a phone of the same person, as
+a watch's is) or **output-only** (a `watch`, `glasses` or `car` whose caps declare neither `input.text` nor
+`input.voice`); anything that can send text of its own asks. Switching off never asks.
+
+What each device does is tagged: every request is a usage row with `agent: relay:device:<id>` for the device's
+person (never a word of the request), listed in Chronicle under "Model relay requests"; switching on and off is an
+activity line with the same tag. The provider's own usage numbers in each answer are held against what the request
+and its answer can explain; more than that is an activity warning line, tagged likewise.
+
 ## 24. Server operations
 
 - Data directory: `DOCA_DATA_DIR` (default `<repo>/.doca`, gitignored): `devices.json`, `prompts.json`, `profiles/`, `outbox/`, `media/`, `artifacts/`. Atomic writes; safe to back up.
@@ -1730,6 +1752,8 @@ else may join (404 as if absent), an admin included.
 | GET / DELETE | `/harness/sessions/:id` | `harness:sessions` | transcript / delete |
 | POST | `/harness/sessions/:id/activate` | `harness:sessions` | make it the active one |
 | GET | `/harness/memory` | `harness:memory` | durable memory, rules, waiting proposals |
+| GET | `/relay/models` | `relay:use` | the models the model relay offers this device's person, OpenAI's shape (§23.5) |
+| POST | `/relay/chat/completions` | `relay:use` | ask one through the hub's provider, streamed or not (§23.5) |
 | GET, WS | `/realtime` | `harness:chat` | a live call with a realtime speech model (§23.1) |
 | GET | `/recipes`, POST `/recipes/:id/run` | `harness:chat` | the person's recipes (§23.2) |
 | GET | `/schedules` | `harness:sessions` | the person's schedules (§23.2) |

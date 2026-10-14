@@ -25,6 +25,10 @@ const FAMILIES = {
   harness:   'Converse with the built-in harness: chat, sessions (own conversations), memory (read)',
   // Another hub sending what it made: it lands in the library and waits for a host's dry run (packs/library.js).
   packs:     'Send packs to this hub\'s library (send); nothing is applied until a host brings one in. Browse and fetch what it publishes (read)',
+  // The hub's models through the model relay (relay/; the owner's yes of 2026-10-14): OpenAI-compatible, the provider's
+  // key staying on the hub. The scope is what a device may be given; its own relay switch (Field → API keys → Model
+  // relay) is whether it is answered now.
+  relay:     'Use the hub\'s models through the model relay (use), while its own relay switch is on',
 };
 
 /** Scopes that are a bare family with no target (e.g. `interact`). */
@@ -83,7 +87,8 @@ const PRESETS = {
   // with, and it is self-limiting by construction: it reaches only the one
   // definition a human already pointed at this device. A device hosting nothing
   // can do nothing with it.
-  phone:    ['read:*', 'command:*', 'interact', 'profile:*', 'vars:self', 'sensors:report', 'media:upload', 'artifacts:self', 'devices:admin', 'mcp:self', 'harness:chat', 'harness:sessions'],
+  // `relay:use` is answered only once the device's own relay switch is on — a device taking text asks the password then.
+  phone:    ['read:*', 'command:*', 'interact', 'profile:*', 'vars:self', 'sensors:report', 'media:upload', 'artifacts:self', 'devices:admin', 'mcp:self', 'harness:chat', 'harness:sessions', 'relay:use'],
   viewer:   ['read:*'],
   // Another DOCA hub, to send this one packs (TODO H4.5) and nothing else.
   hub:      ['packs:send'],

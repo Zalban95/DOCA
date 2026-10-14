@@ -143,6 +143,8 @@ const PERSON = [
     gap: 16, why: 'set up on the watch it belongs to, rather than at the panel' },
   { id: 'device-files', does: 'browse and change a device\'s files', panel: ['POST /api/devices/:id/files/*'],
     only: 'the panel reaching into a device through the files family it lends; the device has its own files' },
+  { id: 'relay-use', does: 'use the hub\'s models through the model relay', panel: [], v1: ['GET /relay/models', 'POST /relay/chat/completions'],
+    note: 'switching a device\'s relay on is the owner\'s, at the panel (Field → API keys → Model relay; capability-map-host.js computers)' },
   { id: 'sealed-use', does: 'use a sealed secret on a device', panel: [], v1: ['GET /mcp/self/seal'], note: 'keeping one is the owner\'s, at the panel (capability-map-host.js)' },
   { id: 'sealed-own', does: 'keep or forget a secret of my own for my devices', panel: ['POST /api/connectors/sealed/mine', 'DELETE /api/connectors/sealed/mine/:name'],
     only: 'a secret is typed in only where the password is asked again (CONSTITUTION S4, S14) — the panel, or a device opening /d/<id>/; never sent to a device to keep' },

@@ -14,8 +14,9 @@
  * only while the relay is on for computers.
  *
  * Who: an agents' computer whose own switch is on (relay/computer.js), with the token the hub made for it, while the
- * owner's switch (prefs `relay.enabled`, Field → API keys → Model relay) is on and open to computers. Paired devices
- * would need an /api/v1 scope of their own, which is ask-first (S11): `relay.devices` is declared and drawn disabled.
+ * owner's switch (prefs `relay.enabled`, Field → API keys → Model relay) is on and open to computers; and a paired
+ * device holding `relay:use` whose own switch is on (relay/device.js), at /api/v1/relay over the panel's HTTPS, while
+ * the relay is open to devices (`relay.devices`; the scope approved by the owner 2026-10-14).
  * Which models: `relay.models`, else the harness's own model and its fallbacks — and of those only what the computer's
  * person is allotted (auth/allot.js), within their budget and the harness's daily ceiling (turn/ceiling.js), counted
  * in the usage ledger for them (serve.js).
@@ -25,6 +26,7 @@ const http = require('http');
 const value = k => require('../settings-schema').value(`relay.${k}`);
 const enabled = () => value('enabled') === true;
 const forComputers = () => value('computers') === true;
+const forDevices = () => value('devices') === true;
 
 /** The models it offers: { provider, model }, in order. */
 function offered() {
@@ -113,10 +115,10 @@ async function syncNow(at) {
 
 /** For the card: on, open to whom, where it listens or why not, and the models. Never a token. */
 function state() {
-  return { enabled: enabled(), computers: forComputers(), devices: false,
-    devicesNote: 'Paired devices need an /api/v1 scope of their own for this, which waits for the owner\'s yes (CONSTITUTION S11).',
+  return { enabled: enabled(), computers: forComputers(), devices: forDevices(), deviceList: require('./device').list(),
+    deviceUrl: '/api/v1/relay',
     listening: bound ? { address: bound.host, port: bound.port, url: computerUrl(bound.port) } : null, reason: bound ? null : why,
     models: value('models'), port: value('port'), address: value('address'), offered: offered() };
 }
 
-module.exports = { enabled, forComputers, offered, allowedFor, resolve, address, computerUrl, sync, close, state };
+module.exports = { enabled, forComputers, forDevices, offered, allowedFor, resolve, address, computerUrl, sync, close, state };

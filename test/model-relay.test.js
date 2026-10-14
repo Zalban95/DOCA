@@ -71,8 +71,6 @@ test('off by default; the owner switches it on for computers, and it listens apa
   assert.equal(r.status, 200);
   assert.equal(r.body.enabled, false, 'a new install has no relay');
   assert.equal(r.body.listening, null);
-  r = await H.api(null, 'POST', '/api/computers/relay', { devices: true });
-  assert.equal(r.status, 409, 'devices wait for a scope of their own (S11)');
   r = await H.api(null, 'POST', '/api/computers/relay', { address: '100.101.102.103' });
   assert.equal(r.status, 400, 'never the tailnet');
   r = await H.api(null, 'POST', '/api/computers/relay', { enabled: true });
@@ -133,7 +131,7 @@ test('a computer\'s token gets answers, streamed and not; the key never reaches 
   let rows = [];
   for (let i = 0; i < 40 && rows.length < 3; i++) { rows = await db.all("SELECT * FROM usage WHERE kind = 'relay' AND session_id = ?", [sessionId]); await new Promise(x => setTimeout(x, 25)); }
   assert.equal(rows.length, 3);
-  assert.ok(rows.every(x => x.person_id === m.user.id && x.agent === 'computer:aa11bb22' && x.source === 'provider'));
+  assert.ok(rows.every(x => x.person_id === m.user.id && x.agent === 'relay:computer:aa11bb22' && x.source === 'provider'));
 });
 
 test('a provider\'s answer carrying its key is scrubbed', async () => {
