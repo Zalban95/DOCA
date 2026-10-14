@@ -140,3 +140,14 @@ test('the prompt\'s own memory block stays keyword-only: no model is asked to bu
   assert.equal(typeof prompt, 'string');
   assert.deepEqual([calls.embeddings, calls.chat, calls.rerank], [0, 0, 0]);
 });
+
+test('the measurement compares off and on, on retrieval\'s own entries and questions', async () => {
+  quick('quick'); ranker('ranker'); rerankMode = 'garden-first';
+  const lines = [];
+  const log = console.log;
+  console.log = (...a) => lines.push(a.join(' '));   // the script prints its table; kept off the test runner's stdout
+  try { assert.equal(await require('../bin/experiments/retrieval-rerank').measure(), 0); } finally { console.log = log; }
+  const row = lines.find(l => /^\n?\| \d{4}-\d{2}-\d{2} \|/.test(l));
+  assert.ok(row, lines.join('\n'));
+  assert.match(row, /emb \/ concepts \| rewordings: emb \/ quick; rerank: emb \/ ranker \| \d+\/16 · \d+\/16 \| \d+\/16 · \d+\/16 \|/);
+});
