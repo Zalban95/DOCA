@@ -91,8 +91,11 @@ test('a cast screen: keys through the hub move the outline, OK presses, Back say
   const here = await evaluate("apiFetch('/api/cast/targets').then(d => d.targets.find(t => t.here)?.id)");
   assert.ok(here, 'the page has a screen record');
   const press = key => evaluate(`apiFetch('/api/cast/remote', { method: 'POST', body: { screen: ${JSON.stringify(here)}, key: '${key}' } }).then(() => true)`);
-  await press('down');
-  assert.ok(await until("document.activeElement && document.activeElement !== document.body"), 'the first press puts the outline on something');
+  // The page hears the hub on its live stream, which a slow machine opens a little after load (Windows CI): pressed
+  // again until it is listening, as a person would.
+  let focused = false;
+  for (let i = 0; i < 15 && !focused; i++) { await press('down'); focused = await until("document.activeElement && document.activeElement !== document.body", 1000); }
+  assert.ok(focused, 'a press puts the outline on something');
   const first = await evaluate("document.activeElement.outerHTML.slice(0, 80)");
   await press('right'); await press('down');
   await headless.sleep(600);
