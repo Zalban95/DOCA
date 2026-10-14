@@ -40,8 +40,12 @@ function saved() {
   const list = seen();
   return things().map(t => {
     const s = seenOf(t, list);
-    return { ...t, seenId: s?.id || null, lastSeen: s?.lastSeen || t.lastSeen || null, addresses: s?.addresses || t.addresses || [],
-      can: s?.can || t.can || [], how: s?.how || t.how || {}, web: s?.web || t.web || null, sources: s?.sources || t.sources || [], seenFrom: s?.seenFrom || [] };
+    // What was saved stays known: a later sighting adds to it and never empties it (2026-10-14: the saved TV's Cast
+    // address was overwritten by a sighting that said "cast" with no details, and the TV left the cast list).
+    const has = a => Array.isArray(a) && a.length;
+    return { ...t, seenId: s?.id || null, lastSeen: s?.lastSeen || t.lastSeen || null, addresses: has(s?.addresses) ? s.addresses : t.addresses || [],
+      can: [...new Set([...(t.can || []), ...(s?.can || [])])], how: { ...(t.how || {}), ...(s?.how || {}) }, web: s?.web || t.web || null,
+      sources: has(s?.sources) ? s.sources : t.sources || [], seenFrom: s?.seenFrom || [] };
   }).sort((a, b) => a.place.localeCompare(b.place) || a.room.localeCompare(b.room) || a.name.localeCompare(b.name));
 }
 

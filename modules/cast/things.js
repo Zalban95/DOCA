@@ -29,6 +29,9 @@ const dlnaOnly = t => !hasCast(t) && (t.can || []).includes('dlna-play') && !!t.
 const castable = t => hasCast(t) || dlnaOnly(t);
 const ipOf = t => t.how?.cast?.ip || t.how?.dlna?.ip || (() => { try { return new URL(t.how.dlna.control).hostname; } catch { return null; } })();
 
+/** The port that answers for it: Cast's, else its DLNA control's. */
+const portOf = t => (hasCast(t) ? Number(t.how.cast.port) || 8009 : (() => { try { const u = new URL(t.how.dlna.control); return Number(u.port) || 80; } catch { return null; } })());
+
 const SEEN_MS = 24 * 3600e3;
 
 /**
@@ -40,13 +43,16 @@ function pool() {
   const saved = store.saved();
   const savedSeen = new Set(saved.map(t => t.seenId).filter(Boolean));
   const seen = store.seen().filter(t => !savedSeen.has(t.id) && t.lastSeen && Date.now() - Date.parse(t.lastSeen) < SEEN_MS).map(t => ({ ...t, seenOnly: true }));
-  return [...saved, ...seen];
+  // A saved thing that says it casts but kept no Cast address still has its address: Cast's own port there.
+  const mended = t => ((t.can || []).includes('cast') && !t.how?.cast?.ip && t.addresses?.[0]
+    ? { ...t, how: { ...(t.how || {}), cast: { name: t.name, ip: t.addresses[0], port: 8009 } } } : t);
+  return [...saved, ...seen].map(mended);
 }
 
 function list(who) {
   return pool().filter(t => castable(t) && mayUse(who, t)).map(t => ({
     id: t.id, name: name(t), kind: t.kind || 'thing', place: t.place || null, room: t.room || null, model: t.model || null,
-    shows: t.kind !== 'speaker' && hasCast(t), speaks: true, address: ipOf(t), via: hasCast(t) ? 'cast' : 'dlna', lastSeen: t.lastSeen || null,
+    shows: t.kind !== 'speaker' && hasCast(t), speaks: true, address: ipOf(t), port: portOf(t), via: hasCast(t) ? 'cast' : 'dlna', lastSeen: t.lastSeen || null,
     ...(t.seenOnly ? { seenOnly: true, seenFrom: (t.seenFrom || [])[0]?.label || null } : {}) }))
     .sort((a, b) => Number(!!a.seenOnly) - Number(!!b.seenOnly) || String(a.place || '~').localeCompare(String(b.place || '~')) || String(a.room || '~').localeCompare(String(b.room || '~')) || a.name.localeCompare(b.name));
 }
