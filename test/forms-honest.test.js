@@ -130,3 +130,13 @@ test('Packs: a pack with no name is asked for one, offering what it holds', { sk
   await B.evaluate("document.querySelector('.app-confirm-backdrop.open button')?.click()");
   assert.deepEqual(B.errors, []);
 });
+
+test('API keys: a screen says what it shows, and how to open a page there, in two sentences', { skip: B.skip }, async () => {
+  await go('apikeys');
+  assert.ok(await B.until("!!document.querySelector('.dev-show')"), 'this browser is listed as a screen');
+  const line = await B.evaluate("document.querySelector('.dev-show').parentElement.innerText");
+  assert.match(line, /(On its screen now: .+\.|Not open now\.)/);
+  assert.match(line, /Open a page there:/);
+  assert.doesNotMatch(line, /show here/);
+  assert.deepEqual(B.errors, []);
+});
