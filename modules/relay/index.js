@@ -78,11 +78,18 @@ function close() {
   return s ? new Promise(r => s.close(() => r())) : Promise.resolve();
 }
 
+let chain = Promise.resolve();
 /**
  * Listen when the relay is on for computers, stop when not; again on a changed address or port. `at` pins both for
  * this process (the tests: loopback, any free port). → state()
  */
-async function sync(at = null) {
+function sync(at = null) {   // one at a time: a computer made and a switch flipped together must not both bind
+  const run = chain.then(() => syncNow(at));
+  chain = run.catch(() => {});
+  return run;
+}
+
+async function syncNow(at) {
   if (at) pinned = at;
   if (!enabled() || !forComputers()) { why = enabled() ? 'not open to agents\' computers' : 'off'; await close(); return state(); }
   const host = pinned?.address || await address();
