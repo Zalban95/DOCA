@@ -7,7 +7,8 @@
  * server listens on this hub's private address on the target's network (`cast.doorPort`, 4250) and serves a request only
  * when its peer is the address of a cast running now (and 60 s after), and the path is one that cast needs:
  *   the view link (`GET /api/cast/open/:code`), the page's static files, what that page reads (cast/views.js), the
- *   looking POSTs it allows, and `GET /api/cast/media/:token` (one-time media, cast/media.js).
+ *   looking POSTs it allows, and `GET /api/cast/media/:token` (one-time media, cast/media.js) — or, for a preview cast,
+ *   that one project page through canvas/proxy.js and its watch console (console-pages.js), and nothing of the panel.
  * Everything else is a bare 404. An allowed request goes to the same Express app in process, so the gate, the view
  * session's `view:<page>` cap and `network.limited` apply unchanged: the peer is a private address, never a machine
  * right. Off unless the owner switched it on (`cast.door`, never proposable); closed when no cast needs it.
@@ -38,6 +39,12 @@ function addressFor(target) {
   return null;
 }
 
+/** The preview token a cast running now gave this peer, or null. */
+function previewFor(req) {
+  const c = _casts.get(plain(req.socket.remoteAddress));
+  return c && (!c.until || c.until >= Date.now()) ? c.preview || null : null;
+}
+
 /** Whether this request may go through the door. */
 function allows(req) {
   const c = _casts.get(plain(req.socket.remoteAddress));
@@ -54,8 +61,17 @@ async function listen(address) {
   if (_server && _bound === address) return;
   await close();
   const server = http.createServer((req, res) => {
+    // A preview cast (cast/things.js showPreview): the TV is given that one app, through canvas/proxy.js — its own
+    // paths, none of the panel's, nothing of DOCA's in its headers — and a watch's console for it (console-pages.js).
+    const pv = previewFor(req);
+    if (pv && require('../canvas/proxy').forward(req, res, pv)) return;
     if (allows(req)) { req.castDoor = true; return _app(req, res); }   // media.js serves a sound only through here
     res.writeHead(404, { 'Content-Type': 'text/plain' }); res.end('Not here.');
+  });
+  server.on('upgrade', (req, socket, head) => {   // a dev server's hot reload, or the game's own socket
+    const pv = previewFor(req);
+    if (pv) return require('../canvas/proxy').upgrade(req, socket, head, pv);
+    socket.destroy();
   });
   await new Promise((resolve, reject) => { server.once('error', reject); server.listen(Number(process.env.DOCA_CAST_DOOR_PORT ?? value('doorPort')), address, resolve); });
   _server = server; _bound = address;
@@ -81,14 +97,15 @@ function needOn() {
     why: 'TVs and speakers fetch what they are sent over plain HTTP from this hub\'s address on their network: while a cast runs, a door opens to that device alone, for that page or sound. It travels unencrypted on your Wi-Fi.' });
 }
 
-async function open(target, { page = null, tokens = [] } = {}) {
+async function open(target, { page = null, tokens = [], preview = null } = {}) {
   needOn();
   if (!_app) throw bad('The cast door is not ready yet.', 503);
   const here = addressFor(target);
   if (!here) throw bad(`This hub has no address on ${plain(target)}'s network, so the device cannot reach it: a device of yours on that network that lends Cast (doca-client's cast family) casts there, once it has seen it in Nearby → Look from.`);
   await listen(here);
-  const c = _casts.get(plain(target)) || { page: null, tokens: new Set(), until: null };
-  c.page = page || c.page; c.until = null;
+  const c = _casts.get(plain(target)) || { page: null, tokens: new Set(), until: null, preview: null };
+  if (preview) { c.preview = preview; c.page = null; } else if (page) { c.page = page; c.preview = null; }
+  c.until = null;
   for (const t of tokens) c.tokens.add(t);
   _casts.set(plain(target), c);
   return `http://${here}:${_server.address().port}`;

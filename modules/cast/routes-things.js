@@ -25,7 +25,7 @@ function mount(app) {
     return { things: await require('./answers').withAnswers(things.list(req.auth, now)), here, door: { on: require('./door').on(), mayChange: isHost(req.auth) },
     tones: (() => { try { return require('./speech').tones({ id: req.auth?.user?.id }); } catch { return []; } })() };
   }));
-  app.post('/api/cast/things/:id/show', h(req => things.show(req.auth, req.params.id, String(req.body?.page || ''))));
+  app.post('/api/cast/things/:id/show', h(req => (req.body?.preview ? things.showPreview(req.auth, req.params.id, String(req.body.preview)) : things.show(req.auth, req.params.id, String(req.body?.page || '')))));
   app.post('/api/cast/things/:id/say', h(req => things.say(req.auth, req.params.id, req.body?.text, { story: req.body?.story === true })));
   app.post('/api/cast/things/:id/play', h(req => things.play(req.auth, req.params.id, String(req.body?.file || ''))));
   app.post('/api/cast/things/:id/stop', h(req => things.stop(req.auth, req.params.id)));
