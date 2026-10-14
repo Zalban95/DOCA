@@ -225,11 +225,19 @@ words.)*
   after the person's permission. Spending has its own settings page, which the agent may also manage with the
   person's permission; a permission the person asks to make permanent stays permanent; what a person may allow
   follows their level. Nothing is spent unasked. (2026-10-07)
-- **S14 Important and safety switches ask for the password.** Turning on or off anything that governs safety or
-  what agents may do — approval modes, developer mode, sharing, spending, reach, levels, the guards — asks for the
-  person's password again, however recently they signed in. (2026-10-07) One password covers the switches one
-  click flips, and the person may choose to keep it unlocked for a few minutes (1–30), held in memory only, shown as
-  "Unlocked until" with Lock now. (2026-10-13)
+- **S14 Important and safety switches say why first; a few ask for the password.** Signed in, a person is that
+  person. The password is asked again, however recently they signed in, only where it protects what a stolen or
+  borrowed session must not do: restarting the hub and switching its version; changing who may do what (accounts,
+  levels, rights, grants, reach, delegation, who may release unasked, a pack that can carry a level); turning the
+  approval mode to Unattended; turning a guard off; sending settings or backups that carry secrets elsewhere, or
+  writing them back; keeping or forgetting secrets for devices; the licence; opening a door from the Home page. Every
+  other switch that governs safety or what agents may do — the other approval modes, developer mode, sharing,
+  spending, the network, what is kept — shows a short notice of what it does and why it matters, with Continue,
+  Cancel and "Don't show this again", remembered for that person on the hub and shown again from Settings → General.
+  Each is audited either way; a device's request uses its token and meets neither; an agent never passes one.
+  (2026-10-07; the password narrowed to these, the owner's decision of 2026-10-14) One password covers the switches
+  one click flips, and the person may choose to keep it unlocked for a few minutes (1–30), held in memory only, shown
+  as "Unlocked until" with Lock now. (2026-10-13)
 - **S5 Admin and developer mode are internal.** Experiments live under developer mode, which is an admin's;
   admin is for the repository's owners, independent testers and private copies. A customer's install never meets
   the experiments. Licensing decides the rest (3.0): one build for every hive, a licence from the project's own
