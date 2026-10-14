@@ -58,7 +58,11 @@ test("on a phone: Settings' pill row fades the edge it has more past", { skip: B
   await B.viewport(390, 844);
   await B.evaluate("nav('settings'); settingsSubNav('general')");
   await B.sleep(500);
-  const start = await B.evaluate(`(() => { const n = document.getElementById('settings-subnav'); n.scrollLeft = 0; return { more: n.scrollWidth > n.clientWidth }; })()`);
+  // How many pills there are depends on the machine (a harness's group only where it is installed): on Windows CI they fit
+  // in 390 px. The fade is what is tested, so the row is made wider than the phone with a spacer if it is not already.
+  const start = await B.evaluate(`(() => { const n = document.getElementById('settings-subnav');
+    if (n.scrollWidth <= n.clientWidth) n.append(Object.assign(document.createElement('span'), { id: 'test-spacer', style: 'display:inline-block;min-width:600px' }));
+    n.scrollLeft = 0; return { more: n.scrollWidth > n.clientWidth }; })()`);
   assert.ok(start.more, 'the pills are wider than the phone');
   await B.sleep(300);
   assert.equal(await B.evaluate("document.getElementById('settings-subnav').dataset.scrollMore"), 'right');
@@ -66,6 +70,7 @@ test("on a phone: Settings' pill row fades the edge it has more past", { skip: B
   await B.sleep(300);
   assert.equal(await B.evaluate("document.getElementById('settings-subnav').dataset.scrollMore"), 'left');
   assert.match(await B.evaluate("getComputedStyle(document.getElementById('settings-subnav')).maskImage || getComputedStyle(document.getElementById('settings-subnav')).webkitMaskImage"), /gradient/);
+  await B.evaluate("document.getElementById('test-spacer')?.remove()");
   await B.viewport(1300, 900);
 });
 
