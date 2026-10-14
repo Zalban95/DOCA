@@ -3,8 +3,8 @@
 /**
  * Spending with permission (CONSTITUTION S12–S14; docs/design/spending.md; TODO P1.6): budgets are off until somebody
  * sets one and refuse a turn at the budget; the owner is bound only by their own; a spending permission is used once or
- * kept, and a person allows only what their level lets them; the agent proposes and never allows; every change asks
- * for the password, and declining does not.
+ * kept, and a person allows only what their level lets them; the agent proposes and never allows; every change shows
+ * a notice saying why it matters first (S14, 2026-10-14), and declining does not.
  */
 const test   = require('node:test');
 const assert = require('node:assert/strict');
@@ -18,7 +18,7 @@ const permissions = () => require('../modules/spending/permissions');
 const ceiling     = () => require('../modules/harness/turn/ceiling');
 const memory      = () => require('../modules/harness/memory');
 const person = (u, role) => ({ ...u.user, role, orgId: u.orgId });
-const without = { 'X-Doca-Password': '' };
+const without = { 'X-Doca-Password': '', 'X-Doca-Notice': '' };
 
 /** A conversation of `who` that spent `tokens`, today. */
 async function spend(who, tokens, { provider = 'stub', model = 'm' } = {}) {
@@ -76,7 +76,7 @@ test('the owner is bound only by a budget they set themselves', async () => {
   assert.equal(budgets().effective(owner), null);
 });
 
-test('money budgets count with the owner\'s prices, and the prices then ask for the password', async () => {
+test('money budgets count with the owner\'s prices, and the prices then show a notice first', async () => {
   const m = await H.signIn('member', 'sp-money@test.local');
   require('../modules/harness/prices').save({ currency: 'EUR', models: { 'paid/model': { input: 10, output: 10 } } });
   const sid = await spend(m, 1e6, { provider: 'paid', model: 'model' });   // 10 EUR
@@ -86,7 +86,7 @@ test('money budgets count with the owner\'s prices, and the prices then ask for 
   budgets().set(person(m, 'member'), { budget: { moneyPerMonth: 5 } });
   await assert.rejects(ceiling().check({}, new Date(), { person: person(m, 'member'), sessionId: sid }), e => /5\.00 EUR a month/.test(e.message));
   r = await H.api(null, 'POST', '/api/harness/usage/prices', { currency: 'EUR', models: {} }, without);
-  assert.equal(r.status, 401, 'with a money budget the prices decide whether a turn starts');
+  assert.equal(r.status, 428, 'with a money budget the prices decide whether a turn starts');
   r = await H.api(null, 'POST', '/api/harness/usage/prices', { currency: 'EUR', models: {} }, { Cookie: m.cookie, 'X-Doca-Password': m.password });
   assert.equal(r.status, 403, 'and they are a host\'s');
   budgets().set(person(m, 'member'), { budget: {} });
@@ -117,7 +117,7 @@ test('a permission: one-time is used up, permanent is kept within its month, bey
   await H.api(null, 'POST', '/api/spending/budget', { levelId: 'member', mayAllow: '' });
 });
 
-test('the agent proposes; its person accepts with the password, and declining needs none', async () => {
+test('the agent proposes; its person accepts after a notice, and declining needs none', async () => {
   const m = await H.signIn('member', 'sp-agent@test.local');
   const tools = require('../modules/harness/tools');
   assert.ok(require('../modules/agents/registry').NEVER.includes('spend_propose'), 'a mission never asks to spend');
@@ -128,8 +128,8 @@ test('the agent proposes; its person accepts with the password, and declining ne
 
   const as = { Cookie: m.cookie, 'X-Doca-Password': m.password };
   let r = await H.api(null, 'POST', `/api/spending/permissions/${id}/accept`, { permanent: true }, { Cookie: m.cookie, ...without });
-  assert.equal(r.status, 401, 'accepting asks for the password');
-  assert.equal(r.body.code, 'password_required');
+  assert.equal(r.status, 428, 'accepting shows the notice');
+  assert.equal(r.body.code, 'notice_required');
   r = await H.api(null, 'POST', `/api/spending/permissions/${id}/accept`, {}, as);
   assert.equal(r.status, 403, 'and stays within the level: a member allows nothing by default');
   r = await H.api(null, 'POST', `/api/spending/permissions/${id}/accept`, { permanent: true });
@@ -144,12 +144,12 @@ test('the agent proposes; its person accepts with the password, and declining ne
   assert.equal(r.status, 200, 'saying no is free');
   assert.equal(r.body.state, 'declined');
   r = await H.api(null, 'DELETE', `/api/spending/permissions/${id}`, undefined, { Cookie: m.cookie, ...without });
-  assert.equal(r.status, 401, 'revoking asks for the password too');
+  assert.equal(r.status, 428, 'revoking shows it too');
   r = await H.api(null, 'DELETE', `/api/spending/permissions/${id}`, undefined, as);
   assert.equal(r.status, 200);
 
   const { switchOf } = require('../modules/auth/guarded');
-  assert.match(switchOf({ method: 'POST', path: '/api/spending/budget', body: {} }), /spending/);
+  assert.match(switchOf({ method: 'POST', path: '/api/spending/budget', body: {} }).what, /spending/);
   assert.equal(switchOf({ method: 'GET', path: '/api/spending', body: {} }), null);
 });
 

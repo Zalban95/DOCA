@@ -92,7 +92,7 @@ module.exports = { look, trust, forget, list, get, fetchPinned, originOf };
  * Field → Connectors → Certificates you trust (host, under /api/connectors):
  *   GET    /api/connectors/certs                 what is trusted by name
  *   POST   /api/connectors/certs/look  {origin}  what that server presents now
- *   POST   /api/connectors/certs  {origin, fingerprint}  trust it — with the password (auth/guarded.js)
+ *   POST   /api/connectors/certs  {origin, fingerprint}  trust it — after a notice (auth/guarded.js)
  *   DELETE /api/connectors/certs?origin=…        trust it no more
  */
 function mount(app) {

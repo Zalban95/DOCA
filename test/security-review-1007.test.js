@@ -44,8 +44,8 @@ test('a proposal is checked against the live setting, not the `from` stored with
   const doc = store.readJson('harness/proposals', { proposals: [] });
   for (const c of doc.proposals.find(p => p.id === id).changes) c.from = c.to;   // edited to read as "no change"
   store.writeJson('harness/proposals', doc);
-  const r = await H.api(null, 'POST', `/api/harness/proposals/${id}/apply`, {}, without);
-  assert.equal(r.status, 401);
+  const r = await H.api(null, 'POST', `/api/harness/proposals/${id}/apply`, {}, { ...without, 'X-Doca-Notice': '' });
+  assert.equal(r.status, 428, 'its notice is still shown');
   assert.equal(!!require('../modules/utils').loadPrefs().agents?.enabled, before);
 });
 

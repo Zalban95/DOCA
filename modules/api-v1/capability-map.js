@@ -72,7 +72,7 @@ const PERSON = [
     gap: 2, ask: true, why: 'the proposal is read on the phone (/harness/memory) and waits for the panel; a device applying a setting is a rule to change, not a route to add' },
   { id: 'spent', does: 'see what was spent', panel: ['GET /api/harness/usage'], v1: ['GET /harness/usage'] },
   { id: 'spending', does: 'set a money budget and decide spending permissions', panel: ['GET /api/spending', 'POST /api/spending/*', 'DELETE /api/spending/permissions/:id'],
-    only: 'budgets and spending permissions change only with the password, at the panel (CONSTITUTION S12, S14); a device opens /d/<id>/ for them' },
+    only: 'budgets and spending permissions change only at the panel, after a notice saying why they matter (CONSTITUTION S12, S14); a device opens /d/<id>/ for them' },
   { id: 'canvas', does: 'see and remove the pages the agent made', panel: ['GET /api/harness/canvases', 'DELETE /api/harness/canvases/:id'],
     gap: 13, why: 'a page the agent made for a person is shown on the panel only' },
 
@@ -174,7 +174,7 @@ const PERSON = [
     only: 'who reports to whom is people and levels: an admin\'s, or a team leader\'s for their own people, at the panel' },
 
   // ── A person's account ──
-  { id: 'sign-in', does: 'sign in, out, or change my password', panel: ['POST /api/auth/login', 'POST /api/auth/logout', 'POST /api/auth/setup', 'POST /api/auth/step-up', 'POST /api/auth/password', 'DELETE /api/auth/sessions', 'DELETE /api/auth/unlock'],
+  { id: 'sign-in', does: 'sign in, out, change my password, or see the switches\' notices again', panel: ['POST /api/auth/login', 'POST /api/auth/logout', 'POST /api/auth/setup', 'POST /api/auth/step-up', 'POST /api/auth/password', 'DELETE /api/auth/sessions', 'DELETE /api/auth/unlock', 'DELETE /api/auth/notices'],
     only: 'a person signing in to the panel; a device pairs instead (/devices)' },
   { id: 'grants', does: 'give or take back an exception (a grant)', panel: ['POST /api/auth/grants', 'DELETE /api/auth/grants/:id'],
     gap: 17, ask: true, why: 'an exception given from a phone; delegating is S11\'s, so the owner decides first' },

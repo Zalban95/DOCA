@@ -80,7 +80,7 @@ function computersCard(c) {
       <button class="btn btn-xs ${c.pinned ? 'btn-amber' : ''}" onclick="computersPin(${jsArg(c.id)}, ${!c.pinned})"
         title="${c.pinned ? 'Pinned: kept as it is. Click to let it be tidied away.' : c.auto ? 'Made by an agent: it stops after its mission and is removed some days later. Pin to keep it.' : 'Pin to keep it running after its missions.'}">📌</button>
       ${c.agentType ? '' : `<button class="btn btn-xs ${c.test ? 'btn-amber' : ''}" onclick="computersTest(${jsArg(c.id)}, ${!c.test})"
-        title="${c.test ? 'A test computer: sign-ins without asking. Click to make it ask again.' : 'Make it a test computer: an agent signs in to what it tests without asking you (asks for your password). Paying is still asked.'}">🧪</button>`}
+        title="${c.test ? 'A test computer: sign-ins without asking. Click to make it ask again.' : 'Make it a test computer: an agent signs in to what it tests without asking you (it says why first). Paying is still asked.'}">🧪</button>`}
       ${typeof computersRelayButton === 'function' ? computersRelayButton(c) : ''}
       <button class="btn btn-xs" onclick="archiveSet('computer', ${jsArg(c.id)}, true)" title="Put it away: stopped, its desktop and files kept, back from Agents → Archive">🗄</button>
       <button class="btn btn-xs btn-red" onclick="computersAct('remove', ${jsArg(c.id)})" title="Remove it and its files">✕</button></div>
@@ -141,7 +141,7 @@ function computersMedia(name, mime) {
     kind: /^video\//.test(mime) ? 'video' : /^audio\//.test(mime) ? 'audio' : 'image' });
 }
 
-/** Mark or unmark a test computer (computers/test-mode.js): marking loosens its browser guard, so the hub asks for the password. */
+/** Mark or unmark a test computer (computers/test-mode.js): marking loosens its browser guard, so the hub says why first (a notice). */
 function computersTest(id, on) {
   const go = async () => {
     try {

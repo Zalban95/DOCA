@@ -6,7 +6,7 @@
  *
  * In the keys folder on purpose: that folder is protected from the agent's file tools (paths.PROTECTED_DIRS), and a
  * record of what the agent may spend is exactly what it must not be able to write itself. Every change goes through
- * this module's callers, whose routes ask for the password (auth/guarded.js).
+ * this module's callers, whose routes show a notice first (auth/guarded.js).
  */
 const path = require('path');
 

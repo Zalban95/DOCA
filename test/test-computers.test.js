@@ -2,7 +2,7 @@
 
 // Test computers (modules/computers/test-mode.js; the owner's decision of 2026-10-08, self-test #7 option b): a
 // computer made for testing takes the agent's own test password and a sign-in click without a person; paying is still
-// asked, a saved login never goes in, and only a person marks one, with the password. A fake control server stands in
+// asked, a saved login never goes in, and only a person marks one, after a notice. A fake control server stands in
 // for the computer on the hub's side; the computer's own browser tools run against the installed Chromium.
 
 const H = require('./helpers');
@@ -35,22 +35,22 @@ before(async () => {
 });
 after(async () => { await H.stop(); await new Promise(r => ctl.close(r)); });
 
-test('only a person marks a computer for testing, with the password; never one a specialist keeps', async () => {
+test('only a person marks a computer for testing, after a notice; never one a specialist keeps', async () => {
   calls.length = 0;
-  const asked = await H.api(null, 'POST', '/api/computers/0rd1nary/test', { on: true }, { 'X-Doca-Password': '' });
-  assert.equal(asked.status, 401, 'marking asks for the password');
-  assert.equal(asked.body.code, 'password_required');
+  const asked = await H.api(null, 'POST', '/api/computers/0rd1nary/test', { on: true }, { 'X-Doca-Password': '', 'X-Doca-Notice': '' });
+  assert.equal(asked.status, 428, 'marking shows the notice');
+  assert.equal(asked.body.code, 'notice_required');
   const ok = await H.api(null, 'POST', '/api/computers/0rd1nary/test', { on: true });
   assert.equal(ok.status, 200, JSON.stringify(ok.body));
   assert.equal(ok.body.test, true);
   assert.deepEqual(calls.at(-1), { name: 'test_mode', args: { on: true, key: 'fk-0rd1nary' } }, 'the computer hears it with the hub\'s key');
   const off = await H.api(null, 'POST', '/api/computers/0rd1nary/test', { on: false }, { 'X-Doca-Password': '' });
-  assert.equal(off.status, 200, 'unmarking tightens: no password');
+  assert.equal(off.status, 200, 'unmarking tightens: nothing asked');
   assert.equal(require('../modules/computers').get('0rd1nary').test, false);
   const kept = await H.api(null, 'POST', '/api/computers/k3pt0001/test', { on: true });
   assert.equal(kept.status, 409);
   assert.match(kept.body.error, /kept for a specialist/);
-  assert.equal((await H.api(null, 'POST', '/api/computers', { name: 'x', test: true }, { 'X-Doca-Password': '' })).status, 401, 'making one marked asks too');
+  assert.equal((await H.api(null, 'POST', '/api/computers', { name: 'x', test: true }, { 'X-Doca-Password': '', 'X-Doca-Notice': '' })).status, 428, 'making one marked asks too');
 });
 
 test('the agent cannot mark a computer that exists, and its list shows the mark', async () => {

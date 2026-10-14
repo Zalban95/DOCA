@@ -23,6 +23,7 @@ const GUARD = /\b(appConfirm|machineAsk|machineAskFirst|appChoose|confirmRemove|
 
 /** file → a piece of the call's line, and why it needs neither a question nor Undo. */
 const ALLOWED = [
+  ['settings/account.js', '/api/auth/notices', 'showing the switches\' notices again only adds a question back: nothing is lost'],
   ['lib/unlock.js', '/api/auth/unlock', 'Lock now closes the password window: it adds a guard back, nothing is lost'],
   ['harness-console/approval.js', 'approval/always', 'forgetting an "always" only makes the agent ask again: it adds a guard, and the next card offers "always" back'],
   ['meet/share.js', "_meetPost('control/revoke')", 'ending someone\'s control of your own screen is the safety stop itself: it must act at once'],

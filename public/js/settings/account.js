@@ -29,7 +29,29 @@ async function accountLoad() {
         <div class="snap-date">${escHtml(me.email)} · ${escHtml(me.levelName || me.role)}</div>
       </div>
     </div>
+    <div id="account-notices" class="desc" style="margin-top:10px"></div>
     <span class="status-line" id="account-status"></span>`;
+  accountNoticesDraw();
+}
+
+/* Notices before important switches (modules/auth/guarded.js, notices.js): which ones this person chose not to see
+   again — kept on the hub, so on every screen — and one click to see them all again. */
+async function accountNoticesDraw() {
+  const el = document.getElementById('account-notices');
+  if (!el) return;
+  let hidden = [];
+  try { hidden = (await apiFetch('/api/auth/notices')).hidden || []; } catch { return; }
+  el.innerHTML = hidden.length
+    ? `Notices before important switches: ${hidden.length} not shown again (${hidden.map(h => escHtml(h.what)).join(', ')}). `
+      + '<button class="btn btn-xs" onclick="accountNoticesReset()">Show them all again</button>'
+    : 'Notices before important switches: every one is shown. Ticking "Don\'t show this again" on one hides it on every screen you sign in on.';
+}
+
+async function accountNoticesReset() {
+  const st = document.getElementById('account-status');
+  try { await apiFetch('/api/auth/notices', { method: 'DELETE' }); if (st) st.textContent = 'Every notice will be shown again.'; }
+  catch (e) { if (st) st.textContent = e.message; }
+  accountNoticesDraw();
 }
 
 function accountPassword() {

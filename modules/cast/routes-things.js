@@ -7,7 +7,7 @@
  *   POST /api/cast/things/:id/say         {text, story?}  a speaker says it in the person's Quick call voice (a story: each part its own tone)
  *   POST /api/cast/things/:id/stop                 what the receiver plays or shows stops
  *   POST /api/cast/things/:id/volume      {level}  0–1
- *   POST /api/cast/door                   {on}     the owner's switch (cast.door), with the password (auth/guarded.js)
+ *   POST /api/cast/door                   {on}     the owner's switch (cast.door), after a notice (auth/guarded.js)
  *   GET  /api/cast/media/:token                    a one-time sound, to the one address it is for (cast/media.js)
  */
 const things = require('./things');

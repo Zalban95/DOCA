@@ -55,7 +55,7 @@ function list() {
 }
 
 const devOff = () => require('./switch-off').off('Developer mode is off: switch it on in Settings → Developer first.', {
-  what: 'Developer mode', route: '/api/experiments/developer', body: { on: true }, password: true, setting: 'developer.mode', page: 'settings/experiments',
+  what: 'Developer mode', route: '/api/experiments/developer', body: { on: true }, setting: 'developer.mode', page: 'settings/experiments',
   why: 'Experiments are offered only with developer mode on: it is for the people who build and test this panel.' });
 
 function set(id, value) {
@@ -76,7 +76,7 @@ function need(id, what) {
   if (!developer()) throw devOff();   // the first switch missing first: one question and one password each
   const e = EXPERIMENTS.find(x => x.id === id);
   throw require('./switch-off').off(`${what} is an experiment that is off (Settings → Developer).`, {
-    what, route: `/api/experiments/${id}`, body: { on: true }, password: true, setting: `experiments.${id}`, page: 'settings/experiments',
+    what, route: `/api/experiments/${id}`, body: { on: true }, setting: `experiments.${id}`, page: 'settings/experiments',
     why: e?.what || e?.label || `The experiment "${id}" — switched on here, it takes effect at once.` });
 }
 

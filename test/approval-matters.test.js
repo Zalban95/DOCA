@@ -56,8 +56,8 @@ test('a new install asks what matters; the setting is the owner\'s, guarded and 
   const schema = require('../modules/settings-schema');
   assert.equal(schema.value('harness.approval.manualAsks'), 'what-matters');
   assert.ok(require('../modules/harness/settings').refuse('harness.approval.manualAsks'), 'an agent cannot propose it');
-  const noPassword = await H.api(null, 'POST', '/api/harness/approval', { manualAsks: 'everything' }, { 'X-Doca-Password': '' });
-  assert.equal(noPassword.status, 401, 'changing it asks for the password, like the mode');
+  const noPassword = await H.api(null, 'POST', '/api/harness/approval', { manualAsks: 'everything' }, { 'X-Doca-Password': '', 'X-Doca-Notice': '' });
+  assert.equal(noPassword.status, 428, 'changing it shows the notice, like the mode');
   const bad = await H.api(null, 'POST', '/api/harness/approval', { manualAsks: 'nothing' });
   assert.equal(bad.status, 400);
   const ok = await H.api(null, 'POST', '/api/harness/approval', { manualAsks: 'everything' });
