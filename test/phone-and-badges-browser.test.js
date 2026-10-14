@@ -85,3 +85,15 @@ test('at a desk: a fresh install marks no fold changed, and each count says it c
   for (const f of seen.filter(f => f.count)) assert.match(f.count, /^\d+ settings?$/, `${f.label}: "${f.count}"`);
 });
 
+test('at a desk: a long theme name wraps rather than being cut', { skip: B.skip }, async () => {
+  await B.evaluate("nav('settings'); settingsSubNav('general')");
+  await B.until("[...document.querySelectorAll('.theme-swatch-label')].some(l => /Catppuccin Mocha/.test(l.textContent))");
+  const r = await B.evaluate(`(() => {
+    const l = [...document.querySelectorAll('.theme-swatch-label')].find(l => /Catppuccin Mocha/.test(l.textContent));
+    for (let d = l.closest('details'); d; d = d.parentElement.closest('details')) d.open = true;
+    return { client: l.clientWidth, scroll: l.scrollWidth };
+  })()`);
+  assert.ok(r.client > 0, 'the label is drawn');
+  assert.ok(r.scroll <= r.client, `the whole name shows (${r.client} of ${r.scroll} px)`);
+});
+
