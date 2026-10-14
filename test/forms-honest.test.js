@@ -100,3 +100,17 @@ test('Set-up: "Only show what it would do" answers, with nothing to do and with 
   assert.match(await text('#guided-plan'), /Nothing to set up: everything this needs is here/);
   assert.deepEqual(B.errors, []);
 });
+
+test('Packs: a library pack\'s "Bring in…" preview has a way out', { skip: B.skip }, async () => {
+  const skill = require('fs').readdirSync(require('path').join(__dirname, '..', 'skills'))[0];
+  const kept = await H.api(null, 'POST', '/api/packs/library', { name: 'a-test-pack', skills: [skill] });
+  assert.equal(kept.status, 200, JSON.stringify(kept.body));
+  await go('settings', 'packs');
+  assert.ok(await B.until(`!!document.querySelector('button[onclick*="packsPlan(null"]')`), 'the library lists it');
+  assert.ok(await B.clickOn('button[onclick*="packsPlan(null"]'));
+  assert.ok(await B.until("/Bring in the ticked ones/.test(document.getElementById('pack-plan').textContent)"), 'the preview opens');
+  assert.ok(await B.clickOn('#pack-plan button[onclick="packsPlanClose()"]'), 'it has a Cancel');
+  assert.ok(await B.until("document.getElementById('pack-plan').textContent.trim() === ''"), 'Cancel closes it');
+  assert.equal(await B.evaluate('_packLib'), null, 'and lets the pack go');
+  assert.deepEqual(B.errors, []);
+});

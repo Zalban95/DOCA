@@ -137,7 +137,9 @@ async function packsPlan(file, libId = null) {
     : await fetch('/api/packs/plan', { method: 'POST', body: form });
   out.scrollIntoView?.({ block: 'nearest' });
   const p = await res.json().catch(() => ({}));
-  if (!res.ok) { out.innerHTML = `<div style="color:var(--red);font-size:12px">${escHtml(p.error || `HTTP ${res.status}`)}</div>`; return; }
+  // A way out of the preview, as every other one has (newcomer run 2026-10-14: only "Bring in the ticked ones" was there).
+  const close = '<button class="btn btn-sm" type="button" onclick="packsPlanClose()" title="Bring nothing in">Cancel</button>';
+  if (!res.ok) { out.innerHTML = `<div style="color:var(--red);font-size:12px">${escHtml(p.error || `HTTP ${res.status}`)}</div><div class="toolbar" style="margin-top:6px">${close}</div>`; return; }
   const rows = p.items.map(i => `<label class="disk-row" style="cursor:pointer"><span class="disk-label"><input type="checkbox" data-key="${escHtml(i.key)}" ${i.overwrites ? '' : 'checked'}>
       ${escHtml(i.kind)} · ${escHtml(i.id)}</span><span class="disk-path">${escHtml(i.command || i.path || '')}${i.steps ? ` · ${i.steps} steps` : ''}${i.count !== undefined ? ` · ${i.count}` : ''}${i.parts ? escHtml(i.parts) : ''}</span>
       <span class="disk-free" style="color:${i.overwrites ? 'var(--amber)' : 'var(--green)'}">${i.overwrites ? 'exists here' : 'new'}</span></label>`).join('');
@@ -146,8 +148,16 @@ async function packsPlan(file, libId = null) {
     ${rows || '<div class="placeholder">Nothing a pack carries.</div>'}
     ${needs.length ? `<div style="font-size:11px;color:var(--amber);margin-top:6px">Needs: ${needs.map(escHtml).join(' · ')}</div>` : ''}
     ${p.skipped.length ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Skipped: ${p.skipped.map(s => `${escHtml(s.path)} (${escHtml(s.why)})`).join(', ')}</div>` : ''}
-    ${rows ? `<div class="toolbar" style="gap:8px;margin-top:8px"><label style="font-size:12px"><input type="checkbox" id="pack-overwrite"> replace what exists</label>${infoBtn('Off (the default): a ticked item that already exists here is skipped. On: it replaces the one here.')}
-      <button class="btn btn-sm btn-blue" onclick="packsImport()">Bring in the ticked ones</button></div>` : ''}`;
+    <div class="toolbar" style="gap:8px;margin-top:8px">${rows ? `<label style="font-size:12px"><input type="checkbox" id="pack-overwrite"> replace what exists</label>${infoBtn('Off (the default): a ticked item that already exists here is skipped. On: it replaces the one here.')}
+      <button class="btn btn-sm btn-blue" onclick="packsImport()">Bring in the ticked ones</button>` : ''}${close}</div>`;
+}
+
+/** The preview closed: nothing brought in, the file or library pack let go. */
+function packsPlanClose() {
+  _packFile = null; _packLib = null;
+  const out = document.getElementById('pack-plan');
+  if (out) out.innerHTML = '';
+  const input = document.getElementById('pack-file'); if (input) input.value = '';
 }
 
 async function packsImport() {
