@@ -16,17 +16,37 @@ async function castThingsHtml() {
       <option value="">Tone</option>${d.tones.map(x => `<option value="${escHtml(x)}">${escHtml(x)}</option>`).join('')}</select>` : '';
   _castTones = d.tones || [];
   const groups = {};
-  for (const t of d.things) (groups[t.seenOnly ? 'Seen nearby, not saved' : [t.place, t.room].filter(Boolean).join(' · ') || 'Elsewhere'] ||= []).push(t);
+  for (const t of d.things) (groups[t.seenOnly ? `Seen nearby${t.network ? ` on ${t.network.label}` : ''}, not saved` : [t.place, t.room].filter(Boolean).join(' · ') || (t.network ? `On ${t.network.label}` : 'Elsewhere')] ||= []).push(t);
   // A saved thing that does not answer now still shows, greyed, with why — pressing may still wake it.
-  const row = t => `<div class="cast-target cast-thing${t.answers === false ? ' cast-off' : ''}" data-thing="${escHtml(t.id)}"${t.answers === false ? ' style="opacity:.55"' : ''}><div><b>${t.kind === 'speaker' ? '🔊' : '📺'} ${escHtml(t.name)}</b>
-      <br><span class="desc">${escHtml([t.model, t.address, t.seenOnly && t.seenFrom ? `seen from ${t.seenFrom}` : '', t.answers === false ? t.why : ''].filter(Boolean).join(' · '))}</span>
+  // A thing on a network none of the person's devices is on now is greyed with that (networks.js): nothing can reach it from here.
+  const away = t => t.here === false;
+  const row = t => `<div class="cast-target cast-thing${t.answers === false || away(t) ? ' cast-off' : ''}" data-thing="${escHtml(t.id)}"${t.answers === false || away(t) ? ' style="opacity:.55"' : ''}><div><b>${t.kind === 'speaker' ? '🔊' : '📺'} ${escHtml(t.name)}</b>
+      <br><span class="desc">${escHtml([t.model, t.address, t.network && !t.seenOnly ? `on ${t.network.label}` : '', t.seenOnly && t.seenFrom ? `seen from ${t.seenFrom}` : '',
+        away(t) ? `none of your devices is on ${t.network.label} now` : t.answers === false ? t.why : ''].filter(Boolean).join(' · '))}</span>
       ${t.shows ? '' : `<div class="cast-say">${tones}<input class="input" placeholder="Say something here…" aria-label="What ${escHtml(t.name)} says" onkeydown="if(event.key==='Enter')castThingSay('${escHtml(t.id)}', this)"></div>`}
       <span class="status-line"></span></div>
     <span class="cast-acts">${t.shows ? `<button class="btn btn-sm btn-teal" type="button" onclick="castThingShow('${escHtml(t.id)}', this)">Cast</button>`
       : `<button class="btn btn-sm btn-teal" type="button" onclick="castThingSay('${escHtml(t.id)}', this)">Say</button><button class="btn btn-sm" type="button" title="A longer text, a tone for each part" onclick="castStoryOpen('${escHtml(t.id)}', ${jsArg(t.name)})">Story…</button>`}
       <button class="btn btn-sm" type="button" onclick="castThingStop('${escHtml(t.id)}', this)">Stop</button></span></div>`;
-  return `<div class="input-label">Around you</div>${door}${Object.entries(groups).map(([g, list]) =>
+  return `<div class="input-label">Around you</div>${door}${castWhereHtml(d.here, d.door.mayChange)}${Object.entries(groups).map(([g, list]) =>
     `<div class="cast-room">${escHtml(g)}</div>${list.map(row).join('')}`).join('')}`;
+}
+
+/** Which Wi-Fi each of the person's lookers is on now — the hub, their phone — each network renamable by an admin. */
+function castWhereHtml(here, mayName) {
+  const list = (here || []).filter(h => h.network);
+  if (!list.length) return '';
+  return `<p class="desc cast-where">${list.map(h => `${h.by === 'hub' ? 'This hub' : escHtml(h.label)} is on <b>${escHtml(h.network.label)}</b>${mayName
+    ? ` <button class="btn btn-xs" type="button" title="Name this network (a customer's Wi-Fi, say)" onclick="castNetworkName('${escHtml(h.network.id)}', ${jsArg(h.network.label)})">✎</button>` : ''}`).join(' · ')}</p>`;
+}
+
+/** Name a network once ("Rossi's office"): every TV seen on it is listed under that name. */
+function castNetworkName(id, was) {
+  appPrompt('Name this network', async label => {
+    if (!label?.trim()) return;
+    try { await apiFetch(`/api/machines/nearby/networks/${encodeURIComponent(id)}`, { method: 'POST', body: { label } }); await castThingsAgain(); }
+    catch (e) { appAlert(e.message); }
+  }, was);
 }
 
 const _castThingSay = el => el.closest('.cast-thing')?.querySelector('.status-line');

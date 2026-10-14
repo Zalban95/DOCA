@@ -88,6 +88,10 @@ function mount(app) {
   app.post('/api/machines/nearby/saved/restore', (req, res) => { try { res.json(store.restore(req.body?.thing)); } catch (e) { fail(res, e); } });
   app.put('/api/machines/nearby/saved/:id', (req, res) => { try { res.json(store.save({ ...req.body, id: req.params.id, seenId: undefined })); } catch (e) { fail(res, e); } });
   app.delete('/api/machines/nearby/saved/:id', (req, res) => { try { res.json(store.remove(req.params.id)); } catch (e) { fail(res, e); } });
+  // Networks, named once (networks.js): the Cast sheet groups TVs by them; a person names a customer's Wi-Fi.
+  app.get('/api/machines/nearby/networks', (req, res) => res.json({ networks: require('./networks').list() }));
+  app.post('/api/machines/nearby/networks/:id', (req, res) => { try { res.json(require('./networks').rename(req.params.id, req.body?.label)); } catch (e) { fail(res, e); } });
+  app.delete('/api/machines/nearby/networks/:id', (req, res) => { try { res.json(require('./networks').forget(req.params.id)); } catch (e) { fail(res, e); } });
   app.delete('/api/machines/nearby/seen/:id', (req, res) => { try { res.json(store.forget(req.params.id)); } catch (e) { fail(res, e); } });
   app.post('/api/machines/nearby/pair', async (req, res) => {
     const address = String(req.body?.address || '');

@@ -54,7 +54,11 @@ const own = () => new Set(Object.values(os.networkInterfaces()).flat().filter(Bo
 
 const running = new Map();   // by looker: one scan at a time from each
 
-const tag = (things, by, network, at) => things.map(t => ({ ...t, seenFrom: [{ by, label: network?.label || null, network: network?.gatewayMacHash || null, address: t.addresses?.[0] || null, at }] }));
+// Each sighting says who saw it and on which named network (networks.js): a TV saved on a customer's Wi-Fi stays that Wi-Fi's.
+function tag(things, by, network, at) {
+  const net = require('./networks').remember(network, by)?.id || null;
+  return things.map(t => ({ ...t, seenFrom: [{ by, label: network?.label || null, network: network?.gatewayMacHash || null, net, address: t.addresses?.[0] || null, at }] }));
+}
 
 /** A scan from one of the person's clients (lookers.js): its sightings, merged here like the hub's. */
 async function fromClient({ from, only, why, person }) {

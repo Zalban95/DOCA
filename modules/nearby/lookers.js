@@ -18,6 +18,7 @@ async function hubNetwork() {
   if (hubNet && Date.now() - hubNet.t < 60e3) return hubNet.v;
   const neighbours = await require('./lan').neighbours({ dns: { reverse: async () => [] } }).catch(() => []);
   const v = await net.network({ neighbours });
+  try { require('./networks').remember(v, 'hub'); } catch { /* naming is a convenience */ }
   hubNet = { t: Date.now(), v };
   return v;
 }
@@ -68,4 +69,22 @@ async function fromClient(serverId, person, only = null) {
   return { things, network: r.network || null, why: r.why || {}, sources: r.sources || [], by: c.deviceId, label: c.label, sameNetwork: same };
 }
 
-module.exports = { list, clients, waiting, fromClient, hubNetwork };
+/**
+ * Where the person's lookers are now — the hub and each of their connected clients that lends Nearby, asked its
+ * `nearby_network` (a reading, no scan), at most `ms` each — remembered as named networks (networks.js).
+ * → { by: networkId|null }
+ */
+async function whereNow(person, ms = 1500) {
+  const nets = require('./networks');
+  const out = {};
+  try { const h = await Promise.race([hubNetwork(), new Promise(r => setTimeout(() => r(null), ms))]); out.hub = h ? nets.remember(h, 'hub')?.id || null : nets.whereNow('hub'); } catch { out.hub = nets.whereNow('hub'); }
+  await Promise.all(clients(person).map(async c => {
+    try {
+      const text = await Promise.race([require('../mcp/registry').client(c.id).callTool('nearby_network', {}), new Promise((_, no) => setTimeout(() => no(new Error('slow')), ms))]);
+      out[c.deviceId] = nets.remember(JSON.parse(text), c.deviceId)?.id || null;
+    } catch { out[c.deviceId] = nets.whereNow(c.deviceId); }
+  }));
+  return out;
+}
+
+module.exports = { list, clients, waiting, fromClient, hubNetwork, whereNow };

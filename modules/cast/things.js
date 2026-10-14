@@ -49,8 +49,16 @@ function pool() {
   return [...saved, ...seen].map(mended);
 }
 
-function list(who) {
+/**
+ * What may be cast to, for the Cast sheet. `now` ({by: network id}, lookers.whereNow) says where the person's lookers are,
+ * so each thing carries the named network it was seen on and whether any of them is there now (`here`; null: unknown).
+ */
+function list(who, now = null) {
+  const nets = require('../nearby/networks');
+  const present = new Set(Object.values(now || {}).filter(Boolean));
+  const netOf = t => { const id = t.network || (t.seenFrom || []).find(x => x.net)?.net || null; const n = id ? nets.get(id) : null; return n ? { id: n.id, label: n.label } : null; };
   return pool().filter(t => castable(t) && mayUse(who, t)).map(t => ({
+    ...(n => (n ? { network: n, here: now ? present.has(n.id) : null } : {}))(netOf(t)),
     id: t.id, name: name(t), kind: t.kind || 'thing', place: t.place || null, room: t.room || null, model: t.model || null,
     shows: t.kind !== 'speaker' && hasCast(t), speaks: true, address: ipOf(t), port: portOf(t), via: hasCast(t) ? 'cast' : 'dlna', lastSeen: t.lastSeen || null,
     ...(t.seenOnly ? { seenOnly: true, seenFrom: (t.seenFrom || [])[0]?.label || null } : {}) }))
@@ -63,6 +71,9 @@ function thing(who, id) {
   if (!mayUse(who, t)) throw bad('Not a device allotted to you: an admin allots it (Settings → Users).', 403);
   return t;
 }
+
+/** " on Rossi's office": the named network a thing was seen on, for the activity line of a cast through a device. */
+const onNet = t => { const id = t.network || (t.seenFrom || []).find(x => x.net)?.net; const n = id ? require('../nearby/networks').get(id) : null; return n ? ` on ${n.label}` : ''; };
 
 function note(who, t, what, act) {
   require('../activity').note({ from: 'cast', what, why: 'a person cast it', person: { id: who.user.id, name: who.user.name || who.user.email },
@@ -84,7 +95,7 @@ async function show(who, id, page) {
   if (dlnaOnly(t)) throw bad(`${name(t)} plays over DLNA, which has no browser: it can say a sentence or play a sound, not show a page.`, 409);
   const link = require('./links').create({ page, name: `${name(t)} — ${require('./views').VIEWS[page].label}`, thing: t.id }, who);
   const c = via(who, t);
-  if (c) { const r = await require('./relay').show(c, t, link); require('./running').note({ thing: t.id, ip: ipOf(t), page, via: c.id }); note(who, t, `cast ${page} to ${name(t)} through ${c.label}`, 'cast'); return { ...r, page }; }
+  if (c) { const r = await require('./relay').show(c, t, link); require('./running').note({ thing: t.id, ip: ipOf(t), page, via: c.id }); note(who, t, `cast ${page} to ${name(t)} through ${c.label}${onNet(t)}`, 'cast'); return { ...r, page }; }
   const origin = await require('./door').open(t.how.cast.ip, { page });
   const url = `${origin}${link.path}`;
   await withDevice(t, async s => {
@@ -104,7 +115,7 @@ async function say(who, id, text, { story = false } = {}) {
   const speech = require('./speech');
   const audio = story ? await speech.story(words, personOf(who)) : await speech.speak(words, personOf(who));
   const c = via(who, t);
-  if (c) { const r = await require('./relay').say(c, t, audio, words.slice(0, 80)); note(who, t, `said a sentence on ${name(t)} through ${c.label}`, 'say'); return r; }
+  if (c) { const r = await require('./relay').say(c, t, audio, words.slice(0, 80)); note(who, t, `said a sentence on ${name(t)} through ${c.label}${onNet(t)}`, 'say'); return r; }
   const media = require('./media');
   const tok = media.token({ buffer: audio.buffer, mime: audio.mime, for: ipOf(t) });
   const origin = await require('./door').open(ipOf(t), { tokens: [tok] });

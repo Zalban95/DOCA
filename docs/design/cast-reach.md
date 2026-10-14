@@ -65,6 +65,12 @@ kept per thing in `nearby/seen` (merge.into keeps the newest entry per `by`), an
 
 ### 1.3 A network, named once
 
+**Built** (3.84.0, 2026-10-14; `modules/nearby/networks.js`): every scan's looker is remembered as a network; a saved
+thing keeps the one it was seen on; the Cast sheet says which network the hub and each of the person's lookers are on
+now (`lookers.whereNow`, each client's `nearby_network`), greys a TV on a network none of them is on, and lets an admin
+name a network (✎). DocaMobile ≥ 1.7.3 says its Wi-Fi's name. A cast through a device names the network in its
+activity line.
+
 A **network** is what a person calls "Home Wi-Fi": `nearby/networks` (store.js, never prefs):
 
 ```
