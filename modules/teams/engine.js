@@ -64,7 +64,7 @@ async function dispatch(team, t) {
       : `In the project's folder ${place.root}, shared with your teammates.${place.why ? ` (${place.why})` : ''}`}` : '';
     if (t.agent === 'work') {
       const org = require('../harness/organization');
-      const s = org.create({ title: `${team.title}: ${t.title}`.slice(0, 100) });
+      const s = org.create({ title: `${team.title}: ${t.title}`.slice(0, 100), ...org.under(team.by) });   // one level below the team's leader (org-depth.js)
       require('../harness/memory').updateSession(s.id, { team: { id: team.id, task: t.id }, ...(fields || {}) });
       org.start(s.id, `${t.task}\n\n${context}${where}`, team.by);
       t.sessionId = s.id;
