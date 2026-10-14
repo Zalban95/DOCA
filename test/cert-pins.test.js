@@ -1,7 +1,7 @@
 'use strict';
 
 // A home server's own certificate, trusted by name (cert-pins.js; Proxmox VE, 2026-10-13): refused until the owner looks
-// at its fingerprint and trusts that exact certificate (with the password); then calls go through; another certificate
+// at its fingerprint and trusts that exact certificate (after a notice); then calls go through; another certificate
 // at the same address is refused again; the open web is never trusted this way.
 const test = require('node:test');
 const assert = require('node:assert/strict');
@@ -28,13 +28,13 @@ test('refused at first, with where to trust it', async () => {
   assert.match(r.error, /presents its own certificate \(self-signed\).*Certificates you trust/);
 });
 
-test('looked at, trusted with the password when the fingerprint matches, and then used', async () => {
+test('looked at, trusted after a notice when the fingerprint matches, and then used', async () => {
   const seen = (await H.api(null, 'POST', '/api/connectors/certs/look', { origin })).body;
   assert.equal(seen.subject, 'pve.lan');
   assert.match(seen.fingerprint, /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/);
   assert.equal(seen.pem, undefined, 'the certificate itself is not sent to the page');
   assert.equal((await H.api(null, 'POST', '/api/connectors/certs', { origin, fingerprint: 'AA:BB' })).status, 409, 'another fingerprint than the one seen');
-  assert.equal((await H.api(null, 'POST', '/api/connectors/certs', { origin, fingerprint: seen.fingerprint }, { 'X-Doca-Password': '' })).status, 401, 'the password is asked');
+  assert.equal((await H.api(null, 'POST', '/api/connectors/certs', { origin, fingerprint: seen.fingerprint }, { 'X-Doca-Password': '', 'X-Doca-Notice': '' })).status, 428, 'the notice is shown first');
   const t = await H.api(null, 'POST', '/api/connectors/certs', { origin, fingerprint: seen.fingerprint });
   assert.equal(t.status, 200, JSON.stringify(t.body));
   const r = await call();

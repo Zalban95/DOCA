@@ -9,8 +9,8 @@
  * declared setting the agent may propose (harness/settings.readable), placed by its prefix. Its `how` is one of:
  *   propose   settings_propose {changes, asked: true}: on the person's own turn, applied at once with a checkpoint
  *   screen    the same with screen "this": each screen keeps its own (settings-schema.js screenPropose)
- *   guarded   settings_propose makes it a proposal, accepted with the password (auth/guarded.js)
- *   password  the person's switch, with their password — the agent tells them where to click
+ *   guarded   settings_propose makes it a proposal; its Accept asks the person first — a notice, or the password (auth/guarded.js)
+ *   password  the person's switch, at the panel (which asks them first) — the agent tells them where to click
  *   person    the person's own, on that page — nothing asks for a password, and the agent does not change it
  *   tool      a tool of its own (panel_layout)
  */
@@ -141,8 +141,8 @@ function howText(r) {
     case 'propose': return `${ask} — applied at once when the person asked for exactly this (a checkpoint keeps the old value). Or they change it in ${where(r)}.`;
     case 'screen': return `${ask.replace('{changes', '{screen: "this", changes')} — for the screen they asked from; each screen keeps its own.${
       hiveToo(path) ? ' With no screen behind the turn, leave screen out: that changes the default every screen starts from.' : ''} Or they change it in ${where(r)}.`;
-    case 'guarded': return `settings_propose {changes: [{path: "${path}", value: ${to}}]} makes it a proposal they accept with their password; or they switch it themselves in ${where(r)} (it asks for their password).`;
-    case 'password': return `Theirs to switch, with their password — you cannot change it. Tell them where: ${where(r)}.`;
+    case 'guarded': return `settings_propose {changes: [{path: "${path}", value: ${to}}]} makes it a proposal they accept (the panel asks them first); or they switch it themselves in ${where(r)}.`;
+    case 'password': return `Theirs to switch, at the panel — you cannot change it. Tell them where: ${where(r)}.`;
     case 'tool': return `${r.tool}. Or they change it in ${where(r)}.`;
     default: return `Theirs to change in ${where(r)} — you do not change it; tell them where.`;
   }

@@ -16,7 +16,7 @@ test('the Library, from nothing: developer mode, then the experiment, then its m
   let r = await H.api(null, 'POST', '/api/library/run', {});
   assert.equal(r.status, 409);
   assert.equal(r.body.code, 'switch_off');
-  assert.deepEqual([r.body.needs.what, r.body.needs.route, r.body.needs.password, r.body.needs.mayChange], ['Developer mode', '/api/experiments/developer', true, true]);
+  assert.deepEqual([r.body.needs.what, r.body.needs.route, r.body.needs.password, r.body.needs.notice, r.body.needs.mayChange], ['Developer mode', '/api/experiments/developer', false, true, true]);
   assert.equal((await H.api(null, 'POST', r.body.needs.route, r.body.needs.body)).status, 200);
   r = await H.api(null, 'POST', '/api/library/run', {});
   assert.deepEqual([r.body.needs.what, r.body.needs.route], ['The Library', '/api/experiments/library']);

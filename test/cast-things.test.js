@@ -44,14 +44,14 @@ test('the sheet lists the saved Cast devices by place and room; a member only wh
   assert.equal((await H.api(null, 'POST', `/api/cast/things/${tv.id}/stop`, {}, { Cookie: member.cookie })).status, 403);
 });
 
-test('the door is off until the owner switches it on, with the password', async () => {
+test('the door is off until the owner switches it on, after a notice', async () => {
   const r = await H.api(null, 'POST', `/api/cast/things/${tv.id}/show`, { page: 'live' });
   assert.equal(r.status, 409);
   assert.match(r.body.error, /Casting to devices on this network is off/);
-  // Said so the panel can ask: what, why, the call that switches it on (with the password), where it lives, and that this person may.
+  // Said so the panel can ask: what, why, the call that switches it on (after a notice), where it lives, and that this person may.
   assert.equal(r.body.code, 'switch_off');
-  assert.deepEqual([r.body.needs.setting, r.body.needs.route, r.body.needs.password, r.body.needs.page, r.body.needs.mayChange], ['cast.door', '/api/cast/door', true, 'nearby', true]);
-  assert.equal((await H.api(null, 'POST', '/api/cast/door', { on: true }, { 'X-Doca-Password': '' })).status, 401, 'the password is asked');
+  assert.deepEqual([r.body.needs.setting, r.body.needs.route, r.body.needs.password, r.body.needs.notice, r.body.needs.page, r.body.needs.mayChange], ['cast.door', '/api/cast/door', false, true, 'nearby', true]);
+  assert.equal((await H.api(null, 'POST', '/api/cast/door', { on: true }, { 'X-Doca-Password': '', 'X-Doca-Notice': '' })).status, 428, 'the notice is shown');
   assert.equal((await H.api(null, 'POST', '/api/cast/door', { on: true })).status, 200);
 });
 

@@ -144,13 +144,31 @@ function gate(req, res, next) {
     if (!sameOrigin(req))
       return res.status(403).json({ code: 'browser_only',
         error: 'This route applies a change and expects a click in the dashboard. Open the panel in a browser and do it there.' });
-    // An important or safety switch: the password, for this change, however recent the sign-in (guarded.js; S14).
+    // An important or safety switch: the password where it protects something, else a notice (guarded.js; S14).
     const sw = require('./guarded').switchOf(req, p);
-    // Every change, attributable — a switch by its name (Hub → Admin's Security card). The body is not logged: it can hold passwords and keys.
-    res.on('finish', () => authStore.audit({ orgId: who.orgId, actorId: who.user.id, action: `${method} ${p}`, status: res.statusCode, ...(sw ? { switch: sw } : {}) }));
-    if (sw) return confirmSwitch(req, res, next, sw);
+    // Every change, attributable — a switch by its name, and how a notice was passed (Hub → Admin's Security card).
+    // The body is not logged: it can hold passwords and keys.
+    res.on('finish', () => authStore.audit({ orgId: who.orgId, actorId: who.user.id, action: `${method} ${p}`, status: res.statusCode,
+      ...(sw ? { switch: sw.what } : {}), ...(req._notice ? { notice: req._notice } : {}) }));
+    if (sw?.password) return confirmSwitch(req, res, next, sw.what);
+    if (sw) return noticeSwitch(req, res, next, sw, who.user.id);
   }
   next();
+}
+
+/**
+ * A switch that says what it does before it changes (guarded.js `notice`): passed by the panel's Continue
+ * (`X-Doca-Notice: continue`), or `hide` — Continue and "Don't show this again", remembered for this person (notices.js).
+ * Otherwise 428 `notice_required` with the notice, which the panel shows and answers by sending the request again.
+ */
+function noticeSwitch(req, res, next, sw, userId) {
+  const notices = require('./notices');
+  const answer = String(req.get('x-doca-notice') || '').trim().toLowerCase();
+  if (answer === 'hide') notices.hide(userId, sw.key);
+  if (answer === 'continue' || answer === 'hide') { req._notice = answer === 'hide' ? 'continued, not shown again' : 'continued'; return next(); }
+  if (notices.hidden(userId, sw.key)) { req._notice = 'not shown (hidden by the person)'; return next(); }
+  return res.status(428).json({ code: 'notice_required', switch: sw.what, key: sw.key, notice: sw.notice,
+    error: `Changing ${sw.what}: ${sw.notice}` });
 }
 
 async function confirmSwitch(req, res, next, what) {

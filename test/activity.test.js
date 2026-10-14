@@ -44,13 +44,13 @@ test('Chronicle shows them as "What the hub did": a host every line, a member on
   assert.ok(mine.body.rows.length >= 1);
 });
 
-test('its retention is a log setting, shown with what it holds, and asks for the password to change', async () => {
+test('its retention is a log setting, shown with what it holds, and says why it matters before it changes', async () => {
   const keep = await H.api(null, 'GET', '/api/logs/keep');
   const row = keep.body.stores.find(s => s.id === 'activity');
   assert.ok(row && row.settings[0].path === 'logs.activityDays' && row.settings[0].value === 30);
-  const r = await H.api(null, 'POST', '/api/logs/keep', { values: { 'logs.activityDays': 7 } }, { 'X-Doca-Password': '' });
-  assert.equal(r.status, 401);
-  assert.equal(r.body.code, 'password_required');
+  const r = await H.api(null, 'POST', '/api/logs/keep', { values: { 'logs.activityDays': 7 } }, { 'X-Doca-Password': '', 'X-Doca-Notice': '' });
+  assert.equal(r.status, 428);
+  assert.equal(r.body.code, 'notice_required');
 });
 
 test('every routine the audit lists writes its line where it acts', () => {

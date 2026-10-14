@@ -3,7 +3,8 @@
 /**
  * One password for a while (auth/unlock.js; the owner's yes of 2026-10-13): a correct password with `X-Doca-Unlock`
  * opens this session — `chain` for one click's switches, 1/5/15/30 minutes when chosen — in memory only; without the
- * header nothing opens (as before), another session is never opened, and Lock now closes it.
+ * header nothing opens (as before), another session is never opened, and Lock now closes it. Since 2026-10-14 it
+ * matters only for the switches that ask for the password.
  */
 const test   = require('node:test');
 const assert = require('node:assert/strict');
@@ -14,7 +15,8 @@ test.after(() => H.stop());
 
 const unlock = () => require('../modules/auth/unlock');
 const without = { 'X-Doca-Password': '' };
-const flip = (mode, headers) => H.api(null, 'POST', '/api/harness/approval', { mode }, headers);
+// Unattended is a switch that asks for the password (guarded.js); most others show a notice and never meet the window.
+const flip = (_mode, headers) => H.api(null, 'POST', '/api/harness/approval', { mode: 'unattended', confirm: 'unattended' }, headers);
 
 test('a password without the header opens nothing: the next switch asks again', async () => {
   unlock()._open.clear();

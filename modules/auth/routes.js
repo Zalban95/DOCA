@@ -246,6 +246,7 @@ function mount(app) {
   app.post('/api/auth/password', handlePassword);
   app.post('/api/auth/step-up',  handleStepUp);
   require('./unlock').mount(app);   // one password for a while (unlock.js)
+  require('./notices').mount(app);  // "don't show this again" for a switch's notice (notices.js)
   app.get   ('/api/auth/sessions', handleSessions);
   app.delete('/api/auth/sessions', handleSessions);
 }

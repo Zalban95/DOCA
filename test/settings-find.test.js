@@ -4,7 +4,7 @@
  * Finding a setting by the words people use (modules/settings-find; deep test A, 2026-10-08): asked to "switch my theme
  * to light", "turn on manual approval" or "turn on developer mode", the agent searched settings_read and features until
  * it ran out of steps. Now each answers at the first look with where the setting is and the one way to change it — a
- * proposal applied at once, or the person's own switch with their password and where to click — and the header search
+ * proposal applied at once, or the person's own switch at the panel and where to click — and the header search
  * finds the same rows.
  */
 const test   = require('node:test');
@@ -38,7 +38,7 @@ test('the words people use find the setting, with how it changes', () => {
   assert.equal(first('quiet hours').id, 'quiet-hours');
   const how = Object.fromEntries(find().rows().map(r => [r.id, r.how]));
   assert.deepEqual([how.theme, how.approval, how.developer, how.specialists, how['agent-model']], ['screen', 'password', 'password', 'guarded', 'propose']);
-  assert.match(find().describe(first('manual approval')), /Agents → Harness → the Auto \/ Manual switch[\s\S]*with their password — you cannot change it/);
+  assert.match(find().describe(first('manual approval')), /Agents → Harness → the Auto \/ Manual switch[\s\S]*at the panel — you cannot change it/);
 });
 
 test('every row is on a real page, and the machine\'s are not offered to someone without host', () => {
@@ -52,7 +52,7 @@ test('settings_read answers "theme", "approval" and "developer" at the first loo
   const read = filter => tools.call('settings_read', { filter }, [], { user: owner() });
   assert.match(await read('theme'), /Where and how[\s\S]*"daylight" for light[\s\S]*settings_propose \{screen: "this"/);
   const approval = await read('approval');
-  assert.match(approval, /Approval mode[\s\S]*Theirs to switch, with their password/);
+  assert.match(approval, /Approval mode[\s\S]*Theirs to switch, at the panel/);
   assert.doesNotMatch(approval, /^No settings match/);
   assert.match(await read('developer'), /Settings → Developer → the "Developer mode on this install" switch/);
   assert.match(await read('max tool steps'), /harness\.config\.doca\.maxSteps/, 'each word counts, not only the whole filter');

@@ -37,12 +37,12 @@ test('null deletes a key; an array replaces; ?replace=1 replaces whole top-level
 
 test('the guard asks when the merge would change a switch, and only then', async () => {
   seed();
-  const without = { 'X-Doca-Password': '' };
-  assert.equal((await H.api(null, 'POST', '/api/prefs', { harness: { approval: { mode: 'auto' } } }, without)).status, 401);
-  assert.equal((await H.api(null, 'POST', '/api/prefs', { harness: { approval: null } }, without)).status, 401, 'deleting a switch is changing it');
-  assert.equal((await H.api(null, 'POST', '/api/prefs?replace=1', { harness: { config: {} } }, without)).status, 401, 'a replace that drops it too');
+  const without = { 'X-Doca-Password': '', 'X-Doca-Notice': '' };
+  assert.equal((await H.api(null, 'POST', '/api/prefs', { harness: { approval: { mode: 'auto' } } }, without)).status, 428);
+  assert.equal((await H.api(null, 'POST', '/api/prefs', { harness: { approval: null } }, without)).status, 428, 'deleting a switch is changing it');
+  assert.equal((await H.api(null, 'POST', '/api/prefs?replace=1', { harness: { config: {} } }, without)).status, 428, 'a replace that drops it too');
   assert.equal(u().loadPrefs().harness.approval.mode, 'manual');
-  assert.equal((await H.api(null, 'POST', '/api/prefs', { harness: { approval: { mode: 'auto' } } })).status, 200, 'with the password');
+  assert.equal((await H.api(null, 'POST', '/api/prefs', { harness: { approval: { mode: 'auto' } } })).status, 200, 'past the notice');
   assert.equal(u().loadPrefs().harness.approval.mode, 'auto');
 });
 

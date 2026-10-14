@@ -76,7 +76,7 @@ async function close() {
 /** The owner's switch, asked as a question when off — the hub's door and a device's relay alike (relay.js). */
 function needOn() {
   if (!on()) throw require('../switch-off').off('Casting to devices on this network is off (cast.door): switch it on in the Cast sheet or Machines → Nearby.', {
-    what: 'Casting to devices on this network', setting: 'cast.door', route: '/api/cast/door', body: { on: true }, password: true,
+    what: 'Casting to devices on this network', setting: 'cast.door', route: '/api/cast/door', body: { on: true },
     page: 'nearby', card: 'Casting to devices on this network',
     why: 'TVs and speakers fetch what they are sent over plain HTTP from this hub\'s address on their network: while a cast runs, a door opens to that device alone, for that page or sound. It travels unencrypted on your Wi-Fi.' });
 }
