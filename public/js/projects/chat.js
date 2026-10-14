@@ -163,7 +163,7 @@ function _pjTurnUi(t) {
     context: evt => { t.usage = evt; _pjMeter(t); },
   });
   return {
-    onEvent: e => { sink.onEvent(e); if (['work_plan', 'agent_dispatch', 'work_chats'].includes(e.name) && e.type === 'tool_result') pjTabsSync(); },
+    onEvent: e => { sink.onEvent(e); if (['work_plan', 'agent_dispatch', 'work_chats', 'team'].includes(e.name) && e.type === 'tool_result') pjTabsSync(); },
     onError: sink.onError,
     finish: async () => {
       sink.finish();
