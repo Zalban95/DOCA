@@ -60,4 +60,4 @@ async function measure() {
   return 0;
 }
 
-module.exports = { measure };
+module.exports = { measure, ENTRIES, QUESTIONS };
