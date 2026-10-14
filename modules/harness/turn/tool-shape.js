@@ -28,7 +28,9 @@ function switches() {
   if (require('./tool-tiers').mode() === 'all') out.push({ name: 'tools_more', why: 'every tool is sent in full (harness.config.doca.toolsLoading: all)' });
   // An old name kept so old transcripts and recipes still run (tools.call maps it); never offered.
   out.push({ name: 'show_image', why: 'an old name for show_media' });
-  return out;
+  // One reason a tool: the licence's first, so an unlicensed tool is never sent to a page this hive lacks (Machines → VNC).
+  const seen = new Set();
+  return out.filter(o => !seen.has(o.name) && seen.add(o.name));
 }
 
 /**

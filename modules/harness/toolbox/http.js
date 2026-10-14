@@ -71,7 +71,7 @@ async function send({ url, method, body, headers, key, form, files, save_as }, c
       catch (e) {
         // Its own certificate (a home server: Proxmox, a NAS): said with where it is trusted, never accepted here.
         const own = /SELF_SIGNED|DEPTH_ZERO|UNABLE_TO_VERIFY|self.signed/i.test(`${e.cause?.code || ''} ${e.cause?.message || ''} ${e.message}`);
-        if (own && !/not the one you trusted/.test(e.message)) return { error: `Error: ${new URL(url).origin} presents its own certificate (self-signed), which is not trusted. The person trusts it by name — after looking at its fingerprint — in Field → Connectors → Certificates you trust, or gives the server a trusted one.` };
+        if (own && !/not the one you trusted/.test(e.message)) return { error: `Error: ${new URL(url).origin} presents its own certificate (self-signed), which is not trusted. ${require('../../license/where').where('connectors', 'The person trusts it by name — after looking at its fingerprint — in Field → Connectors → Certificates you trust, or gives the server a trusted one.', 'The person gives the server a trusted certificate.')}` };
         return { error: `Error: ${keys.scrub(e.message, secret, token)}` };
       }
       // Redirects are followed here, each hop checked (security review 2026-10-07): a key never leaves its own origin,

@@ -55,28 +55,34 @@ async function packsLibraryRender() {
   const el = document.getElementById('pack-library');
   if (!el) return;
   let d;
+  if (typeof licenceReady === 'function') await licenceReady();
   try { d = await apiFetch('/api/packs/library'); } catch (e) { el.innerHTML = `<div class="placeholder">${escHtml(e.message)}</div>`; return; }
-  const hubOpts = d.hubs.map(h => `<option value="${escHtml(h.id)}">${escHtml(h.label)}</option>`).join('');
+  // Sending to other hubs is a licensed feature (pack-hubs): without it the hubs, Send and Add are left out, never a
+  // control whose route is not there (lib/licence.js).
+  const hubsOn = typeof licenceFeatureOn !== 'function' || licenceFeatureOn('pack-hubs');
+  const registry = d.registry && (typeof licenceFeatureOn !== 'function' || licenceFeatureOn('pack-registry'));
+  const hubs = hubsOn ? d.hubs : [];
+  const hubOpts = hubs.map(h => `<option value="${escHtml(h.id)}">${escHtml(h.label)}</option>`).join('');
   el.innerHTML = `<div class="card-title">Library</div>
     <p class="desc" style="margin-bottom:8px">Packs this hive keeps: saved here, saved by the agent, or sent by another hub. Nothing in it is applied until you bring it in.</p>
     ${d.packs.map(p => `<div class="disk-row"><span class="disk-label">${escHtml(p.name)} <span style="color:var(--muted)">${escHtml(p.origin)}${p.from ? ` · ${escHtml(p.from)}` : ''} · ${escHtml(p.savedAt.slice(0, 10))}</span></span>
       <span class="disk-path">${escHtml(p.contents.map(c => `${c.kind}${c.id ? ` ${c.id}` : ''}`).join(', ') || (p.native ? 'another tool\'s files' : ''))}</span>
       <span class="disk-free" style="display:flex;gap:4px"><a class="btn btn-xs" href="/api/packs/library/${encodeURIComponent(p.id)}">⬇</a>
         <button class="btn btn-xs" onclick="packsPlan(null, ${jsArg(p.id)})">Bring in…</button>
-        ${d.registry ? `<button class="btn btn-xs ${p.published ? 'btn-blue' : ''}" onclick="packsPublish(${jsArg(p.id)}, ${!p.published})" title="Listed to hubs holding a registry token">${p.published ? 'Published' : 'Publish'}</button>` : ''}
-        ${d.hubs.length ? `<select class="input" aria-label="Send to a hub" style="width:auto;font-size:11px" onchange="if (this.value) packsSend(${jsArg(p.id)}, this.value); this.value=''"><option value="">Send to…</option>${hubOpts}</select>` : ''}
+        ${registry ? `<button class="btn btn-xs ${p.published ? 'btn-blue' : ''}" onclick="packsPublish(${jsArg(p.id)}, ${!p.published})" title="Listed to hubs holding a registry token">${p.published ? 'Published' : 'Publish'}</button>` : ''}
+        ${hubs.length ? `<select class="input" aria-label="Send to a hub" style="width:auto;font-size:11px" onchange="if (this.value) packsSend(${jsArg(p.id)}, this.value); this.value=''"><option value="">Send to…</option>${hubOpts}</select>` : ''}
         <button class="btn btn-xs btn-red" onclick="packsDelete(${jsArg(p.id)})">✕</button></span></div>`).join('') || '<div class="placeholder">Empty.</div>'}
-    <div class="card-subtitle" style="margin-top:10px">Other hubs to send to</div>
+    ${hubsOn ? `<div class="card-subtitle" style="margin-top:10px">Other hubs to send to</div>
     <p class="desc">Send packs straight to another hub.</p>
     ${d.hubs.map(h => `<div class="disk-row"><span class="disk-label">${escHtml(h.label)}</span><span class="disk-path">${escHtml(h.url)}${h.pinned ? ' · pinned' : ''} · ${[h.send && 'send', h.read && 'browse'].filter(Boolean).join(', ')}</span>
-      <span class="disk-free" style="display:flex;gap:4px">${d.registry && h.read ? `<button class="btn btn-xs" onclick="packsBrowse(${jsArg(h.id)})">Browse</button>` : ''}<button class="btn btn-xs btn-red" onclick="packsHubRemove(${jsArg(h.id)})">✕</button></span></div>`).join('')}
+      <span class="disk-free" style="display:flex;gap:4px">${registry && h.read ? `<button class="btn btn-xs" onclick="packsBrowse(${jsArg(h.id)})">Browse</button>` : ''}<button class="btn btn-xs btn-red" onclick="packsHubRemove(${jsArg(h.id)})">✕</button></span></div>`).join('')}
     <div id="pack-browse"></div>
     <div class="form-row" style="margin-top:6px">
       <div class="field"><label class="input-label" for="pack-hub-url">Its address${infoBtn('The other hub\'s address, e.g. https://other-hub:4242. Its certificate is pinned when you add it, so only that hub is trusted at this address.')}</label>
         <input class="input" id="pack-hub-url" placeholder="https://other-hub:4242"></div>
-      <div class="field"><label class="input-label" for="pack-hub-token">Its token${infoBtn(`Made on the other hub: Field → API keys → a token with the "hub" preset, which can only send packs${d.registry ? ' (or "registry", to browse and fetch what it publishes)' : ''}. Kept on this machine.`)}</label>
+      <div class="field"><label class="input-label" for="pack-hub-token">Its token${infoBtn(`Made on the other hub: Field → API keys → a token with the "hub" preset, which can only send packs${registry ? ' (or "registry", to browse and fetch what it publishes)' : ''}. Kept on this machine.`)}</label>
         <input class="input" id="pack-hub-token" type="password" autocomplete="off" placeholder="doca_…"></div>
-      <button class="btn btn-sm" onclick="packsHubAdd()">Add</button></div>`;
+      <button class="btn btn-sm" onclick="packsHubAdd()">Add</button></div>` : ''}`;
   if (typeof sharingRender === 'function') sharingRender();   // the owner's sharing card, above the library
 }
 

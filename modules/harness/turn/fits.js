@@ -70,7 +70,7 @@ function inventory(held, person = null) {
   if (held.has('computer_login')) {
     try {
       const ls = require('../../logins').list();
-      out.push(`- Logins for computer_login: ${ls.length ? ls.map(l => `${l.label} (${l.site})`).join(', ') : 'none yet — ask the owner to add one (Field → Connectors → Logins)'}.`);
+      out.push(`- Logins for computer_login: ${ls.length ? ls.map(l => `${l.label} (${l.site})`).join(', ') : `none yet — ask the owner to add one${require('../../license/where').where('connectors', ' (Field → Connectors → Logins)')}`}.`);
     } catch { /* none */ }
   }
   if (held.has('secret_use')) {

@@ -6,11 +6,15 @@
 
 let _mcpKeyName = null;
 
+/** Whether this hive keeps keys for services (feature service-keys): without them a server signs in by its own headers,
+ *  and neither field is drawn (lib/licence.js: left out, never a control whose route is not there). */
+const _mcpKeysOn = () => typeof licenceFeatureOn !== 'function' || licenceFeatureOn('service-keys');
+
 /** Draw the token field for `key` (or remove it), saying whether one is kept already. */
 async function mcpKeyField(key) {
   _mcpKeyName = key || null;
   document.getElementById('mcp-keyfield')?.remove();
-  if (!key) return;
+  if (!key || !_mcpKeysOn()) { _mcpKeyName = null; return; }
   let kept = false;
   try { kept = ((await apiFetch('/api/connectors/keys/all')).keys || []).some(k => k.name === key); } catch { /* shown as not kept */ }
   const field = document.createElement('div');
@@ -66,6 +70,7 @@ function mcpFormBack() {
    hub filling each variable from the key as it starts the server — so the value lives in Keys for services, not here. */
 function mcpKeyEnvField(map) {
   let box = document.getElementById('mcp-keyenv');
+  if (!_mcpKeysOn()) { box?.closest('.field')?.remove(); return; }
   if (!box) {
     const env = document.getElementById('mcp-env')?.closest('.field');
     if (!env) return;

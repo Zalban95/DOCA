@@ -20,11 +20,20 @@ function push(level, text, machine = null) {
   return l;
 }
 
+/** What looks at the machines (busy.want), naming only what this hive has: Live and the status column are licensed. */
+function watchers() {
+  let lic = null;
+  try { lic = require('../license'); } catch { /* no licence module: every one */ }
+  const on = f => !lic || lic.featureOn(f);
+  const said = [on('machines-live') && 'Live', on('workstream') && 'the Workstream', on('machines-status') && 'the status column'].filter(Boolean);
+  return said.length > 1 ? `${said.slice(0, -1).join(', ')} or ${said[said.length - 1]}` : said[0] || 'a page that shows them';
+}
+
 /** For logs.js: the kept lines, then each new one. Returns the function that stops it. */
 function open(tail, onLine) {
   for (const l of ring.slice(-tail)) onLine(l);
   if (!ring.length) onLine({ ts: new Date().toISOString(), source: 'machines', label: 'Machines', level: 'info',
-    text: 'Nothing seen yet. The machines are looked at while Live, the Workstream or the status column is shown.' });
+    text: `Nothing seen yet. The machines are looked at while ${watchers()} is shown.` });
   listeners.add(onLine);
   return () => listeners.delete(onLine);
 }

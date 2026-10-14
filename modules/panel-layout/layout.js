@@ -106,9 +106,12 @@ function merge(layers) {
  * never placed.
  */
 function resolve(merged = {}, { host = true } = {}) {
-  const absent = require('../hosted').on() ? require('../hosted').TABS : [];   // a hosted hive's machine pages are not there (hosted.js)
-  // A page of a feature this hive is not licensed for is never placed (license/gate.js), like the machine's for a non-host.
-  const allowed = t => (host || !D.HOST_PAGES.includes(t)) && !absent.includes(t) && require('../license/gate').pageOn(t);
+  const hosted = require('../hosted').on() ? require('../hosted').TABS : [];   // a hosted hive's machine pages are not there (hosted.js)
+  // A page of a feature this hive is not licensed for is never placed (license/gate.js), like the machine's for a non-host,
+  // and is absent like a hosted hive's: the panel takes it out of every list of pages (panel-layout.js).
+  const pageOn = require('../license/gate').pageOn;
+  const absent = [...hosted, ...D.PAGES.filter(t => !hosted.includes(t) && !pageOn(t))];
+  const allowed = t => (host || !D.HOST_PAGES.includes(t)) && !absent.includes(t);
   const vs = (merged.views || []).map(v => ({ ...v, parts: v.parts.filter(p => allowed(p.page)) })).filter(v => v.parts.length);
   const pages = new Set([...D.PAGES.filter(allowed), ...vs.map(v => v.id)]);
   const placed = new Set(), groups = [];
