@@ -359,3 +359,8 @@ html[data-hosted] .harness-add-row { display: none; }
 .cast-thing .cast-say .input { width: 100%; max-width: 360px; }
 .cast-acts { display: flex; gap: 6px; flex-shrink: 0; }
 .cast-door { margin: 6px 0 10px; }
+
+/* ── A row that scrolls sideways fades the edge it has more past (js/lib/scroll-more.js): Settings' pills on a phone ── */
+[data-scroll-more="right"] { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+[data-scroll-more="left"] { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
+[data-scroll-more="both"] { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }

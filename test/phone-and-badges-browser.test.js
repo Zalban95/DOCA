@@ -54,3 +54,18 @@ test("on a phone: the hub's sentences wrap inside the screen", { skip: B.skip },
   for (const x of r) assert.ok(x.right <= 390, `"${x.text}…" ends at ${x.right}, inside 390 px`);
 });
 
+test("on a phone: Settings' pill row fades the edge it has more past", { skip: B.skip }, async () => {
+  await B.viewport(390, 844);
+  await B.evaluate("nav('settings'); settingsSubNav('general')");
+  await B.sleep(500);
+  const start = await B.evaluate(`(() => { const n = document.getElementById('settings-subnav'); n.scrollLeft = 0; return { more: n.scrollWidth > n.clientWidth }; })()`);
+  assert.ok(start.more, 'the pills are wider than the phone');
+  await B.sleep(300);
+  assert.equal(await B.evaluate("document.getElementById('settings-subnav').dataset.scrollMore"), 'right');
+  await B.evaluate("(() => { const n = document.getElementById('settings-subnav'); n.scrollLeft = n.scrollWidth; })()");
+  await B.sleep(300);
+  assert.equal(await B.evaluate("document.getElementById('settings-subnav').dataset.scrollMore"), 'left');
+  assert.match(await B.evaluate("getComputedStyle(document.getElementById('settings-subnav')).maskImage || getComputedStyle(document.getElementById('settings-subnav')).webkitMaskImage"), /gradient/);
+  await B.viewport(1300, 900);
+});
+
