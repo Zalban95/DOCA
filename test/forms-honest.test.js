@@ -13,7 +13,9 @@ require('../modules/license/keys').preloaded.certificate = null;
 require('../modules/license').reload();
 const B = require('./panel-browser');
 
-before(() => B.start({ setup: B.pastFirstRun }));
+// Loaded again when the first load threw (a script lost to a busy runner: "controlsInit is not defined"): every test
+// here checks the page made no error, and one at load is not theirs.
+before(async () => { await B.start({ setup: B.pastFirstRun }); if (B.errors.length) { B.errors.splice(0); await B.open(); } });
 after(() => B.stop());
 
 // Moved between as a person does, in the one page: a page loaded afresh per test left the last one's live stream

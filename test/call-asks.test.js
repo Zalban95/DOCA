@@ -39,7 +39,7 @@ test('the question is one short sentence a voice can say', () => {
 test('the card stacks above the call\'s face, and inside whatever is full screen', () => {
   const z = (css, sel) => Number(new RegExp(`\\${sel}\\s*\\{[^}]*z-index:\\s*(\\d+)`).exec(css)?.[1]);
   assert.ok(z(CSS('components.css'), '.approval-overlay') > z(CSS('face.css'), '.face-assistant'), 'above the face');
-  const el = () => ({ children: [], style: {}, classList: { add() {}, toggle() {} }, appendChild(c) { this.children.push(c); return c; }, querySelector: () => null, remove() {} });
+  const el = () => ({ children: [], style: {}, classList: { add() {}, toggle() {} }, appendChild(c) { this.children.push(c); return c; }, querySelector: () => null, remove() {}, setAttribute(k, v) { (this.attrs = this.attrs || {})[k] = v; } });
   const face = el(), body = el();
   const sandbox = { document: { createElement: el, getElementById: () => null, body, documentElement: {}, fullscreenElement: face }, CSS: { escape: s => s } };
   vm.createContext(sandbox);
