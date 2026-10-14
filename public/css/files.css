@@ -141,6 +141,8 @@
 .fm-icon  { font-size: 14px; text-align: center; color: var(--muted); }
 .fm-name  { font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 6px; }
 .fm-row.dir .fm-name { color: var(--blue); font-weight: 500; }
+.fm-row.dir .fm-name { justify-self: start; max-width: 100%; }   /* only the name is the link: the rest of the row selects */
+.fm-row.dir .fm-name:hover { text-decoration: underline; }
 .fm-size  { font-size: 10px; color: var(--muted); text-align: right; padding-right: 8px; }
 .fm-date  { font-size: 10px; color: var(--muted); }
 .fm-acts  { display: flex; gap: 3px; justify-content: flex-end; opacity: 0; transition: opacity var(--t-fast); }

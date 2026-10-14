@@ -110,7 +110,7 @@ module.exports = [
           // named here, so the agent can open it in canvas or put Machines → Live on a screen without reading the log.
           let serving = [];
           try { serving = require('../../machines').served(); } catch { /* nothing serving */ }
-          const served = j => serving.filter(s => s.jobId === j.id).map(s => `\n    serving ${s.url} (Machines → Live shows it)`).join('');
+          const served = j => serving.filter(s => s.jobId === j.id).map(s => `\n    serving ${s.url}${require('../../license/where').where('live', ' (Machines → Live shows it)')}`).join('');
           return rows.length ? rows.map(j => line(j) + served(j)).join('\n') : 'No background jobs in this conversation.';
         }
         default: throw new Error('action is one of status, output, stop, list.');

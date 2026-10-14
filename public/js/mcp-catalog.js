@@ -38,7 +38,7 @@ async function mcpCatalogAdd(id, transport) {
     // A server at an address needs its address and token before it can start: straight to its form.
     if (transport === 'http') {
       await mcpLoad(); await mcpEdit(id);
-      setStatus(document.getElementById('mcp-form-status'), 'Added, off. Check its address and Save; its token is the key named on its row (Field → Connectors → API services). Then Connect it — or ✨ Ask the agent.', '');
+      setStatus(document.getElementById('mcp-form-status'), `Added, off. Check its address and Save; ${licenceWhere('connectors', 'its token is the key named on its row (Field → Connectors → API services)', 'its token goes in its headers as "Authorization: Bearer <the token>"')}. Then Connect it — or ✨ Ask the agent.`, '');
       document.getElementById('mcp-form').scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
@@ -54,7 +54,8 @@ function mcpKeyNoteHtml(s) {
   let base = '';
   try { base = new URL(s.url).origin; } catch { /* no address yet */ }
   const made = APP_LINKS[s.key]?.pages?.token ? ` — made at ${appLinkHtml(s.key, 'token', { base })}` : '';
-  return ` · token: the key <b>${escHtml(s.key)}</b> in <a href="#" onclick="nav('connectors');return false">Field → Connectors → API services</a>${made}`;
+  const where = licenceWhere('connectors', ` in <a href="#" onclick="nav('connectors');return false">Field → Connectors → API services</a>`, ' (or "Authorization: Bearer …" in its headers)');
+  return ` · token: the key <b>${escHtml(s.key)}</b>${where}${made}`;
 }
 
 /** A suggested app: its release downloaded, checked and unpacked by the hub (mcp/craft-install.js), then added off. */

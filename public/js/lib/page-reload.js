@@ -9,6 +9,7 @@
 
 let _prVersion = null;          // the version this page's scripts came with (the first hello's)
 let _prTimer = null, _prBar = null;
+let _prPutAway = false;         // ✕ pressed: the notice is not drawn again; the page still reloads once it is free
 const _prEdited = new Set();    // fields typed into since the page loaded
 
 /** When this page could reload without losing anything ("once the call ends"); '' when it can now. */
@@ -35,8 +36,8 @@ function pageVersionSeen(v) {
 function pageReloadSoon(why) {
   clearTimeout(_prTimer);
   const busy = pageReloadBusy();
-  if (!busy) { _prShow(`${why} Loading it again…`, false); _prTimer = setTimeout(() => location.reload(), 1200); return; }
-  _prShow(`${why} This page loads again ${busy} — or now:`, true);
+  if (!busy) { if (!_prPutAway) _prShow(`${why} Loading it again…`, false); _prTimer = setTimeout(() => location.reload(), 1200); return; }
+  if (!_prPutAway) _prShow(`${why} This page loads again ${busy} — or now:`, true);   // the 10 s re-check drew it back after ✕
   _prTimer = setTimeout(() => pageReloadSoon(why), 10000);
 }
 
@@ -51,9 +52,18 @@ function _prShow(text, button) {
     const b = Object.assign(document.createElement('button'), { type: 'button', className: 'btn btn-sm undo-btn', textContent: 'Reload' });
     b.onclick = () => location.reload();
     const later = Object.assign(document.createElement('button'), { type: 'button', className: 'icon-btn undo-x', textContent: '✕', title: 'Not now (it still reloads once the page is free)' });
-    later.onclick = () => { _prBar.remove(); };
+    later.onclick = () => { _prPutAway = true; _prBar.remove(); };
     _prBar.append(b, later);
   }
+}
+
+/** Who asked, in words for this reader: their own ask (from this page or another of theirs) is "You asked…" — it
+    named them by their account's name, which read as someone else's doing (newcomer run 2026-10-14, b24). */
+async function _prAsked(c) {
+  if (!c.every) return 'You asked your screens to load again.';
+  let mine = false;
+  if (c.byId && typeof apiFetch === 'function') { try { mine = (await apiFetch('/api/auth/me'))?.id === c.byId; } catch { /* said by name */ } }
+  return mine ? 'You asked every screen to load again.' : `${c.by || 'An admin'} asked every screen to load again.`;
 }
 
 /** Settings → devices: ⟳ reloads every signed-in page of the hive (an admin) or one's own (anyone else). */
@@ -69,6 +79,6 @@ async function screensReloadAll(btn) {
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
   document.addEventListener('input', e => { if (e.isTrusted && e.target?.matches?.('input, textarea, select, [contenteditable]')) _prEdited.add(e.target); }, true);
   document.addEventListener('DOMContentLoaded', () => {
-    if (typeof liveOn === 'function') liveOn('screen', c => { if (c.what === 'reload') pageReloadSoon(c.every ? `${c.by || 'An admin'} asked every screen to load again.` : 'You asked your screens to load again.'); });
+    if (typeof liveOn === 'function') liveOn('screen', c => { if (c.what === 'reload') _prAsked(c).then(pageReloadSoon); });
   });
 }

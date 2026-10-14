@@ -62,6 +62,15 @@ function fieldInfoUpgrade(root = document) {
     label.insertAdjacentHTML('beforeend', ' ' + infoBtn(text));
     help.hidden = true;
   });
+  // Each button named after what it explains: forty buttons all called "What this is" told a screen reader, or a
+  // newcomer hovering one, nothing about which (newcomer run 2026-10-14, b3).
+  root.querySelectorAll?.('.info-btn:not([data-named])').forEach(btn => {
+    btn.dataset.named = '1';
+    const anchor = btn.closest('.input-label, label, .field-label, .models-settings-label, .card-title, summary');
+    const name = anchor ? [...anchor.childNodes].filter(n => !['BUTTON', 'SELECT', 'TEXTAREA', 'DETAILS'].includes(n.tagName))
+      .map(n => n.textContent).join(' ').replace(/\s+/g, ' ').trim().slice(0, 60) : '';
+    if (name) { btn.setAttribute('aria-label', `What “${name}” is`); btn.title = `What “${name}” is`; }
+  });
 }
 
 (function fieldInfoWatch() {

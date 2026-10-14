@@ -40,7 +40,7 @@ function reload(person, { every = false } = {}) {
   const host = !person?.id || require('../harness/session-access').isHost(person);
   if (every && !host) throw Object.assign(new Error('Reloading everyone\'s screens is an admin\'s; yours reload with every: false.'), { status: 403 });
   const personId = every ? null : person?.id || null;
-  require('../live').changed('screen', null, 'reload', { personId, every: !personId, by: person?.name || null });
+  require('../live').changed('screen', null, 'reload', { personId, every: !personId, by: person?.name || null, byId: person?.id || null });
   return { sent: true, every: !personId, pages: personId ? require('../live/routes').pagesOf(personId) : require('../live/routes').pagesAll() };
 }
 

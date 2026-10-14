@@ -74,3 +74,36 @@ test('the picker opens the way down to the path a field already holds', () => {
   const ide = fs.readFileSync(path.join(PUB, 'js/projects/ide.js'), 'utf8');
   assert.match(ide, /async function pjNew\(\)[\s\S]{0,200}fpPick\(/);
 });
+
+/** The picker run in a sandbox over a made-up disk: what it asked for, and what it said. */
+async function pickerOver(disk, want) {
+  const vm = require('node:vm');
+  const asked = [];
+  const el = () => ({ innerHTML: '', textContent: '', value: '', style: {}, setAttribute() {}, querySelector: () => null });
+  const els = { 'fp-list': el(), 'fp-breadcrumb': el(), 'fp-selected': el(), 'fp-modal': el(), 'fp-title': el() };
+  const ctx = { document: { getElementById: id => els[id] || null }, escHtml: s => String(s), CSS: { escape: s => s },
+    apiFetch: async url => {
+      asked.push(url);
+      if (url === '/api/files/roots') return { roots: ['/home/a'] };
+      const p = decodeURIComponent(url.split('path=')[1]);
+      if (!disk[p]) throw new Error('404 There is no folder');
+      return { entries: disk[p] };
+    } };
+  vm.createContext(ctx);
+  vm.runInContext(fs.readFileSync(path.join(PUB, 'js/fp.js'), 'utf8'), ctx);
+  await ctx._fpLoadRoots(want);
+  return { asked, crumb: els['fp-breadcrumb'].textContent, selected: vm.runInContext('FP.selected', ctx) };
+}
+
+test('a folder that does not exist yet: nothing is asked for it, and the tree starts from the nearest one that does', async () => {
+  const disk = { '/home/a': [{ name: 'docs', isDir: true }, { name: 'x.txt', isDir: false }], '/home/a/docs': [] };
+  const r = await pickerOver(disk, '/home/a/.ollama/models');
+  assert.deepEqual(r.asked, ['/api/files/roots', `/api/files/list?path=${encodeURIComponent('/home/a')}`], 'no 404 for a folder not there');
+  assert.equal(r.selected, '/home/a', 'the nearest folder that exists is where it starts');
+  assert.match(r.crumb, /\/home\/a\/\.ollama\/models does not exist yet — this starts from \/home\/a, the nearest folder that does/);
+  // One that exists opens all the way down, with no note.
+  const ok = await pickerOver(disk, '/home/a/docs');
+  assert.equal(ok.selected, '/home/a/docs');
+  assert.equal(ok.crumb, '/home/a/docs');
+  assert.equal(ok.asked.length, 3);
+});

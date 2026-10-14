@@ -21,9 +21,12 @@ function mcpShowResult(id, msg, cls) {
   const card = line?.closest('.mcp-card');
   if (!line) return false;
   setStatus(line, msg, cls, cls === 'err' || cls === 'warn' ? { clear: 0 } : { clear: 8000 });   // what still needs a click stays
-  if (card) {
-    card.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    card.classList.remove('mcp-flash'); void card.offsetWidth; card.classList.add('mcp-flash');
-  }
+  if (card) { card.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); mcpFlash(card); }
   return true;
+}
+
+/** A card lit once (settings.css .mcp-flash): the eye goes where the click went. */
+function mcpFlash(card) {
+  if (!card) return;
+  card.classList.remove('mcp-flash'); void card.offsetWidth; card.classList.add('mcp-flash');
 }

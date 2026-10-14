@@ -118,7 +118,8 @@ const tier = x => (!x.r.declared && x.score >= 6 ? 0 : 1);
 function find(q, { host = true, limit = 6 } = {}) {
   const { base, all } = words(q);
   if (!base.length) return [];
-  return rows().filter(r => host || (!r.host && !hostPage(r.page))).map(r => {
+  const here = r => { try { return !r.page || require('../license/gate').pageOn(r.page); } catch { return true; } };   // not licensed here: not found
+  return rows().filter(r => here(r) && (host || (!r.host && !hostPage(r.page)))).map(r => {
     const strong = `${r.id} ${r.label} ${r.paths.join(' ')}`.toLowerCase(), weak = `${r.words || ''} ${r.control || ''}`.toLowerCase();
     // The person's own words count most; a synonym's a little, so "dark" finds the theme and not every dark corner.
     const score = (r.declared ? base : all).reduce((s, w) => s + (base.includes(w) ? 3 : 1) * ((strong.includes(w) ? 2 : 0) + (weak.split(/[^a-z0-9.+-]+/).includes(w) ? 1 : 0)), 0);

@@ -265,7 +265,7 @@
             <span id="fm-statusbar-text"></span>
             <span id="fm-statusbar-clip"></span>
             <span style="flex:1"></span>
-            <span class="text-muted fm-kbd-hints">Ctrl+C copy · Ctrl+X cut · Ctrl+V paste · Del delete · F2 rename</span>
+            <span class="text-muted fm-kbd-hints">Click a folder's name or double-click its row to open it · Ctrl+C copy · Ctrl+X cut · Ctrl+V paste · Del delete · F2 rename</span>
           </div>
 
         </div>
@@ -1302,7 +1302,7 @@
 <!-- ═══════════════════════════════════════════════════ SHARED MODALS -->
 <!-- Custom confirm modal (replaces browser confirm()) -->
 <div id="app-confirm-modal" class="app-confirm-backdrop">
-  <div class="app-confirm-box">
+  <div class="app-confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="app-confirm-message">
     <p id="app-confirm-message" class="app-confirm-msg"></p>
     <div class="app-confirm-actions">
       <button id="app-confirm-cancel" class="btn btn-sm">Cancel</button>
@@ -1313,7 +1313,7 @@
 
 <!-- Custom prompt modal (replaces browser prompt()) -->
 <div id="app-prompt-modal" class="app-confirm-backdrop">
-  <div class="app-confirm-box">
+  <div class="app-confirm-box" role="dialog" aria-modal="true" aria-labelledby="app-prompt-message">
     <p id="app-prompt-message" class="app-confirm-msg"></p>
     <input id="app-prompt-input" class="input" style="width:100%;box-sizing:border-box"
            autocomplete="off" spellcheck="false">
@@ -1326,7 +1326,7 @@
 
 <!-- Sudo password modal -->
 <div id="sudo-modal" class="app-confirm-backdrop">
-  <div class="app-confirm-box">
+  <div class="app-confirm-box" role="dialog" aria-modal="true" aria-labelledby="sudo-modal-message">
     <p id="sudo-modal-message" class="app-confirm-msg">Enter sudo password to continue:</p>
     <input id="sudo-modal-input" type="password" class="input" placeholder="This computer's password (sudo)"
            style="width:100%;margin:8px 0 14px;box-sizing:border-box" autocomplete="current-password">
@@ -1339,7 +1339,7 @@
 
 <!-- Docker Run modal -->
 <div id="docker-run-modal" class="app-confirm-backdrop">
-  <div class="app-confirm-box" style="min-width:380px;max-width:460px">
+  <div class="app-confirm-box" role="dialog" aria-modal="true" aria-label="Run a container" style="min-width:380px;max-width:460px">
     <p class="app-confirm-msg" style="margin:0 0 4px">
       Run container from <strong id="docker-run-image-label"></strong>
     </p>
@@ -1401,11 +1401,11 @@
 <script src="js/lib/view-token.js"></script><script src="js/lib/api.js"></script>
 <script src="js/lib/html.js"></script>
 <script src="js/lib/output.js"></script>
-<script src="js/lib/status.js"></script><script src="js/lib/fab-aside.js"></script>
+<script src="js/lib/status.js"></script><script src="js/lib/fab-aside.js"></script><script src="js/lib/scroll-more.js"></script>
 <script src="js/lib/format.js"></script>
 <script src="js/lib/presence.js"></script><script src="js/lib/live.js"></script><script src="js/lib/select-sheet.js"></script><script src="js/lib/choice-input.js"></script><script src="js/lib/model3d.js"></script><script src="js/lib/icons.js"></script><script src="js/lib/ui-parts.js"></script><script src="js/lib/field-info.js"></script><script src="js/lib/app-links.js"></script>
 <script src="js/lib/debounce.js"></script>
-<script src="js/lib/dialogs.js"></script><script src="js/lib/machine-ask.js"></script><script src="js/lib/undo.js"></script><script src="js/lib/people-pick.js"></script><script src="js/lib/page-reload.js"></script><script src="js/lib/install-ask.js"></script><script src="js/settings/leaf-fields.js"></script><script src="js/lib/machine-origin.js"></script><script src="js/lib/attention.js"></script><script src="js/lib/mic.js"></script><script src="js/lib/mic-keep.js"></script><script src="js/lib/screen.js"></script><script src="js/lib/licence.js"></script><script src="js/lib/unlock.js"></script>
+<script src="js/lib/dialogs.js"></script><script src="js/lib/machine-ask.js"></script><script src="js/lib/undo.js"></script><script src="js/lib/people-pick.js"></script><script src="js/lib/page-reload.js"></script><script src="js/lib/toast-aside.js"></script><script src="js/lib/install-ask.js"></script><script src="js/settings/leaf-fields.js"></script><script src="js/lib/machine-origin.js"></script><script src="js/lib/attention.js"></script><script src="js/lib/mic.js"></script><script src="js/lib/mic-keep.js"></script><script src="js/lib/screen.js"></script><script src="js/lib/licence.js"></script><script src="js/lib/unlock.js"></script>
 <script src="js/lib/system-tools.js"></script>
 <script src="js/lib/pty-banner.js"></script>
 <!-- The agent transcript, shared by the floating chat and the harness console. -->
@@ -1445,7 +1445,7 @@
 <script src="js/snapshots.js"></script>
 <script src="js/setup.js"></script>
 <script src="js/config.js"></script>
-<script src="js/files-bookmarks.js"></script><script src="js/files.js"></script><script src="js/files-menu.js"></script><script src="js/files-disks.js"></script><script src="js/global-search.js"></script>
+<script src="js/files-bookmarks.js"></script><script src="js/files.js"></script><script src="js/files-menu.js"></script><script src="js/files-open.js"></script><script src="js/files-disks.js"></script><script src="js/global-search.js"></script>
 <!-- Harness settings on the Controls page. -->
 <script src="js/harness/lines.js"></script><script src="js/harness/life.js"></script><script src="js/harness/web-stack.js"></script>
 <script src="js/harness/param-table.js"></script>

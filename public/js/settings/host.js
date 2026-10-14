@@ -24,7 +24,7 @@ async function hostCapsLoad(fresh = false) {
       <button class="btn btn-xs" onclick="hostCapsLoad(true)" title="Look again">↺</button></div>
     <p style="font-size:11px;color:var(--muted);margin-bottom:8px">${escHtml(`${c.os.name} ${c.os.release} · ${c.os.arch} · ${c.os.cpus} CPUs · ${c.os.memoryGB} GB · Node ${c.node}`)}</p>
     ${_HOST_ROWS.map(([k, label]) => { const r = c[k] || {};
-      return `<div class="disk-row"><span class="disk-label">${r.available ? '●' : '○'} ${escHtml(label)}</span>
+      return `<div class="disk-row note-row"><span class="disk-label">${r.available ? '●' : '○'} ${escHtml(label)}</span>
         <span class="disk-path" title="${escHtml(r.via || '')}">${escHtml(r.via || '')}</span>
         <span class="disk-free" style="${r.available ? '' : 'color:var(--muted)'}">${escHtml(r.note || (r.available ? 'available' : 'absent'))}</span></div>`; }).join('')}`;
   hostMigrationsDraw(card);

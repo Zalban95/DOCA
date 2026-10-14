@@ -68,7 +68,7 @@ function pickRole(role, a, doc, opts = {}) {
     alternatives: ok.slice(1, 3).map(t => ({ id: t.m.id, label: t.m.label, where: t.f.where })),
     tooBig: closest ? { id: closest.m.id, label: closest.m.label, why: closest.f.why } : null,
     providers: providersFor(role, doc, opts.providers),
-    providersNote: doc.hostedNote?.[role] || null,
+    providersNote: require('../license/where').unsaid(doc.hostedNote?.[role]) || null,   // never a page this hive lacks
   };
 }
 

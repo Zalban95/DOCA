@@ -18,7 +18,7 @@ function formHelpScan(root = document) {
     box.dataset.helpId = id;
     _formHelpForms.set(id, box);
     const btn = Object.assign(document.createElement('button'), { className: 'btn btn-xs form-help-btn', type: 'button', textContent: '✨ Ask the agent',
-      title: 'The agent sees this form (never its passwords or tokens), explains what goes where and can fill it as a draft for you to save' });
+      title: 'Opens the chat to ask about this card: the agent sees its fields (never passwords or tokens), explains what goes where and can fill them as a draft for you to save' });
     btn.onclick = e => { e.stopPropagation(); formHelpAsk(id); };
     const title = box.querySelector('.card-title');
     if (title) title.append(btn); else box.prepend(btn);

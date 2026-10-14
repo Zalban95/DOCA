@@ -18,8 +18,13 @@ const SETTINGS_TABS = [
 
 let _settingsHidden = [];
 
+/** The pages this hive has, to show or hide: an unlicensed page (lib/licence.js) or one absent here is left out. */
+const _settingsTabsHere = () => SETTINGS_TABS.filter(t => (typeof licencePageOn !== 'function' || licencePageOn(t.id))
+  && (typeof NAV_TABS === 'undefined' || NAV_TABS.includes(t.id)));
+
 async function _subtabGeneralInit() {
   try {
+    if (typeof licenceReady === 'function') await licenceReady();
     const prefs = await screenPrefs();   // this screen's look, tabs and sections over the hive's (lib/screen.js)
     _settingsHidden = prefs.hiddenTabs || [];
     _settingsRender();
@@ -64,7 +69,7 @@ async function _subtabVoiceInit() {
 function _settingsRender() {
   const list = document.getElementById('settings-tabs-list');
   if (!list) return;
-  list.innerHTML = advancedFold(SETTINGS_TABS.map(t => `
+  list.innerHTML = advancedFold(_settingsTabsHere().map(t => `
     <div class="settings-tab-row">
       <label class="skill-toggle">
         <input type="checkbox" id="settings-show-${t.id}" data-default="true" data-label="${escHtml(t.label)}"
@@ -81,9 +86,10 @@ function _settingsRender() {
  *  silently does nothing until you find a Save button is a trap. */
 async function settingsSave() {
   const status = document.getElementById('settings-status');
-  const hiddenTabs = SETTINGS_TABS
-    .filter(t => !document.getElementById(`settings-show-${t.id}`)?.checked)
-    .map(t => t.id);
+  const here = _settingsTabsHere();
+  // A page not drawn here keeps what was saved for it: it is not here to be shown or hidden.
+  const hiddenTabs = [...here.filter(t => !document.getElementById(`settings-show-${t.id}`)?.checked).map(t => t.id),
+    ..._settingsHidden.filter(id => !here.some(t => t.id === id))];
 
   try {
     await screenSave({ hiddenTabs });

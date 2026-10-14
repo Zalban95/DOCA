@@ -41,9 +41,14 @@ const APP_LINKS = {
       token: ['Open {token} in Home Assistant, signed in as the person whose rights the hub should have.',
         'Under Long-lived access tokens press Create token, and name it after this hub.',
         'Copy the token — Home Assistant shows it once — and paste it as the key below, with Home Assistant\'s address (http://<its address>:8123).'],
-      mcp: ['In Home Assistant, add {mcp} (it serves the entities you expose to Assist as tools).',
-        'Make a token at {token} (Long-lived access tokens → Create token) and copy it.',
-        'Paste it in Field → Connectors → API services as the key home-assistant, with Home Assistant\'s address; then Start the server here.'],
+      // Where the token goes: Keys for services where this hive has them, else the server's own header (lib/licence.js).
+      get mcp() {
+        const keys = typeof licencePageOn !== 'function' || licencePageOn('connectors');
+        return ['In Home Assistant, add {mcp} (it serves the entities you expose to Assist as tools).',
+          'Make a token at {token} (Long-lived access tokens → Create token) and copy it.',
+          keys ? 'Paste it in Field → Connectors → API services as the key home-assistant, with Home Assistant\'s address; then Start the server here.'
+            : 'Paste it in the server\'s headers here as "Authorization: Bearer <the token>"; then Start the server here.'];
+      },
     },
   },
   telegram: {

@@ -738,7 +738,7 @@ body.chat-resizing * { cursor: nwse-resize !important; }
 .theme-swatch-label {
   font-size: 10px; color: var(--text); text-align: center;
   padding: 5px 2px 3px; letter-spacing: 0.04em;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  white-space: normal; overflow-wrap: anywhere; line-height: 1.25;   /* a long name takes a second line, never cut (run 1) */
   width: 100%;
 }
 .theme-swatch-custom-icon {

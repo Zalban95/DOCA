@@ -128,7 +128,10 @@ function _wsActivity(a) {
   row.className = `ws-act ${a.kind}${a.failed ? ' failed' : ''}`;
   // A call's risk tier (experiment riskTiers): read, reversible with its way back, or outward — asked.
   const tier = a.tier ? `<span class="ws-tier ${escHtml(a.tier)}" title="${escHtml(a.way ? `Way back: ${a.way}` : a.why || '')}">${escHtml(a.tier)}</span>` : '';
-  row.innerHTML = `<span class="ws-who">${escHtml(a.who || '')}</span>${tier}${escHtml(a.text)}${a.way ? `<span class="ws-way"> ↩ ${escHtml(a.way)}</span>` : ''}`;
+  // Two columns, who and what, the name once per run of lines by the same speaker (it read as one run-on line, b9).
+  const again = box.lastElementChild?.dataset.who === (a.who || '');
+  row.dataset.who = a.who || '';
+  row.innerHTML = `<span class="ws-who${again ? ' again' : ''}">${escHtml(a.who || '')}</span><span class="ws-body">${tier}${escHtml(a.text)}${a.way ? `<span class="ws-way"> ↩ ${escHtml(a.way)}</span>` : ''}</span>`;
   box.append(row);
   if (++WS.lines > 400) { box.firstElementChild?.remove(); WS.lines--; }
   if (near) box.scrollTop = box.scrollHeight;

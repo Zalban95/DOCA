@@ -12,6 +12,8 @@
  * of this panel, and `checked` is the day the pin was read from the npm registry (`npm view <pkg> version`). A server
  * added before the pin keeps the arguments it was added with; adding it again takes the pin.
  */
+const { where } = require('../license/where');
+
 const CATALOG = [
   { id: 'playwright', label: 'Playwright — a browser the agent drives',
     about: 'Microsoft\'s server: open pages, read them as an accessibility snapshot, click and type by reference, take screenshots, '
@@ -26,10 +28,15 @@ const CATALOG = [
   // and its token named as a key for services (`home-assistant`, since 2.266.0): the person pastes it once in Field →
   // Connectors → Keys for services, where the Home page reads it too; the hub adds it when it connects (registry.withKey).
   { id: 'home-assistant', label: 'Home Assistant — the building: lights, climate, covers, sensors, scenes',
-    about: 'Home Assistant\'s own MCP server (Settings → Devices & services → Add "Model Context Protocol Server" in Home Assistant): '
-      + 'the entities you expose to Assist become tools — turn on and off, set lights and climate, read sensors, run scripts and scenes. '
-      + 'Set its address in the MCP tab, and paste a long-lived access token (your Home Assistant profile → Security) as the key '
-      + '"home-assistant" for that address in Field → Connectors → Keys for services.',
+    // Where the token goes is said only where this hive has Keys for services (license/where.js); without them it is the
+    // server's own header, which withKey uses when no key of that name is kept.
+    get about() {
+      return 'Home Assistant\'s own MCP server (Settings → Devices & services → Add "Model Context Protocol Server" in Home Assistant): '
+        + 'the entities you expose to Assist become tools — turn on and off, set lights and climate, read sensors, run scripts and scenes. '
+        + 'Set its address in the MCP tab, and paste a long-lived access token (your Home Assistant profile → Security) '
+        + where('connectors', 'as the key "home-assistant" for that address in Field → Connectors → Keys for services.',
+          'in its headers as "Authorization: Bearer <the token>".');
+    },
     transport: 'http', url: 'http://homeassistant.local:8123/api/mcp', headers: {}, key: 'home-assistant', needs: [],
     // Home Assistant on this machine (a container on the host network) answers on localhost, and `homeassistant.local`
     // often does not resolve here at all (2026-10-11): the first that answers is the address it is added with.
@@ -38,10 +45,13 @@ const CATALOG = [
   // hosted here (n8n's Sustainable Use License is for their own internal use): only connected, with its Bearer token
   // as the key for services `n8n`, so the secret never sits in the server's headers. The path is each workflow's own.
   { id: 'n8n', label: 'n8n — your own workflows as tools (MCP Server Trigger)',
-    about: 'A workflow in your own n8n that starts with the "MCP Server Trigger" node offers the tools connected to it. '
-      + 'Copy its Production URL (or Test URL while you build it) into the address here, choose Bearer auth on the trigger, '
-      + 'and paste the same token in the Token box (kept as the key "n8n" in Field → Connectors → Keys for services). '
-      + 'This panel does not install n8n.',
+    get about() {
+      return 'A workflow in your own n8n that starts with the "MCP Server Trigger" node offers the tools connected to it. '
+        + 'Copy its Production URL (or Test URL while you build it) into the address here, choose Bearer auth on the trigger, '
+        + where('connectors', 'and paste the same token in the Token box (kept as the key "n8n" in Field → Connectors → Keys for services). ',
+          'and paste the same token in its headers as "Authorization: Bearer <the token>". ')
+        + 'This panel does not install n8n.';
+    },
     transport: 'http', url: 'http://localhost:5678/mcp/your-workflow-path', headers: {}, key: 'n8n', needs: [] },
   // Suggested, never default: open-source creative apps, each its own server (catalog-craft.js).
   ...require('./catalog-craft').ROWS,

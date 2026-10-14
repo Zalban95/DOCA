@@ -10,7 +10,7 @@
    Keys: ↑ ↓ move, → opens, ← closes or goes up, Enter chooses.
    ═══════════════════════════════════════════════════════ */
 
-const FP = { target: null, mode: 'dir', selected: '', resolve: null, open: new Set(), kids: new Map() };
+const FP = { target: null, mode: 'dir', selected: '', note: '', resolve: null, open: new Set(), kids: new Map() };
 
 const _fpSep = p => (/^[A-Za-z]:\\/.test(p) || (p.includes('\\') && !p.includes('/')) ? '\\' : '/');
 const _fpJoin = (dir, name) => { const s = _fpSep(dir); return dir.endsWith(s) ? dir + name : dir + s + name; };
@@ -58,13 +58,25 @@ async function _fpLoadRoots(want = '') {
   }
   FP.roots = roots;
   FP.open.clear();
+  FP.note = '';
   const root = roots.filter(r => want && _fpUnder(want, r)).sort((a, b) => b.length - a.length)[0];
   if (root) {
-    // Open each folder from the root down to the one wanted (its parent when it is a file, or does not exist yet).
+    // Open each folder from the root down to the one wanted (its parent when it is a file). A step is listed only when
+    // its parent's listing has it: a folder that does not exist yet is not asked for (it answered 404 and the picker
+    // drew nothing — newcomer run 2026-10-14, a9) — the tree starts from the nearest folder that does, and says so.
     const chain = [];
     for (let p = want.replace(/[\\/]+$/, '') || want; p && _fpUnder(p, root); p = _fpParent(p)) { chain.unshift(p); if (p === root || _fpParent(p) === p) break; }
-    for (const p of chain) { if (await _fpKids(p) === null) break; FP.open.add(p); }
-    FP.selected = want;
+    let have = null, found = false;
+    for (const [i, p] of chain.entries()) {
+      const entry = i && (FP.kids.get(chain[i - 1]) || []).find(e => _fpJoin(chain[i - 1], e.name) === p);
+      if (i && !entry) break;                         // not in its parent: it does not exist (yet)
+      found = i === chain.length - 1;
+      if (i && !entry.isDir) break;                   // a file: chosen, not opened
+      if (await _fpKids(p) === null) break;
+      FP.open.add(p); have = p;
+    }
+    FP.selected = found || !have ? want : have;
+    if (!found && have) FP.note = `${want} does not exist yet — this starts from ${have}, the nearest folder that does. Select keeps the path below, or choose another.`;
   }
   _fpDraw();
   list.querySelector('.fp-node.sel')?.scrollIntoView({ block: 'center' });
@@ -111,6 +123,7 @@ async function _fpToggle(abs, force) {
 }
 
 function _fpSelect(abs, isDir) {
+  FP.note = '';
   if ((isDir && FP.mode === 'dir') || (!isDir && FP.mode === 'file')) { FP.selected = abs; document.getElementById('fp-selected').value = abs; }
   _fpDraw();
   document.querySelector(`#fp-list .fp-node[data-path="${CSS.escape(abs)}"]`)?.focus();
@@ -119,7 +132,7 @@ function _fpSelect(abs, isDir) {
 function _fpCrumbs(p) {
   const bc = document.getElementById('fp-breadcrumb');
   if (!bc) return;
-  bc.textContent = p ? p : (FP.mode === 'file' ? 'Open a folder and choose a file' : 'Open folders with ▸ and choose one');
+  bc.textContent = FP.note || (p ? p : (FP.mode === 'file' ? 'Open a folder and choose a file' : 'Open folders with ▸ and choose one'));
 }
 
 function fpClose() {

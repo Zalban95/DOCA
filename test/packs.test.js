@@ -108,4 +108,8 @@ test('a skill travels with the recipes it names', async () => {
   if (!require('../modules/recipes/store').get('pack-echo')) require('../modules/recipes/store').save({ title: 'Pack echo', steps: [{ tool: 'shell', args: { command: 'echo hi' } }] });
   const { manifest } = require('../modules/packs/export').build({ skills: ['echoing'] });
   assert.deepEqual(manifest.contents.map(c => `${c.kind}:${c.id}`).sort(), ['recipe:pack-echo', 'skill:echoing']);
+  // Given no name it is named by what it holds, never the "pack" every unnamed one shared (newcomer run 2026-10-14).
+  assert.equal(manifest.name, 'echoing-and-1-more');
+  assert.equal(require('../modules/packs/export').build({ name: '  ', recipes: ['pack-echo'] }).manifest.name, 'pack-echo');
+  assert.equal(require('../modules/packs/export').build({ name: 'mine', recipes: ['pack-echo'] }).manifest.name, 'mine');
 });

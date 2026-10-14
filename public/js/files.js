@@ -209,7 +209,7 @@ function fmRowHTML(e) {
                ondblclick="fmDblClick(${jsArg(fpath)}, ${e.isDir})"
                oncontextmenu="fmContextMenu(event, ${jsArg(fpath)}, ${e.isDir})">
     <span class="fm-icon">${icon}</span>
-    <span class="fm-name" title="${escHtml(e.name)}">${escHtml(e.name)}</span>
+    <span class="fm-name" title="${e.isDir ? `Open ${escHtml(e.name)}` : escHtml(e.name)}"${e.isDir ? ` onclick="fmOpenByName(event, ${jsArg(fpath)})"` : ''}>${escHtml(e.name)}</span>
     <span class="fm-size">${escHtml(size)}</span>
     <span class="fm-date">${escHtml(date)}</span>
     <span class="fm-acts">

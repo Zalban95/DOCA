@@ -96,6 +96,32 @@ async function key(k) {
   await headless.sleep(120);
 }
 
+/** A real mouse click at a point of the page, as a person's would land: on whatever is drawn on top there. */
+async function click(x, y) {
+  for (const type of ['mousePressed', 'mouseReleased']) await page.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 });
+  await headless.sleep(120);
+}
+
+/**
+ * A real click at the centre of the first element matching `selector`, once it is in view and nothing covers it (a
+ * smooth scroll the page started may still be moving it); false when none is drawn or something else stays on top.
+ */
+async function clickOn(selector) {
+  let last = null;
+  for (let i = 0; i < 20; i++) {
+    const at = await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(selector)}); if (!e || !e.getClientRects().length) return null;
+      const r = e.getBoundingClientRect(), x = r.x + r.width / 2, y = r.y + r.height / 2;
+      if (y < 0 || y > innerHeight || x < 0 || x > innerWidth) { e.scrollIntoView({ block: 'center', behavior: 'instant' }); return { wait: true }; }
+      const top = document.elementFromPoint(x, y);
+      return top && (top === e || e.contains(top)) ? { x, y } : { wait: true }; })()`);
+    if (!at) return false;
+    if (!at.wait && last && last.x === at.x && last.y === at.y) { await click(at.x, at.y); return true; }   // still for 200 ms
+    last = at.wait ? null : at;
+    await headless.sleep(200);
+  }
+  return false;
+}
+
 /** The page at another size, as a phone (390) or a desk (1300) shows it; `mobile` for touch-sized media queries. */
 async function viewport(width, height = 900, mobile = width < 600) {
   await page.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile });
@@ -115,4 +141,4 @@ const pastFirstRun = () => {
   savePrefs({ ...loadPrefs(), setup: { ...(loadPrefs().setup || {}), mode: 'advanced' } });
 };
 
-module.exports = { start, stop, open, evaluate, until, key, shot, viewport, pastFirstRun, errors, sleep: headless.sleep, skip: !exe && 'no browser here' };
+module.exports = { start, stop, open, evaluate, until, key, click, clickOn, shot, viewport, pastFirstRun, errors, sleep: headless.sleep, skip: !exe && 'no browser here' };

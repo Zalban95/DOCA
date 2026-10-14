@@ -75,6 +75,8 @@ test('the hello names the running version; reloading reaches whose pages it shou
     assert.ok(r.body.pages >= 2);
     const heard = await own.until(c => c.topic === 'screen' && c.what === 'reload' && c.every);
     assert.ok(heard);
+    const me = (await H.api(null, 'GET', '/api/auth/me')).body;
+    assert.equal(heard.byId, me.id, 'who asked, by id: their own page says "You asked…"');
     assert.ok(await mem.until(c => c.topic === 'screen' && c.what === 'reload' && c.every), 'every page of the hive');
 
     r = await H.api(null, 'POST', '/api/screen/reload', {}, { Cookie: '' });
@@ -119,4 +121,12 @@ test('a page reloads when the hub runs another version, unless something typed w
   assert.match(busy.ctx.pageReloadBusy(), /typed/);
   busy.type('');
   assert.equal(busy.ctx.pageReloadBusy(), '', 'cleared: free to reload');
+});
+
+test('whoever asked reads "You asked…", anyone else the asker\'s name', async () => {
+  const s = sandbox();
+  s.ctx.apiFetch = async () => ({ id: 'u1' });
+  assert.equal(await s.ctx._prAsked({ every: true, by: 'Test Owner', byId: 'u1' }), 'You asked every screen to load again.');
+  assert.equal(await s.ctx._prAsked({ every: true, by: 'Test Owner', byId: 'u2' }), 'Test Owner asked every screen to load again.');
+  assert.equal(await s.ctx._prAsked({ every: false }), 'You asked your screens to load again.');
 });

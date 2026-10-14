@@ -40,7 +40,7 @@ function _usersPeopleCard() {
     sel.onchange = () => _usersPatch(p.id, { level: sel.value });
     lvl.appendChild(sel);
     const status = Object.assign(document.createElement('td'), { textContent: p.suspended ? 'suspended' : p.status });
-    const sess = Object.assign(document.createElement('td'), { textContent: String(p.sessions) });
+    const sess = Object.assign(document.createElement('td'), { textContent: !p.sessions ? 'not now' : `${p.sessions} session${p.sessions === 1 ? '' : 's'}` });   // a lone number read as nothing (b22)
     const act = document.createElement('td');
     const b = (t, title, fn) => act.appendChild(Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: t, title, onclick: fn }));
     b(p.suspended ? 'Restore' : 'Suspend', p.suspended ? 'Let them sign in again' : 'Sign them out and stop them signing in', () => _usersPatch(p.id, { suspended: !p.suspended }));
@@ -61,11 +61,11 @@ function _usersPeopleCard() {
     ${_usersField('users-new-name', 'Name', 'How they are shown in the panel and to others. Optional.', '<input class="input" id="users-new-name" placeholder="optional">')}
     ${_usersField('users-new-level', 'Level', 'What they may do. Member (the default) talks to the agents and uses their own devices; an Admin runs the machine. You can change it later.',
       `<select class="input" id="users-new-level">${_usersData.levels.map(l => `<option value="${escHtml(l.id)}" ${l.id === 'member' ? 'selected' : ''}>${escHtml(l.name)}</option>`).join('')}</select>`)}
-    <button class="btn btn-xs btn-blue" onclick="usersAdd()">+ Add person</button>`;
+    <button class="btn btn-xs btn-blue" onclick="usersAdd()">+ Add person</button><span class="status-line" id="users-new-status"></span>`;
   card.appendChild(add);
   if (typeof peopleExport === 'function') {   // the owner's alone (org): shown once /api/auth/me says so
     const ex = Object.assign(document.createElement('p'), { className: 'desc', hidden: true });
-    ex.innerHTML = 'Hive chat: nobody reads a conversation they are not in, an admin included. <button type="button" class="btn btn-xs" onclick="peopleExport()">Export every conversation</button> — for compliance, the owner\'s alone, with the password, written in the audit.';
+    ex.innerHTML = 'Hive chat: nobody reads a conversation they are not in, an admin included. <button type="button" class="btn btn-xs" onclick="peopleExport()">Export every conversation</button> — a compliance copy for the owner alone: it asks for your password, and the export is written in the audit.';
     card.appendChild(ex);
     apiFetch('/api/auth/me').then(me => { ex.hidden = !(me.rights || []).includes('org'); }).catch(() => {});
   }
@@ -73,8 +73,9 @@ function _usersPeopleCard() {
 }
 
 async function usersAdd() {
-  const email = document.getElementById('users-new-email').value.trim();
-  if (!email) return;
+  const field = document.getElementById('users-new-email'), email = field.value.trim();
+  // An empty press said nothing at all (newcomer run 2026-10-14): the form says what it needs.
+  if (!email) { setStatus(document.getElementById('users-new-status'), 'Type their email first — it is what they sign in with.', 'err'); field.focus(); return; }
   try {
     const r = await apiFetch('/api/auth/users', { method: 'POST', body: { email, name: document.getElementById('users-new-name').value.trim(), level: document.getElementById('users-new-level').value } });
     appAlert(`${email} can sign in with this one-time password:\n\n${r.oneTimePassword}\n\nShown once. They replace it at their first sign-in.`);

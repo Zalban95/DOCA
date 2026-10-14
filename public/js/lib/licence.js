@@ -21,6 +21,8 @@ async function licenceLoad() {
 const licencePageOn = page => !(LICENCE.off?.pages || []).includes(page);
 /** Whether a feature (its id in the feature index) is licensed here: a page asks before calling its routes. */
 const licenceFeatureOn = id => !(LICENCE.off?.features || []).includes(id);
+/** `there` where this hive has `page`, else `otherwise` — words that name no page it lacks (modules/license/where.js). */
+const licenceWhere = (page, there, otherwise = '') => (licencePageOn(page) ? there : otherwise);
 
 function licenceBannerDraw() {
   let el = document.getElementById('licence-banner');

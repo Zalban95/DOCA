@@ -13,8 +13,14 @@
 .undo-text { flex: 1; min-width: 0; font-size: 13px; line-height: 1.35; }
 .undo-btn { font-weight: 600; color: var(--accent); border-color: var(--accent); }
 .undo-x { width: 28px; height: 28px; font-size: 13px; }
+/* With a dialog open the toasts step aside from its box (js/lib/toast-aside.js): to the top, else under its shade. */
+.undo-toasts.aside-top { top: 16px; bottom: auto; }
+.undo-toasts.under { z-index: 900; }
 @keyframes undo-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@media (max-width: 600px) { .undo-toasts { bottom: 76px; } .undo-toast { flex-wrap: wrap; } .undo-text { flex-basis: 100%; } }
+@media (max-width: 600px) { .undo-toast { flex-wrap: wrap; } .undo-text { flex-basis: 100%; } }
+/* Above the chat button (bottom: the bar + 10–12 px, 44–60 px tall), never over it: a press on the button pressed the
+   reload banner instead (run 1, 2026-10-14). */
+@media (max-width: 768px) { .undo-toasts { bottom: calc(var(--mobile-nav-h, 54px) + 80px); } }
 
 /* ── A path chosen from a tree (js/fp.js): over any window it was opened from ── */
 .fp-overlay { z-index: 10040; }

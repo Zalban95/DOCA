@@ -15,12 +15,9 @@ function ptyErrorBanner(container) {
     <span class="term-pty-error-icon">⚠</span>
     <div class="term-pty-error-body">
       <strong>Terminal unavailable</strong>
-      <span>node-pty is not installed. This native addon is required for embedded terminals.</span>
+      <span>The Terminal needs node-pty, which is not built on this machine. Its row in System tools builds it, with no restart — where Build tools is missing, install that row first.</span>
       <div class="term-pty-error-actions">
-        <button class="btn btn-xs btn-teal" onclick="
-          nav('settings');
-          setTimeout(() => document.getElementById('sysdeps-list')?.scrollIntoView({ behavior: 'smooth' }), 200);
-        ">Open Settings → System tools</button>
+        <button class="btn btn-xs btn-teal" onclick="sysdepsShow()">Open Settings → System → System tools</button>
       </div>
     </div>`;
   container.style.position = 'relative';

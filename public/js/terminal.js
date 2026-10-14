@@ -22,7 +22,7 @@ function termAddSession() {
     <div class="term-session-header">
       <span class="term-session-label">Terminal ${id}</span>
       <span class="term-session-status" id="term-st-${id}">○ connecting…</span>
-      <button class="btn btn-xs btn-red" onclick="termCloseSession(${id})" title="Close">✕</button>
+      <button class="btn btn-xs btn-red" onclick="termCloseSession(${id})" title="Close this terminal" aria-label="Close terminal ${id}">✕</button>
     </div>
     <div class="term-session-container" id="term-cont-${id}"></div>
   `;

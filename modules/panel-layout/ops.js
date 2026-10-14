@@ -16,7 +16,8 @@ const OPS = ['move', 'group', 'hide', 'show', 'rename', 'view', 'remove_view', '
 function apply(layer, ops, { eff, merged }) {
   let doc = structuredClone(L.normalize(layer));
   const said = [];
-  const pages = () => new Set([...D.PAGES, ...(doc.views || merged.views || []).map(v => v.id)]);
+  // Only the pages this hive has: a refusal lists what exists, never an unlicensed page (license/gate.js).
+  const pages = () => new Set([...D.PAGES.filter(require('../license/gate').pageOn), ...(doc.views || merged.views || []).map(v => v.id)]);
   const page = (t, what = 'page') => {
     const p = String(t || '').trim().toLowerCase();
     const byLabel = Object.entries(eff.labels).find(([, l]) => l.toLowerCase() === p)?.[0];
