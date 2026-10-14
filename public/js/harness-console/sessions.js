@@ -79,7 +79,8 @@ async function _hcLoadSessions(refreshOnly = false) {
     const draw = (s, depth = 0) => {
       if (drawn.has(s.id)) return '';
       drawn.add(s.id);
-      const role = s.kind === 'orchestrator' ? '1 · Orchestrator' : s.kind === 'specialist' ? '3 · Specialist' : s.kind === 'chat' ? '2 · Conversation' : '2 · Work leader';
+      const role = s.kind === 'orchestrator' ? (s.title === 'Orchestrator' ? '1 · Your main contact' : '1 · Orchestrator') :   // not the name twice (b7)
+         s.kind === 'specialist' ? '3 · Specialist' : s.kind === 'chat' ? '2 · Conversation' : '2 · Work leader';
       return `<div class="hc-session ${s.id === _hcSession ? 'active' : ''}" data-session="${escHtml(s.id)}"
         style="margin-left:${Math.min(2, depth) * 12}px" onclick="hcOpenSession(${jsArg(s.id)})">
         <span class="hc-session-title"><small>${role}${s.archivedAt ? ' · archived' : ''}</small>${escHtml(s.title)}</span>
