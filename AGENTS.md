@@ -17,7 +17,16 @@ OpenClaw Dashboard — a single Node.js/Express web app (`server.js` + `modules/
   `POST /api/v1/harness/sessions`, a member's first) is kind `chat`; a **work chat** (kind `work`) is what the
   Orchestrator creates or the panel's ＋ Work / ＋ Plan ask for (`kind: 'work'`), and only it carries a job. Both are
   level 2 and lead what they start (`organization.leads`); a project's chats are its work chats (since the self-test of
-  2026-10-08; older conversations stay as they were).
+  2026-10-08; older conversations stay as they were). **Who makes what below itself is one rule, `harness/org-depth.js`**
+  (asked 2026-10-14), read through `organization.mayCreate(id, work|team|dispatch)` by `work_chats create`, `team
+  create` (and its `work` tasks) and `agent_dispatch`: the Orchestrator (level 1) makes everything; a level-2
+  conversation makes teams and specialists, and **a project's chat** (level 2 with its own `projectId`) work chats too,
+  for its project; what a level-2 conversation makes is **level 3** (`session.level: 3`, parent the maker, so it shows ↳
+  among the project's tabs and reports to it) and makes nothing — the refusal names the level. **What a conversation
+  makes is mentioned in its transcript** (`harness/mentions.js`, `public/js/agent-ui/mention.js`): the tool calls
+  `ctx.mention`, the turn says a `mention` event and keeps `mentions` on the tool row (as `images`), and every chat
+  draws a chip with a state point (following the live feed) that opens the work chat, the team's board or the
+  mission's log. `/api/v1` is untouched.
 - **scout** — the airlock specialist that reads the web (`specialists/scout`); the experiment that looks for better
   models is the **model scout** (`modules/scout`, tool `model_scout`; `scout` still runs as it for old transcripts).
 - **browser** — a device record of kind `browser` (a signed-in screen, `modules/screens`); the person's own browser

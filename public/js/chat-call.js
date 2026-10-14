@@ -304,7 +304,7 @@ async function _callAnswer(userText) {
       stream,
       fold: (kind, body, name, opts) => _chatAppendFold(kind, body, name, opts),
       note: (kind, text) => chatAppendMsg(kind === 'waiting' ? 'waiting' : 'failover', text),
-      image: img => _chatAppendImage(img),
+      image: img => _chatAppendImage(img), mention: x => agentMentionAppend(container, x, _chatScroll),
       approval: evt => { _chatApproval(evt, container); if (typeof callAskEvent === 'function') callAskEvent(evt); },   // said in the call too (chat-call-ask.js)
       error: msg => chatAppendMsg('system', `Error: ${msg}`),
       onText: chunk => {

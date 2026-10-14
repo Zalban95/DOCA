@@ -151,6 +151,7 @@ async function hcOpenSession(id, skipReload) {
     data.messages.forEach(m => {
       if (m.role === 'tool') {
         (m.images || []).forEach(_hcAppendImage);
+        (m.mentions || []).forEach(x => agentMentionAppend(box, x));
         _hcAppend('tool-result', m.content, m.name);
       }
       else if (m.role === 'assistant') {

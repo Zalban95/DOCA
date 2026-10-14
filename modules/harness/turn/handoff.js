@@ -121,12 +121,14 @@ function handOff({ session, message, from, reply, say, step, person = null, spok
   const organization = require('../organization');
   const chat = organization.create({ title: short(message, 80) || 'Handed-off job' });
   require('../session-access').claim(person, chat.id);   // the person's work, under their level — not the Orchestrator's owner's
-  for (const tc of reply.tool_calls) {
+  const mention = { ...require('../mentions').work(chat.id), state: 'running' };   // started below; the first row carries a chip that opens it (mentions.js)
+  reply.tool_calls.forEach((tc, i) => {
     const name = tc.function?.name || '';
     const result = `Not run here: the job moved to the work chat "${chat.title}" (${chat.id}), which carries it on.`;
-    memory.append(session.id, { role: 'tool', tool_call_id: tc.id || name, name, content: result });
+    if (!i) say({ type: 'mention', mention, step });
+    memory.append(session.id, { role: 'tool', tool_call_id: tc.id || name, name, content: result, ...(i ? {} : { mentions: [mention] }) });
     say({ type: 'tool_result', name, result, step });
-  }
+  });
   const task = 'The Orchestrator started this job and handed it to you so it stays free for the person. Their request:\n'
     + `${message}\n\nWhat was already done (results shortened):\n${doneSince(session.id, from)}\n\n`
     + `It was about to: ${reply.tool_calls.map(callLine).join('; ')}\n\n`

@@ -259,8 +259,8 @@ function profileOf(def) {
  * the arrangement, not a limitation of it.
  */
 function dispatch({ agentId, task, context, by, chainId, plan, computer = null, vnc = null, place = null } = {}) {   // place: a team's task's project or worktree (teams/place.js)
-  if (by && require('../harness/organization').session(by).kind === 'specialist')
-    throw Object.assign(new Error('A specialist cannot delegate further. Report to its work leader.'), { status: 403 });
+  const no = by ? require('../harness/organization').mayCreate(by, 'dispatch') : null;   // the depth rule (harness/org-depth.js)
+  if (no) throw Object.assign(new Error(no), { status: 403 });
   if (!registry.enabled())
     throw require('./off')('Specialist agents are switched off (agents.enabled). Ask the user to turn them on.');
 

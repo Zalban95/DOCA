@@ -104,12 +104,14 @@ function fromSafetyNet({ session, message, from, reply, say, step, person, spoke
   const handoff = require('./turn/handoff');
   const done = { lines: handoff.doneSince(session.id, from), next: reply.tool_calls.map(handoff.callLine).join('; ') };
   const { chat, title, waiting } = make({ session, message, person, spoken, attachments, done });
-  for (const tc of reply.tool_calls) {
+  const mention = require('./mentions').work(chat.id);   // the first row carries a chip that opens it (mentions.js)
+  reply.tool_calls.forEach((tc, i) => {
     const name = tc.function?.name || '';
     const result = `Not run here: the job moved to the work chat "${chat.title}" (${chat.id}), which carries it on.`;
-    memory.append(session.id, { role: 'tool', tool_call_id: tc.id || name, name, content: result });
+    if (!i) say({ type: 'mention', mention, step });
+    memory.append(session.id, { role: 'tool', tool_call_id: tc.id || name, name, content: result, ...(i ? {} : { mentions: [mention] }) });
     say({ type: 'tool_result', name, result, step });
-  }
+  });
   say({ type: 'handoff', step, sessionId: chat.id, title: chat.title, from: session.id, ...(waiting ? { waiting } : {}) });
   return line({ title, spoken, safety: true, waiting }) + require('./manual-note').note(session.id, { spoken });
 }

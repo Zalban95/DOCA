@@ -70,13 +70,13 @@ test('each CLI\'s own event stream is read mechanically: its commands, files, re
 });
 
 test('count makes several alike tasks that share the plan; what came after the counted task comes after every copy', () => {
-  const s = teams.shape({ title: 'Five', tasks: [{ id: 'build', agent: 'harness:claude', model: 'opus', task: 'Build it', count: 3 }, { id: 'review', agent: 'work', task: 'Review', after: ['build'] }] }, { orchestrator: true });
+  const s = teams.shape({ title: 'Five', tasks: [{ id: 'build', agent: 'harness:claude', model: 'opus', task: 'Build it', count: 3 }, { id: 'review', agent: 'work', task: 'Review', after: ['build'] }] }, { workChats: true });
   assert.deepEqual(s.tasks.map(t => t.id), ['build-1', 'build-2', 'build-3', 'review']);
   assert.deepEqual(s.tasks[3].after, ['build-1', 'build-2', 'build-3']);
   assert.equal(s.tasks[0].model, 'opus');
   assert.match(s.tasks[1].title, /\(2\/3\)/);
-  assert.throws(() => teams.shape({ title: 'x', tasks: [{ agent: 'harness:nope', task: 't' }] }, { orchestrator: true }), /No outside harness "nope"/);
-  assert.throws(() => teams.shape({ title: 'x', tasks: [{ agent: 'harness:dsh', model: 'v4', task: 't' }] }, { orchestrator: true }), /takes its model/);
+  assert.throws(() => teams.shape({ title: 'x', tasks: [{ agent: 'harness:nope', task: 't' }] }, { workChats: true }), /No outside harness "nope"/);
+  assert.throws(() => teams.shape({ title: 'x', tasks: [{ agent: 'harness:dsh', model: 'v4', task: 't' }] }, { workChats: true }), /takes its model/);
 });
 
 test('a team uses an outside harness only when the person asked for it: unasked refused, asked allowed', async () => {

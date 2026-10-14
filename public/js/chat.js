@@ -30,7 +30,7 @@ async function chatLoadHistory() {
             const fold = _chatAppendFold(step.kind, step.body, step.label);
             if (step.at) fold.el.dataset.at = step.at;
           }
-          (m.images || []).forEach(_chatAppendImage);
+          (m.images || []).forEach(_chatAppendImage); (m.mentions || []).forEach(x => agentMentionAppend(container, x, _chatScroll));
           if (m.content) _chatAppendContent(m.content);
         }
         else if (agentRowIsAuto(m)) container.appendChild(agentAutoNoteEl(m.content)); else {   // the hub's own words: a note
@@ -387,7 +387,7 @@ function _chatTurnUi(spoken) {
     stream,
     fold: (kind, body, name, opts) => _chatAppendFold(kind, body, name, opts),
     note: (kind, text) => chatAppendMsg(kind === 'waiting' ? 'waiting' : 'failover', text),
-    image: img => _chatAppendImage(img),
+    image: img => _chatAppendImage(img), mention: x => agentMentionAppend(container, x, _chatScroll),
     approval: evt => _chatApproval(evt, container),
     error: msg => { const el = chatAppendMsg('assistant', `Error: ${msg}`, { plain: true }); el.style.color = 'var(--red)'; },
     context: evt => _chatContext(evt),

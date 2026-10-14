@@ -12,6 +12,13 @@ module.exports = [
   { id: 'work-chats', licence: 'core', name: 'Work chats', page: 'harness', tools: ['work_chats'],
     use: 'Hand a job with several steps to a conversation of its own that works until done, so the person keeps talking.',
     routes: ['/api/harness/work/*'], words: 'job supervisor background task restart drop stopped' },
+  // No `tools` on these two: a feature listing a tool decides its licence (license/use.js featureOfTool).
+  { id: 'project-chat-work', licence: 'core', name: 'A project\'s chats make work chats and teams', page: 'projects',
+    use: 'A project\'s chat creates work chats (and, with Teams licensed, teams) for its project, one level down: what it makes reports to it, shows ↳ among the tabs, and makes nothing further.',
+    words: 'project chat spawn work chat team helper level depth sub-agent only the orchestrator' },
+  { id: 'made-mentions', licence: 'core', name: 'Mentions of what a chat made', page: ['harness', 'projects'],
+    use: 'When a conversation makes a work chat, a team or a mission, its transcript shows a chip with its state that opens it — the chat, the team\'s board or the mission\'s log.',
+    words: 'mention chip link subagent row follow open work chat team mission created' },
   { id: 'plans', licence: 'core', name: 'Plans and their contracts', page: 'harness', tools: ['work_plan'], since: '2.118.0',
     use: 'Draft or propose a plan the person approves before work starts; each step can carry a check that must hold for it to be done.',
     words: 'approve plan steps contract done when' },
