@@ -594,6 +594,22 @@ api("POST", "/agent/alerts", json={"title": "Backup finished", "priority": "norm
 
 ---
 
+## The hub's models from a device (model relay, PROTOCOL §23.5)
+
+Once the owner has switched the relay on for paired devices and for this device
+(Field → API keys → Model relay), any OpenAI-compatible SDK works with the
+device's own token as the API key — no provider key on the device:
+
+```python
+from openai import OpenAI
+client = OpenAI(base_url="https://doca.tailnet.ts.net:4242/api/v1/relay", api_key=DEVICE_TOKEN)
+print(client.chat.completions.create(model="", messages=[{"role": "user", "content": "hi"}]).choices[0].message.content)
+```
+
+An empty `model` is the first the relay offers; `client.models.list()` names
+them. Every request is counted for the device's person and tagged with the
+device, never its words.
+
 ## Testing your client without hardware
 
 - `npm run client:demo` on the host runs the whole protocol once against a live

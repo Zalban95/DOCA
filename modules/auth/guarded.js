@@ -113,6 +113,9 @@ const ROUTES = [
   // Marking one — at making it or after — is the person's, typed; unmarking tightens, so it does not ask.
   [['POST'], /^\/api\/computers$/, 'a test computer (sign-ins without asking)', req => req.body?.test === true],
   [['POST'], /^\/api\/computers\/[^/]+\/test$/, 'a test computer (sign-ins without asking)', req => req.body?.on !== false],
+  // The model relay for a paired device (relay/device.js; the owner's rule of 2026-10-14): one that can send text of its
+  // own asks; an extension of a phone or an output-only device does not. Switching off tightens, so it never asks.
+  [['POST'], /^\/api\/computers\/relay\/devices\/[^/]+$/, 'the model relay for a device that can send text', req => req.body?.on !== false && require('../relay/device').asksPassword(req.path.split('/')[5])],
   // The hive chat's compliance export: the one way anyone reads conversations they are not in (people/keep.js).
   [['POST'], /^\/api\/people\/export$/, 'exporting every hive-chat conversation'],
   [['POST'], /^\/api\/home\/call$/, 'unlocking a door or disarming an alarm', req => require('../home/actions').guardedCall(req.body)],
