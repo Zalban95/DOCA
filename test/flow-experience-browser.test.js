@@ -39,7 +39,7 @@ test('Standard is the panel as it was', { skip: B.skip, timeout: 120000 }, async
 test('Flow: the opening warms the pages and goes; a warmed page is drawn at once', { skip: B.skip, timeout: 120000 }, async () => {
   await B.evaluate("screenSave({ experience: { mode: 'flow' } }).then(() => sessionStorage.clear())");
   await B.open();
-  assert.equal(await B.evaluate('document.documentElement.dataset.experience'), 'flow');
+  assert.ok(await B.until("document.documentElement.dataset.experience === 'flow'", 20000), 'the screen\'s setting reached the page');   // settings.js reads it after the page loads
   assert.ok(await B.until('typeof _flowWarm !== "undefined" && _flowWarm && _flowWarm.finished', 25000), 'warming finished');
   assert.ok(await B.until("!document.getElementById('flow-opening')", 6000), 'the opening went');
   const warmed = await B.evaluate('_flowWarm.done.slice()');
