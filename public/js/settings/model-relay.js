@@ -1,6 +1,7 @@
 /* Field → API keys → Model relay (modules/relay): the owner's switch for the hub's OpenAI-compatible relay, which lets
    programs inside an agents' computer use this hub's models without a provider key going into it — on or off, who it is
-   available for, which models it offers, and where its own small listener sits. A host's; each computer's own switch is
+   available for (agents' computers, paired devices — each device with its own switch here), which models it offers, and
+   where its own small listener sits. A host's; each computer's own switch is
    on its card in the Computers tab (computers-relay.js). */
 async function modelRelayRender() {
   const panel = document.querySelector('#sp-keys .scroll-y') || document.getElementById('sp-keys');
@@ -19,11 +20,11 @@ async function modelRelayRender() {
     <label class="mr-switch" style="display:flex;gap:8px;align-items:center"><input type="checkbox" class="switch" id="mr-enabled" data-default="false"${s.enabled ? ' checked' : ''}> Answer requests through the relay</label>
     <div class="form-row" style="margin-top:8px"><span class="tool-label">Available for</span>
       <label style="display:inline-flex;gap:6px;align-items:center;margin-right:14px"><input type="checkbox" id="mr-computers" data-default="true"${s.computers ? ' checked' : ''}> Agents' computers${infoBtn('Each computer also has its own switch, on its card in the Computers tab (or the computer tool\'s relay action): only those switched on are answered.')}</label>
-      <label style="display:inline-flex;gap:6px;align-items:center;opacity:.6" title="${escHtml(s.devicesNote)}"><input type="checkbox" id="mr-devices" disabled> Paired devices</label>
-      <div class="desc" style="font-size:11px;color:var(--muted)">${escHtml(s.devicesNote)}</div></div>
+      <label style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="mr-devices" data-default="false"${s.devices ? ' checked' : ''}> Paired devices${infoBtn(`At ${s.deviceUrl} on this hub's address, with the device's own token: only those switched on below.`)}</label></div>
+    ${modelRelayDevices(s.deviceList || [])}
     <div class="form-row"><span class="tool-label">Models${infoBtn('One per line, as provider/model. Empty: the harness\'s own model and its fallbacks.')}</span>
       <textarea class="input" id="mr-models" rows="3" data-default="" placeholder="${escHtml(def || 'provider/model')}" style="width:min(420px,100%)">${escHtml((s.models || []).join('\n'))}</textarea></div>
-    ${advancedFold(`<div class="form-row"><span class="tool-label">Port</span><input class="input" id="mr-port" type="number" min="1024" max="65535" data-default="4243" value="${escHtml(String(s.port || ''))}" placeholder="4243" style="width:110px"></div>
+    ${advancedFold(`<div class="form-row"><span class="tool-label">Port</span><input class="input" id="mr-port" type="number" min="1024" max="65535" data-default="4244" value="${escHtml(String(s.port || ''))}" placeholder="4244" style="width:110px"></div>
       <div class="form-row"><span class="tool-label">Address${infoBtn('Empty: the Docker bridge on Linux, loopback elsewhere. Never the tailnet or the local network.')}</span><input class="input" id="mr-address" data-default="" value="${escHtml(s.address || '')}" placeholder="the Docker bridge" style="width:200px"></div>`,
     { id: 'model-relay-where', label: 'Advanced — where it listens' })}
     <div class="desc" id="mr-state" style="margin:8px 0;font-size:11px">${where}</div>
@@ -32,9 +33,23 @@ async function modelRelayRender() {
 
 async function modelRelaySave() {
   const v = id => document.getElementById(id);
-  const body = { enabled: v('mr-enabled').checked, computers: v('mr-computers').checked, models: v('mr-models').value };
+  const body = { enabled: v('mr-enabled').checked, computers: v('mr-computers').checked, devices: v('mr-devices').checked, models: v('mr-models').value };
   if (v('mr-port').value) body.port = Number(v('mr-port').value);
   body.address = v('mr-address').value.trim();
   try { await apiFetch('/api/computers/relay', { method: 'POST', body }); } catch (e) { return appAlert(e.message); }
+  modelRelayRender();
+}
+
+/** Each paired device's own switch: an extension of a phone or an output-only device switches on as it is; one that can
+   send text asks for the password (the panel's fetch asks and sends again). What each does is tagged with it. */
+function modelRelayDevices(list) {
+  if (!list.length) return '<div class="desc" style="font-size:11px;margin:4px 0 8px">No paired device yet.</div>';
+  return `<div class="form-row" style="flex-direction:column;align-items:flex-start;gap:4px">${list.map(d => `<label style="display:flex;gap:8px;align-items:center">
+    <input type="checkbox" class="switch"${d.on ? ' checked' : ''} onchange="modelRelayDevice(${jsArg(d.id)}, this.checked)"> ${escHtml(d.name)}
+    <span class="desc" style="font-size:11px">${escHtml(d.formFactor)} · ${escHtml(d.why)}${d.asks ? ' — asks for the password' : ''}</span></label>`).join('')}</div>`;
+}
+
+async function modelRelayDevice(id, on) {
+  try { await apiFetch(`/api/computers/relay/devices/${encodeURIComponent(id)}`, { method: 'POST', body: { on } }); } catch (e) { appAlert(e.message); }
   modelRelayRender();
 }

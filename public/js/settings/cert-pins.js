@@ -1,6 +1,6 @@
 /* Field → Connectors → Certificates you trust (modules/cert-pins.js): a home server that makes its own certificate —
    Proxmox VE, a NAS — is trusted by name, one exact certificate per address, after looking at its fingerprint; never
-   "any self-signed certificate". Only your own addresses. Trusting asks for the password; forgetting does not. */
+   "any self-signed certificate". Only your own addresses. Trusting says why it matters first; forgetting does not. */
 async function certPinsRender() {
   const el = document.getElementById('certs-card');
   if (!el) return;

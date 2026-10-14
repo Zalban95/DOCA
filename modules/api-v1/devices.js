@@ -286,6 +286,8 @@ function update(id, patch) {
   if (patch.lastSeenAt !== undefined) rec.lastSeenAt = patch.lastSeenAt;
   // A screen showing a cast (cast/): what it shows, from whom, and whether it is kept there (null ends it).
   if (patch.cast !== undefined) { if (patch.cast) rec.cast = patch.cast; else delete rec.cast; }
+  // Its model relay switch (relay/device.js): only that module writes it; the relay answers `relay:use` while it is on.
+  if (patch.relayOn !== undefined) { if (patch.relayOn) rec.relayOn = true; else delete rec.relayOn; }
   persist();
   return publicView(rec);
 }

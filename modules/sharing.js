@@ -46,7 +46,7 @@ async function share(packId) {
   const s = state();
   const where = { page: 'settings/packs', card: 'Share with the project' };
   if (!s.contribute) throw require('./switch-off').off('Sharing with the project is off: the owner switches it on in Settings → Packs.', {
-    what: 'Sharing with the project', route: '/api/sharing', body: { contribute: true }, password: true, setting: 'sharing.contribute', ...where,
+    what: 'Sharing with the project', route: '/api/sharing', body: { contribute: true }, setting: 'sharing.contribute', ...where,
     why: 'What your agents learned (packs they saved) may be offered to the project, one click per pack: nothing leaves without it.' });
   if (!s.upstream) throw require('./switch-off').unset('No project hub is chosen: pick one in Settings → Packs → Share with the project.', {
     what: 'The project\'s hub', ...where, why: 'Where shared packs are sent: one of the hubs this hive sends packs to.' });

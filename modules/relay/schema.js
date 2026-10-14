@@ -11,8 +11,8 @@ module.exports = { is: 'mixed', home: 'hive', note: 'the model relay (relay/): w
   keys: {
     enabled:   never({ type: 'boolean', default: false, hint: 'Answer OpenAI-compatible requests (/v1/chat/completions, /v1/models) for the callers switched on below, sent on through this hub\'s own providers: the provider\'s key never leaves the hub.' }),
     computers: never({ type: 'boolean', default: true, hint: 'Agents\' computers whose own relay switch is on (Computers tab, or the computer tool) may use it, each with a token the hub made for it.' }),
-    devices:   never({ type: 'boolean', default: false, hint: 'Paired devices may use it. Not available yet: it needs a device scope of its own, which waits for the owner\'s yes (CONSTITUTION S11).' }),
+    devices:   never({ type: 'boolean', default: false, hint: 'Paired devices may use it at /api/v1/relay over the panel\'s HTTPS, with their own token: those holding relay:use whose own relay switch is on. Switching on a device that can send text asks for the password; an extension of a phone or an output-only device does not.' }),
     models:    never({ type: 'array', default: [], hint: 'Which models it offers, each as provider/model. Empty: the harness\'s own model and its fallbacks.' }),
-    port:      never({ type: 'integer', min: 1024, max: 65535, default: 4243, hint: 'The port of the relay\'s own small listener (plain HTTP, the Docker bridge only). Computers made before a change keep the old one in their environment; their relay file has the new one.' }),
+    port:      never({ type: 'integer', min: 1024, max: 65535, default: 4244, hint: 'The port of the relay\'s own small listener (plain HTTP, the Docker bridge only). Computers made before a change keep the old one in their environment; their relay file has the new one.' }),
     address:   never({ type: 'string', default: '', hint: 'The address that listener takes. Empty: the Docker bridge\'s gateway on Linux (what host.docker.internal is inside a computer), loopback elsewhere (Docker Desktop forwards to it). Never the tailnet or the LAN.' }),
   } };

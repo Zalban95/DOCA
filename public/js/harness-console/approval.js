@@ -72,7 +72,7 @@ function _hcApprovalFill(list, a) {
   list.appendChild(re);
 
   // What Manual asks (modules/harness/approval-matters.js): everything that does something, or only what matters. A
-  // safety switch like the mode: the hub asks for the password (auth/guarded.js) and the fetch wrapper types it.
+  // safety switch like the mode: the hub says why it matters first (auth/guarded.js) and the fetch wrapper shows it.
   const asks = document.createElement('label');
   asks.className = 'approval-recheck';
   const matters = a.manualAsks !== 'everything';

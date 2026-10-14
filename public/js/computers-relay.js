@@ -4,7 +4,7 @@
    is Field → API keys → Model relay (settings/model-relay.js). */
 function computersRelayButton(c) {
   const r = c.relay || {};
-  const title = r.on ? `Model relay on: programs inside use this hub's models${r.blocked ? ` — but ${r.blocked}` : ''}. Click to switch it off.`
+  const title = r.on ? `Model relay on: programs inside use this hub's models${r.blocked ? ` — but ${r.blocked}` : ''}. Click to switch it off — its token is replaced then, so a copy taken out stops working.`
     : 'Let programs inside use this hub\'s models through the model relay (an OpenAI-compatible address and a token of its own; no provider key goes in).';
   return `<button class="btn btn-xs ${r.on ? 'btn-amber' : ''}" onclick="computersRelay(${jsArg(c.id)}, ${!r.on})" title="${escHtml(title)}">Relay</button>`;
 }

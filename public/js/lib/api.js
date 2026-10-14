@@ -46,7 +46,7 @@ function _renewSignIn(why) {
 }
 
 /**
- * An important or safety switch asks for the password (modules/auth/guarded.js; CONSTITUTION S14): asked here, sent
+ * A switch that asks for the password (modules/auth/guarded.js; CONSTITUTION S14): asked here, sent
  * with the request again, kept nowhere in the page. One question at a time — requests that hit a switch while it is
  * asked wait for it and go through the window it opened (one click's chain, auth/unlock.js) — and the question offers
  * "Keep it unlocked for" a few minutes (lib/unlock.js draws "Unlocked until"). Resolves the answer, or null on Cancel.
@@ -105,12 +105,34 @@ function _switchRevert(touched) {
   if (el.type !== 'checkbox') el._switchWas = was;
 }
 
+/**
+ * A switch that says what it does first (428 `notice_required`, auth/guarded.js): shown, and on Continue sent again
+ * with the answer — `hide` when "Don't show this again" was ticked, which the hub remembers for this person. No
+ * password: signed in, the person is that person (CONSTITUTION S14, 2026-10-14). Cancelled, the control is put back.
+ */
+async function _noticeSwitch(input, init, d) {
+  const touched = _switchTouched;
+  _switchTouched = null;
+  const { go, hide } = typeof appNotice === 'function' ? await appNotice(d.notice || d.error) : { go: true, hide: false };
+  if (!go) {
+    _switchRevert(touched);
+    return new Response(JSON.stringify({ error: 'Not changed.', code: 'notice_cancelled' }), { status: 428, headers: { 'Content-Type': 'application/json' } });
+  }
+  const headers = new Headers(init?.headers || {});
+  headers.set('X-Doca-Notice', hide ? 'hide' : 'continue');
+  const again = await window.fetch(input, { ...(init || {}), headers });   // through the wrapper: a password may follow
+  if (!again.ok) _switchRevert(touched);
+  return again;
+}
+
 if (_rawFetch) window.fetch = async (input, init) => {
   const res = await _rawFetch(input, init);
-  if (res.status !== 401 && res.status !== 403) return res;
+  if (res.status !== 401 && res.status !== 403 && res.status !== 428) return res;
   const url = typeof input === 'string' ? input : input?.url || '';
   if (!url.startsWith('/')) return res;
   const d = await res.clone().json().catch(() => ({}));
+  if (d.code === 'notice_required') return _noticeSwitch(input, init, d);
+  if (res.status === 428) return res;
   // A switch asks for the password wherever it is — levels, grants and accounts are under /api/auth/ too. Cancelled
   // or refused, the control that asked is drawn as it was: the setting did not change.
   if (d.code === 'password_required') {

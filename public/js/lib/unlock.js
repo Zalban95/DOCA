@@ -36,7 +36,7 @@ function unlockShow(untilIso) {
   chip.innerHTML = narrow
     ? `🔓 ${hhmm} <button type="button" class="btn btn-xs" onclick="unlockLock()" aria-label="Lock now">Lock</button>`
     : `🔓 Unlocked until ${hhmm} <button type="button" class="btn btn-xs" onclick="unlockLock()">Lock now</button>`;
-  chip.title = `Unlocked until ${hhmm}: important switches do not ask for your password until then (this browser's sign-in only).`;
+  chip.title = `Unlocked until ${hhmm}: the switches that ask for your password do not ask again until then (this browser's sign-in only).`;
   _unlockTimer = setTimeout(() => unlockShow(null), at - Date.now() + 500);
 }
 

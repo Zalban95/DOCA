@@ -180,6 +180,27 @@ function appChoose(message, choices, onPick) {
 }
 
 /**
+ * An important switch's notice (modules/auth/guarded.js; CONSTITUTION S14): what it does and why it matters, with
+ * Continue / Cancel and "Don't show this again" under it — remembered on the hub for this person (auth/notices.js).
+ * Resolves {go, hide}; Escape and Cancel answer {go: false}.
+ */
+function appNotice(message) {
+  return new Promise(resolve => {
+    const box = document.getElementById('app-confirm-modal')?.querySelector('.app-confirm-actions');
+    if (!box) return resolve({ go: confirm(message), hide: false });
+    const row = Object.assign(document.createElement('label'), { className: 'app-notice-hide desc' });
+    row.style.cssText = 'display:flex;gap:8px;align-items:center;margin:4px 0 10px';
+    const tick = Object.assign(document.createElement('input'), { type: 'checkbox' });
+    row.append(tick, "Don't show this again");
+    box.before(row);
+    appChoose(message, [{ label: 'Cancel', value: false }, { label: 'Continue', value: true, cls: 'btn-blue' }], go => {
+      row.remove();
+      resolve({ go: !!go, hide: !!go && tick.checked });
+    });
+  });
+}
+
+/**
  * Escape closes the panel's other windows (.modal-overlay) the way a click beside them does: it clicks the backdrop of
  * the topmost open one, so each window's own close runs and one that does not close on its backdrop stays. A question
  * that must be answered is left alone: the approval popup (every button is a decision) and the first-run choice.

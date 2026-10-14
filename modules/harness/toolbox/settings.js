@@ -86,13 +86,13 @@ module.exports = [
         const names = [...new Set(all.map(r => r.section))].join(', ');
         // Why something is missing, so the agent stops looking: these are the person's, never proposed.
         return `No settings match${filter ? ` "${filter}"` : ''}${section ? ` in "${section}"` : ''}. The sections are: ${names}. `
-          + 'Not here on purpose — only the person changes them, with their password: the approval mode (the Auto / Manual switch on '
+          + 'Not here on purpose — only the person changes them, at the panel (it asks them first): the approval mode (the Auto / Manual switch on '
           + 'Agents → Harness; Approvals beside it), developer mode and experiments (Settings → Developer), how the hub listens and what is '
           + 'kept of logs (Settings → System), sharing (Settings → Packs), and keys or secrets. Tell them where; do not search again.';
       }
       const bySection = new Map();
       for (const r of rows) { if (!bySection.has(r.section)) bySection.set(r.section, []); bySection.get(r.section).push(r); }
-      const guard = p => (find.howOf(p) === 'guarded' ? '   [a proposal they accept with their password]' : '');
+      const guard = p => (find.howOf(p) === 'guarded' ? '   [a proposal they accept; the panel asks them first]' : '');
       const body = [...bySection].map(([name, list]) => `## ${name}\n${list.map(r =>
         `${r.path} = ${JSON.stringify(r.value)}${r.detail ? `   # ${r.detail}` : ''}${guard(r.path)}`).join('\n')}`).join('\n');
       // Which model does what (model-roles.js): the answer to "what runs my speech / my screen reading", in one list.
@@ -138,7 +138,7 @@ module.exports = [
       const p = settings.propose({ changes, reason, sessionId: ctx.sessionId, screen: screen === 'this' ? ctx.screen || 'this' : screen || null, person: ctx.user });
       // The person asked for exactly this, on their own turn (CONSTITUTION S1, 2026-10-07): their request is the decision.
       // Within their level only (permits); the save keeps a checkpoint (checkpoints.js), so the way back is one click.
-      // An important or safety switch is never applied from a turn: its Accept asks for the password (auth/guarded.js; S14).
+      // An important or safety switch is never applied from a turn: its Accept asks the person — a notice, or the password (auth/guarded.js; S14).
       const guarded = !p.screen && require('../../auth/guarded').prefsTouched(p.changes);
       const own = !guarded && asked === true && ctx.byPerson && ctx.user?.id
         && p.changes.every(c => p.screen || require('../../auth/permits').holds({ ...ctx.user, role: ctx.user.role }, `setting:${c.path}`));
@@ -155,7 +155,7 @@ module.exports = [
         return `Applied at once — unattended mode is on, so nobody was asked:\n${p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`).join('\n')}`;
       }
       const lines = p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`);
-      return `Proposed (${p.id}) — waiting for the user to accept or decline${guarded ? ` (${guarded} is changed only with their password, on Accept)` : ''}:\n${lines.join('\n')}\n`
+      return `Proposed (${p.id}) — waiting for the user to accept or decline${guarded ? ` (${guarded.what} is changed only on their Accept, ${guarded.password ? 'with their password' : 'after a notice saying why it matters'})` : ''}:\n${lines.join('\n')}\n`
         + 'Tell them what you proposed and why, then stop.';
     },
   },
