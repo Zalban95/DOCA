@@ -64,7 +64,7 @@ const PAGE_OF = [
   ['call', 'settings/voice'], ['face', 'settings/voice'], ['ambient', 'settings/ambient'], ['updates', 'settings/general'],
   ['features', 'settings/system'], ['theme', 'settings/general'], ['customTheme', 'settings/general'], ['hiddenTabs', 'settings/general'],
   ['sidebarStats', 'settings/general'], ['sidebarSections', 'settings/general'], ['agents', 'harness'], ['limits', 'settings/experiments'],
-  ['llamacpp', 'models'], ['services', 'settings/system'],
+  ['llamacpp', 'models'], ['services', 'settings/system'], ['projects', 'projects'],
   // Every section has a page, so every declared setting can be found (2026-10-13: "cast door" found nothing).
   ['call', 'settings/voice'], ['realtime', 'settings/voice'], ['wakeword', 'models'], ['skillSuggest', 'settings/harness'],
   ['home', 'home'], ['meetings', 'meetings'], ['teams', 'teams'], ['people', 'people'], ['devices', 'apikeys'],
