@@ -40,7 +40,7 @@ function _usersPeopleCard() {
     sel.onchange = () => _usersPatch(p.id, { level: sel.value });
     lvl.appendChild(sel);
     const status = Object.assign(document.createElement('td'), { textContent: p.suspended ? 'suspended' : p.status });
-    const sess = Object.assign(document.createElement('td'), { textContent: String(p.sessions) });
+    const sess = Object.assign(document.createElement('td'), { textContent: !p.sessions ? 'not now' : `${p.sessions} session${p.sessions === 1 ? '' : 's'}` });   // a lone number read as nothing (b22)
     const act = document.createElement('td');
     const b = (t, title, fn) => act.appendChild(Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: t, title, onclick: fn }));
     b(p.suspended ? 'Restore' : 'Suspend', p.suspended ? 'Let them sign in again' : 'Sign them out and stop them signing in', () => _usersPatch(p.id, { suspended: !p.suspended }));
@@ -65,7 +65,7 @@ function _usersPeopleCard() {
   card.appendChild(add);
   if (typeof peopleExport === 'function') {   // the owner's alone (org): shown once /api/auth/me says so
     const ex = Object.assign(document.createElement('p'), { className: 'desc', hidden: true });
-    ex.innerHTML = 'Hive chat: nobody reads a conversation they are not in, an admin included. <button type="button" class="btn btn-xs" onclick="peopleExport()">Export every conversation</button> — for compliance, the owner\'s alone, with the password, written in the audit.';
+    ex.innerHTML = 'Hive chat: nobody reads a conversation they are not in, an admin included. <button type="button" class="btn btn-xs" onclick="peopleExport()">Export every conversation</button> — a compliance copy for the owner alone: it asks for your password, and the export is written in the audit.';
     card.appendChild(ex);
     apiFetch('/api/auth/me').then(me => { ex.hidden = !(me.rights || []).includes('org'); }).catch(() => {});
   }
