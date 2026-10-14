@@ -16,7 +16,7 @@ const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e)
 
 function mount(app) {
   require('./door').attach(app);
-  app.get('/api/cast/things', h(req => ({ things: things.list(req.auth), door: { on: require('./door').on(), mayChange: isHost(req.auth) },
+  app.get('/api/cast/things', h(async req => ({ things: await require('./answers').withAnswers(things.list(req.auth)), door: { on: require('./door').on(), mayChange: isHost(req.auth) },
     tones: (() => { try { return require('./speech').tones({ id: req.auth?.user?.id }); } catch { return []; } })() })));
   app.post('/api/cast/things/:id/show', h(req => things.show(req.auth, req.params.id, String(req.body?.page || ''))));
   app.post('/api/cast/things/:id/say', h(req => things.say(req.auth, req.params.id, req.body?.text, { story: req.body?.story === true })));
