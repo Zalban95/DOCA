@@ -5,6 +5,8 @@
 async function modelRelayRender() {
   const panel = document.querySelector('#sp-keys .scroll-y') || document.getElementById('sp-keys');
   if (!panel || (typeof _settingsNoHost !== 'undefined' && _settingsNoHost)) return;
+  // Not in this licence: the card is left out and its route never asked (lib/licence.js).
+  if (typeof licenceReady === 'function') { await licenceReady(); if (!licenceFeatureOn('model-relay')) return document.getElementById('model-relay-card')?.remove(); }
   let card = document.getElementById('model-relay-card');
   if (!card) { card = Object.assign(document.createElement('div'), { className: 'card', id: 'model-relay-card' }); panel.append(card); }
   let s;

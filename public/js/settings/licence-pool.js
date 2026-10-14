@@ -7,6 +7,8 @@
 async function licencePoolCard() {
   const sys = document.getElementById('sp-system');
   if (!sys) return;
+  // Not in this licence: the card is left out and its route never asked (lib/licence.js).
+  if (typeof licenceReady === 'function') { await licenceReady(); if (!licenceFeatureOn('computer-licences')) return document.getElementById('licence-pool-card')?.remove(); }
   let P;
   try { P = await apiFetch('/api/licence/computers'); } catch { document.getElementById('licence-pool-card')?.remove(); return; }   // not a host
   let card = document.getElementById('licence-pool-card');
