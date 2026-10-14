@@ -23,10 +23,10 @@ async function fmInit() {
 
   try {
     const paths = await apiFetch('/api/paths');
-    fm.cwd = paths.home || '/';
+    fm.cwd = fm.wanted?.path || paths.home || '/';   // a search result asked for its own folder (fmShow): start there
     FM_BOOKMARKS = fmBookmarksFrom(paths);   // files-bookmarks.js: only what is there, or can be made
   } catch {
-    fm.cwd = '/';
+    fm.cwd = fm.wanted?.path || '/';
     FM_BOOKMARKS = [{ id: 'root', icon: '/', label: 'Root fs', path: '/' }];
   }
 
@@ -138,7 +138,7 @@ async function fmRefresh() {
   try {
     const data    = await apiFetch(`${fmApi()}/list?path=${encodeURIComponent(fm.cwd)}`);
     fm.entries    = data.entries || [];
-    fmRenderList();
+    fmRenderList(); if (typeof fmWantedSelect === 'function') fmWantedSelect();   // a search's file, selected (files-show.js)
   } catch (e) {
     list.innerHTML = `<div class="placeholder" style="padding:16px;color:var(--red)">${escHtml(e.message)}</div>`;
   }

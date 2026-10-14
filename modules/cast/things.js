@@ -107,6 +107,31 @@ async function show(who, id, page) {
   return { ok: true, url, page };
 }
 
+/**
+ * Show a preview — a project's page being tested, as the panel's preview window shows it (canvas/previews.js) — on a TV
+ * (the owner's yes of 2026-10-12, "the panel's preview popups"; asked again 2026-10-14 to play a game on the TV with
+ * the watch). The cast door serves that one app to that TV alone (door.js); its watch console comes with it
+ * (console-pages.js). A preview is the person's when their conversation made it, or any for a host.
+ */
+async function showPreview(who, id, ref) {
+  const t = thing(who, id);
+  if (t.kind === 'speaker' || !hasCast(t)) throw bad(`${name(t)} shows no page: it can say a sentence or play a sound.`);
+  const pv = require('../canvas/previews');
+  const p = pv.get(String(ref || '')) || pv.byToken(String(ref || ''));
+  if (!p) throw bad('No preview by that id: the canvas tool\'s preview action makes one (it lasts 12 hours).', 404);
+  const host = require('../auth/rights').can(who?.role, 'host');
+  if (!host && !(p.sessionId && require('../harness/session-access').mayUse({ id: who.user.id, role: who.role }, p.sessionId)))
+    throw bad('That preview was made in someone else\'s conversation.', 404);
+  if (via(who, t)) throw bad(`${name(t)} is reached through one of your devices: a preview goes to a TV this hub reaches itself, for now.`, 409);
+  const origin = await require('./door').open(ipOf(t), { preview: p.token });
+  await withDevice(t, async s => {
+    const app = await s.launch(APPS.dashcast);
+    s.send(app.transportId, NS.dashcast, { url: `${origin}/`, force: true, reload: false, reload_time: 0 });
+  });
+  note(who, t, `cast the preview "${p.title}" to ${name(t)}`, 'cast');
+  return { ok: true, preview: p.id, title: p.title };
+}
+
 /** Say a sentence — or, with `story`, a longer text whose parts each carry their own tone (speech.js story). */
 async function say(who, id, text, { story = false } = {}) {
   const t = thing(who, id);
@@ -204,4 +229,4 @@ async function volume(who, id, level) {
   return { ok: true, level: v };
 }
 
-module.exports = { list, show, say, play, stop, volume, mayUse, thing };
+module.exports = { list, show, showPreview, say, play, stop, volume, mayUse, thing };

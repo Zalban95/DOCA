@@ -70,7 +70,9 @@ function configOf(id) {
     buttons[b] = { behaviour: BEHAVIOURS.includes(x.behaviour) ? x.behaviour : DEFAULT_BEHAVIOUR[b], keys: text(x.keys), run: text(x.run),
       label: text(x.label).slice(0, LABEL_MAX) };
   }
-  return { links: Array.isArray(c.links) ? c.links : [], host: c.host === true, mode: MODES.includes(c.mode) ? c.mode : 'keys', buttons };
+  // `pages`: previews it plays into (console-pages.js), by preview id; one that expired drops out as it is read.
+  const pages = (Array.isArray(c.pages) ? c.pages : []).filter(id => require('./canvas/previews').get(id));
+  return { links: Array.isArray(c.links) ? c.links : [], pages, host: c.host === true, mode: MODES.includes(c.mode) ? c.mode : 'keys', buttons };
 }
 
 function saveConfig(id, patch) {
@@ -85,9 +87,11 @@ function cleanFrame(f) {
   if (!f || typeof f !== 'object') return null;
   const out = { t: num(f.t) ?? 0 };
   if (Array.isArray(f.accel) && f.accel.length === 3 && f.accel.every(x => num(x) !== undefined)) out.accel = f.accel.map(Number);
+  // The gyroscope (rad/s, device axes): with accel, six axes (DocaWear ≥ 1.7.0).
+  if (Array.isArray(f.gyro) && f.gyro.length === 3 && f.gyro.every(x => num(x) !== undefined)) out.gyro = f.gyro.map(Number);
   if (num(f.heading) !== undefined) out.heading = ((f.heading % 360) + 360) % 360;
   if (num(f.crown) !== undefined) out.crown = f.crown;
-  return out.accel || out.heading !== undefined || out.crown !== undefined ? out : null;
+  return out.accel || out.gyro || out.heading !== undefined || out.crown !== undefined ? out : null;
 }
 
 /**
@@ -161,7 +165,9 @@ function ingest(device, body = {}) {
   if (joystick) s.joystick = joystick;
 
   const targets = cfg.links.filter(id => id !== device.id);
-  if (targets.length && (frames.length || press || release || modeChanged || typeof body.enabled === 'boolean')) {
+  const moved = frames.length || press || release || modeChanged || typeof body.enabled === 'boolean';
+  if (cfg.pages.length && moved) require('./console-pages').feed(device.id, cfg.pages, { enabled: s.enabled, mode: cfg.mode, frames, button, toggles: { ...s.toggles }, ...(joystick ? { joystick } : {}) });
+  if (targets.length && moved) {
     const bus = require('./api-v1/bus');
     const payload = { deviceId: device.id, enabled: s.enabled, mode: cfg.mode, frames, press, ...(release ? { release } : {}), button, toggles: { ...s.toggles },
       ...(joystick ? { joystick } : {}), ...(macro ? { macro } : {}) };
@@ -169,8 +175,8 @@ function ingest(device, body = {}) {
       try { bus.publish(id, 'console.input', payload, press || release ? { cls: 'durable', ttlSec: 60 } : { cls: 'ephemeral' }); } catch { /* one bad target never stops the rest */ }
     }
   }
-  return { accepted: frames.length, press, ...(release ? { release } : {}), linked: targets.length, host: cfg.host, mode: cfg.mode, toggles: { ...s.toggles },
-    buttons: buttonsFor(cfg, targets.length) };
+  return { accepted: frames.length, press, ...(release ? { release } : {}), linked: targets.length + cfg.pages.length, host: cfg.host, mode: cfg.mode, toggles: { ...s.toggles },
+    buttons: buttonsFor(cfg, targets.length + cfg.pages.length) };
 }
 
 /** What the device draws on each button: its behaviour, its label, and whether it does anything (a macro, a command
@@ -185,8 +191,8 @@ function buttonsFor(cfg, linked) {
 /** One line for the agent's doca_clients: that the console exists and where it goes, never what it streams. */
 function summary(id, nameOf = x => x) {
   const s = _live.get(id), c = configOf(id);
-  if (!s?.at && !c.links.length && !c.host) return null;
-  const to = [...c.links.map(nameOf), ...(c.host ? ['host'] : [])];
+  if (!s?.at && !c.links.length && !c.pages.length && !c.host) return null;
+  const to = [...c.links.map(nameOf), ...c.pages.map(id => `page ${id}`), ...(c.host ? ['host'] : [])];
   return `console=${s?.enabled ? 'on' : 'off'},${c.mode}${to.length ? ` → ${to.join(', ')}` : ' → nobody'}`;
 }
 
@@ -212,6 +218,7 @@ function mountPanel(app) {
     if (Array.isArray(b.links)) {
       patch.links = [...new Set(b.links.map(String).filter(id => id !== req.params.id && devices.get(id) && !devices.get(id).revokedAt))];
     }
+    if (Array.isArray(b.pages)) patch.pages = [...new Set(b.pages.map(String).filter(id => require('./canvas/previews').get(id)))];
     if (typeof b.host === 'boolean') patch.host = b.host;
     if (MODES.includes(b.mode)) patch.mode = b.mode;
     res.json(saveConfig(req.params.id, patch));
@@ -226,7 +233,7 @@ function mountPanel(app) {
 }
 
 function openapi({ obj, str, int, arr, bool, body, json, std }) {
-  const frame = obj({ t: int(), accel: arr({ type: 'number' }), heading: { type: 'number' }, crown: { type: 'number' } });
+  const frame = obj({ t: int(), accel: arr({ type: 'number' }), gyro: arr({ type: 'number' }), heading: { type: 'number' }, crown: { type: 'number' } });
   return {
     '/console': { post: { tags: ['Devices'], summary: 'Stream console input: motion, heading, crown, buttons A–E', operationId: 'postConsole', 'x-scope': 'sensors:report',
       description: 'For the services the panel linked to this device, as `console.input` events. Never reaches the harness. '

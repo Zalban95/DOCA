@@ -64,6 +64,7 @@ function handler(req, res) {
   if (!m) {
     const proxy = require('./proxy');
     if (proxy.enter(req, res) || proxy.forward(req, res)) return;
+    if (require('../console-pages').serve(req, res, null)) return;   // its script answers even before a preview is entered
     return send(res, 404, 'Nothing here.');
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') return send(res, 405, 'Only pages here.');

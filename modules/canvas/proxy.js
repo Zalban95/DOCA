@@ -57,10 +57,11 @@ function upstreamHeaders(req, port) {
   return h;
 }
 
-/** Forward an HTTP request; returns false when this browser has no preview. */
-function forward(req, res) {
-  const p = previews.byToken(tokenFrom(req));
+/** Forward an HTTP request; returns false when this browser has no preview. `token`: the cast door's own preview. */
+function forward(req, res, token = null) {
+  const p = previews.byToken(token || tokenFrom(req));
   if (!p) return false;
+  if (require('../console-pages').serve(req, res, p)) return true;   // a watch's console for this page, before the app
   const up = http.request({ host: '127.0.0.1', port: p.port, method: req.method, path: req.url, headers: upstreamHeaders(req, p.port) }, r => {
     const headers = { ...r.headers };
     // Framed by the panel only; a CSP the app sends of its own still applies too.
@@ -80,8 +81,8 @@ function forward(req, res) {
 }
 
 /** A WebSocket upgrade (hot reload): the same cookie, piped as bytes. */
-function upgrade(req, socket, head) {
-  const p = previews.byToken(tokenFrom(req));
+function upgrade(req, socket, head, token = null) {
+  const p = previews.byToken(token || tokenFrom(req));
   if (!p) return socket.destroy();
   const up = net.connect(p.port, '127.0.0.1', () => {
     const h = upstreamHeaders(req, p.port);

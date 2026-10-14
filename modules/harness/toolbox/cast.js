@@ -32,7 +32,7 @@ module.exports = [{
   name: 'cast',
   description: 'Show a page, play a video, a sound or a picture, or say a sentence on a TV or speaker that Machines → Nearby saved or saw in the last day, from the hub or one of the person\'s devices (Cast; DLNA ones say and play, they show no page) — use it when the person asks to '
     + 'put something on a TV or say something in a room ("play that video on the living room TV", "say dinner is ready in the kitchen"). list: the TVs and speakers by place and room; '
-    + 'show: a page on a TV; play: a kept file (its name, as show_media or computer get kept it) — a video or picture on a TV, a sound on either; say: a sentence in the person\'s voice; story: a longer text, a tone tag before each part; stop; volume (0–1). '
+    + 'show: a page on a TV, or with preview a project\'s page being tested (a canvas preview\'s id), with its watch console (device_console); play: a kept file (its name, as show_media or computer get kept it) — a video or picture on a TV, a sound on either; say: a sentence in the person\'s voice; story: a longer text, a tone tag before each part; stop; volume (0–1). '
     + 'This is the way to a Cast or DLNA device: not catt or a script in the shell, which go around the door and the record. A TV Home Assistant controls can also play through its media player there. Only when the person asked for it: asked true.',
   parameters: {
     type: 'object',
@@ -41,13 +41,14 @@ module.exports = [{
       file: { type: 'string', description: 'play: the kept file\'s name (an attachment: what show_media showed or computer get brought back).' },
       thing: { type: 'string', description: 'show, play, say, stop, volume: the thing\'s name, its room, or its id from list.' },
       page: { type: 'string', description: 'show: live, workstream, ambient, home, computers, chronicle or face.' },
+      preview: { type: 'string', description: 'show: a preview\'s id (prv_…, from the canvas tool) to put that page on the TV instead.' },
       text: { type: 'string', description: 'say: the sentence, as it should be heard; story: up to 4000 characters, each part after its tone tag ("[calm] Once upon a time… [whispers] Quiet now…"). An expressive voice speaks tone tags in it — [whispers] [laughs] [sighs] [excited] [calm] [sad] [curious] [serious] — when the person asks for a tone; list says whether theirs does.' },
       level: { type: 'number', description: 'volume: 0 to 1.' },
       asked: { type: 'boolean', description: 'true only when the person asked for exactly this on this turn.' },
     },
     required: ['action'],
   },
-  run: async ({ action, thing, page, file, text, level, asked }, ctx = {}) => {
+  run: async ({ action, thing, page, preview, file, text, level, asked }, ctx = {}) => {
     const person = ctx.user;
     if (!person?.id) return bad('no person on this turn — a TV or a speaker is cast to for a person.');
     const things = require('../../cast/things'), who = whoOf(person);
@@ -67,6 +68,7 @@ module.exports = [{
     try {
       if (action === 'show') {
         if (!t.shows) return bad(`${t.name} is a speaker: it can say a sentence, not show a page.`);
+        if (preview) { const r = await things.showPreview(who, t.id, preview); return `${t.name} shows "${r.title}" in a few seconds. Say so in one line.`; }
         await things.show(who, t.id, String(page || 'live'));
         return `${t.name} shows ${page || 'live'} in a few seconds. Say so in one line.`;
       }
