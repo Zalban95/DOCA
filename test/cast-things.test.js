@@ -114,7 +114,7 @@ test('the agent casts only when the person asked, to what they may use (the cast
   const tools = require('../modules/harness/tools');
   const owner = { ...H.owner.user, role: 'owner' };
   const list = await tools.call('cast', { action: 'list' }, [], { user: owner });
-  assert.match(list, /Kitchen speaker \(n_[0-9a-f]+\) — speaker, Home · Kitchen: says a sentence/);
+  assert.match(list, /Kitchen speaker \(n_[0-9a-f]+\) — speaker, Home · Kitchen: plays a sound, says a sentence/);
   const unasked = await tools.call('cast', { action: 'say', thing: 'kitchen', text: 'Hello' }, [], { user: owner, byPerson: true });
   assert.match(unasked, /only when the person asked/);
   const notTheirTurn = await tools.call('cast', { action: 'say', thing: 'kitchen', text: 'Hello', asked: true }, [], { user: owner });
@@ -128,3 +128,23 @@ test('the agent casts only when the person asked, to what they may use (the cast
   assert.ok(require('../modules/agents/registry').NEVER.includes('cast'), 'never from a mission');
 });
 
+
+test('a TV plays a kept video from the door, by its name, with ranges; a speaker is not given a video; the agent\'s tool plays it', async () => {
+  const fs = require('node:fs'), path = require('node:path');
+  const att = require('../modules/attachments');
+  att.ensureDir();
+  fs.writeFileSync(path.join(att.dir(), 'demo-clip.mp4'), Buffer.alloc(9000, 3));
+  dev.fetched.length = 0;
+  const r = await H.api(null, 'POST', `/api/cast/things/${tv.id}/play`, { file: 'demo-clip.mp4' });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(dev.heard.some(m => m.data?.type === 'LOAD' && m.data.media?.contentType === 'video/mp4' && m.data.media.metadata?.title === 'demo-clip.mp4'));
+  for (let i = 0; i < 50 && !dev.fetched.length; i++) await H.sleep(20);
+  assert.equal(dev.fetched[0]?.bytes, 9000, 'served from the door to that device');
+  assert.equal((await H.api(null, 'POST', `/api/cast/things/${speaker.id}/play`, { file: 'demo-clip.mp4' })).status, 400, 'a speaker plays sound only');
+  assert.equal((await H.api(null, 'POST', `/api/cast/things/${tv.id}/play`, { file: 'nope.mp4' })).status, 404);
+  assert.ok(lines().some(l => l.act === 'play' && l.machine?.id === tv.id));
+  const tool = require('../modules/harness/toolbox/cast').find(t => t.name === 'cast');
+  const said = await tool.run({ action: 'play', thing: 'Living room TV', file: 'demo-clip.mp4', asked: true },
+    { user: { id: H.owner.user?.id || H.owner.id, role: 'owner' }, byPerson: true });
+  assert.match(said, /plays demo-clip\.mp4/);
+});

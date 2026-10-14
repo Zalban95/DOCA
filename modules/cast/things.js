@@ -134,6 +134,49 @@ async function say(who, id, text, { story = false } = {}) {
   return { ok: true };
 }
 
+/**
+ * Play a kept file — a video, a sound, a picture — on a TV or a speaker (asked 2026-10-14: "what happens if I ask the
+ * agent to cast that video on the TV?"; until now only a page or a spoken sentence went). The file is an attachment (what
+ * show_media or `computer get` kept), served once through the cast door to that device alone, with ranges so it seeks;
+ * Cast plays it in its own media player, DLNA through its renderer. Through a phone it travels with the cast, so up to
+ * RELAY_MAX. Attachments are the hive's files: a host's to send for now.
+ */
+const RELAY_MAX = 25 * 1024 * 1024;
+async function play(who, id, file) {
+  const t = thing(who, id);
+  const att = require('../attachments');
+  const a = att.get(String(file || '').split('/').pop());
+  if (!a) throw bad(`No kept file "${file}": what show_media showed or \`computer get\` brought back is one (its name).`, 404);
+  if (!require('../auth/rights').can(who?.role, 'host')) throw bad('Playing a kept file on a TV is an admin\'s for now: the attachments are the hive\'s files.', 403);
+  const kind = att.playableKind(a.mime);
+  if (!['video', 'audio', 'image'].includes(kind)) throw bad(`${a.name} is not a video, a sound or a picture (${a.mime}).`);
+  if (kind !== 'audio' && t.kind === 'speaker') throw bad(`${name(t)} is a speaker: it plays a sound, not ${kind === 'video' ? 'a video' : 'a picture'}.`);
+  const c = via(who, t);
+  if (c) {
+    if (a.bytes > RELAY_MAX) throw bad(`${name(t)} is reached through ${c.label}, which carries a file up to ${RELAY_MAX / 1048576} MB; ${a.name} is ${att.humanBytes(a.bytes)}.`, 413);
+    const r = await require('./relay').say(c, t, { buffer: require('fs').readFileSync(a.path), mime: a.mime }, a.name);
+    note(who, t, `played ${a.name} on ${name(t)} through ${c.label}${onNet(t)}`, 'play');
+    return { ...r, file: a.name };
+  }
+  const media = require('./media');
+  const tok = media.token({ file: a.path, mime: a.mime, for: ipOf(t) });
+  const origin = await require('./door').open(ipOf(t), { tokens: [tok] });
+  const url = `${origin}/api/cast/media/${tok}`;
+  if (dlnaOnly(t)) {
+    await require('./dlna').play(t.how.dlna, url, a.mime, a.name);
+    note(who, t, `played ${a.name} on ${name(t)} (DLNA)`, 'play');
+    return { ok: true, file: a.name };
+  }
+  const r = await withDevice(t, async s => {
+    const app = await s.launch(APPS.media);
+    return s.request(app.transportId, NS.media, { type: 'LOAD', autoplay: true,
+      media: { contentId: url, contentType: a.mime, streamType: 'BUFFERED', metadata: { metadataType: 0, title: a.name } } }, 20000);
+  });
+  if (r.data?.type === 'LOAD_FAILED' || r.data?.type === 'LOAD_CANCELLED') throw bad(`${name(t)} could not play ${a.name} (${r.data.type}).`, 502);
+  note(who, t, `played ${a.name} on ${name(t)}`, 'play');
+  return { ok: true, file: a.name };
+}
+
 async function stop(who, id) {
   const t = thing(who, id);
   require('./running').forget(t.id);
@@ -161,4 +204,4 @@ async function volume(who, id, level) {
   return { ok: true, level: v };
 }
 
-module.exports = { list, show, say, stop, volume, mayUse, thing };
+module.exports = { list, show, say, play, stop, volume, mayUse, thing };
