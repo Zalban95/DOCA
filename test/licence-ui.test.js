@@ -103,3 +103,18 @@ test('pages the hive does not have are absent from every list of pages: the layo
   const s = search(offNow());
   assert.ok(s.includes('Voice') && s.includes('Connectors'), s.join());
 });
+
+test('"Models in use" names only roles and places this hive has', async () => {
+  const roles = async () => (await H.api(null, 'GET', '/api/models/roles')).body.roles;
+  const missing = /Settings → Voice|Agents → Harness → Specialists|Settings → Harness → Vision|Wake words|Library|Decision models|Retrieval/;
+  await coreOnly(async () => {
+    const r = await roles();
+    assert.ok(r.some(x => x.id === 'harness') && r.some(x => x.id === 'stt'), 'the core\'s roles stay');
+    for (const x of r) assert.doesNotMatch(x.where, missing, `${x.id}: ${x.where}`);
+    assert.equal(r.find(x => x.id === 'stt').where, 'Field → Models → Inference Services (Whisper)');
+    assert.ok(!r.some(x => ['assistant', 'specialists', 'vision', 'wakeword', 'library'].includes(x.id)));
+  });
+  const r = await roles();
+  assert.ok(['assistant', 'specialists', 'vision', 'wakeword', 'library'].every(id => r.some(x => x.id === id)));
+  assert.match(r.find(x => x.id === 'stt').where, /^Settings → Voice; /);
+});
