@@ -16,8 +16,15 @@ const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e)
 
 function mount(app) {
   require('./door').attach(app);
-  app.get('/api/cast/things', h(async req => ({ things: await require('./answers').withAnswers(things.list(req.auth)), door: { on: require('./door').on(), mayChange: isHost(req.auth) },
-    tones: (() => { try { return require('./speech').tones({ id: req.auth?.user?.id }); } catch { return []; } })() })));
+  app.get('/api/cast/things', h(async req => {
+    // Where this person's lookers are now (the hub, their phone…), as named networks: the sheet says which Wi-Fi each is on.
+    const now = await require('../nearby/lookers').whereNow({ id: req.auth?.user?.id || null }).catch(() => ({}));
+    const nets = require('../nearby/networks'), lookers = require('../nearby/lookers').list({ id: req.auth?.user?.id || null });
+    const here = Object.entries(now).filter(([, n]) => n).map(([by, n]) => ({ by: by === 'hub' ? 'hub' : by, label: (lookers.find(l => (l.deviceId || l.id) === by) || {}).label || by,
+      network: (x => (x ? { id: x.id, label: x.label } : null))(nets.get(n)) }));
+    return { things: await require('./answers').withAnswers(things.list(req.auth, now)), here, door: { on: require('./door').on(), mayChange: isHost(req.auth) },
+    tones: (() => { try { return require('./speech').tones({ id: req.auth?.user?.id }); } catch { return []; } })() };
+  }));
   app.post('/api/cast/things/:id/show', h(req => things.show(req.auth, req.params.id, String(req.body?.page || ''))));
   app.post('/api/cast/things/:id/say', h(req => things.say(req.auth, req.params.id, req.body?.text, { story: req.body?.story === true })));
   app.post('/api/cast/things/:id/stop', h(req => things.stop(req.auth, req.params.id)));

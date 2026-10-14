@@ -45,7 +45,7 @@ function saved() {
     const has = a => Array.isArray(a) && a.length;
     return { ...t, seenId: s?.id || null, lastSeen: s?.lastSeen || t.lastSeen || null, addresses: has(s?.addresses) ? s.addresses : t.addresses || [],
       can: [...new Set([...(t.can || []), ...(s?.can || [])])], how: { ...(t.how || {}), ...(s?.how || {}) }, web: s?.web || t.web || null,
-      sources: has(s?.sources) ? s.sources : t.sources || [], seenFrom: s?.seenFrom || [] };
+      sources: has(s?.sources) ? s.sources : t.sources || [], seenFrom: s?.seenFrom || [], network: s?.seenFrom?.find(x => x.net)?.net || t.network || null };
   }).sort((a, b) => a.place.localeCompare(b.place) || a.room.localeCompare(b.room) || a.name.localeCompare(b.name));
 }
 
@@ -65,7 +65,7 @@ function save({ id, seenId, name, place, room, kind } = {}) {
   else {
     t = { id: `n_${crypto.randomBytes(5).toString('hex')}`, ...fields, keys: from.keys.filter(k => !k.startsWith('ip:')).concat(from.keys.filter(k => k.startsWith('ip:'))),
       addresses: from.addresses, can: from.can, how: from.how, web: from.web, sources: from.sources, maker: from.maker, model: from.model,
-      lastSeen: from.lastSeen, savedAt: new Date().toISOString() };
+      lastSeen: from.lastSeen, savedAt: new Date().toISOString(), ...(from.seenFrom?.[0]?.net ? { network: from.seenFrom[0].net } : {}) };   // the network it was saved on (networks.js)
     list.push(t);
   }
   writeThings(list);
