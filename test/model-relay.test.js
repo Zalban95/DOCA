@@ -162,23 +162,32 @@ test('no token, a token the hub did not make, a switched-off computer and a swit
   r = await H.api(null, 'POST', '/api/computers/ee55ff66/relay', { on: false });
   assert.equal(r.status, 200);
   r = await ask('/v1/chat/completions', { token, body });
-  assert.equal(r.status, 403);
+  assert.equal(r.status, 401, 'switched off, the token it had is refused as no token of the hub\'s');
+  r = await ask('/v1/chat/completions', { token: computers().get('ee55ff66').relayToken, body });
+  assert.equal(r.status, 403, 'and the one kept in its place is refused while it is off');
   assert.equal((await r.json()).error.code, 'relay_off');
+  assert.notEqual(computers().get('ee55ff66').relayToken, token, 'switched off, its token is replaced: a copy taken out is dead');
   await H.api(null, 'POST', '/api/computers/ee55ff66/relay', { on: true });
-  assert.equal(computers().get('ee55ff66').relayToken, token, 'switched back on, the same token works again');
+  const fresh = computers().get('ee55ff66').relayToken;
+  assert.notEqual(fresh, token, 'switched back on, a new one');
+  assert.equal(computers().get('ee55ff66').relayEnv, false, 'its environment holds the dead one: relay.env holds the live one');
   r = await ask('/v1/chat/completions', { token, body });
+  assert.equal(r.status, 401, 'the old token is nobody\'s now');
+  r = await ask('/v1/chat/completions', { token: fresh, body });
   assert.equal(r.status, 200);
+  await H.api(null, 'POST', '/api/computers/ee55ff66/relay', { on: true });
+  assert.equal(computers().get('ee55ff66').relayToken, fresh, 'switched on again while on: unchanged');
 
   const routes = require('../modules/relay/routes');
   routes.save({ enabled: false });   // saved, the listener not yet closed: the relay itself still refuses
   try {
-    r = await ask('/v1/models', { token });
+    r = await ask('/v1/models', { token: fresh });
     assert.equal(r.status, 403);
     assert.match((await r.json()).error.message, /off for agents' computers/);
   } finally { routes.save({ enabled: true }); }
 
   computers().save(computers().rows().filter(c => c.id !== 'ee55ff66'));
-  r = await ask('/v1/models', { token });
+  r = await ask('/v1/models', { token: fresh });
   assert.equal(r.status, 401, 'its computer removed, the token is nobody\'s');
 });
 

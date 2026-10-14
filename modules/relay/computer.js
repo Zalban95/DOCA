@@ -87,15 +87,18 @@ async function removeFile(c) {
 }
 
 /**
- * A computer's relay switch (the Computers tab, or the computer tool's `relay` action). On: a token if it has none,
- * and `relay.env` written into it (when it is running; otherwise when it next starts). Off: refused from now on, and
- * the file taken out; the token is kept, so a computer whose environment holds it works again when switched back on.
+ * A computer's relay switch (the Computers tab, or the computer tool's `relay` action). On: a new token when it was
+ * off (or had none), and `relay.env` written into it (when it is running; otherwise when it next starts). Off: refused
+ * from now on, the file taken out, and the token replaced by one never handed out — so a token copied out of the
+ * computer stops working for good (the owner's, 2026-10-14). The environment it was made with then holds a dead token,
+ * so `relayEnv` goes: the file is where a program finds the live one.
  * → { on, file, env, note }
  */
 async function set(id, on) {
   const computers = require('../computers');
   const c = computers.need(String(id || ''));
-  const fields = { relayOn: !!on, ...(on && !c.relayToken ? { relayToken: mint() } : {}) };
+  const rotate = !on || !c.relayOn || !c.relayToken;
+  const fields = { relayOn: !!on, ...(rotate ? { relayToken: mint(), relayEnv: false } : {}) };
   computers.patch(c.id, fields);
   const now = { ...c, ...fields };
   let file = null;
