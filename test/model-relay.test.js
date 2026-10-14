@@ -235,3 +235,16 @@ test('a DOCA inside the computer paces itself by the relay: each model\'s window
     inside: { baseUrl: 'http://host.docker.internal:4244/v1', apiKey: 'x' } } } }));
   assert.equal(require('../modules/harness/providers').endpoint('inside').local, true);
 });
+
+test('a server offering several models: the pace takes the window of the model in use, not the one /props says', async () => {
+  const pace = require('../modules/harness/provider-pace');
+  const fetchImpl = async url => ({ ok: true, json: async () => (/\/props$/.test(url) ? { default_generation_settings: { n_ctx: 1048576 } } : {}) });
+  const cw = require('../modules/harness/context-window');
+  const was = cw.discover;
+  cw.discover = async () => ({ tokens: 40960, source: 'hub relay /models, context_length' });
+  try {
+    const p = await pace.measure('inside', { model: 'qwen', fetchImpl });
+    assert.match(p.from, /context_length/);
+    assert.equal(p.maxTokens, 10240, 'a quarter of 40,960, not of a million');
+  } finally { cw.discover = was; }
+});

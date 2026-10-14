@@ -46,8 +46,20 @@ function shape({ title, goal, tasks, context } = {}, { workChats = false } = {})
   });
   const ids = new Set(out.map(t => t.id));
   if (ids.size !== out.length) throw bad('Two tasks have the same id.');
+  // `after` names a task by its id; a title, or a word only one title holds, means that task too (the 2026-10-14 demo: a
+  // model wrote after: ["text"] four times for the task titled "Improve the page's text", and ran out of steps).
+  const low = v => String(v).trim().toLowerCase();
+  const idOf = a => {
+    if (ids.has(a)) return a;
+    const exact = out.filter(x => low(x.title) === low(a));
+    if (exact.length === 1) return exact[0].id;
+    const within = out.filter(x => low(a) && low(x.title).includes(low(a)));
+    return within.length === 1 ? within[0].id : null;
+  };
+  const named = out.map(x => `${x.id} "${x.title}"`).join(', ');
+  for (const t of out) t.after = [...new Set(t.after.map(a => idOf(a) || a))];
   for (const t of out) for (const a of t.after) {
-    if (!ids.has(a)) throw bad(`Task ${t.id} comes after "${a}", which is not a task of this team.`);
+    if (!ids.has(a)) throw bad(`Task ${t.id} comes after "${a}", which is not a task of this team. Name one by its id: ${named}.`);
     if (a === t.id) throw bad(`Task ${t.id} cannot come after itself.`);
   }
   // No cycles: every task must be reachable by finishing the ones before it.

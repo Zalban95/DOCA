@@ -72,14 +72,15 @@ async function models(req, res, who) {
 
 /**
  * What a local model server says about itself, in llama.cpp's words, so a DOCA inside a computer paces itself as it
- * does for a server on its own network (provider-pace.js, turn/busy-server.js): `/props` the first offered model's
+ * does for a server on its own network (provider-pace.js, turn/busy-server.js): `/props` the smallest offered model's
  * window, `/slots` whether the relay is passing a request on right now — a queued request reads as the server at work,
  * so its wait goes on instead of ending at 90 s as a stall (the same demo: the hub's model took three minutes to start).
  * Facts only, never a word of a request; answered on the bridge without a token, as llama.cpp answers them.
  */
 async function props(req, res) {
-  const first = require('./index').offered()[0];
-  const n = first ? await windowOf(first) : null;
+  // One window for a server that offers several: the smallest, so a caller that cannot ask per model never overfills one.
+  const windows = (await Promise.all(require('./index').offered().map(windowOf))).filter(Boolean);
+  const n = windows.length ? Math.min(...windows) : null;
   res.writeHead(200, { 'Content-Type': 'application/json' });
   res.end(JSON.stringify({ default_generation_settings: { n_ctx: n || 0 }, ...(n ? { n_ctx: n } : {}) }));
 }

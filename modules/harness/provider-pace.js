@@ -60,9 +60,11 @@ async function measure(provider, { model, fetchImpl = fetch } = {}) {
     slots = num(props?.total_slots);
     if (ctx || slots) from = `llama.cpp /props: ${ctx ? `${ctx} tokens of context` : 'no context size'}${slots ? `, ${slots} slot${slots === 1 ? '' : 's'}` : ''}`;
   } catch { /* not llama.cpp */ }
-  if (!ctx && model) {
+  // The model in use says its own window where its server lists it: a server offering several (the hub's model relay)
+  // says one window in /props, which need not be this model's (2026-10-14: 1,048,576 for a 40,960-token model).
+  if (model) {
     const w = await require('./context-window').discover(ep.id, model).catch(() => null);
-    if (w?.tokens) { ctx = w.tokens; from = w.source; }
+    if (w?.tokens && w.tokens !== ctx) { ctx = w.tokens; from = `${w.source}${slots ? `, ${slots} slot${slots === 1 ? '' : 's'}` : ''}`; }
   }
   const pace = { ...valuesFor({ ctx, slots }), ...(slots ? { slots } : {}), from: from || 'a model on this machine or the local network (its server said nothing about its size)', at: new Date().toISOString() };
   const doc = store.readJson(DOC, { providers: {} });
