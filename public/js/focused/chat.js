@@ -77,6 +77,7 @@ async function _fcChatLoad() {
       }
     }
     for (const img of m.images || []) box.append(fcMadeCard(img) || _fcImgEl(img));
+    for (const x of m.mentions || []) agentMentionAppend(box, x);
     const text = String(m.content || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
     if (text) mdInto(_fcMsg('it', '', box), text);
   }
@@ -162,6 +163,7 @@ function _fcTurnUi() {
     },
     note: (kind, text) => { const n = Object.assign(document.createElement('div'), { className: 'fc-note', textContent: text }); c.box.append(n); return n; },
     image: img => { c.box.append(fcMadeCard(img) || _fcImgEl(img)); _fcScroll(); },
+    mention: x => agentMentionAppend(c.box, x, _fcScroll),
     approval: evt => agentApprovalEvent(evt, c.box, { note: t => c.box.append(Object.assign(document.createElement('div'), { className: 'fc-note', textContent: t })), scroll: _fcScroll }),
     error: msg => { typing?.remove(); typing = null; const n = Object.assign(document.createElement('div'), { className: 'fc-note fc-err', textContent: msg }); c.box.append(n); },
     userAdded: evt => _fcMsg('me', _fcPlain(evt.text)),

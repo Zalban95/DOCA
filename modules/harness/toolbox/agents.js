@@ -68,9 +68,11 @@ module.exports = [
         const w = require('../../agents/after').dispatchAfter({ agentId: agent, task, context, plan, computer, vnc: vnc || null, by: ctx.sessionId }, after);
         if (w.waiting) return `Waiting (${w.waiting}): ${agent} starts when ${w.after.join(', ')} ${w.after.length === 1 ? 'is' : 'are'} done, with their results and files as its context. Carry on.`;
         if (w.dropped) return `Not started: ${w.why}`;
+        try { ctx.mention?.(require('../mentions').mission(require('../../agents/missions').get(w.started))); } catch { /* the chip is a convenience */ }
         return `Mission ${w.started} started — what it waited for is already done, and its results are in its context.`;
       }
       const m = require('../../agents/missions').dispatch({ agentId: agent, task, context, plan, computer, vnc: vnc || null, by: ctx.sessionId });
+      ctx.mention?.(require('../mentions').mission(m));   // a chip in this transcript that opens its log (mentions.js)
       // A plan is what lets every client draw progress instead of "STEP 0"
       // until the mission is already over — see missions.setPlan().
       const how = Array.isArray(plan) && plan.length

@@ -76,6 +76,7 @@ module.exports = [
           const team = await t.create(a, { by: ctx.sessionId, keepGoing: a.keep_going === true, maxRounds: a.max_rounds ?? null,
             asked: a.asked === true && !!ctx.byPerson, person: ctx.user || null });   // an outside harness: only the person's own ask (teams/outside.js)
           const v = t.view(team);
+          ctx.mention?.(require('../mentions').team(team));   // a chip in this transcript that opens its board (mentions.js)
           if (typeof ctx.show === 'function' && team.doc?.name) ctx.show({ name: team.doc.name, mime: 'text/markdown', kind: 'doc',
             bytes: Buffer.byteLength(require('../../teams/doc').render(team, v.tasks)), caption: `Team: ${team.title} — its board, written again at every change` });
           const manual = require('../manual-note').note(ctx.sessionId);

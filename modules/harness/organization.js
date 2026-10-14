@@ -364,6 +364,7 @@ async function tool(args, ctx) {
     if (no) throw error(no, 403);
     const s = create({ title: args.title, planning: args.planning, kind: 'work', ...under(actor.id) });   // a work chat, one level down; nothing else the call passed
     if (args.message) start(s.id, args.message, actor.id);
+    ctx.mention?.(require('./mentions').work(s.id));   // a chip in this transcript that opens it (mentions.js)
     return view(s);
   }
   if (args.action === 'report') {

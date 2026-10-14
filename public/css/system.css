@@ -319,6 +319,13 @@ html[data-hosted] .harness-add-row { display: none; }
 .agent-auto-note > summary { cursor: pointer; list-style: none; opacity: .85; }
 .agent-auto-note > summary::before { content: '↻ '; }
 .agent-auto-note > div { margin-top: 4px; white-space: pre-wrap; }
+/* What a turn made — a work chat, a team, a mission — as a chip that opens it (js/agent-ui/mention.js). */
+.agent-mention { display: flex; align-items: center; gap: 8px; max-width: 100%; margin: 6px 0; padding: 6px 10px; font: inherit; font-size: 12.5px;
+  color: var(--text); background: var(--bg-input, var(--surface, transparent)); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; text-align: left; }
+.agent-mention:hover, .agent-mention:focus-visible { border-color: var(--accent); }
+.agent-mention-kind { color: var(--muted); flex: none; }
+.agent-mention-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.agent-mention-title::after { content: ' ↗'; color: var(--muted); }
 
 /* A page's longer explanation, folded under one line (the MCP page's "What MCP servers are"). */
 .page-about > summary { cursor: pointer; color: var(--muted); }

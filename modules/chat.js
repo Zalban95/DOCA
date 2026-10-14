@@ -60,6 +60,7 @@ function handleHistory(req, res) {
         } else {
           reply.working.push({ kind: 'tool-result', label: row.name, body: row.content || '', at: row.at });
           if (row.images?.length) reply.images = [...(reply.images || []), ...row.images];
+          if (row.mentions?.length) reply.mentions = [...(reply.mentions || []), ...row.mentions];   // what the turn made, as chips (harness/mentions.js)
         }
       }
     }
@@ -142,7 +143,7 @@ async function handleChat(req, res) {
           // Forwarded whole: `usage` is `budget.report()`, the object the console draws; `approval` is the card
           // a Manual-mode turn blocks on, and `warning` the budget and cut-off notices — both were dropped here,
           // so a turn from this chat waited five minutes on a question nobody could see (audit 2026-10-04).
-          if (['usage', 'approval', 'warning', 'queued', 'queued_read', 'queued_started', 'user_added', 'handoff', 'everyday'].includes(evt.type)) res.write(`data: ${JSON.stringify(evt)}\n\n`);
+          if (['usage', 'approval', 'warning', 'queued', 'queued_read', 'queued_started', 'user_added', 'handoff', 'everyday', 'mention'].includes(evt.type)) res.write(`data: ${JSON.stringify(evt)}\n\n`);
           // Silence, and the end of it. A provider that has the request and has
           // not started answering looks exactly like a frozen page, and a hop
           // down the fallback chain is the one event the user must not miss:
