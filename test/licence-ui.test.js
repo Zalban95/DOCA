@@ -167,3 +167,13 @@ test('the MCP page: no token field, note or step sends a core-only hive to Conne
   assert.match(full.steps, /Field → Connectors/);
   assert.equal(full.fetched, 1); assert.equal(full.keep, 'home-assistant');
 });
+
+test('Hub → Logs → Machines says what looks at the machines without naming Live where there is none', async () => {
+  const first = () => { let t = ''; const stop = require('../modules/machines/busy-log').open(1, l => { t ||= l.text; }); stop(); return t; };
+  if (require('../modules/machines/busy-log').lines().length) return;   // something seen already: no first line to read
+  await coreOnly(() => {
+    const t = first();
+    assert.doesNotMatch(t, /Live|status column/); assert.match(t, /the Workstream is shown/);
+  });
+  assert.match(first(), /while Live, the Workstream or the status column is shown/);
+});
