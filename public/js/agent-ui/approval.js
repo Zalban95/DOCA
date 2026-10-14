@@ -150,9 +150,11 @@ function approvalPopup(evt, done) {
 
   const modal = document.createElement('div');
   modal.className = 'modal approval-modal';
+  // A question that must be answered, said so to a screen reader and to a browser driven by a test (run 2026-10-14).
+  Object.entries({ role: 'alertdialog', 'aria-modal': 'true', 'aria-labelledby': 'approval-title' }).forEach(([k, v]) => modal.setAttribute(k, v));
 
   const title = document.createElement('div');
-  title.className = 'modal-title';
+  title.className = 'modal-title'; title.id = 'approval-title';
   title.textContent = evt.machine ? `${evt.mission?.agent || 'A specialist'} is asking to use a machine` : 'The agent is asking to do something';
   modal.appendChild(title);
 

@@ -23,7 +23,7 @@ async function packsLoad() {
       <details class="desc page-about" style="margin-bottom:10px"><summary>What this is</summary>One .dpack file (a zip) that another hive imports — and that other tools read as they are: skills are
         Agent Skills folders, specialists are subagent markdown, MCP servers are the mcpServers JSON Claude Desktop and Cursor read, a shell-only
         recipe comes with a bash and a PowerShell script. Secrets never travel: they are left empty and listed for whoever imports it.</details>
-      <div class="field" style="margin-bottom:10px;max-width:320px"><label class="input-label" for="pack-name">Pack name${infoBtn('What the pack is called — its file name and how it is listed in a library. Empty: "pack".')}</label><input class="input" id="pack-name" placeholder="my-pack"></div>
+      <div class="field" style="margin-bottom:10px;max-width:320px"><label class="input-label" for="pack-name">Pack name${infoBtn('What the pack is called — its file name and how it is listed in a library. Empty: you are asked, with the first thing ticked as its name.')}</label><input class="input" id="pack-name" placeholder="my-pack"></div>
       ${group('skills', 'Skills', c.skills, 'Written instructions the agents follow for a kind of job. Tick the ones to put in the pack.')}${group('specialists', 'Specialists', c.specialists, 'Agent types the Orchestrator sends errands to, each with its own role and tools.')}${group('recipes', 'Recipes', c.recipes, 'Tool calls saved from a turn that worked, run again without the thinking.')}${group('mcp', 'MCP servers', c.mcp, 'Tool servers this hive connects to. Their secrets are emptied; they arrive switched off.')}${group('services', 'API services (without keys)', c.services || [], 'Online services set up with a key for services: how to reach each one travels, never the key.')}
       <div style="margin-bottom:10px;font-size:12px"><label><input type="checkbox" id="pack-memory"> Memory</label>${infoBtn('The facts the agents keep between conversations (memory.jsonl in the pack). Off by default — it may hold things about you.')}
         <label style="margin-left:12px"><input type="checkbox" id="pack-rules"> Memory rules (as AGENTS.md)</label>${infoBtn('The rules for how the agents keep memory. Imported, only rules the other hive lacks are added.')}</div>
@@ -119,7 +119,10 @@ function packsHubRemove(id) { appConfirm('Stop sending to this hub? (Revoke its 
 
 async function packsExport(keep = false) {
   const pick = kind => [...document.querySelectorAll(`#sp-packs input[data-pack="${kind}"]:checked`)].map(i => i.value);
-  const body = { name: document.getElementById('pack-name').value.trim() || 'pack', skills: pick('skills'), specialists: pick('specialists'),
+  // No name: asked, as the panel asks elsewhere, offering the first thing ticked (an unnamed pack was saved as "pack").
+  const nameEl = document.getElementById('pack-name'), first = document.querySelector('#sp-packs input[data-pack]:checked')?.value;
+  if (!nameEl.value.trim() && first) return appPrompt('What is this pack called? It is its file\'s name and how a library lists it.', n => { nameEl.value = n; packsExport(keep); }, first);
+  const body = { name: nameEl.value.trim(), skills: pick('skills'), specialists: pick('specialists'),
     recipes: pick('recipes'), mcp: pick('mcp'), services: pick('services'), memory: document.getElementById('pack-memory').checked, rules: document.getElementById('pack-rules').checked,
     edition: { branding: document.getElementById('pack-ed-branding').checked, look: document.getElementById('pack-ed-look').checked,
       face: document.getElementById('pack-ed-face').checked && (await faceSpec()), level: document.getElementById('pack-ed-level').value || null } };
@@ -143,7 +146,9 @@ async function packsPlan(file, libId = null) {
     : await fetch('/api/packs/plan', { method: 'POST', body: form });
   out.scrollIntoView?.({ block: 'nearest' });
   const p = await res.json().catch(() => ({}));
-  if (!res.ok) { out.innerHTML = `<div style="color:var(--red);font-size:12px">${escHtml(p.error || `HTTP ${res.status}`)}</div>`; return; }
+  // A way out of the preview, as every other one has (newcomer run 2026-10-14: only "Bring in the ticked ones" was there).
+  const close = '<button class="btn btn-sm" type="button" onclick="packsPlanClose()" title="Bring nothing in">Cancel</button>';
+  if (!res.ok) { out.innerHTML = `<div style="color:var(--red);font-size:12px">${escHtml(p.error || `HTTP ${res.status}`)}</div><div class="toolbar" style="margin-top:6px">${close}</div>`; return; }
   const rows = p.items.map(i => `<label class="disk-row" style="cursor:pointer"><span class="disk-label"><input type="checkbox" data-key="${escHtml(i.key)}" ${i.overwrites ? '' : 'checked'}>
       ${escHtml(i.kind)} · ${escHtml(i.id)}</span><span class="disk-path">${escHtml(i.command || i.path || '')}${i.steps ? ` · ${i.steps} steps` : ''}${i.count !== undefined ? ` · ${i.count}` : ''}${i.parts ? escHtml(i.parts) : ''}</span>
       <span class="disk-free" style="color:${i.overwrites ? 'var(--amber)' : 'var(--green)'}">${i.overwrites ? 'exists here' : 'new'}</span></label>`).join('');
@@ -152,8 +157,16 @@ async function packsPlan(file, libId = null) {
     ${rows || '<div class="placeholder">Nothing a pack carries.</div>'}
     ${needs.length ? `<div style="font-size:11px;color:var(--amber);margin-top:6px">Needs: ${needs.map(escHtml).join(' · ')}</div>` : ''}
     ${p.skipped.length ? `<div style="font-size:11px;color:var(--muted);margin-top:4px">Skipped: ${p.skipped.map(s => `${escHtml(s.path)} (${escHtml(s.why)})`).join(', ')}</div>` : ''}
-    ${rows ? `<div class="toolbar" style="gap:8px;margin-top:8px"><label style="font-size:12px"><input type="checkbox" id="pack-overwrite"> replace what exists</label>${infoBtn('Off (the default): a ticked item that already exists here is skipped. On: it replaces the one here.')}
-      <button class="btn btn-sm btn-blue" onclick="packsImport()">Bring in the ticked ones</button></div>` : ''}`;
+    <div class="toolbar" style="gap:8px;margin-top:8px">${rows ? `<label style="font-size:12px"><input type="checkbox" id="pack-overwrite"> replace what exists</label>${infoBtn('Off (the default): a ticked item that already exists here is skipped. On: it replaces the one here.')}
+      <button class="btn btn-sm btn-blue" onclick="packsImport()">Bring in the ticked ones</button>` : ''}${close}</div>`;
+}
+
+/** The preview closed: nothing brought in, the file or library pack let go. */
+function packsPlanClose() {
+  _packFile = null; _packLib = null;
+  const out = document.getElementById('pack-plan');
+  if (out) out.innerHTML = '';
+  const input = document.getElementById('pack-file'); if (input) input.value = '';
 }
 
 async function packsImport() {

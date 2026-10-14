@@ -109,6 +109,7 @@ function backupEncrypt(box) {
 async function backupPasswordSave() {
   const input = document.getElementById('backup-password');
   const st = document.getElementById('backup-status');
+  if (!input.value.trim()) { setStatus(st, 'Nothing saved: type a password first.', 'err'); input.focus(); return; }
   try {
     await apiFetch('/api/backups/settings', { method: 'POST', body: { password: input.value } });
     input.value = '';

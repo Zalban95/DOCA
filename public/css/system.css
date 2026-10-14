@@ -228,7 +228,7 @@ body:has(#tab-ambient.active) .chat-fab { display: none; }
 .card-subtitle { font-family: var(--font-ui); font-size: 11px; font-weight: 600; color: var(--muted); margin: 12px 0 6px; text-transform: none; letter-spacing: .02em; }
 .pj-tree-tools .icon-btn { width: 28px; height: 28px; }
 
-/* ── des 29: API keys on a phone — the apps' Source folder stays (a full-width row), a device's "show here" group wraps whole ── */
+/* ── des 29: API keys on a phone — the apps' Source folder stays (a full-width row), a device's "Open a page there" group wraps whole ── */
 .dev-show { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; vertical-align: middle; }
 @media (max-width: 480px) { .tool-row .tool-note.ca-note { display: block; grid-column: 1 / -1; grid-row: auto; } .dev-show { display: flex; margin-top: 6px; } }
 .sys-metric.wide { grid-column: span 2; }

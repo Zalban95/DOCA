@@ -155,6 +155,10 @@ test('the routes: settings never return the password, and names cannot leave the
   assert.equal(JSON.stringify(r.body).includes('route password 1'), false);
 
   await H.api(null, 'POST', '/api/backups/settings', { forget: true });
+  // An empty password field saves nothing, and says so — it once answered as if it had saved one (newcomer run 2026-10-14).
+  r = await H.api(null, 'POST', '/api/backups/settings', { password: '' });
+  assert.equal(r.status, 400); assert.equal(r.body.code, 'password_empty');
+  assert.equal((await H.api(null, 'GET', '/api/backups')).body.settings.hasSavedPassword, false, 'still none saved');
   r = await H.api(null, 'POST', '/api/backups', {});
   assert.equal(r.status, 400, 'encrypted with no password is an error, never a silent open backup');
 

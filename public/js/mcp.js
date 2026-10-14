@@ -295,17 +295,14 @@ function parseHeaderLines(text) {
 }
 
 function mcpNew() {
-  for (const [id, v] of Object.entries({
-    'mcp-name': '', 'mcp-command': '', 'mcp-args': '', 'mcp-env': '', 'mcp-cwd': '', 'mcp-url': '',
-    'mcp-headers': '',
-  })) document.getElementById(id).value = v;
+  for (const id of ['mcp-name', 'mcp-command', 'mcp-args', 'mcp-env', 'mcp-cwd', 'mcp-url', 'mcp-headers']) document.getElementById(id).value = '';
   document.getElementById('mcp-transport').value = 'stdio';
   document.getElementById('mcp-autostart').checked = false;
   document.getElementById('mcp-origin-kind').value = 'server';
-  document.getElementById('mcp-name').disabled = false;
-  setStatus(document.getElementById('mcp-form-status'), '', '');
+  const nameEl = document.getElementById('mcp-name'); nameEl.disabled = false; delete nameEl.dataset.editing;   // not the last edit's
+  setStatus(document.getElementById('mcp-form-status'), 'A new server: give it a name and its command or address, then Save.', '');
   _mcpLoadDevices(null); mcpKeyField(null); mcpKeyEnvField(null); mcpFormPlace(null);
-  mcpShowForm(true);
+  mcpShowForm(true); mcpFlash(document.querySelector('#mcp-form .card'));   // seen even when it was already open below
 }
 
 async function mcpEdit(id) {

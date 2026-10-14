@@ -101,7 +101,8 @@ async function modelsSaveSettings() {
         ollamaPath: '',   // the folder is Ollama's own now (ollama-home.js): nothing kept here to disagree with it
       }
     });
-    setStatus(status, '✓ Saved', 'ok');
+    // A bare "✓ Saved" gone in three seconds read as no answer at all (newcomer run 2026-10-14): say what, and stay a while.
+    setStatus(status, `✓ Saved — Ollama is asked at ${document.getElementById('models-ollama-url').value.trim() || 'its default address'}.`, 'ok', { clear: 10000 });
     modelsCheckOllama();
     modelsLoadList();
   } catch (e) {

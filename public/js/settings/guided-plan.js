@@ -23,7 +23,7 @@ function guidedPlanRender(p, applied) {
   const devices = p.devices.length ? `<div class="guided-step"><div class="guided-step-title">Your devices</div>${p.devices.map(d =>
     `<div class="guided-muted">• ${escHtml(d.label)}: ${_guidedPlaces(d.how)}</div>`).join('')}</div>` : '';
   el.innerHTML = `<div class="card"><div class="card-title">${applied ? 'Waiting for you' : 'What it would set up'}</div>
-    ${p.steps.length ? '' : '<p class="guided-muted">Nothing to set up: everything this needs is here.</p>'}
+    ${p.steps.some(s => s.type !== 'have') ? '' : '<p class="guided-muted">Nothing to set up: everything this needs is here.</p>'}
     ${applied ? guidedRunButtonHtml(p) : ''}${rows}${devices}
     ${applied ? '' : '<p class="guided-muted">Nothing has changed yet: "Set it up" keeps your answers and puts each install in front of you.</p>'}</div>`;
   p.steps.forEach((s, i) => { if (s.type === 'key' && s.providers.length) guidedKeyProvider(i); });

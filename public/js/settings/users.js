@@ -61,7 +61,7 @@ function _usersPeopleCard() {
     ${_usersField('users-new-name', 'Name', 'How they are shown in the panel and to others. Optional.', '<input class="input" id="users-new-name" placeholder="optional">')}
     ${_usersField('users-new-level', 'Level', 'What they may do. Member (the default) talks to the agents and uses their own devices; an Admin runs the machine. You can change it later.',
       `<select class="input" id="users-new-level">${_usersData.levels.map(l => `<option value="${escHtml(l.id)}" ${l.id === 'member' ? 'selected' : ''}>${escHtml(l.name)}</option>`).join('')}</select>`)}
-    <button class="btn btn-xs btn-blue" onclick="usersAdd()">+ Add person</button>`;
+    <button class="btn btn-xs btn-blue" onclick="usersAdd()">+ Add person</button><span class="status-line" id="users-new-status"></span>`;
   card.appendChild(add);
   if (typeof peopleExport === 'function') {   // the owner's alone (org): shown once /api/auth/me says so
     const ex = Object.assign(document.createElement('p'), { className: 'desc', hidden: true });
@@ -73,8 +73,9 @@ function _usersPeopleCard() {
 }
 
 async function usersAdd() {
-  const email = document.getElementById('users-new-email').value.trim();
-  if (!email) return;
+  const field = document.getElementById('users-new-email'), email = field.value.trim();
+  // An empty press said nothing at all (newcomer run 2026-10-14): the form says what it needs.
+  if (!email) { setStatus(document.getElementById('users-new-status'), 'Type their email first — it is what they sign in with.', 'err'); field.focus(); return; }
   try {
     const r = await apiFetch('/api/auth/users', { method: 'POST', body: { email, name: document.getElementById('users-new-name').value.trim(), level: document.getElementById('users-new-level').value } });
     appAlert(`${email} can sign in with this one-time password:\n\n${r.oneTimePassword}\n\nShown once. They replace it at their first sign-in.`);
