@@ -16,6 +16,7 @@ const path = require('path');
 const EXPERIMENTS = [
   { id: 'recipeRepair', label: 'Recipes repair themselves', doc: 'recipe-repair.md', todo: 'H3.4', since: '2.176.0', measure: 'script' },
   { id: 'retrieval', label: 'Search memory and conversations by meaning', doc: 'retrieval.md', todo: 'H10.2', since: '2.181.0', measure: 'script' },
+  { id: 'retrievalRerank', label: 'Find by meaning: rewordings of the question, and a reranker', doc: 'retrieval-rerank.md', todo: 'fit 8', since: '3.76.0', measure: 'script' },
   { id: 'bargeIn', label: 'Talk over the agent in a voice call', doc: 'barge-in.md', todo: 'H8.3', since: '2.192.0', measure: 'manual' },
   { id: 'realtimeVoice', label: 'Calls with a realtime speech model', doc: 'realtime-voice.md', todo: 'H8.3', since: '2.200.0', measure: 'script' },
   { id: 'packRegistry', label: 'Publish packs for other hubs, and fetch theirs', doc: 'pack-registry.md', todo: 'H4.6', since: '2.198.0', measure: 'manual' },

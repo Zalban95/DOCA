@@ -187,7 +187,10 @@ const SCHEMA = {
   retrieval:        { is: 'travels', home: 'hive', note: 'the embedding model retrieval uses (retrieval/; the switch is experiments.retrieval)',
     propose: p('Retrieval', 'Which embedding model searches memory and conversations by meaning'),
     keys: { provider: { type: 'string', default: 'ollama', hint: 'The provider that serves the embedding model (Field → API keys); ollama by default.' },
-      model: { type: 'string', default: '', hint: 'An embedding model, e.g. nomic-embed-text or bge-m3 on Ollama. Empty: retrieval stays off.' } } },
+      model: { type: 'string', default: '', hint: 'An embedding model, e.g. nomic-embed-text or bge-m3 on Ollama. Empty: retrieval stays off.' },
+      // The reranker (experiment retrievalRerank): which model reads the merged results again — the owner's choice.
+      rerankProvider: { type: 'string', default: '', propose: false, hint: 'The provider whose OpenAI-compatible /rerank serves the reranker (Field → API keys); empty: the embedding model\'s provider.' },
+      rerankModel: { type: 'string', default: '', propose: false, hint: 'A reranking model, e.g. bge-reranker-v2-m3 on llama.cpp or vLLM. Empty: results are not reranked (experiment retrievalRerank).' } } },
   // The Library (experiment library; docs/experiments/library.md): which folders of this machine are indexed and who may
   // search them — what is read and whom it is opened to are the owner's, so none of it is proposable.
   library:          { is: 'local', home: 'device', on: 'host', note: 'the Library: the embedding model, the folders of this machine it indexes, who may search them, and when (library/)',
