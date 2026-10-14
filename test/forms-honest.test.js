@@ -83,3 +83,20 @@ test('Models: the Ollama card\'s Save says what it saved, and the line stays', {
   assert.match(await text('#models-settings-status'), /Saved/, 'still there after four seconds');
   assert.deepEqual(B.errors, []);
 });
+
+test('Set-up: "Only show what it would do" answers, with nothing to do and with something', { skip: B.skip }, async () => {
+  await go('settings', 'guided');   // it looks at the machine first (GPUs, runtimes): seconds, more on a busy runner
+  assert.ok(await B.until("!!document.querySelector('button[onclick=\"guidedPreview(this)\"]') && !!document.querySelector('#guided-plan .card')", 45000), 'the form and its plan are drawn');
+  await B.sleep(500);   // the plan drawn at load has settled
+  // With something to set up (no model here yet: the agent's own is the first step).
+  assert.ok(await B.clickOn('button[onclick="guidedPreview(this)"]'));
+  assert.ok(await B.until("/what it would set up\\. Nothing has changed yet/.test(document.getElementById('guided-status').textContent)"), await text('#guided-status'));
+  // With nothing: a hub where everything it needs is here, as the newcomer's was (its model answered). The plan is the hub's
+  // answer for such a hub — every step "have" — given in the page, since this test hub has no model that answers.
+  await B.evaluate(`(() => { const real = apiFetch; apiFetch = async (url, ...rest) => url === '/api/guided/plan'
+    ? { steps: [{ type: 'have', role: 'chat', label: "The agent's model", model: 'm', provider: 'p' }], devices: [] } : real(url, ...rest); })()`);
+  assert.ok(await B.clickOn('button[onclick="guidedPreview(this)"]'));
+  assert.ok(await B.until("/Nothing to do: everything this needs is here/.test(document.getElementById('guided-status').textContent)"), await text('#guided-status'));
+  assert.match(await text('#guided-plan'), /Nothing to set up: everything this needs is here/);
+  assert.deepEqual(B.errors, []);
+});

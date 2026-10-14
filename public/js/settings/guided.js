@@ -69,10 +69,19 @@ function guidedAnswers() {
   };
 }
 
-async function guidedPreview() {
-  const st = document.getElementById('guided-status');
-  try { guidedPlanRender(await apiFetch('/api/guided/plan', { method: 'POST', body: { answers: guidedAnswers() } }), false); setStatus(st, '', ''); }
-  catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
+let _guidedPreviewSeq = 0;
+async function guidedPreview(btn) {
+  const st = document.getElementById('guided-status'), seq = ++_guidedPreviewSeq;
+  try {
+    const p = await apiFetch('/api/guided/plan', { method: 'POST', body: { answers: guidedAnswers() } });
+    if (seq !== _guidedPreviewSeq) return;   // a later one was asked: its answer, not this older one, is drawn and said
+    guidedPlanRender(p, false);
+    // Pressed, it answers: the same plan drawn again over itself looked like nothing happened (newcomer run 2026-10-14).
+    if (!btn) return setStatus(st, '', '');
+    if (p.steps.every(x => x.type === 'have')) setStatus(st, 'Nothing to do: everything this needs is here.', 'ok', { clear: 10000 });
+    else setStatus(st, 'Below: what it would set up. Nothing has changed yet.', 'info', { clear: 10000 });
+    document.getElementById('guided-plan')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 
 /** " on <provider>", or nothing when the provider is named after the model (a model added by its address is). */
