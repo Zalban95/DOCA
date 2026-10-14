@@ -22,7 +22,7 @@ async function guidedLoad() {
         <label class="guided-choice"><input type="radio" name="guided-route" value="providers"${a.route === 'providers' ? ' checked' : ''}> Online providers for everything — you paste a key, they bill you, nothing big is installed here</label></div>`
     : g.have?.chat
       ? `<div class="guided-q"><div class="guided-q-title">2. Where it runs</div>
-        <p class="guided-muted">${B}'s agent already has a model — <b>${escHtml(g.have.chat.model)}</b> on ${escHtml(g.have.chat.provider)} — and it answers. Nothing heavy is installed here.</p></div>`
+        <p class="guided-muted">${B}'s agent already has a model — <b>${escHtml(g.have.chat.model)}</b>${_guidedOn(g.have.chat)} — and it answers. Nothing heavy is installed here.</p></div>`
       : `<div class="guided-q"><div class="guided-q-title">2. Where it runs</div>
         <p class="guided-muted">This machine cannot run the agent's model well, so ${B} will use a model elsewhere: an online provider's (paste its key below), or <b>one you already run</b> on another machine (give its address below). Nothing heavy is installed here.</p></div>`;
   panel.innerHTML = `<div class="card guided">
@@ -30,7 +30,7 @@ async function guidedLoad() {
     <p class="guided-lead">Say what you want ${B} for. It looks at this machine, picks what fits, and sets up only that — every install waits for your click, every online service for your key.</p>
     <div class="guided-machine"><b>This machine:</b> ${escHtml(g.machine.summary)}<br>
       <span class="guided-muted" title="${escHtml(`Models it suggests come from a list tested by the ${guidedBrand()} project (version ${g.suggestions.version}, ${g.suggestions.updated}).`)}">${g.shapeHere === 'local' ? 'It can run its own models.' : 'It cannot run the agent\'s model well, so the model will come from elsewhere: an online provider, or one you run on another machine.'}</span>
-      ${g.have?.chat ? `<br><span style="color:var(--green)">✓ ${B} has a model: ${escHtml(g.have.chat.model)} on ${escHtml(g.have.chat.provider)}, and it answers.</span>` : ''}
+      ${g.have?.chat ? `<br><span style="color:var(--green)">✓ ${B} has a model: ${escHtml(g.have.chat.model)}${_guidedOn(g.have.chat)}, and it answers.</span>` : ''}
       <br><span class="guided-muted">The suggested models were checked on <b>${escHtml(g.suggestions.checked || g.suggestions.updated || '—')}</b>${g.suggestions.local ? ` (${g.suggestions.local} added here from the model scout)` : ''}.</span>
       <button class="btn btn-xs" onclick="guidedCheckModels(this)" title="Ask the model scout to look for newer models now">Check for newer models</button>
       <span class="status-line" id="guided-models-status"></span>
@@ -75,6 +75,9 @@ async function guidedPreview() {
   catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 
+/** " on <provider>", or nothing when the provider is named after the model (a model added by its address is). */
+const _guidedOn = c => (c.provider && c.provider !== c.model ? ` on ${escHtml(c.provider)}` : '');
+
 async function guidedApply(btn) {
   const st = document.getElementById('guided-status');
   setStatus(st, 'setting up…', 'info');
@@ -83,6 +86,9 @@ async function guidedApply(btn) {
     const plan = await apiFetch('/api/guided/apply', { method: 'POST', body: { answers: guidedAnswers() } });
     guidedPlanRender(plan, true);
     if (plan.changed === false) setStatus(st, 'Nothing changed — your set-up is as before. Below: what still waits for your click or your key.', 'info', { clear: 8000 });
+    else if (!plan.steps.some(x => x.type !== 'have' && !(x.type === 'install' && x.proposal?.status === 'installed')))
+      // Nothing waits: say it is done and where to go next — a newcomer was left on the same form not knowing (test run 2026-10-14).
+      setStatus(st, `✓ Done — ${guidedBrand()} is set up. Next: talk to it with the round chat button at the bottom right, or open Agents → Harness.`, 'ok');
     else setStatus(st, '✓ Kept your answers. Below: what waits for your click or your key.', 'ok', { clear: 8000 });
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
   finally { if (btn) btn.disabled = false; }

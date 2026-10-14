@@ -53,7 +53,7 @@ function _guidedOwnRow(i) {   // the advanced route: folded, so the common way (
     <div class="form-row guided-key">
       ${_gField(`guided-own-url-${i}`, 'Address', 'Where the model server answers, usually ending in /v1, e.g. http://192.168.1.20:8080/v1. It is tested before anything is saved.', `<input class="input" autocomplete="off" placeholder="http://192.168.1.20:8080/v1" id="guided-own-url-${i}">`)}
       ${_gField(`guided-own-key-${i}`, 'Key', 'Only if the server asks for one. Most servers on your own machines do not: leave it empty.', `<input class="input" type="password" autocomplete="off" placeholder="if it needs one" id="guided-own-key-${i}">`)}
-      ${_gField(`guided-own-name-${i}`, 'Its name', 'What it is called in your lists, e.g. My model at the office. Empty: "My model at" its address.', `<input class="input" autocomplete="off" placeholder="optional" id="guided-own-name-${i}">`)}
+      ${_gField(`guided-own-name-${i}`, 'A name for it', 'A name for this connection in your lists, not the model\'s, e.g. My model at the office. Empty: "My model at" its address.', `<input class="input" autocomplete="off" placeholder="optional" id="guided-own-name-${i}">`)}
       <button class="btn btn-xs btn-blue" onclick="guidedOwnConnect(${i})">Connect and test</button></div>
     <span class="status-line" id="guided-own-st-${i}"></span>
     <div class="toolbar" id="guided-own-models-${i}"></div></div>`, { id: 'guided-own', label: 'Advanced — a model you already run, by its address' });
