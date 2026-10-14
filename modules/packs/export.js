@@ -39,6 +39,13 @@ function skillFiles(name) {
   return out;
 }
 
+/** A pack with no name is named by what it holds — one thing by its own name, more by the first and how many more —
+ *  never "pack", which every unnamed one shared (newcomer run 2026-10-14). */
+function nameOf(contents) {
+  const first = contents[0].id || contents[0].kind;
+  return contents.length === 1 ? first : `${first}-and-${contents.length - 1}-more`;
+}
+
 /** @param {{ name?, description?, skills?: string[], specialists?: string[], recipes?: string[], mcp?: string[], services?: string[], memory?: boolean, rules?: boolean, edition?: object }} sel */
 function build(sel = {}) {
   const files = [];
@@ -100,7 +107,7 @@ function build(sel = {}) {
   const edition = require('./edition').part(sel.edition);
   if (edition) { files.push(edition.file); contents.push(edition.content); }
   if (!contents.length) throw Object.assign(new Error('Choose at least one thing to put in the pack.'), { status: 400 });
-  const manifest = { format: 'dpack', version: VERSION, name: String(sel.name || 'pack').slice(0, 80), description: String(sel.description || '').slice(0, 500),
+  const manifest = { format: 'dpack', version: VERSION, name: String(String(sel.name || '').trim() || nameOf(contents)).slice(0, 80), description: String(sel.description || '').slice(0, 500),
     createdAt: new Date().toISOString(), from: { doca: require('../../package.json').version }, contents,
     needs: { doca: needs.doca, tools: [...needs.tools].sort(), secrets: needs.secrets } };
   files.unshift({ name: 'pack.json', data: `${JSON.stringify(manifest, null, 2)}\n` });

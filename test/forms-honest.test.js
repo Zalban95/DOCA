@@ -114,3 +114,19 @@ test('Packs: a library pack\'s "Bring in…" preview has a way out', { skip: B.s
   assert.equal(await B.evaluate('_packLib'), null, 'and lets the pack go');
   assert.deepEqual(B.errors, []);
 });
+
+test('Packs: a pack with no name is asked for one, offering what it holds', { skip: B.skip }, async () => {
+  await go('settings', 'packs');
+  assert.ok(await B.until("!!document.querySelector('#sp-packs input[data-pack]')"), 'the things a pack can hold are listed');
+  const first = await B.evaluate("(() => { const i = document.querySelector('#sp-packs input[data-pack]'); i.checked = true; document.getElementById('pack-name').value = ''; return i.value; })()");
+  assert.ok(await B.clickOn('button[onclick="packsExport(true)"]'));
+  assert.ok(await B.until("document.getElementById('app-prompt-modal').classList.contains('open')"), 'the name is asked');
+  assert.match(await text('#app-prompt-message'), /What is this pack called/);
+  assert.equal(await B.evaluate("document.getElementById('app-prompt-input').value"), first, 'the first thing ticked is offered');
+  await B.evaluate("document.getElementById('app-prompt-input').value = 'named-by-test'");
+  assert.ok(await B.clickOn('#app-prompt-ok'));
+  assert.ok(await B.until("document.getElementById('app-confirm-modal')?.classList.contains('open') || document.querySelector('.app-confirm-backdrop.open')"), 'it says what it kept');
+  assert.ok(await B.until("/Kept \"named-by-test\"/.test(document.body.innerText)"), await B.evaluate("document.querySelector('.app-confirm-backdrop.open')?.innerText || ''"));
+  await B.evaluate("document.querySelector('.app-confirm-backdrop.open button')?.click()");
+  assert.deepEqual(B.errors, []);
+});

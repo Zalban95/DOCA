@@ -23,7 +23,7 @@ async function packsLoad() {
       <details class="desc page-about" style="margin-bottom:10px"><summary>What this is</summary>One .dpack file (a zip) that another hive imports — and that other tools read as they are: skills are
         Agent Skills folders, specialists are subagent markdown, MCP servers are the mcpServers JSON Claude Desktop and Cursor read, a shell-only
         recipe comes with a bash and a PowerShell script. Secrets never travel: they are left empty and listed for whoever imports it.</details>
-      <div class="field" style="margin-bottom:10px;max-width:320px"><label class="input-label" for="pack-name">Pack name${infoBtn('What the pack is called — its file name and how it is listed in a library. Empty: "pack".')}</label><input class="input" id="pack-name" placeholder="my-pack"></div>
+      <div class="field" style="margin-bottom:10px;max-width:320px"><label class="input-label" for="pack-name">Pack name${infoBtn('What the pack is called — its file name and how it is listed in a library. Empty: you are asked, with the first thing ticked as its name.')}</label><input class="input" id="pack-name" placeholder="my-pack"></div>
       ${group('skills', 'Skills', c.skills, 'Written instructions the agents follow for a kind of job. Tick the ones to put in the pack.')}${group('specialists', 'Specialists', c.specialists, 'Agent types the Orchestrator sends errands to, each with its own role and tools.')}${group('recipes', 'Recipes', c.recipes, 'Tool calls saved from a turn that worked, run again without the thinking.')}${group('mcp', 'MCP servers', c.mcp, 'Tool servers this hive connects to. Their secrets are emptied; they arrive switched off.')}${group('services', 'API services (without keys)', c.services || [], 'Online services set up with a key for services: how to reach each one travels, never the key.')}
       <div style="margin-bottom:10px;font-size:12px"><label><input type="checkbox" id="pack-memory"> Memory</label>${infoBtn('The facts the agents keep between conversations (memory.jsonl in the pack). Off by default — it may hold things about you.')}
         <label style="margin-left:12px"><input type="checkbox" id="pack-rules"> Memory rules (as AGENTS.md)</label>${infoBtn('The rules for how the agents keep memory. Imported, only rules the other hive lacks are added.')}</div>
@@ -113,7 +113,10 @@ function packsHubRemove(id) { appConfirm('Stop sending to this hub? (Revoke its 
 
 async function packsExport(keep = false) {
   const pick = kind => [...document.querySelectorAll(`#sp-packs input[data-pack="${kind}"]:checked`)].map(i => i.value);
-  const body = { name: document.getElementById('pack-name').value.trim() || 'pack', skills: pick('skills'), specialists: pick('specialists'),
+  // No name: asked, as the panel asks elsewhere, offering the first thing ticked (an unnamed pack was saved as "pack").
+  const nameEl = document.getElementById('pack-name'), first = document.querySelector('#sp-packs input[data-pack]:checked')?.value;
+  if (!nameEl.value.trim() && first) return appPrompt('What is this pack called? It is its file\'s name and how a library lists it.', n => { nameEl.value = n; packsExport(keep); }, first);
+  const body = { name: nameEl.value.trim(), skills: pick('skills'), specialists: pick('specialists'),
     recipes: pick('recipes'), mcp: pick('mcp'), services: pick('services'), memory: document.getElementById('pack-memory').checked, rules: document.getElementById('pack-rules').checked,
     edition: { branding: document.getElementById('pack-ed-branding').checked, look: document.getElementById('pack-ed-look').checked,
       face: document.getElementById('pack-ed-face').checked && (await faceSpec()), level: document.getElementById('pack-ed-level').value || null } };
