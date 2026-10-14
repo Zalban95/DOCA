@@ -22,7 +22,10 @@
 const files = require('./files');
 
 const FILE = 'licence-pool.json';
-const INCLUDE = 'license,license.entitlements,license.policy,license.product';   // what the inner hive reads (terms.js)
+// What a licence key may read — the licence and its entitlements, as checkin.js asks. Its policy and product are not
+// a key's to read, and asking for them made the server refuse every check-out (2026-10-14); terms.js reads the edition
+// and check-in from the licence's own metadata, which the issuing script writes.
+const INCLUDE = 'license,license.entitlements';
 const bad = (code, message, status = 409) => Object.assign(new Error(message), { code, status, pool: true });
 
 const read = () => files.readJson(FILE, {});

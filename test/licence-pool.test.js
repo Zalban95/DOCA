@@ -38,6 +38,8 @@ function stubKeygen() {
       if (key !== KEY) return send(401, { errors: [{ detail: 'bad key' }] });
       if (req.method === 'POST' && req.url === '/v1/accounts/acc/machines') { machines.add(json.data.attributes.fingerprint); return send(201, { data: { id: 'm', type: 'machines' } }); }
       const out = /^\/v1\/accounts\/acc\/machines\/([0-9a-f]{64})\/actions\/check-out\?/.exec(req.url);
+      // As the real server: a licence key may not read its policy or product (2026-10-14, the pool asked for both).
+      if (out && /license\.(policy|product)/.test(decodeURIComponent(req.url))) return send(403, { errors: [{ title: 'Access denied', detail: 'You do not have permission to complete the request' }] });
       if (out && machines.has(out[1])) {
         const p = T.payload({ codes: ['machines', 'agents'], machine: out[1], edition: 'demo', fileExpiry: new Date(Date.now() + 30 * 86400000).toISOString() });
         p.included[0].attributes.key = KEY;   // Keygen's own: the licence, key and all, inside every machine file
