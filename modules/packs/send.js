@@ -70,6 +70,8 @@ async function send(destId, packId) {
   const dest = all()[destId];
   if (!dest) throw bad('No such hub.', 404);
   const { meta, buffer } = require('./library').get(packId);
+  // A pack received from elsewhere or kept before the scanner existed is looked at again before it leaves.
+  require('../secret-scan').refuse(require('../secret-scan').scanZip(buffer), `Sending "${meta.name}"`);
   const boundary = `----doca${crypto.randomBytes(8).toString('hex')}`;
   const body = Buffer.concat([Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${meta.name.replace(/[^\w.-]+/g, '-')}.dpack"\r\nContent-Type: application/zip\r\n\r\n`),
     buffer, Buffer.from(`\r\n--${boundary}--\r\n`)]);

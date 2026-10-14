@@ -16,7 +16,8 @@
  *   edition.json                    an edition (TODO H12): names, how screens start out, a face, a level (edition.js)
  *
  * Nothing secret travels: an MCP server's env and header values whose names say key/token/secret/password are
- * emptied and listed under `needs.secrets`, for whoever imports it to fill in.
+ * emptied and listed under `needs.secrets`, for whoever imports it to fill in — and anything else in the pack that
+ * looks like a key (a skill's example, a memory entry) stops it, naming the file and line (secret-scan.js).
  */
 const fs = require('fs');
 const path = require('path');
@@ -103,6 +104,8 @@ function build(sel = {}) {
     createdAt: new Date().toISOString(), from: { doca: require('../../package.json').version }, contents,
     needs: { doca: needs.doca, tools: [...needs.tools].sort(), secrets: needs.secrets } };
   files.unshift({ name: 'pack.json', data: `${JSON.stringify(manifest, null, 2)}\n` });
+  // Secret-named MCP values were emptied above; anything else that looks like a key stops the pack (secret-scan.js).
+  require('../secret-scan').guard(files, 'The pack');
   return { manifest, buffer: zip.write(files) };
 }
 

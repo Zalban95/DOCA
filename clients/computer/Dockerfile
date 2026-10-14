@@ -5,7 +5,7 @@
 FROM node:22-bookworm-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
       chromium xvfb fluxbox x11vnc novnc websockify ffmpeg xdotool \
-      fonts-dejavu-core fonts-noto-color-emoji fonts-symbola fonts-droid-fallback \
+      fonts-dejavu-core fonts-noto-color-emoji fonts-symbola fonts-droid-fallback fonts-nanum \
       ca-certificates curl git python3 procps \
     && rm -rf /var/lib/apt/lists/* \
     # Every glyph the panel draws: Symbola has the symbols DejaVu lacks (⧉ ⏻ ⓘ ⛶ 🖵 …), Droid Sans Fallback the

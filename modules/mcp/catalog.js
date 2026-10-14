@@ -7,17 +7,21 @@
  *
  * Browser control first: the quick path to "the agent uses a page as a person would" on this host, beside
  * the computers (modules/computers), whose Chromium runs in a container.
+ *
+ * A package is pinned, never `@latest` (fit audit 2026-10-14): an install changes what it runs only with a release
+ * of this panel, and `checked` is the day the pin was read from the npm registry (`npm view <pkg> version`). A server
+ * added before the pin keeps the arguments it was added with; adding it again takes the pin.
  */
 const CATALOG = [
   { id: 'playwright', label: 'Playwright — a browser the agent drives',
     about: 'Microsoft\'s server: open pages, read them as an accessibility snapshot, click and type by reference, take screenshots, '
       + 'handle tabs and downloads. Headless, with a fresh profile each start. Needs Node; adding it downloads its browser (~150 MB).',
-    command: 'npx', args: ['-y', '@playwright/mcp@latest', '--headless', '--isolated', '--browser', 'chromium'], needs: ['npx'],
-    setup: ['npx', '-y', '@playwright/mcp@latest', 'install-browser', 'chrome-for-testing'] },
+    command: 'npx', args: ['-y', '@playwright/mcp@0.0.83', '--headless', '--isolated', '--browser', 'chromium'], needs: ['npx'],
+    setup: ['npx', '-y', '@playwright/mcp@0.0.83', 'install-browser', 'chrome-for-testing'], checked: '2026-10-14' },
   { id: 'chrome-devtools', label: 'Chrome DevTools — inspect and drive Chrome',
     about: 'Google\'s server: drive a Chrome over the DevTools protocol — navigate, click, fill forms, read the console and network, '
       + 'record performance traces. Headless and isolated. Needs Node and an installed Chrome.',
-    command: 'npx', args: ['-y', 'chrome-devtools-mcp@latest', '--headless', '--isolated'], needs: ['npx'] },
+    command: 'npx', args: ['-y', 'chrome-devtools-mcp@1.10.1', '--headless', '--isolated'], needs: ['npx'], checked: '2026-10-14' },
   // A server at an address rather than a command: the building's own (skills/smart-home). Added with its default address
   // and its token named as a key for services (`home-assistant`, since 2.266.0): the person pastes it once in Field →
   // Connectors → Keys for services, where the Home page reads it too; the hub adds it when it connects (registry.withKey).
@@ -30,6 +34,15 @@ const CATALOG = [
     // Home Assistant on this machine (a container on the host network) answers on localhost, and `homeassistant.local`
     // often does not resolve here at all (2026-10-11): the first that answers is the address it is added with.
     near: ['http://localhost:8123/api/mcp'] },
+  // A person's own n8n (skills/n8n): a workflow whose "MCP Server Trigger" node gives it an address. Never installed or
+  // hosted here (n8n's Sustainable Use License is for their own internal use): only connected, with its Bearer token
+  // as the key for services `n8n`, so the secret never sits in the server's headers. The path is each workflow's own.
+  { id: 'n8n', label: 'n8n — your own workflows as tools (MCP Server Trigger)',
+    about: 'A workflow in your own n8n that starts with the "MCP Server Trigger" node offers the tools connected to it. '
+      + 'Copy its Production URL (or Test URL while you build it) into the address here, choose Bearer auth on the trigger, '
+      + 'and paste the same token in the Token box (kept as the key "n8n" in Field → Connectors → Keys for services). '
+      + 'This panel does not install n8n.',
+    transport: 'http', url: 'http://localhost:5678/mcp/your-workflow-path', headers: {}, key: 'n8n', needs: [] },
   // Suggested, never default: open-source creative apps, each its own server (catalog-craft.js).
   ...require('./catalog-craft').ROWS,
 ];
