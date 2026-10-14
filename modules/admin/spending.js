@@ -36,7 +36,7 @@ async function read(at = Date.now()) {
 function build(x) {
   const t = x.today || { calls: 0, tokens: 0, money: 0, unpriced: 0 };
   const lines = [line('today', 'Today', `${k(t.tokens)} tokens · ${money(t.money, x.currency)}`, 'ok', 'settings/spending',
-    `${plural(t.calls, 'model call')}${t.unpriced ? `, ${t.unpriced} without a price` : ''}`)];
+    `${plural(t.calls, 'model call')}${t.unpriced ? `, ${t.unpriced} not in the cost: their model has no price set` : ''}`)];
   lines.push(line('month', 'This month', `${k(x.month?.tokens)} tokens · ${money(x.month?.money, x.currency)}`, 'ok', 'settings/spending'));
   for (const [i, p] of (x.people || []).entries()) {
     const tok = p.tokenLimit ? p.tokens / p.tokenLimit : 0, mon = p.moneyLimit ? p.money / p.moneyLimit : 0;

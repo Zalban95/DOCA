@@ -57,6 +57,15 @@ function _prShow(text, button) {
   }
 }
 
+/** Who asked, in words for this reader: their own ask (from this page or another of theirs) is "You asked…" — it
+    named them by their account's name, which read as someone else's doing (newcomer run 2026-10-14, b24). */
+async function _prAsked(c) {
+  if (!c.every) return 'You asked your screens to load again.';
+  let mine = false;
+  if (c.byId && typeof apiFetch === 'function') { try { mine = (await apiFetch('/api/auth/me'))?.id === c.byId; } catch { /* said by name */ } }
+  return mine ? 'You asked every screen to load again.' : `${c.by || 'An admin'} asked every screen to load again.`;
+}
+
 /** Settings → devices: ⟳ reloads every signed-in page of the hive (an admin) or one's own (anyone else). */
 async function screensReloadAll(btn) {
   const every = btn?.dataset.every !== '0';
@@ -70,6 +79,6 @@ async function screensReloadAll(btn) {
 if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
   document.addEventListener('input', e => { if (e.isTrusted && e.target?.matches?.('input, textarea, select, [contenteditable]')) _prEdited.add(e.target); }, true);
   document.addEventListener('DOMContentLoaded', () => {
-    if (typeof liveOn === 'function') liveOn('screen', c => { if (c.what === 'reload') pageReloadSoon(c.every ? `${c.by || 'An admin'} asked every screen to load again.` : 'You asked your screens to load again.'); });
+    if (typeof liveOn === 'function') liveOn('screen', c => { if (c.what === 'reload') _prAsked(c).then(pageReloadSoon); });
   });
 }

@@ -48,7 +48,8 @@ function build(x) {
   }
   lines.push(line('devices', 'Devices', plural(dev.length, 'device'), 'ok', 'apikeys', [...counts].sort((a, b) => b[1] - a[1]).map(([k, n]) => plural(n, ...k)).join(' · ') || null));
   const archived = (x.devices || []).filter(d => d.archived).length, unowned = dev.filter(d => d.unowned).length, pending = dev.filter(d => d.pending).length;
-  lines.push(line('devices-other', 'Put away · nobody\'s · waiting', `${archived} · ${unowned} · ${pending}`, unowned || pending ? 'ask' : 'ok', 'apikeys'));
+  // Each number says what it counts: three bare numbers under three names read as "0 · 0 · 0" (newcomer run, b12).
+  lines.push(line('devices-other', 'Other devices', `${archived} put away · ${unowned} with no person · ${pending} waiting for approval`, unowned || pending ? 'ask' : 'ok', 'apikeys'));
   return { id: 'people', title: 'People and devices', lines };
 }
 

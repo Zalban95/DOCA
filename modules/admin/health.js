@@ -115,7 +115,7 @@ function build(x, now = Date.now()) {
   const t = x.trouble || [];
   lines.push(line('trouble', 'Machines in trouble', t.length ? plural(t.length, 'machine') : 'none', t.length ? 'err' : 'ok', 'live',
     t.length ? t.slice(0, 3).map(r => `${r.name}${r.detail ? ` (${r.detail})` : ''}`).join(', ') : x.machinesError ? 'could not read them' : null));
-  lines.push(line('uptime', 'Hub running for', span(x.uptime?.hub), 'ok', 'settings/system', `the machine for ${span(x.uptime?.machine)}`));
+  lines.push(line('uptime', 'Hub running for', span(x.uptime?.hub), 'ok', 'settings/system', `the machine itself up for ${span(x.uptime?.machine)}`));
   return { id: 'health', title: 'Health', lines };
 }
 

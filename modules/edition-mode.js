@@ -28,8 +28,8 @@ function decide() {
   let lab = false;
   try { const b = require('./license').boot(); lab = !!b.all || (b.codes || []).includes('lab'); } catch { /* no licence readable */ }
   if (hosted) return { mode: 'production', why: 'a hosted hive is always production (DOCA_PROFILE=hosted)' };
-  if (lab) return { mode: 'development', why: 'its licence carries the lab (the owner edition, a tester\'s)' };
-  return { mode: 'production', why: 'its licence does not carry the lab' };
+  if (lab) return { mode: 'development', why: 'its licence includes the development lab (the owner\'s edition, a tester\'s)' };
+  return { mode: 'production', why: 'its licence does not include the development lab' };
 }
 
 /** {mode, why}, read once. */

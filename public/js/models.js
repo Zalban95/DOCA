@@ -177,8 +177,8 @@ async function modelsLoadList() {
       // Ollama not installed or not running is an empty list with its reason (a 200), drawn as a state in plain
       // words, the way to System tools, and the address it looked at on a detail line (self-test 2026-10-08, #11).
       tbody.innerHTML = data.reason
-        ? `<tr><td colspan="4" class="placeholder" style="padding:12px">Ollama is not installed or not running on this machine.
-            <button class="btn btn-xs" onclick="nav('settings');settingsSubNav('system')">Settings → System → System tools</button>
+        ? `<tr><td colspan="4" class="placeholder" style="padding:12px">Ollama is not installed or not running on this machine. Its row in Settings → System → System tools installs it; then start it and refresh.
+            <button class="btn btn-xs" onclick="sysdepsShow()">Open System tools</button>
             <div style="margin-top:4px;font-size:11px;color:var(--muted);word-break:break-all">Looked for it at ${escHtml(data.url || '')}</div></td></tr>`
         : '<tr><td colspan="4" class="placeholder" style="padding:12px">No models installed</td></tr>';
       return;

@@ -83,6 +83,7 @@ test('each card is assembled from its inputs (stubs): health', () => {
   assert.equal(byId(h, 'trouble').value, '1 machine');
   assert.match(byId(h, 'trouble').sub, /doca-kokoro/);
   assert.equal(byId(h, 'uptime').value, '3 h');
+  assert.equal(byId(h, 'uptime').sub, 'the machine itself up for 5 days');
   assert.equal(byId(h, 'backup').go, 'settings/backups');
 });
 
@@ -115,7 +116,7 @@ test('each card is assembled from its inputs (stubs): people, security, spending
   assert.equal(byId(p, 'people').sub, '2 Member · 1 Admin');
   assert.equal(byId(p, 'active').value, '1 person');
   assert.equal(byId(p, 'devices').value, '3 devices');
-  assert.equal(byId(p, 'devices-other').value, '1 · 1 · 0');
+  assert.equal(byId(p, 'devices-other').value, '1 put away · 1 with no person · 0 waiting for approval');
   const s = require('../modules/admin/security').build({ switches: [{ what: 'the approval mode', who: 'Ada', at: ago(2 * 3600e3) }],
     fresh: [{ who: 'Ada', from: '100.64.0.9', at: ago(3600e3) }], passwords: [{ who: 'Ada', whose: 'Bob', at: ago(DAY) }] }, NOW);
   assert.equal(byId(s, 'switch-0').label, 'Changed: the approval mode');
@@ -125,7 +126,7 @@ test('each card is assembled from its inputs (stubs): people, security, spending
   const sp = require('../modules/admin/spending').build({ currency: 'EUR', today: { calls: 4, tokens: 120000, money: 0.5, unpriced: 1 }, month: { tokens: 2e6, money: 9 },
     people: [{ name: 'Ada', tokens: 900000, money: 0, tokenLimit: 1e6, moneyLimit: null }] });
   assert.equal(byId(sp, 'today').value, '120k tokens · 0.50 EUR');
-  assert.match(byId(sp, 'today').sub, /1 without a price/);
+  assert.match(byId(sp, 'today').sub, /1 not in the cost: their model has no price set/);
   assert.equal(byId(sp, 'person-0').state, 'ask');
   assert.deepEqual(byId(sp, 'person-0').meter, { used: 900000, max: 1e6, unit: 'tokens' });
 });
