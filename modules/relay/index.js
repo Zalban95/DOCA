@@ -96,6 +96,10 @@ async function syncNow(at) {
   if (!enabled() || !forComputers()) { why = enabled() ? 'not open to agents\' computers' : 'off'; await close(); return state(); }
   const host = pinned?.address || await address();
   const port = pinned?.port ?? value('port');
+  // Never one of the panel's own ports: 4243 was the relay's default and is the canvas origin's (PORT + 1), so the relay
+  // could not listen and a computer reaching it got the canvas's https (found 2026-10-14).
+  const { PORT, CANVAS_PORT } = require('../paths');
+  if (port && [Number(PORT), Number(CANVAS_PORT)].includes(Number(port))) { why = `port ${port} is one of the panel's own; choose another in Field → API keys → Model relay`; await close(); return state(); }
   if (!host) { why = 'no Docker bridge on this machine to listen on (set relay.address)'; await close(); return state(); }
   if (server && bound?.host === host && (bound.asked === port)) return state();
   await close();

@@ -204,3 +204,12 @@ test('the person\'s budget refuses it, in OpenAI\'s error shape', async () => {
   assert.equal(e.type, 'insufficient_quota');
   assert.match(e.message, /budget/i);
 });
+
+test('the relay never takes one of the panel\'s own ports (the canvas origin is PORT + 1)', async () => {
+  const relay = require('../modules/relay');
+  const { CANVAS_PORT } = require('../modules/paths');
+  const s = await relay.sync({ address: '127.0.0.1', port: Number(CANVAS_PORT) });
+  assert.equal(s.listening, null);
+  assert.match(String(s.reason), /one of the panel's own/);
+  await relay.sync({ address: '127.0.0.1', port: 0 });   // back as the other tests had it
+});

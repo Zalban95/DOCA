@@ -24,7 +24,7 @@ async function modelRelayRender() {
     ${modelRelayDevices(s.deviceList || [])}
     <div class="form-row"><span class="tool-label">Models${infoBtn('One per line, as provider/model. Empty: the harness\'s own model and its fallbacks.')}</span>
       <textarea class="input" id="mr-models" rows="3" data-default="" placeholder="${escHtml(def || 'provider/model')}" style="width:min(420px,100%)">${escHtml((s.models || []).join('\n'))}</textarea></div>
-    ${advancedFold(`<div class="form-row"><span class="tool-label">Port</span><input class="input" id="mr-port" type="number" min="1024" max="65535" data-default="4243" value="${escHtml(String(s.port || ''))}" placeholder="4243" style="width:110px"></div>
+    ${advancedFold(`<div class="form-row"><span class="tool-label">Port</span><input class="input" id="mr-port" type="number" min="1024" max="65535" data-default="4244" value="${escHtml(String(s.port || ''))}" placeholder="4244" style="width:110px"></div>
       <div class="form-row"><span class="tool-label">Address${infoBtn('Empty: the Docker bridge on Linux, loopback elsewhere. Never the tailnet or the local network.')}</span><input class="input" id="mr-address" data-default="" value="${escHtml(s.address || '')}" placeholder="the Docker bridge" style="width:200px"></div>`,
     { id: 'model-relay-where', label: 'Advanced — where it listens' })}
     <div class="desc" id="mr-state" style="margin:8px 0;font-size:11px">${where}</div>
