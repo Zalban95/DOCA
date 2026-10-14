@@ -20,8 +20,19 @@ const TOP = 65535;
 
 const read = () => store.readJson(DOC, {}) || {};
 
-/** Whether nothing listens on `port` now: a test listen, closed at once. */
-const free = port => new Promise(resolve => {
+/** Whether something answers a connection on loopback at `port` (within a second). */
+const answers = port => new Promise(resolve => {
+  const sock = net.connect({ port, host: '127.0.0.1', timeout: 1000 });
+  const done = v => { sock.destroy(); resolve(v); };
+  sock.once('connect', () => done(true)); sock.once('error', () => done(false)); sock.once('timeout', () => done(false));
+});
+
+/**
+ * Whether nothing listens on `port` now: nothing answers on loopback, and a test listen on every address works (closed
+ * at once). Both, because macOS and Windows let a listen on every address succeed while a server holds the port on
+ * 127.0.0.1 alone (CI, 2026-10-14) — a dev server usually binds one or the other.
+ */
+const free = async port => !(await answers(port)) && new Promise(resolve => {
   const srv = net.createServer();
   srv.once('error', () => resolve(false));
   srv.listen({ port, exclusive: true }, () => srv.close(() => resolve(true)));
