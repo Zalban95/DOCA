@@ -32,7 +32,7 @@ module.exports = [{
   name: 'cast',
   description: 'Show a page, play a video, a sound or a picture, or say a sentence on a TV or speaker that Machines → Nearby saved or saw in the last day, from the hub or one of the person\'s devices (Cast; DLNA ones say and play, they show no page) — use it when the person asks to '
     + 'put something on a TV or say something in a room ("play that video on the living room TV", "say dinner is ready in the kitchen"). list: the TVs and speakers by place and room; '
-    + 'show: a page on a TV; play: a kept file (its name, as show_media or computer get kept it) — a video or picture on a TV, a sound on either; say: a sentence in the person\'s voice; story: a longer text, a tone tag before each part; stop; volume (0–1). '
+    + 'show: a page on a TV, or with preview a project\'s page being tested (a canvas preview\'s id), with its watch console (device_console); play: a kept file (its name, as show_media or computer get kept it) — a video or picture on a TV, a sound on either; say: a sentence in the person\'s voice; story: a longer text, a tone tag before each part; stop; volume (0–1). '
     + 'This is the way to a Cast or DLNA device: not catt or a script in the shell, which go around the door and the record. A TV Home Assistant controls can also play through its media player there. Only when the person asked for it: asked true.',
   parameters: {
     type: 'object',
@@ -48,7 +48,7 @@ module.exports = [{
     },
     required: ['action'],
   },
-  run: async ({ action, thing, page, file, text, level, asked }, ctx = {}) => {
+  run: async ({ action, thing, page, preview, file, text, level, asked }, ctx = {}) => {
     const person = ctx.user;
     if (!person?.id) return bad('no person on this turn — a TV or a speaker is cast to for a person.');
     const things = require('../../cast/things'), who = whoOf(person);
