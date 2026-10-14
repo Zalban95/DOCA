@@ -219,6 +219,14 @@ body:has(#tab-ambient.active) .chat-fab { display: none; }
 .pj-top.pj-top-none { display: none; }   /* Projects before the first: only the empty state (des 10) */
 .pj-none .empty-state { margin: 16px; }
 .disk-row.row3 { grid-template-columns: minmax(110px, auto) minmax(0, 1fr) auto; }   /* a label, what it is (cut with …), its action pinned right (des 26) */
+/* A label, where it was found and a sentence about it (Settings → System → The hub): the sentence wraps rather than
+   running off the screen — on a phone it was 456–492 px wide in a 390 px page with nothing to swipe (run 1). */
+.disk-row.note-row { grid-template-columns: minmax(110px, auto) minmax(0, 1fr) minmax(0, 2fr); }
+.disk-row.note-row .disk-free { white-space: normal; overflow-wrap: anywhere; min-width: 0; }
+@media (max-width: 768px) {
+  .disk-row.note-row { grid-template-columns: minmax(0, 1fr); }
+  .disk-row.note-row > * { grid-column: 1; grid-row: auto; text-align: left; }
+}
 
 /* ── des 19: the sidebar's figures stay on one line, cut with … and whole in their title ── */
 .sys-metric, .gm { min-width: 0; }
