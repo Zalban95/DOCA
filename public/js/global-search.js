@@ -175,8 +175,7 @@ function globalSearchHover(idx) {
 
 function globalSearchGo(filePath, isDir) {
   _searchClose();
-  nav('files');
-  fmNavigate(isDir ? filePath : globalSearchDir(filePath));
+  fmShow(filePath, isDir);   // its own folder, the file selected (files.js)
 }
 
 document.addEventListener('click', (e) => {
