@@ -35,7 +35,7 @@ test('a Settings section\'s pill is centred in its row, sideways only', () => {
   assert.doesNotMatch(src, /btn\.scrollIntoView/, 'scrollIntoView also scrolls the page up to the pill');
   const ctx = {};
   vm.createContext(ctx);
-  vm.runInContext(src.match(/function _settingsPillCentre[\s\S]*?\n}\n/)[0], ctx);
+  vm.runInContext(src.match(/function _settingsPillCentre[\s\S]*?\r?\n}\r?\n/)[0], ctx);
   let to = null;
   const row = { scrollWidth: 600, clientWidth: 300, scrollLeft: 0, getBoundingClientRect: () => ({ left: 0 }), scrollTo: o => { to = o; } };
   ctx._settingsPillCentre({ parentElement: row, getBoundingClientRect: () => ({ left: 400, width: 80 }) });
