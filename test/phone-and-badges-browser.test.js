@@ -69,3 +69,18 @@ test("on a phone: Settings' pill row fades the edge it has more past", { skip: B
   await B.viewport(1300, 900);
 });
 
+test('at a desk: a fresh install marks no fold changed', { skip: B.skip }, async () => {
+  const seen = [];
+  for (const go of ["nav('settings'); settingsSubNav('general')", "nav('settings'); settingsSubNav('system')", "nav('models')"]) {
+    await B.evaluate(go);
+    await B.until("[...document.querySelectorAll('details.adv-fold')].length > 3");
+    await B.sleep(2500);   // the pages fill their fields from the hub
+    seen.push(...await B.evaluate(`[...document.querySelectorAll('details.adv-fold')].map(d => {
+      const s = d.querySelector(':scope > summary'), m = s.querySelector('.adv-fold-changed'), c = s.querySelector('.adv-fold-count');
+      return { label: s.querySelector('.adv-fold-label').textContent, count: c.hidden ? '' : c.textContent, changed: m.hidden ? '' : m.title };
+    })`));
+  }
+  assert.ok(seen.some(f => f.label === 'Advanced — models folder'), 'the models folder fold was drawn');
+  assert.deepEqual(seen.filter(f => f.changed), [], 'nothing was changed on a fresh install');
+});
+
