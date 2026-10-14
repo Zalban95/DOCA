@@ -97,6 +97,8 @@ function whyOf(message) {
   if (message === CUT_OFF) return 'its last answer was cut off: finishing it';
   if (message === RESTARTED) return 'the panel restarted mid-turn: picking up';
   if (String(message).startsWith('[panel] Work reported back')) return 'work chats reported back: telling you what matters';
+  if (String(message).startsWith('[panel] Helpers you started')) return 'its helpers reported back: deciding what they need';
+  if (String(message).startsWith('[panel] The specialists you sent')) return 'the specialists it sent finished: passing on their results';
   if (String(message).startsWith('[panel] Service job')) return 'a service job it started ended: telling what came of it';
   if (String(message).startsWith('[panel] The person asked you to carry on')) return 'restarted by a person';
   if (String(message).startsWith(RESTARTED)) return 'the panel restarted while it carried out an approved plan: going on';
@@ -155,6 +157,7 @@ function decide(id, info = {}) {
   // A person's Stop is the end of that line of work (audit 2026-10-06: "stop means stop"): nothing is woken to carry on.
   if (s.kind === 'orchestrator') return info.stopped ? 'stopped' : deliver(id);
   if (s.kind === 'specialist') return info.stopped ? missionStopped(s) : missionEnded(s);
+  if (!s.job && require('./leaders').isLeader(s)) return info.stopped ? 'stopped' : deliver(id);   // a project's chat: what its helpers reported
   if (s.kind !== 'work' || s.archivedAt || !s.job) return 'not a job';   // chats from before jobs existed are left alone
 
   const job = s.job;
@@ -227,6 +230,15 @@ function missionEnded(s) {
   const org = require('./organization');
   let lead;
   try { lead = org.session(m.by); } catch { return 'no lead'; }
+  const leader = !lead.job && require('./leaders').isLeader(lead);   // a project's chat, which sent it for a helper (leaders.js)
+  if (leader) {
+    if (require('./agent').isRunning(lead.id)) return 'lead busy';
+    if (specialistsRunning(lead.id)) return 'others still running';
+    if (m.leadWokenAt) return 'already woken';
+    const how = wake(lead.id, require('./leaders').LEAD_RESULTS, { retry: () => missionEnded(s) });
+    if (how === 'woken') require('../agents/missions').patch(m.id, { leadWokenAt: new Date().toISOString() });
+    return how;
+  }
   if (lead.kind !== 'work' || !lead.job || org.FINAL.includes(lead.job.state)
       || lead.job.state === 'stopped' || lead.job.state === 'dropped' || lead.job.state === 'stalled') return 'lead not working';
   if (require('./agent').isRunning(lead.id)) return 'lead busy';   // its own turn end picks the result up
@@ -255,27 +267,36 @@ function missionStopped(s) {
  * matters to the owner; the reports stay in its context either way.
  */
 function deliver(orchestratorId) {
-  const org = require('./organization');
+  const org = require('./organization'), leaders = require('./leaders');
   let ceo;
   try { ceo = org.session(orchestratorId); } catch { return 'no orchestrator'; }
+  if (leaders.isLeader(ceo)) return deliverLead(ceo);   // a project's chat hears its own helpers (leaders.js)
   if (ceo.kind !== 'orchestrator') return 'not the orchestrator';
   if (require('./agent').isRunning(ceo.id)) return 'busy';   // its turn's end delivers
-  const due = (ceo.reports || []).filter(n => org.FINAL.includes(n.type) && !n.readAt && !n.wokeAt
-    && memory.getSession(n.from)?.parentId === ceo.id);
+  const due = leaders.due(ceo);
   if (!due.length) return 'nothing due';
-  // One line per job: a work chat that reports "done" twice (it happens: a
-  // short one, then one with the timings) is one outcome, the latest.
-  const latest = [...new Map(due.map(n => [n.from, n])).values()];
-  const lines = latest.map(n => `- ${short(memory.getSession(n.from)?.title, 80)} (${n.from}) — ${n.type}: ${short(n.text, 500)}`);
+  // "Done" needs no decision: told in fixed words, no model (leaders.js). The rest wakes the Orchestrator.
+  const told = new Set(leaders.tellDone(ceo, due).map(n => n.id));
+  const rest = due.filter(n => !told.has(n.id));
+  if (!rest.length) return 'told';
+  const latest = leaders.latestOf(rest);
   // A failed job is reported, never retried on its own (deep test B, C13): trying again is the person's call.
   const failed = latest.some(n => n.type === 'failed') ? 'Do not retry failed work or send it anything new: say what failed and ask whether to try again. ' : '';
   const how = wake(ceo.id, '[panel] Work reported back. Tell the owner what matters, in a few lines. ' + failed
     + 'Where a decision is theirs, ask it with ask_device and give the choices — it reaches their phone, '
-    + `their watch and the panel at once.\n${lines.join('\n')}`, { retry: () => deliver(ceo.id) });
-  if (how === 'woken') {
-    const ids = new Set(due.map(n => n.id)), at = new Date().toISOString();
-    memory.updateSessions([ceo.id], row => ({ reports: (row.reports || []).map(n => (ids.has(n.id) ? { ...n, wokeAt: at } : n)) }));
-  }
+    + `their watch and the panel at once.\n${latest.map(leaders.lineOf).join('\n')}`, { retry: () => deliver(ceo.id) });
+  if (how === 'woken') leaders.markWoken(ceo.id, rest);
+  return how;
+}
+
+/** A project's chat: woken for its own helpers' final reports, when it is not working (its turn's end delivers). */
+function deliverLead(lead) {
+  const leaders = require('./leaders');
+  if (require('./agent').isRunning(lead.id)) return 'busy';
+  const due = leaders.due(lead);
+  if (!due.length) return 'nothing due';
+  const how = wake(lead.id, `${leaders.LEAD_REPORTS}\n${leaders.latestOf(due).map(leaders.lineOf).join('\n')}`, { retry: () => deliver(lead.id) });
+  if (how === 'woken') leaders.markWoken(lead.id, due);
   return how;
 }
 
