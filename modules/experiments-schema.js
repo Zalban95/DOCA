@@ -8,6 +8,7 @@
 module.exports = { is: 'travels', home: 'hive', note: 'experiments switched on (docs/experiments)',
     keys: { recipeRepair: { type: 'boolean', default: false, hint: 'When a recipe fails, the agent investigates and proposes a repaired revision for a person to accept.' },
       retrieval: { type: 'boolean', default: false, hint: 'memory_search and recall_conversations also search by meaning, with the embedding model under retrieval.' },
+      retrievalRerank: { type: 'boolean', default: false, hint: 'With retrieval on, a search is also run in two or three rewordings from assistant mode\'s quick model, and the merged results are read again by the reranker under retrieval.rerankModel.' },
       library: { type: 'boolean', default: false, hint: 'The Library: the folders chosen under library are indexed by meaning — documents, pictures, sound and video — and searched from Files and by library_search.' },
       bargeIn: { type: 'boolean', default: false, hint: 'In a voice call, speaking while the agent works or talks is sent at once, and what it was about to say is dropped.' },
       realtimeVoice: { type: 'boolean', default: false, hint: 'A live call speaks with a realtime speech model (realtime.*) in place of speech-to-text, a turn and text-to-speech; the model hands real work to the hive.' },

@@ -9,7 +9,7 @@ const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e)
 
 function view() {
   const E = require('./embed');
-  return Promise.resolve(require('./index').stats()).then(index => ({ ...E.settings(), experiment: require('../experiments').on('retrieval'), on: require('./index').on(), index }));
+  return Promise.resolve(require('./index').stats()).then(index => ({ ...E.settings(), experiment: require('../experiments').on('retrieval'), rerankExperiment: require('../experiments').on('retrievalRerank'), on: require('./index').on(), index }));
 }
 
 function mount(app) {

@@ -113,6 +113,12 @@ const SCHEMA = {
       archiveSeenAfterMin: { type: 'number', min: 0, default: 30, hint: 'Minutes after its person opened a finished mission that it is put away in the Archive (0: never by this rule).' },
       archiveAfterHours:   { type: 'number', min: 0, default: 24, hint: 'Hours after a mission finished that it is put away, seen or not (0: never by this rule). One its leader has not read, one waiting for a person, or one kept with 📌 stays.' },
     } },
+  // A block of 10 ports per git worktree (projects/ports.js), so dev servers of parallel conversations do not take
+  // each other's port.
+  projects:         { is: 'travels', home: 'hive', note: 'where the blocks of ports given to projects\' git worktrees start',
+    keys: {
+      portBase: { type: 'integer', min: 1024, max: 65000, default: 41000, hint: 'First port of the blocks of 10 given to each git worktree a conversation works in: its named commands get PORT (the block\'s first) and PORT_BLOCK (from-to), so parallel dev servers do not collide. A rarely used range is best.' },
+    } },
   devices:          { is: 'travels', home: 'hive', note: 'when a signed-in browser\'s record nobody opened goes to the Archive (screens/archive.js; owner, 2026-10-09) — the owner\'s, never proposable: it ends sign-ins',
     keys: { browserArchiveDays: { type: 'integer', min: 0, max: 3650, default: 7, propose: false, hint: 'Days a signed-in browser may go unseen before its record goes to the Archive and its sign-in ends (signing in again from it brings it back). 0: never. Only browsers — phones, watches, desks, clients and chats never.' } } },
   search:           { is: 'travels', home: 'hive', note: 'which web search provider web_search uses, and a SearXNG address (keys live in keys/search.json)',
@@ -187,7 +193,10 @@ const SCHEMA = {
   retrieval:        { is: 'travels', home: 'hive', note: 'the embedding model retrieval uses (retrieval/; the switch is experiments.retrieval)',
     propose: p('Retrieval', 'Which embedding model searches memory and conversations by meaning'),
     keys: { provider: { type: 'string', default: 'ollama', hint: 'The provider that serves the embedding model (Field → API keys); ollama by default.' },
-      model: { type: 'string', default: '', hint: 'An embedding model, e.g. nomic-embed-text or bge-m3 on Ollama. Empty: retrieval stays off.' } } },
+      model: { type: 'string', default: '', hint: 'An embedding model, e.g. nomic-embed-text or bge-m3 on Ollama. Empty: retrieval stays off.' },
+      // The reranker (experiment retrievalRerank): which model reads the merged results again — the owner's choice.
+      rerankProvider: { type: 'string', default: '', propose: false, hint: 'The provider whose OpenAI-compatible /rerank serves the reranker (Field → API keys); empty: the embedding model\'s provider.' },
+      rerankModel: { type: 'string', default: '', propose: false, hint: 'A reranking model, e.g. bge-reranker-v2-m3 on llama.cpp or vLLM. Empty: results are not reranked (experiment retrievalRerank).' } } },
   // The Library (experiment library; docs/experiments/library.md): which folders of this machine are indexed and who may
   // search them — what is read and whom it is opened to are the owner's, so none of it is proposable.
   library:          { is: 'local', home: 'device', on: 'host', note: 'the Library: the embedding model, the folders of this machine it indexes, who may search them, and when (library/)',
