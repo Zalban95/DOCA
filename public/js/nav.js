@@ -14,6 +14,7 @@ const pageShown = t => currentTab === t || (typeof panelViewParts === 'function'
 
 function nav(name) {
   if (typeof licencePageOn === 'function' && !licencePageOn(name)) name = 'controls';   // a page this hive is not licensed for is not here (lib/licence.js)
+  if (typeof flowNavBefore === 'function') flowNavBefore(currentTab, name);   // Flow: the old page fades out (flow/flow.js)
   currentTab = name;
 
   navGroupsMark(name);   // its group opens, and remembers it (nav-groups.js)
@@ -66,6 +67,7 @@ function nav(name) {
 
   if (typeof panelViewPlace === 'function') { panelViewPlace(name); activate(); }   // pages made by their init land in the view
   closeSidebar();
+  if (typeof flowNavAfter === 'function') flowNavAfter(name);   // Flow: the title takes the focus once the page settles
 }
 
 /* ── Mobile sidebar ──────────────────────────────────── */

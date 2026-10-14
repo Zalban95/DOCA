@@ -30,6 +30,7 @@ async function _subtabGeneralInit() {
     _settingsRender();
     _lookPickerRender(prefs);
     _themePickerRender(prefs);
+    if (typeof experienceCardRender === 'function') experienceCardRender(prefs);   // Standard or Flow (settings/experience.js)
     faceSettingsRender();   // the face: in this screen's corner, or full screen (face/corner.js)
     screenSettingsNote();   // these are this screen's own (lib/screen.js)
     if (typeof yourPanelCard === 'function') yourPanelCard();   // the panel's layout as the person's data (settings/your-panel.js)
@@ -128,6 +129,7 @@ async function settingsApplyOnLoad() {
     settingsHiddenApply();
     _sidebarSections = prefs.sidebarSections || {};
     applySidebarSections(_sidebarSections);
+    if (typeof flowApply === 'function') flowApply(prefs.experience, { boot: true });   // Standard or Flow, this screen's (flow/flow.js)
   } catch {}
   _silentUpdateBadgeCheck();
 }
