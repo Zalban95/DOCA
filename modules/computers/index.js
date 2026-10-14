@@ -154,6 +154,7 @@ async function stop(id) {
 async function archive(id, on = true) {
   const c = need(id);
   if (on) await stop(c.id).catch(() => {});
+  if (on) await require('./licence').release(c.id, 'the computer was put away');   // its test licence seat goes back (license/pool.js)
   patch(c.id, { archivedAt: on ? new Date().toISOString() : null });
   return view({ ...c, archivedAt: on ? 'now' : null });
 }
@@ -170,6 +171,7 @@ async function remove(id) {
   try { require('../mcp/registry').remove(serverId(c)); } catch { /* never registered */ }
   await docker(['rm', '-f', container(c)]).catch(() => {});
   await docker(['volume', 'rm', '-f', container(c)]).catch(() => {});
+  await require('./licence').release(c.id, 'the computer was removed');   // its test licence seat goes back (license/pool.js)
   save(rows().filter(x => x.id !== id));
   return { removed: id };
 }
@@ -302,4 +304,4 @@ async function list({ all = false } = {}) {
   return rows().filter(c => all || !c.archivedAt).map(c => view(c, states[container(c)] || 'missing'));
 }
 
-module.exports = { IMAGE, SERVE, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, archive, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, putSource, fetchFile, patch, view, save, rows };
+module.exports = { IMAGE, SERVE, WORK, docker, container, imageReady, imageState, sourceHash, build, create, start, stop, remove, pin, archive, list, detailed, screen, lend, ownFor, get, all, madeBy, need, put, putSource, fetchFile, patch, view, save, rows };

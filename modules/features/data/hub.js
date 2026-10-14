@@ -173,4 +173,7 @@ module.exports = [
   { id: 'licence', licence: 'core', name: 'The licence', page: 'settings/system', settings: ['licence.server', 'licence.account', 'licence.graceDays'], since: '3.0.0',
     use: 'Which features this hive may run, until when, and checking in with the licence server or uploading a licence file to renew it.',
     routes: ['/api/licence*'], words: 'license licence key keygen edition entitlement expiry renew offline activate fingerprint read-only grace' },
+  { id: 'computer-licences', licence: 'machines', name: 'Licences for test installs in agents\' computers', page: 'settings/system', tools: ['computer'], since: '3.79.0',
+    use: 'A hive installed in an agents\' computer gets a seat of the licence for test computers; removing the computer frees it — to try a new way before settling on it.',
+    routes: ['/api/licence/computers*'], words: 'test licence demo licence seats computer install doca inside sandbox trial pool' },
 ];

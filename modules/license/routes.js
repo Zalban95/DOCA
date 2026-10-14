@@ -10,6 +10,7 @@
  *   POST   /api/licence/key      the licence key, and the server to check in with (licence.server / .account)
  *   POST   /api/licence/check    check in now
  *   DELETE /api/licence          remove the licence file (a sandbox's, or one bound to another machine)
+ *   /api/licence/computers       the licence for test computers (pool-routes.js)
  *
  * A change takes effect at the next start, and the answer says so; read-only is judged at once.
  */
@@ -80,6 +81,7 @@ function mount(app) {
     note('the licence file was removed', 'removed at Settings → System → Licence');
     res.json({ ok: true, said: `The licence file was removed. ${NEXT_START}`, licence: view(req) });
   });
+  require('./pool-routes').mount(app);   // the licence for test computers (pool.js)
 }
 
 function note(what, why) { try { require('../activity').note({ from: 'licence', what, why }); } catch { /* a record */ } }

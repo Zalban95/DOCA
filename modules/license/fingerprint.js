@@ -33,13 +33,17 @@ function machineId() {
   return id ? { id, from: 'os' } : { id: `host:${os.hostname()}`, from: 'hostname' };
 }
 
+/** The fingerprint a hive with this id on a machine with this id has — this hive's, or one inside an agents' computer
+ *  (computers/licence.js reads the two ids there). */
+const of = (hive, machine) => crypto.createHash('sha256').update(`doca-hive:${hive}:${machine}`).digest('hex');
+
 let cached = null;
 function fingerprint() {
   if (!cached) {
     const m = machineId();
-    cached = { value: crypto.createHash('sha256').update(`doca-hive:${hiveId()}:${m.id}`).digest('hex'), machineFrom: m.from };
+    cached = { value: of(hiveId(), m.id), machineFrom: m.from };
   }
   return cached;
 }
 
-module.exports = { fingerprint, hiveId, machineId, _reset: () => { cached = null; } };
+module.exports = { fingerprint, hiveId, machineId, of, _reset: () => { cached = null; } };
