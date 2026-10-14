@@ -5,7 +5,7 @@
                          confirmation (appConfirm)
      emptyStateHtml({})  one empty state: a point of light, a sentence, one action
      pageHeadHtml({})    one page header: a title and one line on the left, the page's actions on the right
-     advancedFold(x, {}) one disclosure for the fields most people never touch: "Advanced · N", closed until opened,
+     advancedFold(x, {}) one disclosure for the fields most people never touch: "Advanced · N settings", closed until opened,
                          remembered per browser, marked when anything inside differs from its default
    Each returns markup built from the caller's own labels (escaped here) and onclick strings the caller wrote,
    attribute-ready as jsArg() makes them (they are not escaped a second time).
@@ -84,8 +84,11 @@ function _foldRemembered(id) {
   try { return localStorage.getItem(_FOLD_KEY(id)) === '1'; } catch { return false; }
 }
 
+// What the number is says itself: a bare "11" beside "Which pages show" read as unclear to a newcomer (run 1).
+const _foldCount = n => `${n} setting${n === 1 ? '' : 's'}`;
+
 function _foldSummary(label, count, changed) {
-  return `<summary class="adv-fold-sum"><span class="adv-fold-label">${_uiEsc(label)}</span>${count ? `<span class="adv-fold-count" title="${count} setting${count === 1 ? '' : 's'} inside">${count}</span>` : '<span class="adv-fold-count" hidden></span>'}`
+  return `<summary class="adv-fold-sum"><span class="adv-fold-label">${_uiEsc(label)}</span>${count ? `<span class="adv-fold-count" title="${_foldCount(count)} inside">${_foldCount(count)}</span>` : '<span class="adv-fold-count" hidden></span>'}`
     + `<span class="adv-fold-changed"${changed ? '' : ' hidden'}>changed</span></summary>`;
 }
 
@@ -134,7 +137,7 @@ function advancedFoldMark(det) {
   const names = [...new Set(differ.map(_foldName))];
   const n = Math.max(differ.length, Number(det.dataset.changed || 0));
   const c = det.querySelector(':scope > summary .adv-fold-count');
-  if (c) { c.hidden = !count; c.textContent = String(count); c.title = `${count} setting${count === 1 ? '' : 's'} inside`; }
+  if (c) { c.hidden = !count; c.textContent = _foldCount(count); c.title = `${_foldCount(count)} inside`; }
   const m = det.querySelector(':scope > summary .adv-fold-changed');
   if (m) {
     m.hidden = !n;

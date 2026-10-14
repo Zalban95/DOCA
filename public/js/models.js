@@ -60,7 +60,14 @@ async function modelsLoadSettings() {
     document.getElementById('models-ollama-path').value  = s.ollamaPath  || '';
   } catch {}
   // The folder Ollama really uses (ollama-home.js): shown in the box when the panel has none of its own.
-  try { const h = await apiFetch('/api/models/ollama/home'); _ollamaHome = h; const box = document.getElementById('models-ollama-path'); if (!box.value) box.value = h.current || ''; } catch {}
+  // That folder is Ollama's own default, not a change: the Advanced fold is marked against it (run 1 read "changed" on a
+  // fresh install, where the box showed ~/.ollama/models against a default of empty).
+  try {
+    const h = await apiFetch('/api/models/ollama/home'); _ollamaHome = h;
+    const box = document.getElementById('models-ollama-path');
+    if (!box.value) { box.value = h.current || ''; box.dataset.default = box.value; }
+    if (typeof advancedFoldRefresh === 'function') advancedFoldRefresh(box);
+  } catch {}
 }
 
 let _ollamaHome = null;
