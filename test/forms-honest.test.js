@@ -140,3 +140,21 @@ test('API keys: a screen says what it shows, and how to open a page there, in tw
   assert.doesNotMatch(line, /show here/);
   assert.deepEqual(B.errors, []);
 });
+
+test('the panel\'s own dialogs say they are dialogs, and an empty answer is asked for', { skip: B.skip }, async () => {
+  await B.evaluate("appPrompt('A question?', () => {})");
+  assert.ok(await B.until("document.getElementById('app-prompt-modal').classList.contains('open')"));
+  const d = await B.evaluate("(() => { const b = document.querySelector('#app-prompt-modal [role=dialog]'); return b && { modal: b.getAttribute('aria-modal'), named: document.getElementById(b.getAttribute('aria-labelledby'))?.textContent, shown: b.getClientRects().length > 0 }; })()");
+  assert.deepEqual(d, { modal: 'true', named: 'A question?', shown: true });
+  assert.ok(await B.clickOn('#app-prompt-ok'));
+  assert.equal(await B.evaluate("document.getElementById('app-prompt-input').validationMessage"), 'Type an answer — or Cancel.', 'OK with nothing typed says so');
+  assert.ok(await B.evaluate("document.getElementById('app-prompt-modal').classList.contains('open')"), 'and stays open');
+  await B.clickOn('#app-prompt-cancel');
+  assert.equal(await B.evaluate("document.querySelector('#app-confirm-modal [role=alertdialog]')?.getAttribute('aria-modal')"), 'true');
+  // The approval popup: a question that must be answered.
+  await B.evaluate("approvalPopup({ id: 'appr-test', tool: 'shell', args: { command: 'true' }, keys: [] }, () => {})");
+  const a = await B.evaluate("(() => { const m = document.querySelector('#approval-overlay [role=alertdialog]'); return m && { modal: m.getAttribute('aria-modal'), named: !!document.getElementById(m.getAttribute('aria-labelledby'))?.textContent }; })()");
+  assert.deepEqual(a, { modal: 'true', named: true });
+  await B.evaluate("document.getElementById('approval-overlay')?.remove()");
+  assert.deepEqual(B.errors, []);
+});

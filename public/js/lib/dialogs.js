@@ -62,7 +62,7 @@ function appPrompt(message, onSubmit, defaultValue, opts = {}) {
 
   const submit = () => {
     const val = opts.secret ? input.value : input.value.trim();
-    if (!val && !opts.allowEmpty) return;
+    if (!val && !opts.allowEmpty) return askFor(input, 'Type an answer — or Cancel.');   // an empty OK said nothing (run 2026-10-14)
     const picked = choice?.value;
     cleanup();
     onSubmit(val, picked);
