@@ -27,7 +27,7 @@ async function text(p) {
   const lines = [
     `# Project: ${p.name}`,
     `You work in ${p.root}: your shell and relative paths start there.`,
-    ...(p.worktree ? [`This is this conversation's own git worktree of ${p.mainRoot}, on branch ${p.worktree.branch} — other conversations may be changing the main folder at the same time. Commit here; merging ${p.worktree.branch} into the main branch is the person's call (project worktree status says how far it is).`] : []),
+    ...(p.worktree ? [`This is this conversation's own git worktree of ${p.mainRoot}, on branch ${p.worktree.branch} — other conversations may be changing the main folder at the same time. Commit here; merging ${p.worktree.branch} into the main branch is the person's call (project worktree status says how far it is).`, require('./ports').briefLine(p.worktree.ports)].filter(Boolean) : []),
     `Kind: ${info.kinds.map(k => k.label).join(', ') || 'no build system recognised'}.`
       + (g ? ` Git: branch ${g.branch}${g.ahead ? `, ${g.ahead} ahead` : ''}${g.behind ? `, ${g.behind} behind` : ''}, ${g.files.length} changed file(s).` : ' Not a git repository.'),
     commands.length
