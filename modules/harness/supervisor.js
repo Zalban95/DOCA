@@ -97,7 +97,7 @@ function whyOf(message) {
   if (message === CUT_OFF) return 'its last answer was cut off: finishing it';
   if (message === RESTARTED) return 'the panel restarted mid-turn: picking up';
   if (String(message).startsWith('[panel] Work reported back')) return 'work chats reported back: telling you what matters';
-  if (String(message).startsWith('[panel] Helpers you started')) return 'its helpers reported back: deciding what they need';
+  if (String(message).startsWith('[panel] Helpers or a team you started')) return 'its helpers reported back: deciding what they need';
   if (String(message).startsWith('[panel] The specialists you sent')) return 'the specialists it sent finished: passing on their results';
   if (String(message).startsWith('[panel] Service job')) return 'a service job it started ended: telling what came of it';
   if (String(message).startsWith('[panel] The person asked you to carry on')) return 'restarted by a person';
@@ -270,7 +270,7 @@ function deliver(orchestratorId) {
   const org = require('./organization'), leaders = require('./leaders');
   let ceo;
   try { ceo = org.session(orchestratorId); } catch { return 'no orchestrator'; }
-  if (leaders.isLeader(ceo)) return deliverLead(ceo);   // a project's chat hears its own helpers (leaders.js)
+  if (leaders.isLeader(ceo) || (ceo.kind === 'work' && ceo.job)) return deliverLead(ceo);   // a project's chat hears its own helpers; a work chat its team (leaders.js)
   if (ceo.kind !== 'orchestrator') return 'not the orchestrator';
   if (require('./agent').isRunning(ceo.id)) return 'busy';   // its turn's end delivers
   const due = leaders.due(ceo);
@@ -281,7 +281,7 @@ function deliver(orchestratorId) {
   if (!rest.length) return 'told';
   const latest = leaders.latestOf(rest);
   // A failed job is reported, never retried on its own (deep test B, C13): trying again is the person's call.
-  const failed = latest.some(n => n.type === 'failed') ? 'Do not retry failed work or send it anything new: say what failed and ask whether to try again. ' : '';
+  const failed = latest.some(n => leaders.outcomeOf(n) === 'failed') ? 'Do not retry failed work or send it anything new: say what failed and ask whether to try again. ' : '';
   const how = wake(ceo.id, '[panel] Work reported back. Tell the owner what matters, in a few lines. ' + failed
     + 'Where a decision is theirs, ask it with ask_device and give the choices — it reaches their phone, '
     + `their watch and the panel at once.\n${latest.map(leaders.lineOf).join('\n')}`, { retry: () => deliver(ceo.id) });
