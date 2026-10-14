@@ -97,7 +97,7 @@ test('a fold is closed, counts what it holds, and is marked when a field inside 
     return { open: det.open, label: sum.querySelector('.adv-fold-label').textContent, count: sum.querySelector('.adv-fold-count').textContent,
       marked: !sum.querySelector('.adv-fold-changed').hidden };
   })()`);
-  assert.deepEqual(r, { open: false, label: 'Advanced', count: '5', marked: false }, 'closed, five fields, nothing changed');
+  assert.deepEqual(r, { open: false, label: 'Advanced', count: '5 settings', marked: false }, 'closed, five fields, nothing changed');
 
   const changed = await evaluate(`(() => {
     const a = document.getElementById('fp-a'); a.value = '7'; a.dispatchEvent(new Event('input', { bubbles: true }));
@@ -132,7 +132,7 @@ test('its open state is remembered per browser per id, and a fold of existing el
     return { probe: a.open, other: b.open, label: a.querySelector('.adv-fold-label').textContent, inForm: det.parentNode === form,
       held: det.querySelectorAll('.adv-fold-body > *').length, marked: !det.querySelector('.adv-fold-changed').hidden, count: det.querySelector('.adv-fold-count').textContent };
   })()`);
-  assert.deepEqual(r, { probe: true, other: false, label: 'More', inForm: true, held: 3, marked: true, count: '2' });
+  assert.deepEqual(r, { probe: true, other: false, label: 'More', inForm: true, held: 3, marked: true, count: '2 settings' });
 });
 
 for (const p of PAGES) {

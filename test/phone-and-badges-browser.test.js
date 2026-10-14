@@ -69,7 +69,7 @@ test("on a phone: Settings' pill row fades the edge it has more past", { skip: B
   await B.viewport(1300, 900);
 });
 
-test('at a desk: a fresh install marks no fold changed', { skip: B.skip }, async () => {
+test('at a desk: a fresh install marks no fold changed, and each count says it counts settings', { skip: B.skip }, async () => {
   const seen = [];
   for (const go of ["nav('settings'); settingsSubNav('general')", "nav('settings'); settingsSubNav('system')", "nav('models')"]) {
     await B.evaluate(go);
@@ -82,5 +82,6 @@ test('at a desk: a fresh install marks no fold changed', { skip: B.skip }, async
   }
   assert.ok(seen.some(f => f.label === 'Advanced — models folder'), 'the models folder fold was drawn');
   assert.deepEqual(seen.filter(f => f.changed), [], 'nothing was changed on a fresh install');
+  for (const f of seen.filter(f => f.count)) assert.match(f.count, /^\d+ settings?$/, `${f.label}: "${f.count}"`);
 });
 
