@@ -35,11 +35,13 @@ keep how — so the next time is a recipe, not a round of thinking.
      the TV's name; the app's own way, so it keeps working when the person picks it up. `media_control` pauses,
      resumes, skips and changes the volume of whatever plays there. Read again after each press: the screen changes.
 3. **From the hub, to a thing Nearby knows**:
-   - **Cast** (a Chromecast, a Google or Nest speaker): `catt -d "<its name>" cast <url>` with `shell` — the line
-     `nearby` gives, when catt is installed (it says so; if not, propose installing it through System tools, never on
-     your own). `catt -d "<name>" stop`, `volume 40`, `pause` and `play` follow it.
-   - **DLNA / UPnP** (a smart TV, a media player that can be played to): its AVTransport control URL from `nearby` —
-     `SetAVTransportURI` with the address, then `Play`, posted with `api_call` (the address is the owner's own).
+   - **Cast or DLNA** (a Chromecast, a Google or Nest speaker, a smart TV, a media player): the `cast` tool —
+     `play` a kept file (a video, a sound, a picture: what `show_media` showed or `computer get` brought back),
+     `show` one of the panel's pages, `say` a sentence, `stop`, `volume`. It goes through the owner's cast door to
+     that device alone (or through the person's phone when the hub is on another network) and is written down.
+     `catt` or a hand-made `SetAVTransportURI` in `shell`/`api_call` goes around both: use them only for what the
+     tool cannot do — a link on the web to a Cast device (`catt -d "<its name>" cast <url>`, when catt is installed;
+     if not, propose installing it through System tools, never on your own) — and say so.
    - **AirPlay**: the device's own app's AirPlay button (route 2); the hub has no AirPlay sender of its own.
    - Or play a file or a stream on the hub's own screen or speakers.
 
