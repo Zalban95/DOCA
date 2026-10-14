@@ -68,7 +68,7 @@ function adminDraw(page, d) {
   const sub = `Is everything fine, and what needs you — ${d.mode === 'production' ? 'a production' : 'a development'} hive${d.hosted ? ', hosted' : ''}.`;
   const needs = d.sections.find(s => s.id === 'needs');
   page.innerHTML = pageHeadHtml({ title: 'Admin', sub,
-    actions: `<span class="adm-at" title="${escHtml(at.toLocaleString())}">${escHtml(at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }))}</span>
+    actions: `<span class="adm-at" title="${escHtml(`Read at ${at.toLocaleString()}`)}">${escHtml(at.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }))}</span>
       <button type="button" class="btn" onclick="adminLoad(true)">Refresh</button>` })
     + (needs ? _adminCard(needs) : '')
     + `<div class="adm-grid">${d.sections.filter(s => s.id !== 'needs').map(_adminCard).join('')}</div>`;
