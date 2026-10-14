@@ -14,6 +14,8 @@
  *   firstTokenTimeoutMs   a full window read at ~200 tokens a second, 2–10 minutes; 5 minutes when nothing says
  *   maxTokens             a quarter of its window, 8192–16384; 8192 when nothing says
  *
+ * and, when no window is declared, the window it reported for the model in use (`contextWindow`), so a conversation
+ * folds before it outgrows the model.
  * They stand in for the harness's defaults only (`apply`): a value the person set — "Longest reply" raised or
  * lowered, a specialist's own — still wins, and a hosted provider is untouched. The busy-server extension
  * (turn/busy-server.js) still stretches the wait while the server is visibly at work. Shown with where each came
@@ -66,7 +68,7 @@ async function measure(provider, { model, fetchImpl = fetch } = {}) {
     const w = await require('./context-window').discover(ep.id, model).catch(() => null);
     if (w?.tokens && w.tokens !== ctx) { ctx = w.tokens; from = `${w.source}${slots ? `, ${slots} slot${slots === 1 ? '' : 's'}` : ''}`; }
   }
-  const pace = { ...valuesFor({ ctx, slots }), ...(slots ? { slots } : {}), from: from || 'a model on this machine or the local network (its server said nothing about its size)', at: new Date().toISOString() };
+  const pace = { ...valuesFor({ ctx, slots }), ...(slots ? { slots } : {}), ...(ctx ? { ctx } : {}), ...(model ? { model } : {}), from: from || 'a model on this machine or the local network (its server said nothing about its size)', at: new Date().toISOString() };
   const doc = store.readJson(DOC, { providers: {} });
   doc.providers[ep.id] = pace;
   store.writeJson(DOC, doc);
@@ -76,9 +78,13 @@ async function measure(provider, { model, fetchImpl = fetch } = {}) {
 /** The kept pace of one provider, or null. */
 const of = provider => all()[provider] || null;
 
-/** `measure` once: what is kept, else asked now. */
-async function ensure(provider, opts) {
-  return of(provider) || measure(provider, opts);
+const STALE_MS = 24 * 3600e3;
+/** What is kept, unless it is a day old or was read for another model; else asked now (a server's answer changes:
+ *  2026-10-14, a pace kept from the relay's old one-window /props held a million-token window for a 40,960 one). */
+async function ensure(provider, opts = {}) {
+  const kept = of(provider);
+  const fresh = kept && Date.now() - Date.parse(kept.at || 0) < STALE_MS && (!opts.model || !kept.model || kept.model === opts.model);
+  return fresh ? kept : measure(provider, opts);
 }
 
 /** For the agent's config route: a provider just chosen is asked once, and its pace said ({} when none). */
@@ -97,7 +103,10 @@ function apply(p) {
   if (!pace) return p;
   const d = require('./providers').defaultParams();
   const take = k => (Number(p[k]) === Number(d[k]) ? pace[k] : p[k]);
-  return { ...p, firstTokenTimeoutMs: take('firstTokenTimeoutMs'), maxTokens: take('maxTokens'), _pace: pace };
+  // The window too, when its server said it for this model and nobody declared one: without it nothing folds, and the
+  // 2026-10-14 demo's chat sent 41,202 tokens to a 40,960-token model. A window a person set stays theirs.
+  const window = pace.ctx && (!pace.model || pace.model === p.model) && !(Number(p.contextWindow) > 0) ? { contextWindow: pace.ctx } : {};
+  return { ...p, firstTokenTimeoutMs: take('firstTokenTimeoutMs'), maxTokens: take('maxTokens'), ...window, _pace: pace };
 }
 
 /** One line for a person: what it waits and writes, and why. */

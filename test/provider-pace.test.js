@@ -70,3 +70,17 @@ test('a turn on it waits and writes by its own pace in place of the defaults; a 
   assert.equal((await H.api(null, 'DELETE', '/api/keys/my-llama')).status, 200);
   assert.equal(pace().of('my-llama'), null);
 });
+
+test('a measured window stands in for an undeclared one, for that model only; a stale or other-model pace is read again', async () => {
+  const pace = require('../modules/harness/provider-pace');
+  const store = require('../modules/store');
+  store.writeJson('harness/provider-pace', { providers: { relayx: { firstTokenTimeoutMs: 205000, maxTokens: 10240, ctx: 40960, model: 'qwen', from: 'test', at: new Date().toISOString() } } });
+  const d = require('../modules/harness/providers').defaultParams();
+  const p = pace.apply({ ...d, provider: 'relayx', model: 'qwen' });
+  assert.equal(p.contextWindow, 40960, 'folds before it outgrows the model');
+  assert.equal(pace.apply({ ...d, provider: 'relayx', model: 'other' }).contextWindow, d.contextWindow, 'another model: not its window');
+  assert.equal(pace.apply({ ...d, provider: 'relayx', model: 'qwen', contextWindow: 32000 }).contextWindow, 32000, 'a declared window stays');
+  store.writeJson('harness/provider-pace', { providers: { relayx: { ctx: 1048576, model: 'qwen', at: '2026-01-01T00:00:00Z' } } });
+  const again = await pace.ensure('relayx', { model: 'qwen' }).catch(() => 'measured');
+  assert.notEqual(again?.ctx, 1048576, 'a day-old pace is read again');
+});
