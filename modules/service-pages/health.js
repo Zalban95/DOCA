@@ -39,6 +39,7 @@ const of = id => _state.get(id) || { up: false, at: null, why: 'not checked yet'
 
 function start() {
   if (_timer) return;
+  require('./run').boot().catch(e => console.warn(`[service-pages] boot: ${e.message}`));   // those marked to start with DOCA
   checkAll().catch(() => {});
   _timer = setInterval(() => checkAll().catch(() => {}), EVERY_MS);
   _timer.unref?.();

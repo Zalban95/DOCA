@@ -67,6 +67,9 @@ async function servicePagesCard() {
       <span class="pt ${s.state.up ? 'pt-run' : ''}" style="background:${s.state.up ? 'var(--green)' : 'var(--muted)'}"></span> ${escHtml(s.name)}</span>
       <span class="desc" style="flex:1">${escHtml(s.url)} · ${escHtml(groupLabel(s.group))} · ${s.who === 'everyone' ? 'everyone' : 'admins'}${s.key ? ` · key ${escHtml(s.key)}` : ''}
         — ${s.state.up ? 'answering: its page is shown' : `not shown: ${escHtml(s.state.why || 'not answering')}`}</span>
+      ${s.run ? `<label class="switch-row" title="DOCA starts it when DOCA starts, unless it already answers"><span class="switch-text">Start with DOCA</span>
+        <input type="checkbox" class="switch"${s.boot ? ' checked' : ''} onchange="servicePagesBoot(${jsArg(s.id)}, this)"></label>
+        ${s.pid ? `<button class="btn btn-xs" type="button" onclick="servicePagesRun(${jsArg(s.id)}, 'stop', this)">■ Stop</button>` : `<button class="btn btn-xs btn-teal" type="button" onclick="servicePagesRun(${jsArg(s.id)}, 'start', this)">▶ Start</button>`}` : ''}
       <button class="btn btn-xs btn-red" type="button" onclick="servicePagesRemove(${jsArg(s.id)}, ${jsArg(s.name)})">Remove</button></div>`).join('');
   card.innerHTML = `<div class="card-title">Services with a page</div>
     <p class="desc">A service with a web interface of its own — DoMac, say — gets a page in the panel while it answers, showing its own interface. The hub sends it its key (from Keys for services); your browser never holds it. Not answering, the page is not there.</p>
@@ -77,7 +80,12 @@ async function servicePagesCard() {
       <select id="svcp-key" class="input"><option value="">none</option>${keys.map(k => `<option value="${escHtml(k.name)}">${escHtml(k.name)}</option>`).join('')}</select></div>
     ${advancedFold(`<div class="form-row"><label>Group</label><select id="svcp-group" class="input" data-default="intelligence">${d.groups.map(g => `<option value="${g}"${g === 'intelligence' ? ' selected' : ''}>${escHtml(groupLabel(g))}</option>`).join('')}</select></div>
       <div class="form-row"><label>Who sees it</label><select id="svcp-who" class="input" data-default="admins"><option value="admins">Admins</option><option value="everyone">Everyone</option></select></div>
-      <div class="form-row"><label>Health route${infoBtn('The path the hub asks to know it answers. Default /api/health.')}</label><input id="svcp-health" class="input" data-default="" placeholder="/api/health"></div>`, { id: 'service-pages', count: 3 })}
+      <div class="form-row"><label>Health route${infoBtn('The path the hub asks to know it answers. Default /api/health.')}</label><input id="svcp-health" class="input" data-default="" placeholder="/api/health"></div>
+      <div class="form-row"><label>Command${infoBtn('How this hub starts its program, for ▶ Start and Start with DOCA: the program, then its arguments one per line. Run as it is, never through a shell.')}</label><input id="svcp-cmd" class="input flex1" data-default="" placeholder="node"></div>
+      <div class="form-row"><label>Arguments</label><textarea id="svcp-args" class="input flex1" rows="2" data-default="" placeholder="bin/domac.js&#10;serve"></textarea></div>
+      <div class="form-row"><label>Working folder</label><input id="svcp-cwd" class="input flex1" data-default="" data-path-pick="dir"></div>
+      <div class="form-row"><label>Settings file${infoBtn('KEY=value lines given to the program as its environment (its port, its folders). Keys and passwords stay in its own keys, not here.')}</label><input id="svcp-env" class="input flex1" data-default="" data-path-pick="file"></div>
+      <label class="switch-row"><span class="switch-text">Start with DOCA</span><input type="checkbox" class="switch" id="svcp-boot" data-default="false"></label>`, { id: 'service-pages', count: 8 })}
     <div style="margin-top:8px"><button class="btn btn-primary btn-sm" type="button" onclick="servicePagesSave(this)">Add</button> <span class="status-line" id="svcp-said"></span></div>`;
 }
 
@@ -86,11 +94,27 @@ async function servicePagesSave(btn) {
   const said = document.getElementById('svcp-said');
   btn.disabled = true;
   try {
-    const r = await apiFetch('/api/service-pages', { method: 'POST', body: { name: v('svcp-name'), url: v('svcp-url'), key: v('svcp-key'), group: v('svcp-group'), who: v('svcp-who'), health: v('svcp-health') || undefined } });
+    const run = v('svcp-cmd') ? { command: v('svcp-cmd'), args: v('svcp-args'), cwd: v('svcp-cwd'), envFile: v('svcp-env') } : undefined;
+    const r = await apiFetch('/api/service-pages', { method: 'POST', body: { name: v('svcp-name'), url: v('svcp-url'), key: v('svcp-key'), group: v('svcp-group'), who: v('svcp-who'), health: v('svcp-health') || undefined,
+      ...(run ? { run, boot: !!document.getElementById('svcp-boot')?.checked } : {}) } });
     setStatus(said, r.state.up ? `✓ ${r.service.name} answers: its page is in the panel` : `Saved; not answering yet — ${r.state.why}`, r.state.up ? 'ok' : '');
     await servicePagesCard(); await servicePagesApply();
   } catch (e) { setStatus(said, `✗ ${e.message}`, 'err'); }
   btn.disabled = false;
+}
+
+async function servicePagesBoot(id, box) {
+  box.disabled = true;
+  try { await apiFetch(`/api/service-pages/${encodeURIComponent(id)}/boot`, { method: 'POST', body: { on: box.checked } }); }
+  catch (e) { box.checked = !box.checked; appAlert(e.message); }
+  box.disabled = false;
+}
+
+async function servicePagesRun(id, act, btn) {
+  btn.disabled = true; btn.textContent = act === 'start' ? 'Starting…' : 'Stopping…';
+  try { await apiFetch(`/api/service-pages/${encodeURIComponent(id)}/${act}`, { method: 'POST' }); }
+  catch (e) { appAlert(e.message); }
+  await servicePagesCard(); await servicePagesApply();
 }
 
 function servicePagesRemove(id, name) {

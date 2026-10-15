@@ -64,3 +64,30 @@ test('a definition is checked: an address, a key that exists, a known group', as
   assert.equal((await H.api(null, 'POST', '/api/service-pages', { name: 'X', url: 'ftp://x' })).status, 400);
   assert.equal((await H.api(null, 'POST', '/api/service-pages', { name: 'X', url: 'http://127.0.0.1:1', key: 'nope' })).status, 400);
 });
+
+test('started here and with DOCA: by its command and settings file, stopped by its own PID, never by name', async () => {
+  const fs = require('node:fs'), path = require('node:path'), os = require('node:os');
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'svc-run-'));
+  const port = 40000 + Math.floor(Math.random() * 2000);
+  fs.writeFileSync(path.join(dir, 'app.js'), "require('http').createServer((q, s) => { s.writeHead(200); s.end('ok'); }).listen(Number(process.env.APP_PORT), '127.0.0.1');");
+  fs.writeFileSync(path.join(dir, 'app.env'), `# the stand-in's port\nAPP_PORT="${port}"\n`);
+  let r = await H.api(null, 'POST', '/api/service-pages', { name: 'Runner', url: `http://127.0.0.1:${port}`, health: '/',
+    run: { command: process.execPath, args: 'app.js', cwd: dir, envFile: path.join(dir, 'app.env') } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.state.up, false, 'not started yet');
+  r = await H.api(null, 'POST', '/api/service-pages/runner/start', {});
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.ok(r.body.pid > 0);
+  assert.equal(r.body.state.up, true, 'it answers');
+  r = await H.api(null, 'POST', '/api/service-pages/runner/stop', {});
+  assert.equal(r.body.stopped, true);
+  assert.equal(r.body.state.up, false);
+  assert.equal((await H.api(null, 'POST', '/api/service-pages/runner/boot', { on: true })).body.service.boot, true);
+  await require('../modules/service-pages/run').boot();
+  await H.sleep(1200);
+  assert.equal((await require('../modules/service-pages/health').check(require('../modules/service-pages').get('runner'))).up, true, 'started with DOCA');
+  require('../modules/service-pages/run').stop(require('../modules/service-pages').get('runner'));
+  assert.equal((await H.api(null, 'POST', '/api/service-pages', { name: 'No way', url: 'http://127.0.0.1:1', boot: true })).status, 400, 'Start with DOCA needs a command');
+  await H.api(null, 'DELETE', '/api/service-pages/runner');
+  fs.rmSync(dir, { recursive: true, force: true });
+});
