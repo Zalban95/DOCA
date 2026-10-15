@@ -45,7 +45,8 @@ function nav(name) {
   if (typeof chronicleTab === 'function') chronicleTab(on('chronicle'));   // hears turns and missions only while shown
   if (typeof peopleTab === 'function') peopleTab(on('people'));   // Controls → Chat: the hive chat; it gives the floating chat back when left
   if (typeof adminTab === 'function') adminTab(on('admin'));   // Hub → Admin: refreshed on the live feed only while shown
-  if (typeof homeTab === 'function') homeTab(on('home'));   // holds the hub's connection to Home Assistant while shown
+  if (typeof homeTab === 'function') homeTab(on('home'));
+  if (typeof servicePagesTab === 'function') servicePagesTab(name);   // a connected service's own UI, opened on its first visit (service-pages.js)   // holds the hub's connection to Home Assistant while shown
   if (typeof ambientTab === 'function') ambientTab(on('ambient'));
   if (typeof meetingsTab === 'function') meetingsTab(on('meetings'));   // calls and meetings between people (meetings.js)
   if (on('models') && typeof decisionModelsTab === 'function') decisionModelsTab();

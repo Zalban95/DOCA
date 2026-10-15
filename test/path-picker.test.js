@@ -47,6 +47,7 @@ const NOT_A_PICK = [
   ['index.html', 'server-filesystem', 'an MCP server\'s arguments, one per line'],
   ['index.html', '/host/path:/container/path', 'a container\'s volumes, host and container paths in pairs'],
   ['js/settings/service-keys.js', 'paths:', 'an OpenAPI document, not a path'],
+  ['js/service-pages.js', '/api/health', 'a connected service\'s health route: a URL path on that service, not a file here'],
 ];
 
 test('every field that takes a path offers the tree', () => {
