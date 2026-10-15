@@ -145,6 +145,15 @@ function parseVboxDisplay(info) {
   return { uri: `${protocol}://${host}:${port}`, protocol, host, port };
 }
 
+/** What showvminfo says it is given, and since when it is in its state (started, or stopped) — Live's every-VM view. */
+function parseVboxFacts(info, state) {
+  const field = k => info.match(new RegExp(`^${k}="?(.*?)"?$`, 'm'))?.[1];
+  const mem = Number(field('memory')), cpus = Number(field('cpus')), since = Date.parse(String(field('VMStateChangeTime') || '').replace(/(\.\d{3})\d*$/, '$1').replace(/(\d)$/, '$1Z'));   // VirtualBox writes UTC with no zone
+  const out = { given: { vcpus: Number.isFinite(cpus) && cpus > 0 ? cpus : null, maxKiB: Number.isFinite(mem) && mem > 0 ? mem * 1024 : null } };
+  if (Number.isFinite(since)) out[state === 'running' ? 'startedAt' : 'stoppedAt'] = since;
+  return out;
+}
+
 async function vboxList() {
   const [all, running] = await Promise.all([
     run('VBoxManage', ['list', 'vms']),
@@ -153,14 +162,15 @@ async function vboxList() {
   const up = new Set(parseVboxList(running).map(v => v.name));
 
   return Promise.all(parseVboxList(all).map(async vm => {
-    let display = null, os = null, stateRaw = up.has(vm.name) ? 'running' : 'poweroff';
+    let display = null, os = null, stateRaw = up.has(vm.name) ? 'running' : 'poweroff', facts = {};
     try {
       const info = await run('VBoxManage', ['showvminfo', vm.name, '--machinereadable']);
       stateRaw = info.match(/^VMState="(.*)"$/m)?.[1] || stateRaw;
       os = info.match(/^ostype="(.*)"$/m)?.[1] || null;
       if (up.has(vm.name)) display = parseVboxDisplay(info);
+      facts = parseVboxFacts(info, normalizeState(stateRaw));
     } catch { /* a VM mid-registration can fail to describe itself */ }
-    return { ...vm, hypervisor: 'virtualbox', state: normalizeState(stateRaw), stateRaw, display, os };
+    return { ...vm, hypervisor: 'virtualbox', state: normalizeState(stateRaw), stateRaw, display, os, ...facts };
   }));
 }
 
@@ -263,5 +273,6 @@ module.exports = {
   parseVirshList,
   parseVboxList,
   parseVboxDisplay,
+  parseVboxFacts,
   normalizeState,
 };

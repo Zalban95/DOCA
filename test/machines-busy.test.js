@@ -28,7 +28,7 @@ test('a command line\'s secrets are masked before anyone sees it', () => {
 
 test('libvirt\'s domstats read as CPU time and memory per machine', () => {
   const m = require('../modules/machines/busy-read').parseDomstats("Domain: 'devbox'\n  state.state=1\n  cpu.time=123000000\n  balloon.current=2097152\n  balloon.rss=1048576\n\nDomain: 'b'\n  cpu.time=5\n");
-  assert.deepEqual(m.get('devbox'), { cpuTime: 123000000, rssKiB: 1048576 });
+  assert.deepEqual(m.get('devbox'), { cpuTime: 123000000, rssKiB: 1048576, maxKiB: 2097152 });
   assert.equal(m.get('b').cpuTime, 5);
 });
 

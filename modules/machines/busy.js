@@ -115,7 +115,7 @@ function judge(x, now) {
   if (pr && !_first) for (const p of pr.started) say(x, 'info', `${x.name}: ${short(p.args)} started (outside DOCA's tools)`);
   const high = (cpu != null && cpu >= BUSY_CPU) || !!pr?.started.length;
   if (high) { st.high++; st.low = 0; } else { st.low++; st.high = 0; }
-  Object.assign(st, { cpu: round(cpu), mem: x.mem || null, top: pr?.top ? short(pr.top.args) : null }, whoOf(x, st, pr));
+  Object.assign(st, { cpu: round(cpu), mem: x.mem || null, memKiB: x.memKiB ?? null, top: pr?.top ? short(pr.top.args) : null }, whoOf(x, st, pr));
   st.text = [st.top, st.cpu != null ? `${st.cpu}% CPU` : null, st.top ? null : st.mem].filter(Boolean).join(' · ');   // "npm test · 74% CPU"
   if (!st.busy && (st.high >= 2 || pr?.started.length)) {
     Object.assign(st, { busy: true, since: now });
@@ -147,7 +147,7 @@ async function look() {
     let vms = [];
     try { vms = (await require('./vm-list').list()).vms.filter(v => v.state === 'running'); } catch { /* none */ }
     const ds = await read.vms(vms.filter(v => v.hypervisor === 'libvirt').map(v => v.name));
-    for (const v of vms) { const d = ds.get(v.name); seen.push({ kind: 'vm', id: `${v.hypervisor}:${v.name}`, name: v.name, cpuTime: d?.cpuTime ?? null, mem: kib(d?.rssKiB) }); }
+    for (const v of vms) { const d = ds.get(v.name); seen.push({ kind: 'vm', id: `${v.hypervisor}:${v.name}`, name: v.name, cpuTime: d?.cpuTime ?? null, mem: kib(d?.rssKiB), memKiB: d?.rssKiB ?? null }); }
     const keys = new Set(seen.map(x => `${x.kind}:${x.id}`));
     for (const [key, st] of [..._m]) if (!keys.has(key)) { _m.delete(key); if (!_first) say(st, 'info', `${st.name} stopped (${st.kind})`); }
     for (const x of seen) judge(x, now);
@@ -156,7 +156,7 @@ async function look() {
   } finally { _lastLook = Date.now(); _running = false; }
 }
 
-const view = st => st && ({ kind: st.kind, id: st.id, name: st.name, busy: st.busy, cpu: st.cpu, mem: st.mem, text: st.text, who: st.who, by: st.by, since: st.since });
+const view = st => st && ({ kind: st.kind, id: st.id, name: st.name, busy: st.busy, cpu: st.cpu, mem: st.mem, memKiB: st.memKiB ?? null, text: st.text, who: st.who, by: st.by, since: st.since });
 /** What was last seen of one machine (a container by its name, a VM as hypervisor:name), or null. */
 const of = (kind, id) => view(_m.get(`${kind}:${id}`)) || null;
 /** The busy machines no DOCA turn drives — the Harness's "working now". */
