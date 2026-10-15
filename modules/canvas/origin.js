@@ -62,6 +62,7 @@ function handler(req, res) {
   const url = String(req.url).split('?')[0];
   const m = /^\/c\/([A-Za-z0-9_-]{22})(?:\/(\d{1,4}))?\/?$/.exec(url);
   if (!m) {
+    if (require('../service-pages/proxy').handle(req, res)) return;   // a connected service's own UI, under /s/<id>/
     const proxy = require('./proxy');
     if (proxy.enter(req, res) || proxy.forward(req, res)) return;
     if (require('../console-pages').serve(req, res, null)) return;   // its script answers even before a preview is entered

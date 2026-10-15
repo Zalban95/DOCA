@@ -21,6 +21,7 @@ function afterListen({ certs = null, mode } = {}) {
   require('./mcp/registry').startWithDoca();          // MCP servers marked "start with DOCA"
   require('./llamacpp-resume').resume().catch(() => {});   // DOCA's own llama.cpp servers that were running, or marked to start with it
   require('./canvas/origin').start({ certs, mode });  // agent-written pages, on their own origin
+  require('./service-pages/health').start();          // connected services' pages: shown while their service answers
   require('./backup/schedule').start();               // backups on a schedule, when switched on
   require('./machine-backup/schedule').start();       // and this machine's own files, daily and when the disk is back (off by default)
   require('./computers/lifecycle').start();           // agents' computers nobody kept, tidied away

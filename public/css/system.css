@@ -374,3 +374,6 @@ body.cast-view :focus { outline: 4px solid var(--accent); outline-offset: 4px; b
 [data-scroll-more="right"] { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
 [data-scroll-more="left"] { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
 [data-scroll-more="both"] { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+/* A connected service's own UI (service-pages.js): the page is its frame, edge to edge. */
+.svc-page.active { padding: 0; }
+.svc-frame-wrap, .svc-frame { width: 100%; height: calc(100vh - var(--header-h, 56px)); border: 0; display: block; }

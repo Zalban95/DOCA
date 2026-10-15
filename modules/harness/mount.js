@@ -42,6 +42,7 @@ function mount(app) {
   require('../llamacpp-hf/routes').mount(app);   // a llama.cpp server from a GGUF on Hugging Face (llamacpp-hf/)
   require('../llamacpp-router/routes').mount(app);
   require('./harness-life').mount(app);
+  require('../service-pages/routes').mount(app);   // pages of connected services, their own UI (service-pages/)
   require('../cast/routes').mount(app);   // casting a page to a screen, and view links (cast/)   // a harness switched off, or deleted (harness-life.js)   // a llama.cpp router's models, from its preset file (llamacpp-router/)
   require('../guided/routes').mount(app);   // the set-up: what this machine bears, the questions, what they set up (guided/)
   require('../spending/routes').mount(app);   // Settings → Spending: what was spent, budgets, spending permissions (CONSTITUTION S12)

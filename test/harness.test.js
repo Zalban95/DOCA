@@ -173,9 +173,12 @@ test('a real specialist turn sends the narrowed prompt on every model request', 
 
 /** POST to an SSE endpoint and collect the parsed `data:` events. */
 async function stream(path, body) {
-  const res = await fetch(H.base + path, {
+  const ask = () => fetch(H.base + path, {
     method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: H.owner.cookie, 'Sec-Fetch-Site': 'same-origin' }, body: JSON.stringify(body),
   });
+  // Windows CI, twice (3.88.0, 3.91.0): a kept-alive socket the server had just closed was reused, and fetch failed before
+  // the request was read — asked once more then, and only then (a reset socket, never an answer).
+  const res = await ask().catch(e => (/ECONNRESET|UND_ERR_SOCKET|other side closed/.test(`${e.cause?.code} ${e.cause?.message}`) ? ask() : Promise.reject(e)));
   const text = await res.text();
   return text.split('\n')
     .filter(l => l.startsWith('data: '))
