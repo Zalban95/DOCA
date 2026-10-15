@@ -72,7 +72,7 @@ const PAGE_OF = [
   ['setup', 'settings/guided'], ['sharing', 'settings/packs'], ['tracing', 'settings/system'], ['logs', 'settings/system'],
   ['network', 'settings/system'], ['library', 'models'], ['systemOne', 'models'], ['cast', 'nearby'], ['nearby', 'nearby'],
   ['harness', 'settings/harness'], ['backup', 'settings/backups'], ['machineBackup', 'settings/backups'], ['licence', 'settings/general'],
-  ['workstream', 'workstream'], ['machines', 'live'], ['channels', 'settings/channels'],
+  ['workstream', 'workstream'], ['outsideAgents', 'settings/system'], ['machines', 'live'], ['channels', 'settings/channels'],
 ];
 const pageOf = path => PAGE_OF.filter(([p]) => path === p || path.startsWith(`${p}.`)).sort((a, b) => b[0].length - a[0].length)[0]?.[1] || null;
 

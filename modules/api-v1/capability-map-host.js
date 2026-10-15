@@ -64,6 +64,8 @@ module.exports = [
     { only: 'a process on this machine and an experiment of the hub\'s own; a device\'s turns already use it' }),
   row('wakeword', 'record, train and remove wake-word models', ['POST /api/wakeword/*', 'DELETE /api/wakeword/models/:name', 'DELETE /api/wakeword/samples/:word/:kind'],
     { only: 'training is the hub\'s; a device downloads the kept models at GET /api/v1/wakeword' }),
+  row('outside-agents', 'switch seeing other agents on this machine in the Workstream', ['POST /api/workstream/agents'],
+    { only: 'reading this machine\'s other programs\' records and opening a listener on its loopback: the owner\'s' }),
   row('watching', 'watch folders and the Workstream', ['POST /api/live/watch', 'POST /api/workstream/hold'],
     { only: 'watching this machine\'s folders; a device already hears turns, missions and work chats on GET /api/v1/events' }),
 
