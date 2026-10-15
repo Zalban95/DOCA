@@ -45,7 +45,7 @@ async function servicePagesTab(name) {
     const r = await apiFetch(`/api/service-pages/${encodeURIComponent(name.slice(4))}/open`, { method: 'POST' });
     const f = Object.assign(document.createElement('iframe'), { className: 'svc-frame', title: r.name, src: r.url });
     // Its own origin already keeps it from the panel; the sandbox keeps it from navigating this page.
-    f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-downloads allow-modals');
+    f.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-downloads allow-modals');   // a page it opens in a new tab (its install link) is a page of its own
     f.setAttribute('allow', 'fullscreen; clipboard-write');
     wrap.replaceChildren(f);
   } catch (e) {

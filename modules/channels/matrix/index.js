@@ -1,5 +1,7 @@
 'use strict';
 
+const retry = require('../retry');   // a start that could not reach the service tries again by itself
+
 /**
  * Matrix as a channel of the hive (TODO H9.1): a bot account on any homeserver — matrix.org, or one the person
  * runs on their own tailnet — that this hub syncs with (long-polled `/sync`, so no public address), whose direct
@@ -90,12 +92,13 @@ async function poll(signal) {
 
 async function start() {
   stop();
-  if (!enabled()) return status();
+  if (!enabled()) { retry.clear('matrix'); return status(); }
   const ctrl = new AbortController();
   state.ctrl = ctrl;
   try { state.me = (await api.whoami()).user_id; state.error = null; }
-  catch (e) { state.error = e.message; state.ctrl = null; return status(); }
+  catch (e) { state.error = e.message; state.ctrl = null; retry.later('matrix', start); return status(); }
   state.running = true;
+  retry.clear('matrix');
   bind.attachAll();
   poll(ctrl.signal).catch(e => { state.error = e.message; }).finally(() => { if (state.ctrl === ctrl) state.running = false; });
   return status();

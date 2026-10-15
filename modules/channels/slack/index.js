@@ -1,5 +1,7 @@
 'use strict';
 
+const retry = require('../retry');   // a start that could not reach the service tries again by itself
+
 /**
  * Slack as a channel of the hive (TODO H9.1): a Slack app in Socket Mode — the hub opens a WebSocket to Slack,
  * so no public address and no request URL are needed — whose direct messages are clients like a phone. Each DM a
@@ -73,11 +75,12 @@ async function connect(attempt = 0) {
 
 async function start() {
   stop();
-  if (!enabled()) return status();
+  if (!enabled()) { retry.clear('slack'); return status(); }
   try { const a = await api.call('auth.test'); state.me = a.user_id; state.team = a.team; state.error = null; }
-  catch (e) { state.error = e.message; return status(); }
+  catch (e) { state.error = e.message; retry.later('slack', start); return status(); }
   state.stopped = false;
   state.running = true;
+  retry.clear('slack');
   bind.attachAll();
   await connect();
   return status();
