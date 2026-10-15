@@ -32,6 +32,7 @@ const ICONS = {
   gear:    '<circle cx="8" cy="8" r="2.2"/><path d="M8 1.8v2M8 12.2v2M1.8 8h2M12.2 8h2M3.6 3.6l1.4 1.4M11 11l1.4 1.4M3.6 12.4L5 11M11 5l1.4-1.4"/>',
   warn:    '<path d="M8 2l6.5 11h-13z"/><path d="M8 6.5v3M8 11.5v.5"/>',
   check:   '<path d="M3.5 8.5l3 3 6-7"/>',
+  lock:    '<rect x="3.5" y="7" width="9" height="6.5" rx="1"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>',
   info:    '<circle cx="8" cy="8" r="6"/><path d="M8 7.2v4M8 4.9v.4"/>',
   // The page groups (nav-groups.js), drawn in Points' phone bar in place of their glyphs
   overview:'<circle cx="8" cy="8" r="1.6"/><circle cx="8" cy="8" r="5.6" stroke-opacity=".4"/>',

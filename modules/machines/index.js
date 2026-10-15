@@ -107,7 +107,7 @@ async function picture({ shots = false } = {}) {
   });
   const { strays, emulators } = await outsideMachines({ shots, now });
   return { computers: [...computers, ...strays], served: pages.map(p => ({ ...p, shot: shooter.has(p.key), working: true })), vms, emulators,
-    vnc: vnc.map(t => ({ ...t, shot: vncShooter.has(t.id), why: vncShooter.error(t.id) })), browser: shooter.browser(), workingMs: WORKING_MS };
+    vnc: vnc.map(t => ({ ...t, shot: vncShooter.has(t.id), why: vncShooter.error(t.id), locked: require('./vm-all').lockedWhy(vncShooter.error(t.id)) })), browser: shooter.browser(), workingMs: WORKING_MS };
 }
 
 /**
@@ -155,6 +155,7 @@ function mount(app) {
     res.set({ 'Content-Type': 'image/png', 'Cache-Control': 'no-store' }).send(png);
   });
   require('./vm-console').mount(app);
+  require('./vm-all').mount(app);   // Live's "VMs" switch: every VM here, a lock with its readings where there is no picture
   require('../vnc-targets').mount(app);   // VNC targets: /api/machines/vnc*
   require('../nearby').mount(app);         // Nearby: what is around this hub, saved by place and room (/api/machines/nearby*)
   app.get('/api/machines/shots/:key', (req, res) => {   // an emulator's or an unrecorded computer's picture (cmd-shots.js)
