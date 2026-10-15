@@ -1,0 +1,15 @@
+{
+  "sessionId": "9d8c7b6a-0000-4111-8222-933344445555",
+  "projectHash": "PROJECT_HASH",
+  "startTime": "2026-10-15T12:00:00.000Z",
+  "lastUpdated": "2026-10-15T12:00:09.000Z",
+  "messages": [
+    { "id": "m1", "timestamp": "2026-10-15T12:00:00.000Z", "type": "user", "content": "CONVERSATION-TEXT rename the module" },
+    { "id": "m2", "timestamp": "2026-10-15T12:00:03.000Z", "type": "gemini", "content": "CONVERSATION-TEXT sure", "thoughts": [{ "subject": "x", "description": "PRIVATE-THOUGHT" }],
+      "toolCalls": [
+        { "id": "run_shell_command-1", "name": "run_shell_command", "args": { "command": "ls src", "directory": "/work/stadia" }, "result": [{ "functionResponse": { "response": { "output": "TOOL-OUTPUT" } } }], "status": "success", "timestamp": "2026-10-15T12:00:04.000Z" },
+        { "id": "replace-2", "name": "replace", "args": { "file_path": "/work/stadia/src/app.py", "old_string": "OLD-CODE", "new_string": "NEW-CODE" }, "status": "success", "timestamp": "2026-10-15T12:00:06.000Z" },
+        { "id": "glob-3", "name": "glob", "args": { "pattern": "**/*.py" }, "status": "success", "timestamp": "2026-10-15T12:00:07.000Z" }
+      ] }
+  ]
+}

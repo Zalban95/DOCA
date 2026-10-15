@@ -26,6 +26,7 @@ function afterListen({ certs = null, mode } = {}) {
   require('./machine-backup/schedule').start();       // and this machine's own files, daily and when the disk is back (off by default)
   require('./computers/lifecycle').start();           // agents' computers nobody kept, tidied away
   require('./relay').sync().catch(() => {});          // the model relay's own listener, when the owner switched it on for computers
+  require('./outside-agents/otel/life').sync().catch(() => {});   // and the receiver for other agents' OpenTelemetry, while one runs (outside-agents/)
   require('./agents/tidy').start();                   // and finished missions nobody needs any more, put away in the Archive
   require('./screens/archive').start();               // and browsers nobody opened for a week (devices.browserArchiveDays)
   require('./cast/running').restore().catch(() => {});   // TVs cast to before a restart: their door again, so their page carries on

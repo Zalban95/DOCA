@@ -113,7 +113,8 @@ async function fileChanged(change) {
 /** A page holds the Workstream open (or lets go). The sentinel runs while anyone holds it. */
 function hold(screen, on = true) {
   if (on) _holders.add(screen); else _holders.delete(screen);
-  if (_holders.size) { sentinel.start(fileChanged); require('./outside').start(); } else { sentinel.stop(); require('./outside').stop(); }
+  if (_holders.size) { sentinel.start(fileChanged); require('./outside').start(); require('../outside-agents').start().catch(() => {}); }
+  else { sentinel.stop(); require('./outside').stop(); require('../outside-agents').stop(); }
   if (_holders.size) require('../machines/busy').want();   // the machines are looked at while it is shown (busy.js)
   return { holding: _holders.has(screen), sentinel: sentinel.status() };
 }

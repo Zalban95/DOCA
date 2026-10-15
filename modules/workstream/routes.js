@@ -4,6 +4,7 @@
 function mount(app) {
   const ws = require('./index');
   ws.start();
+  require('../outside-agents/routes').mount(app);   // other agents on this machine, step by step (outside-agents/)
   app.get('/api/workstream', (_req, res) => res.json(ws.snapshot()));
   app.post('/api/workstream/hold', (req, res) => {
     const screen = String(req.body?.screen || '');

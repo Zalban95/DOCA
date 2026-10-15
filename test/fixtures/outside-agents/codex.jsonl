@@ -1,0 +1,11 @@
+{"timestamp":"2026-10-15T11:00:00.000Z","type":"session_meta","payload":{"id":"0199aaaa-bbbb-7ccc-8ddd-eeeeffff0000","timestamp":"2026-10-15T11:00:00.000Z","cwd":"/work/stadia","originator":"codex_cli_rs","cli_version":"0.50.0","instructions":"BASE-INSTRUCTIONS"}}
+{"timestamp":"2026-10-15T11:00:01.000Z","type":"response_item","payload":{"type":"message","role":"user","content":[{"type":"input_text","text":"CONVERSATION-TEXT add a health route"}]}}
+{"timestamp":"2026-10-15T11:00:02.000Z","type":"response_item","payload":{"type":"reasoning","summary":[{"type":"summary_text","text":"PRIVATE-THOUGHT"}],"encrypted_content":"xyz"}}
+{"timestamp":"2026-10-15T11:00:03.000Z","type":"response_item","payload":{"type":"function_call","name":"shell","arguments":"{\"command\":[\"bash\",\"-lc\",\"rg -n health src\"],\"workdir\":\"/work/stadia\"}","call_id":"call_1"}}
+{"timestamp":"2026-10-15T11:00:04.000Z","type":"response_item","payload":{"type":"function_call_output","call_id":"call_1","output":"TOOL-OUTPUT src/app.py:3"}}
+{"timestamp":"2026-10-15T11:00:05.000Z","type":"response_item","payload":{"type":"custom_tool_call","status":"completed","call_id":"call_2","name":"apply_patch","input":"*** Begin Patch\n*** Update File: src/app.py\n@@\n-OLD-CODE\n+NEW-CODE\n*** Add File: tests/test_health.py\n+FILE-CONTENT\n*** End Patch\n"}}
+{"timestamp":"2026-10-15T11:00:06.000Z","type":"turn_context","payload":{"cwd":"/work/stadia/api","approval_policy":"on-request","model":"gpt-x"}}
+{"timestamp":"2026-10-15T11:00:07.000Z","type":"response_item","payload":{"type":"function_call","name":"exec_command","arguments":"{\"cmd\":\"pytest -q --password=hunter2\"}","call_id":"call_3"}}
+{"timestamp":"2026-10-15T11:00:08.000Z","type":"response_item","payload":{"type":"local_shell_call","call_id":"call_4","status":"completed","action":{"type":"exec","command":["git","status","--short"]}}}
+{"timestamp":"2026-10-15T11:00:09.000Z","type":"response_item","payload":{"type":"function_call","name":"view_image","arguments":"{\"path\":\"/tmp/x.png\"}","call_id":"call_5"}}
+{"timestamp":"2026-10-15T11:00:10.000Z","type":"event_msg","payload":{"type":"agent_message","message":"CONVERSATION-TEXT done"}}

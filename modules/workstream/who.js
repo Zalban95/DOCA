@@ -5,10 +5,12 @@
  * known"). Mechanical, in this order:
  *   1. a DOCA agent: a tool call in the last RECENT_MS that named the file or its folder (write_file, an edit, a
  *      computer's files tool), or a shell command run in a conversation whose project holds the file
- *   2. outside DOCA, with the process that most likely wrote: one of this account's processes working in the file's
+ *   2. outside DOCA, by another agent's session whose own record (or OpenTelemetry) named the file in the last minute
+ *      (outside-agents/, when the owner switched it on): the agent's own word, so it comes before the guess below
+ *   3. outside DOCA, with the process that most likely wrote: one of this account's processes working in the file's
  *      repository (or watched folder) — an agent's session first, then an editor, then a build — named by its program
  *      and pid; Linux gives no "who wrote this" for a file, so it says "working here", never "wrote"
- *   3. outside DOCA, unknown
+ *   4. outside DOCA, unknown
  * No model is asked anything; nothing is guessed beyond what the process table and the agents' own calls say.
  */
 const path = require('path');
@@ -88,6 +90,11 @@ async function of(file, root) {
     return recent ? { by: 'doca', text: `${P()} agent · ${title(recent)} · kept as an attachment`, sessionId: recent }
       : { by: 'doca', text: `${P()} · kept as an attachment` };
   }
+  // Another agent's own record or OpenTelemetry named this file in the last minute (outside-agents/): that session.
+  const oa = require('../outside-agents');
+  await oa.fresh().catch(() => {});
+  const step = oa.editedBy(file);
+  if (step) return { by: 'outside', text: `outside ${P()} · ${step.text}`, agent: step };
   // A process that just started (a session opened a moment ago) is not in a reading seconds old: read again once.
   const proc = await processOf(file, root).catch(() => null) || await processOf(file, root, { fresh: true }).catch(() => null);
   if (proc) return { by: 'outside', text: `outside ${P()} · ${proc.program} (pid ${proc.pid}) works here`, process: proc };
