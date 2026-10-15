@@ -12,6 +12,7 @@ async function workstreamTab(shown) {
   if (shown) {
     if (!document.getElementById('ws-stage')) _wsFrame();
     if (!WS.off && typeof liveOn === 'function') WS.off = liveOn('workstream', _wsChange);
+    if (typeof workstreamAgentsLoad === 'function') workstreamAgentsLoad();   // the bar's "Other agents" switch (workstream-agents.js)
     await _wsHold(true);
     if (!WS.loaded) {
       WS.loaded = true;
@@ -54,7 +55,7 @@ function _wsFrame() {
   const page = document.getElementById('tab-workstream');
   page.innerHTML = `<div class="ws-bar"><span class="ws-title">Workstream</span><span class="ws-status" id="ws-status"></span>
       <button class="btn btn-xs" id="ws-follow" onclick="workstreamFollow()" title="Follow the work: the file being edited comes to the front">⟳ following</button>
-      <button class="btn btn-xs" onclick="soloOpen('workstream')" title="In a window of its own">⧉</button>${typeof processesButtonHtml === 'function' ? processesButtonHtml() : ''}</div>
+      <button class="btn btn-xs" onclick="soloOpen('workstream')" title="In a window of its own">⧉</button>${typeof processesButtonHtml === 'function' ? processesButtonHtml() : ''}${typeof workstreamAgentsButtonHtml === 'function' ? workstreamAgentsButtonHtml() : ''}</div>
     <div class="ws-folders" id="ws-folders" hidden></div>
     <div class="ws-chips" id="ws-chips"></div>
     <div class="ws-stage" id="ws-stage">${emptyStateHtml({ title: 'Nothing edited yet', text: 'When a file changes in a project, the workspace or a folder you watch — whoever edits it: an agent here, an agent outside, you in an editor — it appears here as it changes.' })}</div>

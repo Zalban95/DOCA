@@ -52,6 +52,7 @@ function _subtabSystemInit() {
   sysdepsLoad();
   checkpointsRender();   // settings checkpoints (settings/checkpoints.js)
   logKeepCard();         // what is kept of what happened, and its bounds (settings/log-keep.js)
+  if (typeof outsideAgentsCard === 'function') outsideAgentsCard();   // other agents on this machine, in the Workstream (workstream-agents.js)
   featuresRender();      // every feature, and the kept alternatives' use (settings/features.js)
   licenceCard().catch(() => {}).then(() => licencePoolCard());   // the licence (settings/licence.js) — drawn first in System — then the one for test computers
 }
