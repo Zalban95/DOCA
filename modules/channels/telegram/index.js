@@ -1,5 +1,7 @@
 'use strict';
 
+const retry = require('../retry');   // a start that could not reach the service tries again by itself
+
 /**
  * Telegram as a channel of the hive (TODO H14, H9.1; OpenDots parity): a bot this hub polls — no public
  * address needed, which a hub on a tailnet does not have — whose linked private chats are clients like a
@@ -60,12 +62,13 @@ async function poll(signal) {
 
 async function start() {
   stop();
-  if (!enabled()) return status();
+  if (!enabled()) { retry.clear('telegram'); return status(); }
   const ctrl = new AbortController();
   state.ctrl = ctrl;
   try { state.bot = await api.call('getMe'); state.error = null; }
-  catch (e) { state.error = e.message; state.ctrl = null; return status(); }
+  catch (e) { state.error = e.message; state.ctrl = null; retry.later('telegram', start); return status(); }
   state.running = true;
+  retry.clear('telegram');
   bind.attachAll();
   poll(ctrl.signal).finally(() => { if (state.ctrl === ctrl) state.running = false; });
   return status();

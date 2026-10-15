@@ -12,6 +12,7 @@
    second time. Switching one on that needs another first (an experiment needs developer mode) asks that one too. */
 
 let _switchAsked = null;   // {message, at}: the question just asked, so its error is not alerted after
+const _switchAskOpen = new Map();   // the question on screen, by what it is about: asked once however many calls meet it
 
 /** Ask about `err.needs`; resolves true once the switch is on, false when declined or opened elsewhere. */
 function switchAskWait(err) {
@@ -23,6 +24,26 @@ function switchAskWait(err) {
     castRemoteNote(`${n.what} ${n.route === null ? 'is not set up' : 'is off'} here, so part of this page cannot show on this screen.`);
     return Promise.resolve(false);
   }
+  // Flow warming pages in the background (flow/warm.js): what they meet is not asked — the page asks when opened.
+  if (typeof _flowWarming !== 'undefined' && _flowWarming) return Promise.resolve(false);
+  // The same question already on screen — several requests of one page, or of several, meeting one switch — is
+  // answered once (2026-10-15: a phone on the Wi-Fi had to close the same message again and again).
+  const key = n.setting || n.what;
+  if (_switchAskOpen.has(key)) return _switchAskOpen.get(key);
+  const asked = _switchAskDraw(err, n);
+  _switchAskOpen.set(key, asked);
+  asked.finally(() => _switchAskOpen.delete(key));
+  return asked;
+}
+
+/** This device is on the local network, where the machine is not managed: said plainly, with the way that works. */
+function _switchAskLan(back) {
+  back.querySelector('.app-confirm-box').innerHTML = `<p class="app-confirm-msg"><b class="switch-ask-title">This device is on the local network.</b>
+      <br><span class="desc">From here you read and chat. The machine itself — its settings, terminal and files — is managed over Tailscale or at the machine: open the panel over Tailscale on this device to manage it from here.</span></p>
+    <div class="app-confirm-actions"><button type="button" class="btn btn-sm" data-act="no">OK</button></div>`;
+}
+
+function _switchAskDraw(err, n) {
   return new Promise(resolve => {
     const back = Object.assign(document.createElement('div'), { className: 'app-confirm-backdrop open switch-ask' });
     back.innerHTML = `<div class="app-confirm-box" role="dialog" aria-modal="true">
@@ -46,8 +67,9 @@ function switchAskWait(err) {
       try { await apiFetch(n.route, { method: 'POST', body: n.body || { on: true } }); done(true); }
       catch (x) { back.style.visibility = ''; if (x?.asked) return done(false); btn.disabled = false; st.textContent = `✗ ${x.message}`; }
     });
+    if (n.setting === 'network.lanAdmin' && !n.mayChange) _switchAskLan(back);
     document.body.append(back);
-    back.querySelector('[data-act="on"]')?.focus();
+    (back.querySelector('[data-act="on"]') || back.querySelector('[data-act="no"]'))?.focus();
   });
 }
 

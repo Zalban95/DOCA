@@ -30,6 +30,7 @@ const FLOW_WARM = {
 
 const FLOW_WARM_CAP = { pages: 12, eachMs: 4000, allMs: 15000 };
 
+let _flowWarming = false;   // true while pages are warmed: a refusal they meet is not asked (lib/switch-ask.js)
 let _flowWarm = null;   // {order, done, started} while warming, then kept for the opening screen and the tests
 
 /** The pages to warm, in order: the open group's first, then the others' as the person's groups go. */
@@ -50,6 +51,8 @@ async function flowWarm(onStep = () => {}) {
   const order = flowWarmOrder(), started = performance.now();
   _flowWarm = { order, done: [], started, finished: false };
   _flowWarm.promise = (async () => {
+    _flowWarming = true;
+    try {
     for (const page of order) {
       if (performance.now() - started > FLOW_WARM_CAP.allMs) break;
       await _flowIdle();
@@ -61,6 +64,7 @@ async function flowWarm(onStep = () => {}) {
       _flowWarm.done.push(page);
       onStep(_flowWarm.done, order);
     }
+    } finally { _flowWarming = false; }
     _flowWarm.finished = true;
     _flowWarm.ms = Math.round(performance.now() - started);
     return _flowWarm;
