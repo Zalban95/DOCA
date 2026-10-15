@@ -1,0 +1,19 @@
+/* Live's "VMs" switch (js/machines-live-vms.js): a VM or VNC screen with no picture is a black tile with a lock and its
+   readings; a stopped one is dimmed with Start. White on black in every theme, like the screens beside it. */
+.mlv-panel-box { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #000; color: #e8e8e8; overflow: hidden; }
+.mlv-panel { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 12px; max-width: 100%; text-align: center; font-size: 12px; }
+.mlv-lock { color: #e8e8e8; opacity: .85; line-height: 0; }
+.mlv-state { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: #9a9a9a; }
+.mlv-why { color: #9a9a9a; font-size: 11px; max-width: 34ch; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.mlv-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 2px 10px; margin: 2px 0 0; text-align: left; font-family: var(--font-mono); font-size: 11px; }
+.mlv-facts dt { color: #8a8a8a; }
+.mlv-facts dd { margin: 0; color: #f2f2f2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mlv-reads { color: #8a8a8a; font-size: 10px; max-width: 36ch; }
+.mlv-start { margin-top: 2px; }
+.ml-tile.mlv-off .mlv-facts, .ml-tile.mlv-off .mlv-state { opacity: .7; }
+.ml-tile.mlv-off .ml-cap { opacity: .75; }
+/* The back row's small tiles: the readings only, no explanation. */
+.ml-back .mlv-panel { gap: 3px; padding: 6px; font-size: 10px; }
+.ml-back .mlv-why, .ml-back .mlv-reads { display: none; }
+.ml-back .mlv-facts { font-size: 10px; gap: 1px 6px; }
+.ml-back .ml-tile.mlv-off { opacity: .45; }

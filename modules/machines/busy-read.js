@@ -34,18 +34,36 @@ async function containers() {
   return out;
 }
 
-/** `virsh domstats` printed as blocks of `Domain: 'name'` and `  key=value`. */
+/**
+ * `virsh domstats` printed as blocks of `Domain: 'name'` and `  key=value`: CPU time and memory in use (busy.js), and —
+ * when asked for (`--vcpu --block`, vm-facts.js) — what it is given: memory, processors, its disks (an ISO left out).
+ */
 function parseDomstats(text) {
   const out = new Map();
-  let cur = null;
+  let cur = null, mem = null;
   for (const line of String(text).split('\n')) {
     const d = /^Domain:\s*'(.+)'/.exec(line);
-    if (d) { cur = { cpuTime: null, rssKiB: null }; out.set(d[1], cur); continue; }
-    const kv = /^\s+([\w.]+)=(\S+)/.exec(line);
+    if (d) { cur = { cpuTime: null, rssKiB: null }; mem = null; out.set(d[1], cur); continue; }
+    const kv = /^\s+([\w.]+)=(.+)$/.exec(line);
     if (!cur || !kv) continue;
-    if (kv[1] === 'cpu.time') cur.cpuTime = Number(kv[2]);
-    if (kv[1] === 'balloon.rss') cur.rssKiB = Number(kv[2]);
-    else if (kv[1] === 'balloon.current' && cur.rssKiB === null) cur.rssKiB = Number(kv[2]);
+    const [, k, v] = kv, n = Number(v);
+    if (k === 'cpu.time') cur.cpuTime = n;
+    else if (k === 'balloon.rss') cur.rssKiB = n;
+    else if (k === 'balloon.current') { mem = n; if (cur.rssKiB === null) cur.rssKiB = n; }
+    else if (k === 'balloon.maximum') cur.maxKiB = n;
+    else if (k === 'vcpu.current') cur.vcpus = n;
+    else {
+      const b = /^block\.(\d+)\.(path|allocation|capacity)$/.exec(k);
+      if (!b) continue;
+      const disk = ((cur._disks = cur._disks || [])[b[1]] = cur._disks[b[1]] || {});
+      if (b[2] === 'path') disk.path = v; else disk[b[2] === 'allocation' ? 'used' : 'size'] = n;
+    }
+    if (mem != null && cur.maxKiB == null) cur.maxKiB = mem;
+  }
+  for (const cur of out.values()) {
+    if (!cur._disks) continue;
+    cur.disks = cur._disks.filter(x => x && !/\.iso$/i.test(x.path || '')).map(x => ({ used: x.used ?? null, size: x.size ?? null }));
+    delete cur._disks;
   }
   return out;
 }
@@ -84,4 +102,12 @@ function maskCommand(args = []) {
     .replace(/(\b(?:token|key|secret|password|passwd)\s*[=:]\s*)[^\s'"]+/ig, `$1${MASK}`)));
 }
 
-module.exports = { containers, vms, processes, parseDomstats, maskCommand, pct };
+/** name → what each libvirt machine is given (memory, processors, disks), every one, running or not (vm-facts.js). */
+async function vmsGiven() {
+  try {
+    const flags = require('../vms').virshFlags?.() || [];
+    return parseDomstats(await exec('virsh', [...flags, 'domstats', '--balloon', '--vcpu', '--block'], { LC_ALL: 'C', LANG: 'C' }));
+  } catch { return new Map(); }
+}
+
+module.exports = { containers, vms, vmsGiven, processes, parseDomstats, maskCommand, pct };

@@ -25,7 +25,15 @@ function parseHyperV(json) {
   if (!String(json || '').trim()) return [];
   return [].concat(JSON.parse(json)).filter(Boolean).map(v => {
     const raw = typeof v.State === 'number' ? (HYPERV_STATES[v.State] || String(v.State)) : String(v.State || '');
-    return { name: v.Name, id: v.Id?.Guid || v.Id || null, hypervisor: 'hyperv', stateRaw: raw, display: null };
+    const vm = { name: v.Name, id: v.Id?.Guid || v.Id || null, hypervisor: 'hyperv', stateRaw: raw, display: null };
+    // What Get-VM also says (Machines → Live's every-VM view, machines/vm-facts.js): its CPU now, memory, processors, uptime.
+    if (v.CPUUsage !== undefined || v.MemoryAssigned !== undefined) {
+      const secs = Number(v.Uptime?.TotalSeconds ?? 0);
+      Object.assign(vm, { given: { vcpus: v.ProcessorCount ?? null, maxKiB: v.MemoryStartup ? Math.round(v.MemoryStartup / 1024) : null },
+        live: { cpu: v.CPUUsage ?? null, memUsedKiB: v.MemoryAssigned ? Math.round(v.MemoryAssigned / 1024) : null },
+        startedAt: secs > 0 ? Date.now() - secs * 1000 : null });
+    }
+    return vm;
   });
 }
 const HYPERV_ACTIONS = {
@@ -57,7 +65,7 @@ function hypervisors(normalizeState) {
   return {
     hyperv: { label: 'Hyper-V', bin: 'powershell (Hyper-V)', actions: HYPERV_ACTIONS, os: ['win32'],
       present: async () => process.platform === 'win32' && (await ps('if (Get-Command Get-VM -ErrorAction SilentlyContinue) { "yes" }').catch(() => '')).trim() === 'yes',
-      list: async () => tag(parseHyperV(await ps('Get-VM | Select-Object Name,State,Id | ConvertTo-Json -Compress'))),
+      list: async () => tag(parseHyperV(await ps('Get-VM | Select-Object Name,State,Id,CPUUsage,MemoryAssigned,MemoryStartup,ProcessorCount,Uptime | ConvertTo-Json -Compress'))),
       act: (action, name) => ps(HYPERV_ACTIONS[action], { DOCA_VM: name }) },
     utm: { label: 'UTM', bin: 'utmctl', actions: UTM_ACTIONS, os: ['darwin'],
       present: async () => process.platform === 'darwin' && which('utmctl'),

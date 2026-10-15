@@ -37,6 +37,8 @@ async function read() {
   for (const hv of hypervisors) for (const vm of hv.vms || []) {
     vms.push({ ...vm, hypervisor: hv.id, label: hv.label, os: vm.os || (hv.id === 'libvirt' ? await libvirtOs(vm.name) : null) });
   }
+  // What each is given and since when it runs (vm-facts.js) — one more virsh call per read, for Live's every-VM view.
+  try { await require('./vm-facts').addLibvirt(vms); } catch { /* the list stands without them */ }
   return { at: Date.now(), vms, hypervisors: hypervisors.map(({ id, label, available, error }) => ({ id, label, available, error })) };
 }
 

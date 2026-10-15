@@ -27,9 +27,13 @@ function liveMachinesTab(shown) {
 async function _mlLoad() {
   const page = document.getElementById('tab-live');
   if (!page) return;
-  try { ML.data = await apiFetch('/api/machines?shots=1'); } catch (e) { page.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
+  // With Live's "VMs" switch on, every VM too (machines-live-vms.js), read beside it.
+  try { [ML.data] = await Promise.all([apiFetch('/api/machines?shots=1'), typeof liveVmsLoad === 'function' ? liveVmsLoad() : null]); } catch (e) { page.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   _mlDraw(page);
 }
+
+/** Draw again from what was read (a tile changed its own state: Starting…). */
+function _mlRedraw() { const page = document.getElementById('tab-live'); if (page && ML.data) _mlDraw(page); }
 
 const _mlAgo = ms => (ms < 60000 ? `${Math.round(ms / 1000)} s ago` : `${Math.round(ms / 60000)} min ago`);
 
@@ -45,11 +49,13 @@ function _mlTiles() {
     line: `$ ${s.command.slice(0, 90)}`, who: s.who || '', img: s.shot ? `/api/machines/served/${encodeURIComponent(s.key)}/shot` : null,
     empty: d.browser.found ? 'Taking its picture…' : d.browser.why, tail: s.tail,
     open: () => _mlOpenServed(s.key) });
-  for (const v of d.vms || []) tiles.push({ id: `v:${v.key}`, working: !!v.busy?.busy, busy: v.busy?.busy, kind: '▣', title: v.name, point: 'up',
+  const allVms = typeof liveVmsAllOn === 'function' && liveVmsAllOn() && MLV.data;
+  if (allVms) tiles.push(...liveVmsTiles(d));   // every VM, a lock where there is no picture, a stopped one with Start
+  else for (const v of d.vms || []) tiles.push({ id: `v:${v.key}`, working: !!v.busy?.busy, busy: v.busy?.busy, kind: '▣', title: v.name, point: 'up',
     line: v.busy?.busy ? `busy: ${v.busy.text}` : [v.label, v.os].filter(Boolean).join(' · '), who: v.console.how === 'hub' ? 'VNC' : '',
     img: v.shot ? `/api/machines/vms/${encodeURIComponent(v.hypervisor)}/${encodeURIComponent(v.name)}/shot` : null,
     empty: v.why || 'Taking its picture…', open: () => vmConsoleOpen(v.hypervisor, v.name), by: v.origin });
-  for (const n of d.vnc || []) tiles.push({ id: `n:${n.id}`, working: n.state === 'connected', kind: '◫', title: n.name, point: 'up',
+  for (const n of d.vnc || []) tiles.push(allVms && n.locked ? _mlvVncTile(n) : { id: `n:${n.id}`, working: n.state === 'connected', kind: '◫', title: n.name, point: 'up',
     line: [`${n.host}:${n.port}`, n.same && `${n.same.kind === 'vm' ? 'VM' : 'computer'} ${n.same.name}`].filter(Boolean).join(' · '),
     who: n.state === 'connected' ? (n.driving ? 'someone is driving it' : 'someone is watching it') : 'VNC',
     img: n.shot ? `/api/machines/vnc/${encodeURIComponent(n.id)}/shot` : null, empty: n.why || 'Taking its picture…', open: () => vncConsoleOpen(n.id) });
@@ -104,7 +110,7 @@ async function _mlOpenServed(key) {
 function _mlDraw(page) {
   const tiles = _mlTiles(), front = tiles.filter(t => t.working), back = tiles.filter(t => !t.working);
   if (!page.querySelector('.ml-front')) {
-    const toggle = `<label class="ml-vms-front"><input type="checkbox" class="switch"${ML.vmsFront ? ' checked' : ''} onchange="liveVmsFront(this.checked)"> VMs and VNC in front${infoBtn('On: running virtual machines and VNC screens stay large, beside what the agents are working on. Off (the default): they sit behind the agents\' work unless you pick one. Kept for this browser only.')}</label>${typeof processesButtonHtml === 'function' ? processesButtonHtml() : ''}`;
+    const toggle = `<label class="ml-vms-front"><input type="checkbox" class="switch"${ML.vmsFront ? ' checked' : ''} onchange="liveVmsFront(this.checked)"> VMs and VNC in front${infoBtn('On: running virtual machines and VNC screens stay large, beside what the agents are working on. Off (the default): they sit behind the agents\' work unless you pick one. Kept for this browser only.')}</label>${typeof liveVmsAllHtml === 'function' ? liveVmsAllHtml() : ''}${typeof processesButtonHtml === 'function' ? processesButtonHtml() : ''}`;
     page.innerHTML = `<div class="ml-head">${pageHeadHtml({ title: 'Live', sub: 'The agents\' computers, the pages they serve for tests, the running VMs, the Android emulators and the VNC screens — whatever is working, or being watched, comes to the front.', actions: toggle })}</div>
       <div class="ml-front"></div><div class="ml-back"></div>`;
   }
@@ -117,6 +123,12 @@ function _mlDraw(page) {
       el.classList.toggle('big', big);
       el.classList.toggle('working', !!t.working);
       el.classList.toggle('busy', !!t.busy);   // busy whoever made it so (machines/busy.js)
+      for (const c of ['mlv-locked', 'mlv-off']) el.classList.toggle(c, t.cls === c);   // Live's "VMs" switch (machines-live-vms.js)
+      let panel = el.querySelector('.mlv-panel-box');
+      if (t.panel) {
+        if (!panel) { panel = Object.assign(document.createElement('div'), { className: 'mlv-panel-box' }); el.querySelector('.ml-shot').append(panel); }
+        if (panel.dataset.html !== t.panel) { panel.innerHTML = t.panel; panel.dataset.html = t.panel; t.bind?.(el); }
+      } else panel?.remove();
       el.onclick = t.open;   // a function: an onclick attribute would read jsArg's HTML escaping literally
       el.classList.toggle('focused', t.id === ML.focus);
       el.querySelector('.ml-cap').innerHTML = `<b>${t.point ? `<span class="m-pt ${t.point}"></span>` : ''}${t.kind} ${escHtml(t.title)}</b>${t.who ? `<span class="ml-who">${escHtml(t.who)}</span>` : ''}<div class="ml-line">${escHtml(t.line)}</div>${t.by ? machineOriginHtml(null, null, t.by) : ''}`;   // who started it (lib/machine-origin.js)
