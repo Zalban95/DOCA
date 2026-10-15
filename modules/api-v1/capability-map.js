@@ -105,7 +105,7 @@ const PERSON = [
     panel: ['POST /api/cast/things/:id/show', 'POST /api/cast/things/:id/say', 'POST /api/cast/things/:id/stop', 'POST /api/cast/things/:id/volume', 'POST /api/cast/things/:id/remote', 'POST /api/cast/things/:id/play'],
     gap: 25, why: 'the Cast sheet is the panel page\'s in a phone\'s web view today; /api/v1/cast/* waits for its scope (docs/design/cast-reach.md §5.5)' },
   { id: 'service-pages', does: 'set up a connected service\'s page (its address, key name, group, who sees it) and open it',
-    panel: ['POST /api/service-pages', 'DELETE /api/service-pages/:id', 'POST /api/service-pages/:id/open'],
+    panel: ['POST /api/service-pages', 'DELETE /api/service-pages/:id', 'POST /api/service-pages/:id/open', 'POST /api/service-pages/:id/boot', 'POST /api/service-pages/:id/start', 'POST /api/service-pages/:id/stop'],
     only: 'a page in the panel showing another service\'s own web interface: a screen\'s, through the canvas origin; a device reaches that service by its own API' },
   { id: 'cast-door', does: 'switch the cast door on or off', panel: ['POST /api/cast/door'], only: 'how this hub opens to devices on its network: the owner\'s, with the password' },
   { id: 'cast-open', does: 'open a view link on a screen that cannot sign in', panel: ['GET /api/cast/open/:code'],

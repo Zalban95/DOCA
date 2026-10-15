@@ -30,7 +30,7 @@ function mount(app) {
     const token = require('./tokens').make(s.id, p);
     return { url: `${canvasOrigin(req)}/s/${s.id}/?doca_t=${token}`, name: s.name };
   }));
-  app.get('/api/service-pages/all', h(() => ({ services: services.all().map(s => ({ ...s, health: s.health, state: health.of(s.id) })), groups: services.GROUPS })));
+  app.get('/api/service-pages/all', h(() => ({ services: services.all().map(s => ({ ...s, health: s.health, state: health.of(s.id), pid: require('./run').running(s.id) })), groups: services.GROUPS })));
   app.post('/api/service-pages', h(async req => {
     const s = services.save(req.body || {});
     const state = await health.check(s);
@@ -39,6 +39,13 @@ function mount(app) {
     try { require('../live').changed('screen', null, 'services', { id: s.id, up: state.up }); } catch { /* bookkeeping */ }
     return { service: s, state };
   }));
+  // Starting its program here, and with DOCA (run.js): a host's, like starting an MCP server.
+  const svc = req => { const s = services.get(req.params.id); if (!s) throw Object.assign(new Error('No such service.'), { status: 404 }); return s; };
+  const after = async s => { await new Promise(r => setTimeout(r, 1500)); return { state: await health.check(s), pid: require('./run').running(s.id) }; };
+  app.post('/api/service-pages/:id/boot', h(req => ({ service: services.patch(req.params.id, { boot: req.body?.on === true }) })));
+  app.post('/api/service-pages/:id/start', h(async req => { const s = svc(req); const r = require('./run').start(s); return { ...r, ...(await after(s)) }; }));
+  app.post('/api/service-pages/:id/stop', h(async req => { const s = svc(req); const r = require('./run').stop(s); return { ...r, ...(await after(s)) }; }));
+  app.get('/api/service-pages/:id/log', h(req => ({ log: require('./run').tail(svc(req).id) })));
   app.delete('/api/service-pages/:id', h(req => {
     const r = services.remove(req.params.id);
     health._state.delete(req.params.id);

@@ -15,6 +15,12 @@ const store = require('../store');
 
 const DOC = 'service-pages';
 const GROUPS = ['controls', 'agents', 'machines', 'host', 'intelligence'];
+/** One setting of a service changed, the rest kept (the Start with DOCA switch). */
+function patch(id, fields) {
+  const was = all().find(s => s.id === id);
+  if (!was) throw Object.assign(new Error('No such service.'), { status: 404 });
+  return save({ ...was, ...fields });
+}
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
 const text = (v, max = 80) => String(v ?? '').replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, max);
 
@@ -36,7 +42,11 @@ function save(input = {}) {
     group: GROUPS.includes(input.group) ? input.group : 'intelligence',
     who: input.who === 'everyone' ? 'everyone' : 'admins',
     icon: text(input.icon || '', 4),
+    // How its program starts, and whether DOCA starts it at boot (run.js): an admin's, like an MCP server's command.
+    run: input.run !== undefined ? require('./run').checkRun(input.run) : (get(id)?.run || null),
+    boot: input.boot !== undefined ? input.boot === true : !!get(id)?.boot,
   };
+  if (s.boot && !s.run) throw bad('Starting it with DOCA needs how it starts: its command.');
   store.writeJson(DOC, { services: [...all().filter(x => x.id !== id), s] });
   return s;
 }
@@ -51,4 +61,4 @@ const isHost = person => require('../auth/rights').can(person?.role, 'host');
 /** Whether this person sees the service's page. */
 const sees = (s, person) => isHost(person) || s.who === 'everyone';
 
-module.exports = { DOC, GROUPS, all, get, save, remove, sees, isHost };
+module.exports = { DOC, GROUPS, all, get, save, patch, remove, sees, isHost };
