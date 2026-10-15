@@ -89,5 +89,6 @@ test('started here and with DOCA: by its command and settings file, stopped by i
   require('../modules/service-pages/run').stop(require('../modules/service-pages').get('runner'));
   assert.equal((await H.api(null, 'POST', '/api/service-pages', { name: 'No way', url: 'http://127.0.0.1:1', boot: true })).status, 400, 'Start with DOCA needs a command');
   await H.api(null, 'DELETE', '/api/service-pages/runner');
-  fs.rmSync(dir, { recursive: true, force: true });
+  // Windows holds a killed process's working folder for a moment (EBUSY): wait it out, never fail on the clean-up.
+  try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }); } catch { /* the temp folder goes later */ }
 });
