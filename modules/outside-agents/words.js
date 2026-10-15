@@ -20,11 +20,12 @@ function mask(command) {
   return maskCommand(parts).join(' ').replace(/(\b[a-z][\w+.-]*:\/\/)[^\s/@:]+:[^\s/@]+@/gi, `$1${MASK}@`);   // a password in an address
 }
 
-/** A path as the line says it: relative to where the agent works when it is inside, else whole. */
+/** A path as the line says it: relative to where the agent works when it is inside, else whole — in the path's own style. */
 function rel(file, cwd) {
-  if (!cwd || !path.isAbsolute(file)) return file;
-  const r = path.relative(cwd, file);
-  return r && !r.startsWith('..') && !path.isAbsolute(r) ? r : file;
+  const P = /^[A-Za-z]:[\\/]|\\/.test(`${cwd || ''}${file}`) ? path.win32 : path.posix;
+  if (!cwd || !P.isAbsolute(file)) return file;
+  const r = P.relative(cwd, file);
+  return r && !r.startsWith('..') && !P.isAbsolute(r) ? r : file;
 }
 
 /** What a step did, in a few words. */

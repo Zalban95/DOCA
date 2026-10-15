@@ -173,7 +173,7 @@ test('on: records tailed while the Workstream is held, said as lines, and an edi
   await oa.look();
   assert.equal(ws.snapshot().activity.filter(a => a.agent).length, 0, 'what was there before is not replayed');
   // A session begun since, and the old one going on.
-  const sess = fix('claude.jsonl').replace(/\/work\/stadia/g, HOME);
+  const sess = fix('claude.jsonl').replace(/\/work\/stadia/g, JSON.stringify(HOME).slice(1, -1));   // escaped: a Windows path in JSON
   fs.writeFileSync(path.join(proj, 'new-session.jsonl'), sess);
   fs.appendFileSync(old, sess.split('\n').filter(l => l.includes('toolu_02')).join('\n') + '\n');
   await oa.look();
@@ -207,8 +207,9 @@ test('the receiver: loopback only, open while an agent runs, closed a minute aft
   assert.deepEqual(st.listening, { address: '127.0.0.1', port });
   const r = await post(port, '/v1/logs', fix('otlp-logs.json'));
   assert.equal(r.status, 200);
-  await H.sleep(50);
-  const lines = require('../modules/workstream').snapshot().activity.filter(a => a.agent?.via === 'otel');
+  const otelLines = () => require('../modules/workstream').snapshot().activity.filter(a => a.agent?.via === 'otel');
+  for (let i = 0; i < 100 && otelLines().length < 4; i++) await H.sleep(100);   // said after the answer: naming the folder can take a while
+  const lines = otelLines();
   assert.ok(lines.some(l => l.who === 'Claude Code · stadia' && /npm test/.test(l.text)), 'its folder from the running process');
   assert.ok(lines.some(l => /asked claude-x/.test(l.text)));
   assert.equal((await post(port, '/v1/logs', 'x', { 'Content-Type': 'application/x-protobuf' })).status, 415);
