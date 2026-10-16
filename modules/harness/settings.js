@@ -301,6 +301,20 @@ function propose({ changes, reason, sessionId, screen = null, person = null } = 
 }
 
 /**
+ * A proposal of another kind, in the same tray and card (`kind: 'people-models'`, harness/toolbox/people-models.js):
+ * `changes` are already checked by its module and carry {path, from, to, section}; `apply` hands it back to that module
+ * with the person who accepted. Nothing is written here but the proposal.
+ */
+function proposeOther({ kind, changes, reason, sessionId, by = null, detail = {} } = {}) {
+  const doc = load();
+  const proposal = { id: `p_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`, createdAt: new Date().toISOString(), kind,
+    reason: String(reason || '').trim().slice(0, 600), sessionId: sessionId || null, by, changes, ...detail, status: 'pending' };
+  doc.proposals.push(proposal);
+  save(doc);
+  return proposal;
+}
+
+/**
  * Accept one. The keys are re-checked against the allowlist even though they
  * passed it when proposed: this is a request coming from a browser, and the
  * only thing standing between it and the prefs file is this function.
@@ -311,7 +325,9 @@ function apply(id, { person = null } = {}) {
   if (!p)                       throw Object.assign(new Error('Unknown proposal'), { status: 404 });
   if (p.status !== 'pending')   throw Object.assign(new Error(`Already ${p.status}`), { status: 409 });
 
-  if (p.screen) {
+  if (p.kind === 'people-models') {
+    require('../people-models/propose').apply(p, person);   // as the person who accepted: their own right to assign
+  } else if (p.screen) {
     const sp = require('./screen-proposals'), on = sp.target(p.screen.id, person);
     for (const c of p.changes) { const why = refuse(c.path, c.to, { screen: on }); if (why) throw Object.assign(new Error(why), { status: 400 }); }
     sp.apply(p, person);
@@ -371,6 +387,6 @@ function block() {
 module.exports = {
   SETTABLE, FORBIDDEN,
   readable, refuse,
-  propose, apply, reject, list, find, block,
+  propose, proposeOther, apply, reject, list, find, block,
   get, set,
 };

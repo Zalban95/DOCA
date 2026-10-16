@@ -187,6 +187,10 @@ const PERSON = [
     gap: 17, ask: true, why: 'an exception given from a phone; delegating is S11\'s, so the owner decides first' },
   { id: 'people', does: 'add people, set their levels, sign them out', panel: ['POST /api/auth/users', 'PATCH /api/auth/users/:id', 'POST /api/auth/users/:id/password', 'DELETE /api/auth/users/:id/sessions',
     'POST /api/auth/levels', 'PATCH /api/auth/levels/:id', 'DELETE /api/auth/levels/:id'], only: 'who may do what here: an admin\'s, at the panel with a recent sign-in' },
+  { id: 'people-models', does: 'assign a model to the people below me', panel: ['GET /api/people-models', 'POST /api/people-models/assign'],
+    only: 'what people\'s agents run on and spend: an admin\'s, at the panel with the password' },
+  { id: 'oversight', does: 'follow other people\'s work, and say I read it', panel: ['GET /api/oversight', 'POST /api/oversight/seen', 'POST /api/oversight/switch'],
+    only: 'a host\'s view of others\' conversations; a person\'s devices hear only their own work (3.101.0)' },
 ];
 
 const CAPABILITIES = [...PERSON, ...HOST];

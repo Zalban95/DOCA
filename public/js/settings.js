@@ -35,6 +35,7 @@ async function _subtabGeneralInit() {
     screenSettingsNote();   // these are this screen's own (lib/screen.js)
     if (typeof yourPanelCard === 'function') yourPanelCard();   // the panel's layout as the person's data (settings/your-panel.js)
     if (typeof chatNotifyCard === 'function') chatNotifyCard();   // which hive-chat messages reach my devices (settings/chat-notify.js)
+    if (typeof oversightCard === 'function') oversightCard();   // other people's work in the header, for a host (oversight.js)
     _statsSettingsRender(prefs);
   } catch (e) {
     const el = document.getElementById('settings-tabs-list');

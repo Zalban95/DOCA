@@ -94,6 +94,48 @@ The harness gives its agent eight rules for working on any repository (charter r
   `peopleModels`). Settings → Users → Models for people (`settings/people-models.js`, assignments under Advanced, drawn
   only while assigning); a device reads its person's model read-only as `model` on `GET /api/v1/settings/effective`.
   `test/people-models.test.js`.
+- **Admins assign models to the people below them** (`people-models/assign.js`, `routes.js`; the owner's decision of
+  2026-10-16): an admin — a level holding `users`, or a team leader whose `delegates` names nothing, `*`, `model` or a
+  `use:model:` pattern — always chooses their own model (`mayChoose`), and assigns to people and levels **strictly
+  below** their own (`levels.within` one way and not the other: never an equal, a higher level, the owner or themselves),
+  never beyond what `allot.allowsModel` gives that person or level (nor, for a leader without host, beyond what the
+  leader holds and may give). An admin's assignment is a slot of its own (store `people-models-assigned`, with `by` and
+  `at`); the owner's stay the policy in prefs and, through the same route, record who set them. **The first rule that
+  is set decides** (`index.js ruleFor`), in this order: the owner's for the person, an admin's for the person, the
+  owner's for the level, an admin's for the level, the owner's for everyone — so the owner's wins where both set the
+  same kind of rule. A rule is a model, or **"nothing assigned"** (`none`, set on purpose: the broader rules after it no
+  longer reach that person, who runs on their own choice or the owner's models as the policy says), or absent — **"not
+  set"**, which passes to the next rule. An admin's counts whether or not the owner's `assign` switch is on, and there is
+  deliberately no switch to turn admins' assignments off (the owner: an admin who does not want to assign does not).
+  `GET /api/people-models` lists only whom the asker may assign, each with the owner's, an admin's, what decides now
+  and `options` (the models named anywhere here — the harness order, escalation, mastermind/worker, assistant mode's,
+  levels' lists, current assignments — kept when allotted to that target: `candidates.js`, no provider asked);
+  `POST /api/people-models/assign {personId|levelId, model}` or `{changes: [...]}` (all or nothing: each checked by a
+  dry run first) asks for the password (guarded row `peopleModels`). The Users card is one picker per row (Not set,
+  Nothing assigned, the allotted models, Other model…) and one Save — the owner's switches and every changed row, the
+  password asked once (the unlock window covers both requests). `peopleModels` in `/api/prefs` is now written by the
+  owner alone (`config.js`, 403 for anyone else). **The agent**: `people_models {show | propose}` (kit panel, in
+  `registry.NEVER`; `toolbox/people-models.js`, `people-models/propose.js`) — `show` says the policy, the rule order,
+  who may assign what and whom its person may assign (with their allotted models); `propose` resolves people by name
+  or e-mail, levels by id or name, `everyone_below`, and models as provider/model, "nothing" or "not set", checks every
+  change as the turn's person, and files a settings proposal of `kind: 'people-models'` in that conversation
+  (`settings.proposeOther`): the card's Accept is guarded (`guarded.proposal` → `peopleModels`, the password),
+  decided by whoever may assign (`routes.js mayDecide`), and applied as the person who accepts (`assign.setMany`). It
+  is never applied from a turn — no `asked`, not in Unattended. "What you have" names how many people and levels the
+  person may assign; settings_read's "Where and how" finds it (`settings-find/places.js`).
+  `test/people-models-admins.test.js`, `test/people-models-agent.test.js`.
+- **Other people's work, in the header** (`modules/oversight`, `public/js/oversight.js`; the owner's decision of
+  2026-10-16): devices stay their person's own (3.101.0), and a host gets an icon beside the clock — apart from their own
+  notices and questions — listing the missions and work chats of others they may open (`session-access.mayUse`, a
+  conversation marked as another person's — the owner's included for an admin; never their own, never nobody's):
+  started, finished, failed, waiting (a mission asking, a proposed plan), stopped, paused; an unread count against what
+  they last read (store `oversight`, per person); **a group per person** (`groupsOf`, the owner's answer of 2026-10-16),
+  headed like the header search's sections, the person with the newest unread first and newest first within, unread
+  items marked; each opening its conversation in the Harness console. Read from `missions.list` and
+  `workview.payloadOf`, worded by fixed templates — no model, no agent posts, no device push, no `/api/v1` route; the
+  page reads it again on the live feed's `missions` and conversation started/ended. Opt-in per person (the list's
+  "Follow" and Settings → General), on by default for the owner only. `GET /api/oversight`, `POST …/seen`,
+  `POST …/switch` (host). `test/oversight.test.js`.
 - **What a person holds is one read** (`modules/auth/holdings.js`, `GET /api/auth/holdings[?person=]`, right `signed`; someone else's needs `users`, checked there; TODO P1.10): the level (rights, approval, reach), each allotted kind's rule (all / the level's list / only what is allotted) with the grants that add to it and the concrete keys, accounts, logins, services, computers and providers here that pass `allot.uses`, their own devices and those lent to them, the budget in effect with what was spent, their spending permissions and grants — gathered from the modules that decide each, never a second copy of a rule, never a secret. "What you have" in Settings → Spending (yours) and Settings → Users → What they have (`public/js/settings/holdings.js`).
 - **What the agent may do for a person is one decision: `modules/auth/permits.js`** (auth phase 2, 2.139–2.140, docs/design/permissions.md). The person's **level** (`auth/levels.js`: built-ins viewer/member/admin/owner, plus levels an admin makes, each with rights, settings prefixes, a tool policy and an approval policy) is the agent's ceiling; **grants** (`auth/grants.js`, table `grants`) are recorded exceptions — to a user, a specialist type, a mission or a session — given only by someone holding `delegate` (or an agent, to the mission it dispatched, via `permission_grant`), never beyond what the giver holds. `tool-calls.js` asks `permits.tool()` before the approval gate: outside the level and ungranted is refused with who could grant it; an `ask` level (every level without host) forces the question in any mode, which the person answers for their own call — their "always" becomes their own `approve:` grant, not the panel's allowlist. The rules (charter, control plane, `NEVER`) are checked first and are not grantable. Applying a proposal is bounded by the applier's level's settings. No person on a turn means not narrowed (pre-accounts behaviour).
 - **A conversation belongs to a person: `modules/harness/session-access.js`** (since 2.145.0, found by the live test). The first person to write in a conversation owns it (and its work chats and missions, through `ancestors`); someone holding host uses every conversation, anyone else only their own — the rest answer 404 on the dashboard routes and `/api/v1` alike, as if absent. The global *active* pointer, where a turn with no conversation named goes, is the host's: a member creating or opening a chat no longer moves it, and their own unnamed turn goes to their newest conversation (or a new one). A host's "always" on a member's level-asked call is that member's `approve:` grant, since the panel allowlist never governs a member's turns. The same scope holds for the agent: `recall_conversations` searches and reads only what the person the turn acts for may open. Without host, the shared durable memory is read-only (`/api/harness/memory` writes are host until per-person memory), `/api/auth/me` carries `rights`, and the panel leaves out the machine's tabs (`HOST_TABS` in `nav.js`) rather than drawing them as refusals. Tools in `approval.FREE` (they act on nothing: reporting up, reading memory, showing a picture) pass any level without being listed.
