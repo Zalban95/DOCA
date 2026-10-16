@@ -131,28 +131,34 @@ function score(t, v) {
 }
 
 const TEST_RANK = { passed: 0, null: 1, unknown: 1, failed: 2 };
-/** Better first: eligible, then checks held, then the test, then fewer failures; cost and time only break a tie. */
+/** Better first: eligible, then finished, then checks held, then the test, then fewer failures; cost and time only break a tie. */
 function rank(a, b) {
-  return (b.eligible - a.eligible) || (b.held - a.held) || (TEST_RANK[a.test] - TEST_RANK[b.test]) || (a.failures - b.failures)
+  return (b.eligible - a.eligible) || (b.finished - a.finished) || (b.held - a.held) || (TEST_RANK[a.test] - TEST_RANK[b.test]) || (a.failures - b.failures)
     || (a.tokens - b.tokens) || ((a.usd ?? 0) - (b.usd ?? 0)) || ((a.ms ?? Infinity) - (b.ms ?? Infinity)) || (a.n - b.n);
 }
 const sameMerit = (a, b) => a.eligible === b.eligible && a.held === b.held && TEST_RANK[a.test] === TEST_RANK[b.test] && a.failures === b.failures;
 
 const k = n => (n >= 1000 ? `${Math.round(n / 1000)}k` : String(n));
-/** "3 tries — #2 kept: all 5 checks held; #1 failed 'text over text at 17 s'; #3 did not finish: …" */
+/**
+ * "3 tries — #2 kept: all 5 checks held; #1 failed 'text over text at 17 s'; #3 did not finish: …". When no try held,
+ * the best finished one is kept as the best so far, what failed is said, and trying again is offered — never done by itself.
+ */
 function report(j) {
   const s = [...(j.scores || [])].sort((a, b) => a.n - b.n);
   const kept = s.find(x => x.kept);
   const held = x => (x.total ? (x.held === x.total ? (x.total === 1 ? 'its check held' : `all ${x.total} checks held`) : `${x.held} of ${x.total} checks held`) : 'no checks')
     + (x.test === 'passed' ? ', its test passed' : x.test === 'unknown' ? `, its test not known (${x.testWhy})` : '');
+  const failedOf = x => x.failed[0] || x.testWhy || x.why;
   const one = x => {
+    if (x.kept && j.partial) return `#${x.n} kept as the best so far: ${held(x)} — it failed '${failedOf(x)}'`;
     if (x.kept) return `#${x.n} kept${j.picked ? ` (picked by ${j.picked.by})` : ''}: ${held(x)}`;
     if (!x.finished) return `#${x.n} did not finish: ${x.why}`;
     if (x.eligible) return `#${x.n} also held, set aside${x.tie ? ` — a tie, kept #${kept?.n} for ${x.tieWhy}` : ` (${held(x)})`}`;
-    return `#${x.n} failed '${x.failed[0] || x.testWhy || x.why}'`;
+    return `#${x.n} failed '${failedOf(x)}'`;
   };
-  const head = `${s.length} tries — ${kept ? '' : 'none kept, no try held every check: '}`;
-  return `${head}${[kept, ...s.filter(x => x !== kept)].filter(Boolean).map(one).join('; ')}`;
+  const head = `${s.length} tries — ${j.partial ? 'none held every check: ' : kept ? '' : 'none kept, no try held every check: '}`;
+  const offer = j.partial || !kept ? ` — to try again, the team's leader asks the person and calls team keep_going${j.partial ? `; Keep this try on #${kept.n} goes on with it as it is` : ''}` : '';
+  return `${head}${[kept, ...s.filter(x => x !== kept)].filter(Boolean).map(one).join('; ')}${offer}`;
 }
 
 /** Score a group's tries, keep the best eligible one, put the others' missions away, and write the report. */
@@ -168,8 +174,12 @@ async function judge(team, of, tasks, views, { reviewer = null } = {}) {
     if (pickedBy) { best = pickedBy; j.tieReviewed = true; }
     for (const s of tied) if (s !== best) Object.assign(s, { tie: true, tieWhy: pickedBy ? 'the review' : (s.tokens !== best.tokens ? `fewer tokens (${k(best.tokens)} vs ${k(s.tokens)})` : (s.usd ?? 0) !== (best.usd ?? 0) ? 'a lower cost' : 'less time') });
   }
+  // None held every check: the best one that finished is kept as the best so far (its branch is the work to go on
+  // from), the group reads as failed, and trying again is offered in the report — never started by itself.
+  const partial = !best && scores[0]?.finished ? scores[0] : null;
+  if (partial) best = partial;
   for (const s of scores) s.kept = s === best;
-  Object.assign(j, { judgedAt: new Date().toISOString(), winner: best?.id || null, scores, tries: tasks.length });
+  Object.assign(j, { judgedAt: new Date().toISOString(), winner: best?.id || null, partial: !!partial, scores, tries: tasks.length });
   j.report = report(j);
   for (const s of scores) if (!s.kept && s.missionId) try { require('../agents/missions').archive(s.missionId); } catch { /* still running: left in the bar */ }
   require('./announce').line(team, `${of}: ${j.report}`);

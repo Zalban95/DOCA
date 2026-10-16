@@ -53,10 +53,10 @@ function render(team, views) {
 function tries(team) {
   const judged = Object.entries(team.trials || {}).filter(([, j]) => j.judgedAt);
   if (!judged.length) return [];
-  const row = s => `| ${s.n} | ${s.kept ? 'kept' : s.finished ? (s.eligible ? 'set aside' : 'failed') : 'did not finish'} | ${s.total ? `${s.held} of ${s.total}` : '—'} | ${s.test || '—'} | ${s.failures} | ${s.tokens} | ${cell(s.branch || '—')} |`;
+  const row = (s, j) => `| ${s.n} | ${s.kept ? (j.partial ? 'kept, best so far' : 'kept') : s.finished ? (s.eligible ? 'set aside' : 'failed') : 'did not finish'} | ${s.total ? `${s.held} of ${s.total}` : '—'} | ${s.test || '—'} | ${s.failures} | ${s.tokens} | ${cell(s.branch || '—')} |`;
   return ['## Tries', '', 'Tasks tried several times at once; the hub kept the best by its checks alone (no model judged). The others stay on their branches.', '',
     ...judged.flatMap(([of, j]) => [`**${of}** — ${cell(j.report)}`, '', '| Try | Outcome | Checks held | Test | Failed calls | Tokens | Branch |', '|---|---|---|---|---|---|---|',
-      ...[...(j.scores || [])].sort((a, b) => a.n - b.n).map(row), ''])];
+      ...[...(j.scores || [])].sort((a, b) => a.n - b.n).map(s => row(s, j)), ''])];
 }
 
 /** Write it: the project page (when the leader has a project) and the attachment copy. Records where on the team. */

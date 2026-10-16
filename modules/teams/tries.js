@@ -94,8 +94,8 @@ function groupView(team, of, tryViews) {
   const first = tryViews[0] || {};
   const base = { id: of, title: String(first.title || of).replace(/ \(try \d+ of \d+\)$/, ''), agent: first.agent, after: first.after || [],
     group: true, tries: tryViews.length, contract: first.contract || null };
-  if (j.judgedAt && j.winner) return { ...base, state: 'done', percent: 100, kept: j.winner, why: j.report };
-  if (j.judgedAt) return { ...base, state: 'failed', percent: 0, why: j.report || 'no try held its checks' };
+  if (j.judgedAt && j.winner && !j.partial) return { ...base, state: 'done', percent: 100, kept: j.winner, why: j.report };
+  if (j.judgedAt) return { ...base, state: 'failed', percent: 0, ...(j.winner ? { kept: j.winner } : {}), why: j.report || 'no try held its checks' };
   if (tryViews.every(v => v.state === 'stopped')) return { ...base, state: 'stopped', percent: 0, why: first.why };
   const waiting = tryViews.filter(v => v.state === 'waiting');
   if (waiting.length === tryViews.length) return { ...base, state: 'waiting', percent: 0, waitingOn: waiting[0].waitingOn, ...(waiting[0].blockedBy ? { blockedBy: waiting[0].blockedBy } : {}) };
@@ -173,14 +173,15 @@ async function pick(teamId, of, n, { by = 'a person' } = {}) {
     if (!t) throw bad(`Task ${of} has no try ${n}; it has ${j.tries}.`, 404);
     const score = (j.scores || []).find(s => s.id === id);
     if (!score?.finished) throw bad(`Try ${n} did not finish, so there is nothing of it to keep.`, 409);
-    const was = j.winner;
-    Object.assign(j, { winner: id, picked: { by, at: new Date().toISOString(), was: was || null } });
+    const was = j.winner, asIs = j.partial && was === id;   // the best so far, kept as it is: the tasks after it go on
+    Object.assign(j, { winner: id, partial: false, picked: { by, at: new Date().toISOString(), was: was || null } });
     for (const s of j.scores) s.kept = s.id === id;
     j.report = require('./tries-score').report(j);
     const started = team.tasks.filter(x => (x.after || []).includes(of) && (x.missionId || x.sessionId));
     try { if (t.missionId) require('../agents/missions').archive(t.missionId, { on: false }); } catch { /* not put away */ }
     store.save(team);
-    said = `Try ${n} of ${of} is kept now${was ? ` (it was try ${SUFFIX.exec(was)?.[1]})` : ''}.`
+    said = asIs ? `Try ${n} of ${of} is kept as it is, though its checks did not all hold; the tasks after it go on from it.`
+      : `Try ${n} of ${of} is kept now${was ? ` (it was try ${SUFFIX.exec(was)?.[1]})` : ''}.`
       + (started.length ? ` ${started.map(x => x.id).join(', ')} already started from the try kept before; start them again to use this one.` : '');
     require('./announce').line(team, `${of}: ${by} kept try ${n} — ${j.report}`);
   } catch (e) { err = e; } });   // serial() swallows what throws: the refusal is the caller's to hear
@@ -189,9 +190,30 @@ async function pick(teamId, of, n, { by = 'a person' } = {}) {
   return said;
 }
 
+/**
+ * Try a group again — only when a person asked (team keep_going): every try of a group none of whose tries held starts
+ * once more in its own worktree (or on its branch), told what failed. What was judged before stays on the record.
+ * Returns the group ids started again.
+ */
+function again(team) {
+  const out = [];
+  for (const [of, tasks] of Object.entries(groups(team))) {
+    const j = team.trials?.[of];
+    if (!j?.judgedAt || (j.winner && !j.partial)) continue;
+    team.trials[of] = { tries: tasks.length, earlier: [...(j.earlier || []), { at: j.judgedAt, report: j.report }].slice(-5) };
+    for (const t of tasks) {
+      (t.tries = Array.isArray(t.tries) ? t.tries : []).push({ missionId: t.missionId || null, why: (j.scores || []).find(s => s.id === t.id)?.why || null, at: new Date().toISOString() });
+      t.retryNote = `## Trying again\nNo try of this task held every check last time: ${j.report}\nWhat you made before is still in your folder. Do not repeat what failed; finish the task.`;
+      for (const f of ['missionId', 'sessionId', 'verdict', 'error', 'gaveUp', 'failedFor', 'stoppedAt', 'stoppedWhy', 'startedAt']) delete t[f];
+    }
+    out.push(of);
+  }
+  return out;
+}
+
 /** Each judged group's report line, for the leader's report and the tool's status. */
 function reports(team) {
   return Object.entries(team.trials || {}).filter(([, j]) => j.judgedAt).map(([of, j]) => `${of}: ${j.report}`);
 }
 
-module.exports = { expand, wanted, judged, judgeable, folder, groups, groupView, taskFor, brief, judgeReady, pick, reports, onTie, maxTries, HARD_MAX, ENDED };
+module.exports = { expand, wanted, judged, judgeable, folder, again, groups, groupView, taskFor, brief, judgeReady, pick, reports, onTie, maxTries, HARD_MAX, ENDED };

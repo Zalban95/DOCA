@@ -89,7 +89,8 @@ function tasks(team, look) {
     const v = task(t, { look, byId });
     byId.set(t.id, v);
     const of = t.trial?.of;
-    if (of && team.trials?.[of]?.judgedAt) v.chosen = team.trials[of].winner === t.id;   // kept, or set aside with its score
+    const j = of ? team.trials?.[of] : null;
+    if (j?.judgedAt) { v.chosen = j.winner === t.id; v.keepable = !!t.verdict && (!v.chosen || !!j.partial); }   // kept, or set aside with its score; a person may keep another
     if (of && groups[of].every(x => byId.has(x.id))) byId.set(of, tries.groupView(team, of, groups[of].map(x => byId.get(x.id))));
   }
   for (const t of team.tasks || []) out.push(byId.get(t.id));

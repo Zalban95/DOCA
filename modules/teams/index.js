@@ -151,14 +151,16 @@ async function keepGoing(id, on) {
   const team = store.get(id);
   if (!team) throw bad(`No team called "${id}".`, 404);
   if (team.stoppedAt && on) throw bad('This team was stopped. Make a new one to carry on.', 409);
+  let again = [];
   await engine.serial(id, () => {
     const team = store.get(id);
     team.loop = { ...(team.loop || {}), on: !!on };
     // Turned on after a task already gave up: it is tried again now.
-    if (on) for (const t of team.tasks) if (t.gaveUp) { delete t.gaveUp; delete t.failedFor; }
+    if (on) for (const t of team.tasks) if (t.gaveUp && !t.trial) { delete t.gaveUp; delete t.failedFor; }
+    again = on ? require('./tries').again(team) : [];   // tries none of which held: started once more, on this ask only
     store.save(team);
   });
-  require('./announce').line(team, `keep going ${on ? `on — failed tasks are tried again, up to ${engine.maxRounds(team)} rounds` : 'off'}`);
+  require('./announce').line(team, `keep going ${on ? `on — failed tasks are tried again, up to ${engine.maxRounds(team)} rounds${again.length ? `; the tries of ${again.join(', ')} start again` : ''}` : 'off'}`);
   return view(await engine.advance(id));
 }
 

@@ -215,3 +215,30 @@ test('budgets apply to each try: a person over their budget gets no try started'
   for (const s of j.scores) assert.match(s.why, /budget/i, 'each try was refused by the budget on its own');
   assert.match(j.report, /^2 tries — none kept/);
 });
+
+test('no try holds: the best partial one is kept, what failed is said, and trying again is offered — run only when asked', async () => {
+  const made = await teams().create({ title: 'Partial', project: 'Shop', tasks: [
+    { id: 'p', agent: 'coder', task: 'Make it. T1:WRITE=bad T2:FAIL', tries: 2, check: { file: 'out.txt', contains: 'good' } }] }, { by: lead() });
+  const end = await ended(made.id);
+  const j = teams().get(made.id).trials.p;
+  assert.equal(end.state, 'failed', 'a group none of whose tries held is not done');
+  assert.equal(j.partial, true, JSON.stringify(j));
+  assert.equal(j.winner, 'p-try1', 'the best that finished is kept as the best so far');
+  assert.match(j.report, /^2 tries — none held every check: #1 kept as the best so far: 0 of 1 checks held — it failed 'out\.txt does not contain "good"'; #2 did not finish: [\s\S]* — to try again, the team's leader asks the person and calls team keep_going; Keep this try on #1 goes on with it as it is$/);
+  assert.equal(end.tasks.find(t => t.id === 'p-try1').keepable, true, 'Keep this try is offered on the partial one');
+  const first = teams().get(made.id).tasks.map(t => t.missionId);
+  await H.sleep(300);
+  assert.deepEqual(teams().get(made.id).tasks.map(t => t.missionId), first, 'nothing is tried again by itself');
+
+  await teams().keepGoing(made.id, true);   // the person said yes
+  const again = teams().get(made.id);
+  assert.equal(again.trials.p.earlier.length, 1, 'what was judged before stays on the record');
+  assert.ok(again.tasks.every((t, i) => t.missionId && t.missionId !== first[i]), 'every try starts once more');
+  await ended(made.id);
+  assert.equal(teams().get(made.id).trials.p.partial, true);
+
+  const r = await H.api(null, 'POST', `/api/harness/missions/teams/${made.id}/pick`, { task: 'p', try: 1 });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.match(r.body.said, /Try 1 of p is kept as it is, though its checks did not all hold/);
+  assert.equal(board(made.id).state, 'done', 'kept as it is by a person: the team goes on');
+});
