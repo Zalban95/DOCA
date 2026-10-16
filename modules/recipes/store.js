@@ -11,6 +11,11 @@
  *
  * One JSON file per recipe under DOCA_DATA_DIR/recipes, so a recipe is a file a person can read, diff and
  * carry to another hive (a pack, H4). Fields added later need a read-side default here: there is no migration.
+ *
+ * Some recipes ship with the hub (<repo>/recipes/*.json — the craft templates' runs): read as if saved here, with
+ * `{{skills}}` in a step replaced by the shipped skills folder, so a step can name a skill's own script wherever this
+ * install is. A recipe saved here with the same id wins; removing it brings the shipped one back; a shipped one is
+ * not removed (`shipped: true` on it says why).
  */
 const fs = require('fs');
 const path = require('path');
@@ -50,15 +55,26 @@ function normalize(input, existing = null) {
 }
 
 const file = id => path.join(store.dir(SUB), `${slug(id)}.json`);
+const SHIPPED = path.join(__dirname, '..', '..', 'recipes');
+const SKILLS = path.join(__dirname, '..', '..', 'skills').split(path.sep).join('/');   // node and every shell take /
+
+function shipped(id) {
+  try {
+    const text = fs.readFileSync(path.join(SHIPPED, `${slug(id)}.json`), 'utf8').split('{{skills}}').join(SKILLS.replace(/\\/g, '/'));
+    return { params: [], steps: [], revision: 1, by: null, updatedAt: '', ...JSON.parse(text), shipped: true };
+  } catch { return null; }
+}
+const shippedIds = () => { try { return fs.readdirSync(SHIPPED).filter(n => n.endsWith('.json')).map(n => n.slice(0, -5)); } catch { return []; } };
 
 function get(id) {
-  try { const r = JSON.parse(fs.readFileSync(file(id), 'utf8')); return { params: [], steps: [], revision: 1, ...r }; } catch { return null; }
+  try { const r = JSON.parse(fs.readFileSync(file(id), 'utf8')); return { params: [], steps: [], revision: 1, ...r }; } catch { return shipped(id); }
 }
 
 function list() {
   let names = [];
-  try { names = fs.readdirSync(store.dir(SUB)).filter(n => n.endsWith('.json')); } catch { /* none yet */ }
-  return names.map(n => get(n.slice(0, -5))).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+  try { names = fs.readdirSync(store.dir(SUB)).filter(n => n.endsWith('.json')).map(n => n.slice(0, -5)); } catch { /* none yet */ }
+  const ids = [...new Set([...names, ...shippedIds()])];
+  return ids.map(get).filter(Boolean).sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
 }
 
 /** Save a new recipe, or a new revision of one (`id` given and present); the previous revision is kept beside it. */
@@ -66,6 +82,7 @@ function save(input) {
   const existing = input.id ? get(input.id) : null;
   const r = normalize(input, existing);
   if (!existing && get(r.id)) throw bad(`A recipe "${r.id}" exists. Pass its id to revise it.`, 409);
+  delete r.shipped;   // a revision of a shipped recipe is this hive's own
   if (existing) fs.writeFileSync(path.join(store.dir(`${SUB}/previous`), `${r.id}.r${existing.revision}.json`), JSON.stringify(existing, null, 2));
   fs.writeFileSync(file(r.id), JSON.stringify(r, null, 2));
   return r;
@@ -97,6 +114,7 @@ function discard(id) { if (!proposed(id)) throw bad(`No proposed revision of "${
 function remove(id) {
   const r = get(id);
   if (!r) throw bad(`No recipe "${id}".`, 404);
+  if (!fs.existsSync(file(id))) throw bad(`"${r.id}" ships with the hub and cannot be removed; save a revision to change it here.`, 409);
   fs.rmSync(file(id), { force: true });
   return { removed: r.id };
 }
@@ -145,4 +163,4 @@ function lift(value, params) {
   return value;
 }
 
-module.exports = { list, get, save, remove, fromTurn, normalize, slug, proposed, propose, accept, discard };
+module.exports = { list, get, save, remove, shipped, SHIPPED, fromTurn, normalize, slug, proposed, propose, accept, discard };
