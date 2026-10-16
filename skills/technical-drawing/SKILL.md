@@ -36,12 +36,12 @@ few dimensions only you know matter.
 
 ```json
 {
-  "part": "print/back_tray.step",
-  "out": "drawings/back_tray.pdf",
+  "part": "parts/bracket.step",
+  "out": "drawings/bracket.pdf",
   "sheet": "A3",
   "projection": "first",
-  "title": { "part": "Back tray", "project": "Tablet wall mount", "material": "PETG", "number": "TWM-01", "revision": "A", "drawn": "<the person's name, if they want it>" },
-  "notes": ["Print back face down, no supports.", "M3 hex nuts in the traps."],
+  "title": { "part": "Bracket", "project": "Example assembly", "material": "PETG", "number": "D-001", "revision": "A", "drawn": "<the person's name, if they want it>" },
+  "notes": ["Print flat face down, no supports.", "M3 hex nuts in the traps."],
   "dimensions": [
     { "view": "front", "p1": [-60, 40, 0], "p2": [60, 40, 0], "side": "top" },
     { "view": "detail", "p1": [46, 76, 0], "p2": [54, 76, 0] }
@@ -60,7 +60,7 @@ few dimensions only you know matter.
 - `section`: `{ "axis": "vertical" | "horizontal", "at": <mm along the front view> }`; without `at` it cuts through the
   hole nearest the middle. `hidden`: `front` (default), `all` or `none`.
 - What is dimensioned without asking: overall size, depth, and the holes' positions; holes are tagged H1, H2 … and
-  listed with size and depth (or THRU). Add the dimensions that carry the design — a keyhole's width, a slot, a
+  listed with size and depth (or THRU). Add the dimensions that carry the design — a hole's spacing, a slot, a
   clearance — in `dimensions`: points in the part's own coordinates (3 numbers) or the view's (2), `side` optional;
   a diameter is `{ "view", "center", "d" }`. Put them in the `detail` view when they are small.
 - `tolerance` (default ISO 2768-m), `units`, `font` (default the OS's sans).

@@ -66,7 +66,7 @@ test('the scale is the largest that fits, and a part too big for the sheet is sa
   const small = L.layout({ views: { front: { bbox: [-10, -10, 10, 10] } }, sheet: L.sheetSize('A3') });
   assert.equal(small.scale, 10, 'a 20 mm part on A3 is drawn at 10:1');
   const plate = compose({ sheet: 'A3' }, fakePart(207, 172, 13));
-  assert.equal(plate.report.scale, '1:1', 'the tablet mount fits A3 at 1:1 once the top view gives way');
+  assert.equal(plate.report.scale, '1:1', 'a 207 × 172 mm plate fits A3 at 1:1 once the top view gives way');
   assert.match(plate.report.left_out.join(' '), /top: left out/);
   const asked = compose({ sheet: 'A3', views: ['front', 'top', 'side', 'section', 'iso'] }, fakePart(207, 172, 13));
   assert.ok(asked.report.views.includes('top'), 'a top view asked for by name stays');
@@ -175,7 +175,7 @@ test('a request for drawings or a promo finds its skill', () => {
     return { name, description: text.match(/^description: (.*)$/m)[1], body: text.split('\n---\n').slice(1).join('\n') };
   });
   const top = q => search(q, skills)[0]?.name;
-  assert.equal(top('pdf drawings with dimensions of the mount'), 'technical-drawing');
+  assert.equal(top('pdf drawings with dimensions of the bracket'), 'technical-drawing');
   assert.equal(top('a 20 second promo video of the parts'), 'product-video');
   assert.equal(top('design a printable bracket for M3 screws'), 'printable-part');
 });

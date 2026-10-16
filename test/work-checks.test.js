@@ -134,7 +134,7 @@ function draw(file, filters, seconds, colour = '0x1c2228') {
 let DRAWN = false;
 try {
   if (bin.find('ffmpeg') && bin.find('ffprobe')) {
-    draw(at('good.mp4'), `${text('TABLET MOUNT', 40, 80)},${text('two printed parts', 40, 170, 32)},drawbox=x=420:y=230:w=160:h=90:color=white@0.8:t=4`, 4);
+    draw(at('good.mp4'), `${text('BRACKET KIT', 40, 80)},${text('two printed parts', 40, 170, 32)},drawbox=x=420:y=230:w=160:h=90:color=white@0.8:t=4`, 4);
     draw(at('card.mp4'), 'null', 2.5, '0x7c7c7c');
     draw(at('doubled.mp4'), `${text('PRINT TWO PARTS', 30, 70)},${text('PRINT TWO PARTS', 110, 190)}`, 2.5);
     execFileSync(bin.find('ffmpeg'), ['-v', 'error', '-y', '-i', at('card.mp4'), '-i', at('doubled.mp4'), '-filter_complex', '[0:v][1:v]concat=n=2:v=1[v]', '-map', '[v]', at('bad.mp4')]);
@@ -159,7 +159,7 @@ test('video: its facts, a blank card, doubled text — said with the second and 
 
 test('image: blank or not, and the words on it', { skip: !DRAWN && 'ffmpeg with drawtext is not installed here' }, async () => {
   assert.match((await checks.run({ image: at('blank.png') })).why, /shows almost nothing/);
-  const r = await checks.run({ image: at('good.png'), width: 640, contains: bin.find('tesseract') ? ['TABLET'] : undefined });
+  const r = await checks.run({ image: at('good.png'), width: 640, contains: bin.find('tesseract') ? ['BRACKET'] : undefined });
   assert.equal(r.ok, true, r.why);
 });
 
@@ -200,7 +200,7 @@ test('pdf: what was asked and could not be verified fails, naming what to instal
 
 test('image: words asked for with no tesseract fail the same way', { skip: (!DRAWN && 'ffmpeg with drawtext is not installed here') || (!LINKS && 'linked programs need a POSIX host') }, async () => {
   await hidden(['tesseract'], async () => {
-    const r = await checks.run({ image: at('good.png'), contains: ['TABLET'] });
+    const r = await checks.run({ image: at('good.png'), contains: ['BRACKET'] });
     assert.equal(r.ok, false);
     assert.match(r.why, /could not verify its words — tesseract is not on this machine/);
     assert.equal((await checks.run({ image: at('good.png') })).ok, true, 'nothing asked that needs it');
@@ -213,16 +213,16 @@ test('a plan step with a mesh check stays open until it holds; its progress is c
   const org = require('../modules/harness/organization');
   const tools = require('../modules/harness/tools');
   const progress = require('../modules/harness/plan-progress');
-  const work = org.create({ title: 'A printable mount' });
-  await tools.call('work_plan', { action: 'draft', title: 'Tablet mount', steps: ['Model it', 'Export the print', 'Write it up', 'Drop the old idea'],
-    contracts: [{}, { done: 'the STL is closed and fits the bed', check: { mesh: at('mount.stl'), maxSize: [220, 220, 250], watertight: true } }, {}, {}] }, [], { sessionId: work.id });
+  const work = org.create({ title: 'A printable bracket' });
+  await tools.call('work_plan', { action: 'draft', title: 'A bracket', steps: ['Model it', 'Export the print', 'Write it up', 'Drop the old idea'],
+    contracts: [{}, { done: 'the STL is closed and fits the bed', check: { mesh: at('bracket.stl'), maxSize: [220, 220, 250], watertight: true } }, {}, {}] }, [], { sessionId: work.id });
   const step = (n, state = 'done') => tools.call('work_plan', { action: 'progress', step: n, state }, [], { sessionId: work.id });
   await step(1);
   await step(2, 'running');
   let p = progress.of(org.plan(work.id, { action: 'read' }));
   assert.deepEqual({ done: p.done, total: p.total, percent: p.percent, running: p.running.step }, { done: 1, total: 4, percent: 25, running: 2 });
 
-  fs.writeFileSync(at('mount.stl'), stl(CUBE([200, 140, 14]).slice(0, 10)));
+  fs.writeFileSync(at('bracket.stl'), stl(CUBE([200, 140, 14]).slice(0, 10)));
   const refused = JSON.parse(await step(2));
   assert.equal(refused.done, false);
   assert.match(refused.check, /not closed/);
@@ -230,7 +230,7 @@ test('a plan step with a mesh check stays open until it holds; its progress is c
   assert.equal(p.failing.step, 2, 'the failing check is kept, with why');
   assert.match(p.failing.why, /not closed/);
 
-  fs.writeFileSync(at('mount.stl'), stl(CUBE([200, 140, 14])));
+  fs.writeFileSync(at('bracket.stl'), stl(CUBE([200, 140, 14])));
   await step(2);
   org.plan(work.id, { action: 'cancel', step: 4, why: 'not needed' });
   p = progress.of(org.plan(work.id, { action: 'read' }));

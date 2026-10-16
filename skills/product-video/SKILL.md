@@ -17,8 +17,8 @@ explainer, data that moves — are the video-from-code skill.)
 
 - **Blender** 4.2 or later (headless) and **ffmpeg** (with drawtext, as every usual build has). Missing: propose them
   with `install_propose {kind: "tool"}` when System tools has a row, else ask the person.
-- The parts as files: STL, OBJ, PLY, GLB/GLTF — the same files that get printed. A thing the parts hold (a tablet, a
-  board) can be a plain box: `{"box": [w, d, h], "offset": [...]}` in millimetres.
+- The parts as files: STL, OBJ, PLY, GLB/GLTF — the same files that get printed. A thing the parts hold (a board, a
+  device) can be a plain box: `{"box": [w, d, h], "offset": [...]}` in millimetres.
 
 ## Doing it
 
@@ -40,17 +40,17 @@ explainer, data that moves — are the video-from-code skill.)
 ```json
 {
   "out": "video/promo_1080p.mp4",
-  "title": "Tablet Wall Mount",
-  "subtitle": "Two printed parts for a 200 × 125 × 8 mm tablet",
-  "details": ["3 mm walls", "M3 screws", "USB-C slot"],
-  "end": "Print it. Screw it. Hang it.",
+  "title": "Bracket Kit",
+  "subtitle": "Two printed parts for a 100 × 60 mm board",
+  "details": ["3 mm walls", "M3 screws", "Snap-on lid"],
+  "end": "Print it. Screw it. Use it.",
   "end_lines": ["STL + STEP + drawings", "PETG or PLA · no supports"],
   "duration": 20, "resolution": "1080p", "style": "dark", "accent": "#ff7a2f",
   "rotate": [62, 0, 0],
   "parts": [
-    { "path": "print/back_tray.stl", "name": "Back tray", "note": "keyholes · USB-C slot", "color": "#d6d9de" },
-    { "box": [200, 125, 8], "offset": [-100, -62.5, 3], "name": "Your tablet", "color": "#1d2228" },
-    { "path": "print/bezel.stl", "offset": [0, 0, 13], "name": "Front bezel", "note": "5 mm lip", "color": "#ff7a2f" }
+    { "path": "print/part_a.stl", "name": "Part A", "note": "base · two screw holes", "color": "#d6d9de" },
+    { "box": [100, 60, 2], "offset": [-50, -30, 3], "name": "The board", "color": "#1d2228" },
+    { "path": "print/part_b.stl", "offset": [0, 0, 8], "name": "Part B", "note": "snap-on lid", "color": "#ff7a2f" }
   ]
 }
 ```
@@ -58,7 +58,7 @@ explainer, data that moves — are the video-from-code skill.)
 - **Parts in assembly order**: the first stays, each next one settles onto it. Their files may be in print
   orientation — `offset` (mm) and `rotation` (degrees XYZ) put each where it sits in the assembled product. The
   parts come together along "explode_axis" (default the parts' own +Z).
-- `rotate` turns the whole product for the camera (a wall mount tilted toward the viewer: `[60, 0, 0]`). The camera
+- `rotate` turns the whole product for the camera (a flat part tilted toward the viewer: `[60, 0, 0]`). The camera
   frames it by itself; `elevation`, `azimuth`, `lens` only when asked.
 - `style` `dark` or `light`; `accent` is the one colour of the cards, captions and highlights — give the hero part the
   same one. Default colours follow the list order: light grey, the accent, blue, green.
