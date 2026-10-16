@@ -147,7 +147,7 @@ test('end to end: a long conversation\'s new request starts lean — earlier res
     await require('../modules/harness/agent').turn({ message: 'a new small task', sessionId: s.id, emit: e => events.push(e) });
     const first = m.seen[0];
     assert.ok(budget.estimateRequest(first) < 25000, `the first step is under the ceiling (${budget.estimateRequest(first)})`);
-    assert.ok(events.some(e => e.type === 'compacted' && e.setting === 'stepTokens'));
+    assert.ok(events.some(e => e.type === 'compacted' && e.setting === 'stepTokens' && e.target === 15000), 'shortened to 60% of the ceiling');
     assert.ok(memory.getSession(s.id).summarizedThrough > 0, 'earlier turns folded');
   } finally {
     catalog.saveConfig('doca', { compactTokens: 40000, summarizeAfter: 40, historyTurns: 24, contextWindow: 0, maxSteps: 8, stepTokens: 60000 });
@@ -162,4 +162,28 @@ test('stepTokens 0 is the old behaviour: nothing is cleared or folded by the cei
   assert.equal(built.length, 1);
   assert.equal(r.summary, '');
   assert.equal(memory.getSession(s.id).clearedThrough, undefined);
+});
+
+test('the spill folder is kept to its bound: a deleted or long-unused conversation\'s goes, a used one stays, and comes back', () => {
+  const keep = require('../modules/harness/spill-keep');
+  const { spillTool } = require('../modules/harness/turn/messages');
+  const live = memory.createSession('spill live', { activate: false });
+  const idle = memory.createSession('spill idle', { activate: false });
+  const row = { tool_call_id: 'x1', name: 'shell', content: 'whole text' };
+  const a = spillTool(live.id, row), b = spillTool(idle.id, row), c = spillTool('s_gone_forever', row);
+  const later = Date.now() + 20 * 86400000;
+  memory.updateSession(live.id, { touched: true });
+  assert.ok(keep.prune(14, Date.now()) >= 1);
+  assert.ok(fs.existsSync(a) && fs.existsSync(b) && !fs.existsSync(c), 'today: only the folder of a conversation that does not exist goes');
+  assert.ok(keep.prune(14, later) >= 2, 'twenty days on, folders of conversations unused for fourteen go');
+  assert.ok(!fs.existsSync(a));
+  assert.equal(spillTool(live.id, row), a, 'the next request writes it again from the stored row');
+  assert.equal(fs.readFileSync(a, 'utf8'), 'whole text');
+  const rows = require('../modules/log-keep').usage().stores;
+  assert.ok(rows.some(r => r.id === 'tool-results' && r.settings[0].path === 'logs.toolResultsDays'), 'a row in Settings → System → Logs');
+});
+
+test('a trip shortens down to 60% of the ceiling, not just under it', () => {
+  assert.equal(ceiling.LOW, 0.6);
+  assert.match(budget.block(providers.defaultParams()), /shortened down to 60% of it/);
 });

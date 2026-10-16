@@ -102,6 +102,8 @@ function usage() {
       ...files(read(() => folder(require('./activity').dir()))), settings: [setting('logs.activityDays')] },
     { id: 'jobs', label: 'Background jobs', where: 'disk', what: 'commands left running (shell_job) with their output',
       entries: jobs?.files ?? null, bytes: jobs?.bytes ?? null, settings: [setting('logs.jobsKept')] },
+    { id: 'tool-results', label: 'Shortened tool results', where: 'disk', what: 'the whole text of each tool result sent shortened, for the agent to read back (a cache of the transcript)',
+      ...files(read(() => folder(require('./harness/spill-keep').root()))), settings: [setting('logs.toolResultsDays')] },
     { id: 'evals', label: 'Evaluation results', where: 'disk', what: 'each run of an evaluation set (Settings → Evaluations)',
       entries: evals?.files ?? null, bytes: evals?.bytes ?? null, settings: [setting('logs.evalResultsKept')] },
     { id: 'checkpoints', label: 'Settings checkpoints', where: 'disk', what: 'the settings before each change', fixed: 'the last 200 — a way back, not a log',
@@ -127,6 +129,7 @@ function prune() {
   step('runs', () => require('./harness/runs').prune(limit('logs.runsRetainDays')));
   step('jobs', () => require('./harness/jobs').prune());
   step('evals', () => require('./evals/store').pruneAll());
+  step('tool results', () => require('./harness/spill-keep').prune(limit('logs.toolResultsDays')));
   step('activity', () => require('./activity').prune(limit('logs.activityDays')));
   step('calls', () => require('./realtime/call-log').prune(limit('logs.callDays')));
   const any = Object.entries(removed).filter(([, n]) => n > 0);
@@ -143,7 +146,7 @@ function start() {
 /* ── Changing them (Settings → System → Logs) ─────────── */
 
 // tracing.enabled is shown, not switched here: whether runs are traced at all is evidence of what agents did (S14).
-const EDITABLE = ['logs.harnessLines', 'logs.workstreamLines', 'logs.mcpLines', 'logs.callLines', 'logs.callDays', 'logs.machinesLines', 'logs.runsRetainDays', 'logs.jobsKept', 'logs.evalResultsKept', 'logs.activityDays',
+const EDITABLE = ['logs.harnessLines', 'logs.workstreamLines', 'logs.mcpLines', 'logs.callLines', 'logs.callDays', 'logs.machinesLines', 'logs.runsRetainDays', 'logs.jobsKept', 'logs.evalResultsKept', 'logs.activityDays', 'logs.toolResultsDays',
   'tracing.retainDays', 'tracing.maxSpans'];
 
 /** Write the given values, each checked against its declaration; then apply them. */
