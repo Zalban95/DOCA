@@ -72,7 +72,7 @@ async function forTask(team, t) {
   if (wantsWorktree(team, t)) {
     try {
       // After a task that worked in a worktree, start from its branch: what it made is there, not in the root yet.
-      const dep = (t.after || []).map(id => team.tasks.find(x => x.id === id)?.place?.worktree).find(Boolean);
+      const dep = (t.after || []).map(id => require('./tries').taskFor(team, id)?.place?.worktree).find(Boolean);   // a group: its kept try
       const wt = await require('../projects/worktrees').add(root, { branch: `team/${require('./doc').slug(team.title)}/${t.id}`, base: dep?.branch || null });
       return { fields: { projectId: p.id, worktree: wt }, place: { root: wt.path, worktree: wt } };
     } catch (e) {

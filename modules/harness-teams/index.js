@@ -63,7 +63,7 @@ async function dispatch(team, t, { context = '' } = {}) {
   if (!(await require('../projects/git').top(project.root))) throw bad(`${project.name} is not a git repository: its work comes back as a branch.`);
   if (!(await require('../computers').imageReady())) throw bad('The agents\' computer image is not built yet (Machines → Computers → Build the image).', 409);
   // The task it comes after, when that was a harness task or had a worktree: start from its branch (what it made is there).
-  const dep = (t.after || []).map(id => team.tasks.find(x => x.id === id)?.place?.worktree?.branch).find(Boolean);
+  const dep = (t.after || []).map(id => require('../teams/tries').taskFor(team, id)?.place?.worktree?.branch).find(Boolean);   // a task with tries: its kept one
   const from = t.place?.worktree?.branch || dep || 'HEAD';   // a retry carries on from its last try's branch
   const branch = await branchFor(project.root, row, t);
   const id = `wrk_${crypto.randomBytes(5).toString('hex')}`;

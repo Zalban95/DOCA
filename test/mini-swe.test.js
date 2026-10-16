@@ -98,8 +98,12 @@ test('the Orchestrator\'s rule: when to offer it, before a work chat takes the j
     assert.match(table, /`harness:mini`.*asked: true/);
     assert.match(table, /Not for work that needs DOCA's tools/);
     assert.match(table, /runs every command without asking/);
-    const s = require('../modules/teams').shape({ title: 'Tries', tasks: [{ id: 't1', agent: 'harness:mini', task: 'make the test pass', count: 3 }] }, { workChats: true });
-    assert.deepEqual(s.tasks.map(t => t.id), ['t1-1', 't1-2', 't1-3'], 'parallel tries are count');
+    assert.match(table, /several tries at once would help \(tries: N — each judged by the task\'s check or test, the best kept\)/);
+    assert.doesNotMatch(table, /count for parallel tries|tries at once would help \(count\)/, 'count is several workers sharing a plan, never tries');
+    const s = require('../modules/teams').shape({ title: 'Tries', tasks: [{ id: 't1', agent: 'harness:mini', task: 'make the test pass', tries: 3, test: 'pytest -q' }] }, { workChats: true, project: true });
+    assert.deepEqual(s.tasks.map(t => t.id), ['t1-try1', 't1-try2', 't1-try3'], 'parallel tries judged by the test are tries');
+    const c = require('../modules/teams').shape({ title: 'Count', tasks: [{ id: 't1', agent: 'harness:mini', task: 'share the plan', count: 3 }] }, { workChats: true });
+    assert.deepEqual(c.tasks.map(t => t.id), ['t1-1', 't1-2', 't1-3'], 'count makes several workers sharing the plan');
   } finally { setAllow([]); }
   assert.match(require('../modules/harness/toolbox/teams').find(t => t.name === 'team').parameters.properties.asked.description, /said yes, on this turn, to your offer/);
 });

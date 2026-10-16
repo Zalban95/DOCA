@@ -13,6 +13,7 @@
  *   POST /api/harness/missions/teams/:id/stop       stop every task
  *   POST /api/harness/missions/teams/:id/keep-going {on}   try failed tasks again, up to its rounds
  *   POST /api/harness/missions/teams/:id/archive    {on}   put a finished team away (or back)
+ *   POST /api/harness/missions/teams/:id/pick       {task, try}   keep another try of a task tried several times (tries.js)
  * Mounted before /api/harness/missions/:id.
  */
 const teams = require('./index');
@@ -39,6 +40,11 @@ function mount(app) {
   app.get('/api/harness/missions/teams/:id/detail', h(req => require('./detail').detail(mine(req))));
   app.post('/api/harness/missions/teams/:id/stop', h(async req => ({ team: await teams.stop(mine(req).id) })));
   app.post('/api/harness/missions/teams/:id/keep-going', h(async req => ({ team: await teams.keepGoing(mine(req).id, req.body?.on !== false) })));
+  app.post('/api/harness/missions/teams/:id/pick', h(async req => {
+    const team = mine(req);
+    const said = await require('./tries').pick(team.id, String(req.body?.task || ''), req.body?.try, { by: who(req)?.name || 'a person' });
+    return { said, team: teams.view(teams.get(team.id)) };
+  }));
   app.post('/api/harness/missions/teams/:id/archive', h(req => ({ team: teams.archive(mine(req).id, req.body?.on !== false) })));
 }
 
