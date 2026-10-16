@@ -77,7 +77,7 @@ async function create(args, { by, keepGoing = false, maxRounds = null, asked = f
   const shaped = shape(args, { workChats: !org.mayCreate(by, 'work') });
   // The project it works on (place.js): named, else the one its leading conversation works in.
   const project = require('./place').resolve(args.project, by);
-  const started = require('./outside').gate(shaped.tasks, { asked, person, project });   // 'asked', 'free' (its switch) or null
+  const started = require('./outside').gate(shaped.tasks, { asked, person, project, by });   // 'asked', 'free' (its switch) or null
   if (shaped.tasks.some(t => t.agent !== 'work' && !require('./outside').isOutside(t.agent)) && !require('../agents/registry').enabled())
     throw require('../agents/off')('Specialist agents are switched off (agents.enabled). Ask the person to turn them on.');
   const rounds = maxRounds == null ? null : Math.max(0, Math.min(20, Math.floor(Number(maxRounds)) || 0));

@@ -140,6 +140,23 @@ test('On its own: the Orchestrator starts it unasked, says so, and an activity l
   } finally { setUse({}); fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test('On its own, on an automatic turn: the conversation\'s owner must hold host; nobody owning it is refused', async () => {
+  setUse({ mini: 'free' });
+  const memory = require('../modules/harness/memory');
+  const outside = require('../modules/teams/outside');
+  const member = await H.signIn('member');
+  const mk = person => { const s = memory.createSession('auto', { activate: false }); if (person) memory.updateSession(s.id, { person: { id: person.id, orgId: member.orgId } }); return s.id; };
+  const child = parent => memory.createSession('woken work chat', { activate: false, parentId: parent }).id;
+  const p = { id: 'p' };
+  try {
+    assert.throws(() => outside.gate(tasks, { asked: false, by: mk(member.user), project: p }), e => e.status === 403 && /member does not hold host/.test(e.message), 'a member\'s conversation woken by the supervisor');
+    assert.throws(() => outside.gate(tasks, { asked: false, by: child(mk(member.user)), project: p }), /does not hold host/, 'up the chain');
+    assert.throws(() => outside.gate(tasks, { asked: false, by: mk(null), project: p }), e => e.status === 403 && /nobody owns this conversation/.test(e.message));
+    assert.throws(() => outside.gate(tasks, { asked: false, project: p }), /nobody owns this conversation/);
+    assert.equal(outside.gate(tasks, { asked: false, by: child(mk(H.owner.user)), project: p }), 'free', 'the owner\'s conversation, woken');
+  } finally { setUse({}); }
+});
+
 test('moving a harness to "On its own" asks for the password; tightening does not; the person\'s words leave it a proposal', async () => {
   const guarded = require('../modules/auth/guarded');
   assert.equal(guarded.prefsTouched([{ path: 'teams.outside.use.mini', from: 'ask', to: 'free' }])?.key, 'outsideFree');
