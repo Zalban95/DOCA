@@ -74,3 +74,27 @@ test('reasoning is re-sent whole when lean context is off, and only to the provi
   assert.ok(toApiMessages(rows, { sessionId: 's_think', provider: 'ds', resendChars: 8000 })[1].reasoning_content.length < 8500);
   assert.equal(toApiMessages(rows, { sessionId: 's_think', provider: 'other', resendChars: 8000 })[1].reasoning_content, undefined);
 });
+
+// Round 1 of 2026-10-16, #4/#12: lean context cleared the craft skills' reads mid-task, and the agent hunted for the
+// scripts they named.
+test('a skill this turn is following is never shortened or cleared; its read names its folder', () => {
+  const clear = require('../modules/harness/turn/clear-results');
+  const call = (id, name, args = {}) => ({ role: 'assistant', content: '', tool_calls: [{ id, type: 'function', function: { name, arguments: JSON.stringify(args) } }] });
+  const result = (id, name, content) => ({ role: 'tool', tool_call_id: id, name, content });
+  const body = `# product-video\nThis skill's folder: /x/skills/product-video — the scripts and files it names are there; run them by that path.\n1. **Spec** write it.\n${'Use promo.js. '.repeat(1500)}`;
+  const s = memory.createSession('following a skill', { activate: false });
+  memory.append(s.id, { role: 'user', content: 'make the video' });
+  memory.append(s.id, call('k', 'skill', { action: 'read', name: 'product-video' }));
+  memory.append(s.id, result('k', 'skill', body));
+  for (let i = 0; i < 6; i++) { memory.append(s.id, call(`c${i}`, 'shell')); memory.append(s.id, result(`c${i}`, 'shell', 'o'.repeat(5000))); }
+  memory.append(s.id, call('z', 'shell'));
+  assert.ok(clear.clearOld(s.id) > 0, 'other old results are cleared');
+  const { rows, folded } = memory.window(s.id, 0);
+  const sent = toApiMessages(clear.view(rows, folded, memory.getSession(s.id).clearedThrough, s.id), { sessionId: s.id, resendChars: 8000 });
+  assert.equal(sent.find(m => m.role === 'tool' && m.name === 'skill').content, body, 'the skill read goes whole');
+  assert.match(sent.find(m => m.tool_call_id === 'c0').content, /^\[cleared to save context/);
+
+  const tool = require('../modules/harness/toolbox/skills').find(t => t.name === 'skill');
+  const name = require('../modules/harness/skills').list()[0]?.name;
+  if (name) assert.match(tool.run({ action: 'read', name }), /^# [\w.-]+\nThis skill's folder: \S+ — the scripts and files it names are there/);
+});

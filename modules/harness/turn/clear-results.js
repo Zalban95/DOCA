@@ -42,6 +42,12 @@ const longArgs = r => r?.role === 'assistant' && (r.tool_calls || []).some(c => 
 const clearable = r => (r?.role === 'tool' && String(r.content || '').length > MIN_CHARS) || longArgs(r)
   || require('./reasoning-resend').long(r, MIN_CHARS);
 
+/** A skill this turn read is being followed: never cleared (skill-steps.isRead). `i` indexes `rows`. */
+function followed(rows) {
+  const steps = require('./skill-steps'), from = steps.turnStart(rows);
+  return (r, i) => i >= from && steps.isRead(r);
+}
+
 /**
  * Move the mark so that every clearable result except the newest KEEP is
  * cleared. Returns how many results this newly clears (0: nothing to do).
@@ -49,7 +55,8 @@ const clearable = r => (r?.role === 'tool' && String(r.content || '').length > M
 function clearOld(sessionId) {
   const rows = memory.messages(sessionId);
   const seen = rows.map(r => r.role).lastIndexOf('assistant');   // after it: this step's results, not yet read
-  const at = rows.map((r, i) => (clearable(r) && i < seen ? i : -1)).filter(i => i >= 0);
+  const follows = followed(rows);
+  const at = rows.map((r, i) => (clearable(r) && i < seen && !follows(r, i) ? i : -1)).filter(i => i >= 0);
   if (at.length <= KEEP) return 0;
   const through = at[at.length - KEEP];
   const prev = Number(memory.getSession(sessionId)?.clearedThrough) || 0;
@@ -65,8 +72,9 @@ function clearOld(sessionId) {
 function view(rows, offset, clearedThrough, sessionId) {
   const mark = Number(clearedThrough) || 0;
   if (!mark) return rows;
+  const follows = followed(rows);
   return rows.map((r, j) => {
-    if (!(offset + j < mark && clearable(r))) return r;
+    if (!(offset + j < mark && clearable(r)) || follows(r, j)) return r;
     if (r.role === 'assistant') {
       const think = require('./reasoning-resend');
       return { ...r, ...(longArgs(r) ? { tool_calls: r.tool_calls.map(shortCall) } : {}),

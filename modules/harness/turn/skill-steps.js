@@ -41,4 +41,14 @@ function block(rows = [], attached = []) {
   return out.join('\n');
 }
 
-module.exports = { block, stepsOf };
+/**
+ * Whether a transcript row is a skill read (`skill` read: "# name" then its body). A skill being followed is never
+ * shortened or cleared from what is re-sent (round 1 of the test of 2026-10-16, #4/#12: lean context cleared the craft
+ * skills' reads mid-task and the agent went hunting for the scripts they named).
+ */
+const isRead = r => r?.role === 'tool' && r.name === 'skill' && /^# [\w.-]+\r?\n/.test(String(r.content || ''));
+
+/** Where the turn in progress starts in `rows`: after its last user row (0 when there is none). */
+const turnStart = rows => (rows || []).map(r => r.role).lastIndexOf('user') + 1;
+
+module.exports = { block, stepsOf, isRead, turnStart };

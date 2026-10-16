@@ -57,6 +57,8 @@ function clipToolContent(content, spill, max = TOOL_MAX_CHARS) {
  * results — the ones sent uncached a step ago anyway — never further up (ISSUES.md H-9b).
  */
 function maxFor(row, fresh, resendChars, capChars) {
+  // A skill read goes whole every time (skills.js bounds it): it is the procedure the turn is following (skill-steps.js).
+  if (require('./skill-steps').isRead(row)) return capChars > 0 ? Math.min(require('../toolbox/common').MAX_OUT, capChars) : require('../toolbox/common').MAX_OUT;
   const base = !(resendChars > 0) ? TOOL_MAX_CHARS : fresh ? require('../toolbox/common').MAX_OUT
     : row.name === 'read_file' ? Math.max(resendChars, TOOL_MAX_CHARS) : resendChars;
   // On a model whose window is known, never more than its share of it (step-ceiling.resultCapChars): two whole 64k
