@@ -1566,7 +1566,8 @@ the hive answers there later reaches the call.
   that never rises above the room enough to be speech, or ten seconds of exact digital silence — a microphone the
   device muted, as Android does to an app that left the foreground), `stt` (no words were found in what was said, or the
   transcriber did not answer), `turn` (the answer was cut short or failed: the call is still listening), `tts` (an
-  answer could not be spoken: it is in the conversation). Show it, briefly; a client that does not know the frame
+  answer could not be spoken: it is in the conversation), and, since 2026-10-16, `important` (the call's person just changed an
+  important switch — the approval mode, a level, a guard — from the panel: `text` says what, old → new; nothing failed). Show it, briefly; a client that does not know the frame
   ignores it. A call by the pipeline in which nothing is said either way for five minutes is ended by the hub
   (`notice`, then `closed` with `reason: "nothing was said for five minutes"`). Each stage of each call is also kept on the hub (Hub → Logs, source `call`; Chronicle → Live calls), in
   names and numbers. Since 2.314.0 the pipeline counts speech from about -51 dBFS (RMS 90 of PCM16) or three times the
