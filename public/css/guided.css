@@ -19,3 +19,5 @@
 .guided-pick b { font-size: 15px; }
 .guided-pick span { font-size: 12px; color: var(--muted); }
 .guided-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+/* A mastermind and worker pair per budget (settings/guided-pairs.js). */
+.guided-pair { padding: 6px 0; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 4px; }
