@@ -85,6 +85,8 @@ module.exports = [
     },
     danger: true,
     run: (a, ctx = {}) => {
+      const marked = require('../turn/context-marks').refusal(a.replacement, a.path || 'these files');   // never a lean-context marker
+      if (marked) throw new Error(marked);
       const r = require('../../projects/search').replaceInFiles(where(a.path, ctx),
         { ...a, dryRun: !a.apply, refuse: abs => require('../control-plane').which(abs) || require('../../edition-mode').inCode(abs) });
       const head = `${r.written ? 'Replaced' : 'Would replace'} ${r.replacements} occurrence(s) in ${r.files} file(s)`
