@@ -174,7 +174,7 @@ test('a failed run reports what ran, the end of its output and the file holding 
   require('../modules/recipes/store').save({ title: 'Fails loudly', steps: [{ tool: 'shell', args: { command: `node ${scriptPath}` } }] });
   const tool = require('../modules/harness/toolbox/recipes').find(t => t.name === 'recipe');
   const said = await tool.run({ action: 'run', id: 'fails-loudly' }, {});
-  assert.match(said, /Recipe stopped at step 1 \(shell\): exit 3/);
+  assert.match(said, /Recipe stopped at step 1 \(shell\): exit [13]/);   // PowerShell reports 1 for any failing command
   assert.ok(said.includes(`Step 1 ran: node ${scriptPath}`), 'the command, so the script path');
   assert.match(said, /Its output ends with:\n[\s\S]*no geometry in bracket\.step/, 'stderr is in the tail');
   const file = said.match(/The whole result is in (.+?) \(read_file it\)/);
