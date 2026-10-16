@@ -10,6 +10,7 @@
  *   { image, notBlank?, contains?, width?, height? }          checks/image.js
  *   { built: "project.params.json" }                         checks/built.js: deliverables built from the current values
  *   { literals: "<spec>" }                                   checks/literals.js: a parameter's value typed in again
+ *   { fit, parts?, held?, clearance?, screws?, … }            checks/fit.js — an assembly: overlap, clearances, screws
  * Each answers { ok, why }: what failed and where (the second, the page and the place on it, the edge count), and what it
  * could not verify — a program that is missing is named, never passed over in silence. A requirement the contract asked
  * for that could not be verified does not hold: it fails, saying what to install (checks/verdict.js, the one rule). Every reader runs a program the
@@ -20,7 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const KINDS = { video: './video', pdf: './pdf', mesh: './mesh', image: './image', built: './built', literals: './literals' };
+const KINDS = { video: './video', pdf: './pdf', mesh: './mesh', image: './image', built: './built', literals: './literals', fit: './fit' };
 const kind = c => Object.keys(KINDS).find(k => c && typeof c[k] === 'string' && c[k].trim()) || null;
 const reader = k => require(KINDS[k]);
 const badDefault = m => Object.assign(new Error(m), { status: 400 });
@@ -51,7 +52,9 @@ async function run(c, { cwd } = {}) {
   if (!st.isFile()) return { ok: false, why: `${file} is not a file` };
   if (!st.size) return { ok: false, why: `${file} is empty` };
   try {
-    const r = await reader(k).check(c, abs);
+    // A check naming more files (a fit's other parts) finds each the same way, under the same roots.
+    const resolve = p => { const w = where(p, cwd || path.dirname(abs)); if (w.refused) throw new Error(w.refused); return w.abs; };
+    const r = await reader(k).check(c, abs, { resolve });
     return { ok: !!r.ok, why: `${path.basename(abs)}: ${r.why}` };
   } catch (e) { return { ok: false, why: `${path.basename(abs)} could not be checked: ${e.message}` }; }
 }

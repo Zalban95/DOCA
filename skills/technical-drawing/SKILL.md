@@ -20,7 +20,9 @@ few dimensions only you know matter.
   exports the PDF. Missing: the template still makes the sheet as SVG (and as PDF when a Chromium is here) and says
   so — offer CADCraft for the proper CAD file.
 - The part as **STEP** (best: real circles, holes found and tabled) or STL (works; curved edges become facets and
-  holes are not tabled). Model in FreeCAD, build123d or CADCraft and export STEP alongside the STL.
+  holes are not tabled). Model in FreeCAD, build123d or CADCraft and export STEP alongside the STL — from FreeCAD
+  through a document and `Import.export` (`Part.export` can write a STEP with no geometry in it; the template then
+  says "no geometry in <file>"). The freecad-modelling skill has the rest of FreeCAD's traps.
 
 ## Doing it
 
@@ -70,10 +72,14 @@ holds:
 - `section`: `{ "axis": "vertical" | "horizontal", "at": <mm along the front view> }`; without `at` it cuts through the
   hole nearest the middle. `hidden`: `front` (default), `all` or `none`.
 - What is dimensioned without asking: overall size, depth, and the holes' positions; holes are tagged H1, H2 … and
-  listed with size and depth (or THRU). Add the dimensions that carry the design — a hole's spacing, a slot, a
+  listed with size and depth (or THRU). A tag is set outside the outermost ring around its hole (a countersink, a nut
+  trap) where no line runs through it, with a short leader when it had to go further out; one that finds no clear
+  place is named in "left_out". `"hole_tags": false` leaves the tags off the views (the notes still list the holes). Add the dimensions that carry the design — a hole's spacing, a slot, a
   clearance — in `dimensions`: points in the part's own coordinates (3 numbers) or the view's (2), `side` optional;
   a diameter is `{ "view", "center", "d" }`. Put them in the `detail` view when they are small.
 - `tolerance` (default ISO 2768-m), `units`, `font` (default the OS's sans).
+- Notes wrap to the room left of the title block; a title block value too long for its cell is set smaller, and one
+  too long even then is cut and named in `warnings` — shorten it or move the rest into `notes`.
 
 ## Checklist before handing it over
 

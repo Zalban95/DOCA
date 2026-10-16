@@ -44,7 +44,7 @@ function normalizeCheck(c) {
   if (c.absent) return { absent: String(c.absent).slice(0, 500) };
   if (c.free !== undefined) { const port = Number(c.free); if (!Number.isInteger(port) || port < 1 || port > 65535) throw bad('free is a port number.'); return { free: port }; }
   throw bad('A check is {file}, {file, contains}, {url}, {page, contains, selector, noErrors}, {absent}, {free: port}, or one of the work itself — '
-    + '{video, duration?, width?, height?, fps?}, {pdf, pages?, contains?}, {mesh, maxSize?, watertight?}, {image, contains?}; a test you run yourself and report.');
+    + '{video, duration?, width?, height?, fps?}, {pdf, pages?, contains?}, {mesh, maxSize?, watertight?}, {image, contains?}, {fit, parts?, held?, clearance?, screws?}; a test you run yourself and report.');
 }
 
 /** Whether a contract's check holds now: { ok, why }. A contract without a check holds on the agent's word. */

@@ -61,6 +61,29 @@ function parts(spec) {
   return (spec.parts || []).map((p, i) => ({ ...p, name: p.name || `Part ${i + 1}`, color: p.color || pal[i % pal.length] }));
 }
 
+const vec3 = v => Array.isArray(v) && v.length === 3 && v.every(x => Number.isFinite(Number(x)));
+
+/**
+ * How each part after the first comes to its place, checked before anything renders. Without a word of its own a part
+ * comes along the spec's `explode_axis` (default +Z), as every part always did; `axis` [x, y, z] gives it a way of its
+ * own (it starts out on that side and moves against it: `[-1, 0, 0]` slides it on along +X), `distance` (mm) how far
+ * out it starts, and `via` [[x, y, z], …] a path — offsets in mm from its place, travelled in order, then its place
+ * (a clip lifted over a panel edge, then pushed down onto it). Returns one line per moving part, for `plan`.
+ */
+function motion(spec) {
+  const out = [];
+  (spec.parts || []).forEach((p, i) => {
+    const who = `part ${i + 1}${p.name ? ` (${p.name})` : ''}`;
+    if (p.axis !== undefined && (!vec3(p.axis) || p.axis.every(x => !Number(x)))) throw new Error(`${who}: "axis" is a direction, three numbers not all 0, such as [1, 0, 0].`);
+    if (p.distance !== undefined && !(Number(p.distance) > 0)) throw new Error(`${who}: "distance" is millimetres, a number above 0.`);
+    if (p.via !== undefined && (!Array.isArray(p.via) || !p.via.length || !p.via.every(vec3))) throw new Error(`${who}: "via" is a list of points [x, y, z] in mm from where it sits, such as [[0, 0, 40], [0, -10, 40]].`);
+    if (p.via !== undefined && p.axis !== undefined) throw new Error(`${who}: give "axis" or "via", not both.`);
+    if (i === 0) { if (p.axis || p.via) throw new Error(`${who}: the first part stays where it is, so it takes no "axis" or "via" — list the part that moves after it.`); return; }
+    out.push({ part: i + 1, name: p.name || `Part ${i + 1}`, from: p.via ? `via ${p.via.map(v => `[${v.join(', ')}]`).join(' → ')}` : `along ${JSON.stringify(p.axis || spec.explode_axis || [0, 0, 1])}${p.distance ? `, ${p.distance} mm out` : ''}` });
+  });
+  return out;
+}
+
 // ffmpeg filter values: a path or text in single quotes, with what the filter parser reads specially escaped.
 const q = s => `'${String(s).replace(/\\/g, '/').replace(/'/g, "'\\''").replace(/:/g, '\\:')}'`;
 
@@ -74,4 +97,4 @@ function text({ file, font, size, color, x, y, from = 0, to = null, fade = 0.35,
 
 const box = ({ x, y, w, h, color, from = 0, to = null }) => `drawbox=x=${Math.round(x)}:y=${Math.round(y)}:w=${Math.round(w)}:h=${Math.round(h)}:color=${color}:t=fill:enable='${to == null ? `gte(t,${from})` : `between(t,${from},${to})`}'`;
 
-module.exports = { shots, schedule, parts, resolution, text, box, q, RES, WEIGHTS, PALETTE };
+module.exports = { shots, schedule, parts, motion, resolution, text, box, q, RES, WEIGHTS, PALETTE };

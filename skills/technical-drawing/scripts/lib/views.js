@@ -5,6 +5,8 @@
  * drawing adds to it: centre marks and tags on holes, the section's hatched faces, the cutting line, a detail's circle.
  */
 
+const T = require('./tags');
+
 const toPaper = (pl, p) => [pl.origin[0] + p[0] * pl.scale, pl.origin[1] + p[1] * pl.scale];
 const deg = r => r * 180 / Math.PI;
 const ang = (c, p) => { let a = deg(Math.atan2(p[1] - c[1], p[0] - c[0])); if (a < 0) a += 360; return a; };
@@ -103,9 +105,18 @@ function viewEntities(view, pl, { hidden = true, clip = null } = {}) {
     if (r < 0.6) continue;
     const c = toPaper(pl, h.c), m = r + 1.8;
     e.push({ k: 'line', pts: [[c[0] - m, c[1]], [c[0] + m, c[1]]], layer: 'CEN' }, { k: 'line', pts: [[c[0], c[1] - m], [c[0], c[1] + m]], layer: 'CEN' });
-    if (h.tag) e.push({ k: 'text', at: [c[0] + r * 0.75 + 0.6, c[1] + r * 0.75 + 0.6], text: h.tag, h: 2.2, justify: 'BL', layer: 'TAG' });
   }
   return e;
+}
+
+/**
+ * The tags a view's holes ask for — placed later (tags.js), once everything they must keep clear of is on the sheet.
+ * Each starts outside the outermost ring sharing the hole's centre (a countersink, a nut trap), not the hole itself.
+ */
+function holeTags(view, pl) {
+  const edges = [...(view.visible || []), ...(view.hidden || [])];
+  return (view.holes || []).filter(h => h.tag && h.d / 2 * pl.scale >= 0.6)
+    .map(h => ({ c: toPaper(pl, h.c), r0: T.outerRadius(h, edges) * pl.scale, text: h.tag, h: 2.2 }));
 }
 
 /** The cutting line on the front view: chain line, thick ends, arrows looking the way the section is seen, letters. */
@@ -129,4 +140,4 @@ function cuttingLine(cut, pl, outline, label) {
   return e;
 }
 
-module.exports = { viewEntities, cuttingLine, toPaper, arcOf, pointsOf, clipToCircle, seedOf, edgeEntity };
+module.exports = { viewEntities, holeTags, cuttingLine, toPaper, arcOf, pointsOf, clipToCircle, seedOf, edgeEntity };

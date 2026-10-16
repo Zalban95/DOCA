@@ -158,11 +158,34 @@ def world_box(objs):
 # Exploded positions for the assembly shot: along the parts' own axis, each part a step further than the one before.
 axis = Vector(job.get('explode_axis', [0, 0, 1])).normalized()
 ext = (hi - lo)
-step = (abs(axis.x) * ext.x + abs(axis.y) * ext.y + abs(axis.z) * ext.z) / size * 1.2 + job.get('spread', 0.26)
+
+
+def step_along(a):
+    return (abs(a.x) * ext.x + abs(a.y) * ext.y + abs(a.z) * ext.z) / size * 1.2 + job.get('spread', 0.26)
+
+
+step = step_along(axis)
 home = [o.location.copy() for o in parts]
+
+
+def route(i):
+    """Where part i travels from, as points (mm, the assembly's frame) ending before its place: a part's own "via"
+    (offsets from its place, in order), else its own "axis" (and "distance"), else the shared explode axis — each part
+    a step further than the one before it that comes the same way, so a one-axis spec moves exactly as it always did."""
+    p, h = job['parts'][i], home[i]
+    if p.get('via'):
+        return [h + Vector(v) for v in p['via']]
+    a = Vector(p['axis']).normalized() if p.get('axis') else axis
+    k = sum(1 for j in range(1, i + 1) if not job['parts'][j].get('via')
+            and (Vector(job['parts'][j]['axis']).normalized() if job['parts'][j].get('axis') else axis).dot(a) > 0.999)
+    d = p['distance'] if p.get('distance') is not None else step_along(a) * k * size
+    return [h + a * d]
+
+
+routes = [[] if i == 0 else route(i) for i in range(len(parts))]
 if job['shot'] == 'assemble':                       # framed and floored as spread out, its widest moment
-    for i, (o, h) in enumerate(zip(parts, home)):
-        o.location = h + axis * step * i * size
+    for o, h, r in zip(parts, home, routes):
+        o.location = r[0] if r else h
 bpy.context.view_layer.update()
 root.location.z -= world_box(parts)[0].z            # stand it on the floor at z = 0
 bpy.context.view_layer.update()
@@ -232,15 +255,20 @@ else:
     for i, (o, h) in enumerate(zip(parts, home)):
         if i == 0:
             continue
-        spread = h + axis * step * i * size
         s0, s1 = job['moves'][i - 1]
-        o.location = spread
-        o.keyframe_insert('location', frame=max(1, int(round(s0 * fps)) + 1))
-        o.location = h
-        o.keyframe_insert('location', frame=int(round(s1 * fps)) + 1)      # Bézier keys: it eases in and settles
+        pts = routes[i] + [h]
+        # Its waypoints evenly over its move, the place last; Bézier keys: it eases in and settles.
+        for n, at in enumerate(pts):
+            o.location = at
+            t = s0 + (s1 - s0) * n / (len(pts) - 1)
+            o.keyframe_insert('location', frame=max(1, int(round(t * fps)) + 1))
     # Seen from where the parts' axis runs across the picture rather than straight at the lens, or the spread
     # reads as depth and the parts hide each other: about 60° off the axis, on the side nearest the asked azimuth.
-    wa = root.matrix_world.to_quaternion() @ axis          # the axis as the world sees it (rotation only)
+    # With parts coming different ways, the axis is the way of the longest move.
+    moves = [(r[0] - h) for r, h in zip(routes, home) if r]
+    own = any(p.get('axis') or p.get('via') for p in job['parts'])
+    main = max(moves, key=lambda v: v.length).normalized() if own and moves else axis
+    wa = root.matrix_world.to_quaternion() @ main          # the axis as the world sees it (rotation only)
     if 'azimuth' not in job and Vector((wa.x, wa.y)).length > 0.35:
         along = math.degrees(math.atan2(wa.x, -wa.y))
         az0 = min((along + 60, along - 60), key=lambda a: abs(((a - az0 + 180) % 360) - 180))

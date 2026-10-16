@@ -48,6 +48,8 @@ the model doing the work — read its skill and fill its spec instead of startin
 - **A product promo video** (studio, turntable, the parts coming together, title and end cards), rendered in the
   background by Blender: the product-video skill, recipe `product-video`.
 - **A part to 3D-print** (walls, M3 clearances, keyholes, bed fit, orientation): the printable-part skill.
+- **A FreeCAD script** (headless, its exports): the freecad-modelling skill first — scripts that fail loudly, exports
+  that are not empty; and `check_output {kind: "fit"}` when the parts hold something.
 
 ## Doing the work
 
