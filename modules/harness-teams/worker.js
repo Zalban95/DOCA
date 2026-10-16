@@ -11,6 +11,7 @@
 const box = require('./box');
 const events = require('./events');
 const harnesses = require('./harnesses');
+const trajectory = require('./trajectory');
 const S = require('./store');
 
 const POLL_MS = () => Number(process.env.DOCA_TEAM_POLL_MS) || 20000;   // how often a running worker's branch and notes are looked at
@@ -95,8 +96,8 @@ async function notes(w, c) {
 async function run(w) {
   const row = harnesses.all().find(r => r.id === w.harness);
   const project = require('../projects/store').get(w.projectId);
-  let key = null;
-  const scrub = t => (key?.value ? String(t ?? '').split(key.value).join('[key]') : String(t ?? ''));
+  let key = null, relay = {};
+  const scrub = t => [key?.value, relay.OPENAI_API_KEY].filter(Boolean).reduce((s, v) => s.split(v).join('[key]'), String(t ?? ''));
   const stopped = () => S.get(w.id)?.stopRequested;
   try {
     if (!row || !project) throw new Error(!row ? `${w.harness} is no longer in the catalogue` : 'its project is gone');
@@ -107,7 +108,9 @@ async function run(w) {
     const { bin, installed } = await box.install(c, row);
     if (installed) require('../activity').note({ from: 'harness-teams', what: `installed ${row.label} in ${c.name}`, why: 'its first team worker', machine: { kind: 'computer', id: c.id, name: c.name } });
     key = harnesses.keyFor(row);
-    if (!key && (await box.signedIn(c, row, bin)) === false) return index().needsSignIn(w.id, c, row);
+    const by = require('../teams/store').get(w.teamId)?.outsideBy;
+    relay = await trajectory.relayEnv(c, row, `${row.label} on task ${w.task} works on this hub's model — ${by === 'free' ? 'its switch is "On its own"' : 'the person said yes to running it'}`);   // DOCA's own model through the relay (team.relay), or {}
+    if (!key && !row.team.relay && (await box.signedIn(c, row, bin)) === false) return index().needsSignIn(w.id, c, row);
     tick(w, PLAN[1], 'done'); tick(w, PLAN[2], 'running');
     const { dir, base } = await box.putProject(c, { root: project.root, worker: w.id, branch: w.branch, from: w.from, author: `${row.label} (DOCA team)` });
     S.patch(w.id, { dir, base, state: 'running' }); Object.assign(w, { dir, base });
@@ -117,9 +120,17 @@ async function run(w) {
 
     const pidfile = `${box.HOME}/teams/.${w.id}.pid`;
     S.patch(w.id, { pidfile });
-    const child = box.run(c, { dir, bin, args: harnesses.argv(row, { task: index().preamble(w), model: w.model }), env: key ? { [key.env]: key.value } : {}, pidfile });
+    const traj = row.team.output ? `${box.HOME}/teams/${w.id}.traj.json` : null;   // outside its folder, which goes when it ends
+    const env = { ...(row.team.env || {}), ...(key ? { [key.env]: key.value } : {}), ...relay };
+    const child = box.run(c, { dir, bin, args: harnesses.argv(row, { task: index().preamble(w), model: w.model, output: traj }), env, pidfile });
     live.set(w.id, { c, pidfile, child });
-    let buf = '', err = '', final = null;
+    let buf = '', err = '', final = null, seen = 0;
+    const readTraj = async () => {   // a CLI that writes a trajectory, not a stream: its new messages, said the same way
+      if (!traj) return;
+      const r = trajectory.read(await box.read(c, traj), seen);
+      seen = r.seen; r.events.forEach(ev => say(w, ev, scrub));
+      if (r.final) final = r.final;
+    };
     const take = l => { for (const ev of events.parse(row.team.events, l)) { if (ev.type === 'final') final = ev; else if (ev.type === 'error') err = `${err}\n${ev.text}`.slice(-2000); else say(w, ev, scrub); } };
     child.stdout.on('data', d => { buf += d.toString(); const lines = buf.split('\n'); buf = lines.pop(); lines.forEach(take); });
     child.stderr.on('data', d => { err = (err + d.toString()).slice(-2000); });
@@ -130,6 +141,7 @@ async function run(w) {
         const r = await box.pull(c, { dir, branch: w.branch, base, root: project.root, worker: w.id });
         if (r && r.head !== S.get(w.id)?.head) await pulled(w, r, project);
         await notes(w, c);
+        await readTraj();
       } catch { /* the end tries again */ } finally { busy = false; }
     };
     const poll = setInterval(look, POLL_MS());
@@ -139,6 +151,10 @@ async function run(w) {
     while (busy) await new Promise(r => setTimeout(r, 100));
     live.delete(w.id);
     take(buf);
+    await readTraj().catch(() => {});
+    let kept = null;
+    if (traj) kept = await require('../computers').fetchFile(c.id, traj).then(a => a.name, () => null);   // its trajectory, as an attachment
+    if (kept && final) final = { ...final, text: `${final.text}\n\nIts trajectory (every step, as it ran) is kept as the attachment ${kept}.` };
 
     tick(w, PLAN[3], code === 0 ? 'done' : 'failed'); tick(w, PLAN[4], 'running');
     await notes(w, c).catch(() => {});

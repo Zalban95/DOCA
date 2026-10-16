@@ -77,15 +77,17 @@ async function create(args, { by, keepGoing = false, maxRounds = null, asked = f
   const shaped = shape(args, { workChats: !org.mayCreate(by, 'work') });
   // The project it works on (place.js): named, else the one its leading conversation works in.
   const project = require('./place').resolve(args.project, by);
-  require('./outside').gate(shaped.tasks, { asked, person, project });
+  const started = require('./outside').gate(shaped.tasks, { asked, person, project });   // 'asked', 'free' (its switch) or null
   if (shaped.tasks.some(t => t.agent !== 'work' && !require('./outside').isOutside(t.agent)) && !require('../agents/registry').enabled())
     throw require('../agents/off')('Specialist agents are switched off (agents.enabled). Ask the person to turn them on.');
   const rounds = maxRounds == null ? null : Math.max(0, Math.min(20, Math.floor(Number(maxRounds)) || 0));
   const team = { id: store.newId(), ...shaped, by, projectId: project?.id || null, state: 'running', createdAt: new Date().toISOString(), endedAt: null,
-    loop: { on: !!keepGoing, rounds: 0, ...(rounds == null ? {} : { maxRounds: rounds }) }, notes: [] };
+    loop: { on: !!keepGoing, rounds: 0, ...(rounds == null ? {} : { maxRounds: rounds }) }, notes: [], ...(started ? { outsideBy: started } : {}) };
   store.save(team);
   listen();
   require('./announce').line(team, `made${project ? ` in the project ${project.name}` : ''} with ${team.tasks.length} task${team.tasks.length === 1 ? '' : 's'}: ${team.tasks.map(t => `${t.id} ${t.agent}${t.after.length ? ` after ${t.after.join(', ')}` : ''}`).join('; ')}`);
+  if (started === 'free') require('../activity').note({ from: 'teams', sessionId: by, what: `the Orchestrator started ${[...new Set(team.tasks.filter(t => require('./outside').isOutside(t.agent)).map(t => t.agent))].join(', ')} on its own for team "${team.title}"`,
+    why: 'its switch is "On its own" (Settings → Harnesses → CLI harnesses → On a team)' });
   return engine.advance(team.id);
 }
 

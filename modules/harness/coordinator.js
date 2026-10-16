@@ -15,6 +15,26 @@ const ROLE = 'You are the Orchestrator: the person\'s main contact in this panel
   + 'conversation that proposed it. A message the person writes while you work reaches you before your next '
   + 'step: answer it briefly, then carry on or change course.';
 
+/** The outside harnesses and their switches (harness-teams/harnesses.js mode): [{row, mode}], [] when unreadable. */
+const outside = () => { try { const h = require('../harness-teams/harnesses'); return h.all().map(row => ({ row, mode: h.mode(row) })); } catch { return []; } };
+
+/** A row per outside harness that says when it fits: offer it (ask) or start it (free). */
+function fitting(team) {
+  if (!team) return [];
+  return outside().filter(x => x.row.team.when && x.mode !== 'never').map(({ row, mode }) => (mode === 'free'
+    ? `${row.label} — ${row.team.when}. Its switch is "On its own": start it yourself, a \`team\` in the project with agent \`harness:${row.id}\` (no asked needed), `
+      + 'each try in a computer of its own on this hub\'s model through the model relay, its branch back for the person; then say in one line that you started it and why.'
+    : `${row.label} — ${row.team.when}. Offer it in one line, naming it and saying it runs in a computer of its own on this hub's model, through the relay. On their yes: `
+      + `a \`team\` in the project with agent \`harness:${row.id}\` (count for parallel tries), asked: true — its branch and record come back for them.`));
+}
+
+/** Outside harnesses without a rule of their own whose switch is "On its own". */
+function freeRow(team) {
+  const free = team ? outside().filter(x => x.mode === 'free' && !x.row.team.when).map(x => `${x.row.label} (harness:${x.row.id})`) : [];
+  return free.length ? [`Outside harnesses you may start yourself — their switch is "On its own": ${free.join(', ')}. For a coding task in a git project that one fits better than a work chat: `
+    + 'a `team` with that agent (no asked needed), in computers of their own; then say in one line that you started it and why.'] : [];
+}
+
 /**
  * The routing table: the first row that fits wins. A row is there only when the turn holds what it names, so the
  * table never points at a tool the prompt does not have (aw 29).
@@ -31,14 +51,19 @@ function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], 
       + (has('features') ? ', and look it up with `features` before saying something cannot be done.' : '.'),
     has('recipe') && recipes ? `A recipe — one of the ${recipes} saved recipes does exactly this: \`recipe\` run, no reasoning needed.` : '',
     has('skill') && skills ? 'A skill — a listed skill covers the task: `skill` read it, then follow it.' : '',
+    // Outside harnesses with a "when it fits" rule (catalog `team.when`; asked 2026-10-16): offered on `ask`, started on `free`,
+    // before a work chat would take the job. Each runs only in agents' computers; its switch is teams.outside.use.
+    ...fitting(has('team')),
     has('work_chats') ? 'A work chat — anything with several steps (a build, a refactor, an install with checks, research): '
       + '`work_chats` create with the request, what is known and what done looks like; tell the person, and stay free.' : '',
     has('agent_dispatch') && specialists.length ? `A specialist — a self-contained errand one of them fits (${specialists.join(', ')}): \`agent_dispatch\`; `
       + 'it runs in the background and you read the result with `agent_results`. Send independent errands in parallel; one that needs another\'s result waits for it with `after`.' : '',
     has('team') && specialists.length ? 'A team — several errands for different specialists, some needing others\' results, each with a "done when": `team` create once, '
       + 'with every task, its `after` and its contract; the hub dispatches them in order, checks each contract and keeps the team\'s document. Stay free.' : '',
-    has('team') ? 'A named outside harness — only when the person names one in their request (Claude Code, Codex, dsh, Gemini CLI; "5 Claude on Opus"): a `team` '
-      + 'in a project whose tasks\' agent is `harness:<id>` (model, count), with asked: true — each works in a computer of its own on a branch, and the branches come back for the person to merge. Never on your own initiative.' : '',
+    has('team') && outside().some(r => r.mode !== 'never') ? 'A named outside harness — when the person names one in their request (Claude Code, Codex, dsh, Gemini CLI; "5 Claude on Opus"): a `team` '
+      + 'in a project whose tasks\' agent is `harness:<id>` (model, count), with asked: true — each works in a computer of its own on a branch, and the branches come back for the person to merge. '
+      + 'Never on your own initiative, except one whose switch is "On its own".' : '',
+    ...freeRow(has('team')),
     'Ask — the choice is the person\'s (money, something outward or irreversible, a matter of taste): ask once, with the options.',
   ].filter(Boolean);
   // The premise's ladder (CONSTITUTION §0; TODO P0.2): the person's way, then the proven way, then a way found and kept.

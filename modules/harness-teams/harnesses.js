@@ -11,6 +11,19 @@
  *   team.events   which event stream it writes (events.js)
  *   team.key      the environment variable its API key goes in and the provider address that key is DOCA's for
  *   team.signedIn argv that exits 0 when it is signed in by itself (a person's sign-in kept in its computer)
+ *   team.uv       a Python package installed in the computer with uv instead of npm (mini-swe-agent)
+ *   team.relay    its model is DOCA's own through the model relay (relay/computer.js): the computer's relay token in that
+ *                 one process's environment, never a provider key
+ *   team.env      fixed environment for the process (no secrets)
+ *   team.optIn    offered only once switched on here (installed on the Harness tab, or named in teams.outside.allow)
+ *   team.when     when it fits a task: the rule the Orchestrator's routing table reads (harness/coordinator.js)
+ *
+ * Each has a switch (asked 2026-10-16), `teams.outside.use.<id>`: never — not offered, refused; ask — used when the
+ * person names it or says yes to the Orchestrator's offer (the default for one that is allowed); free — the
+ * Orchestrator may start it itself when a task fits, still only in agents' computers, and says so. Moving one to free
+ * asks for the password (auth/guarded.js); a person's own words in chat reach it as settings_propose {asked: true},
+ * which leaves it a proposal whose Accept asks.
+ *   team.output   the flag pair a trajectory file goes in ('{output}' in args); the worker keeps it as an attachment
  */
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
 
@@ -19,14 +32,44 @@ function all() {
   return require('../harness/catalog').KNOWN.filter(r => r.kind === 'cli' && r.cmd && r.team && Array.isArray(r.team.args)).concat(_extra);
 }
 
-/** The ones the owner lets be summoned (teams.outside.allow; empty: all of them). */
-function offered() {
-  let allow = [];
-  try { allow = require('../settings-schema').value('teams.outside.allow') || []; } catch { /* undeclared in an old schema */ }
-  const set = new Set(allow.map(String));
-  const off = require('../harness/harness-life');
-  return all().filter(r => (!set.size || set.has(r.id)) && !off.isDisabled(r.id));   // a switched-off harness is not summoned
+const allowList = () => { try { return require('../settings-schema').value('teams.outside.allow') || []; } catch { return []; } };   // undeclared in an old schema
+
+/**
+ * Whether an opt-in row (`team.optIn`: mini-swe-agent) is switched on here: a person installed it on the hub from the
+ * Harness tab, or the owner named it in teams.outside.allow. Off until then — the agent never installs it itself.
+ */
+const _found = new Map();   // cmd → {at, yes}: PATH is walked at most every 30 s (the routing table asks on every step)
+function installedHere(cmd) {
+  const k = _found.get(cmd);
+  if (k && Date.now() - k.at < 30000) return k.yes;
+  const yes = !!require('../shell').which(cmd);
+  _found.set(cmd, { at: Date.now(), yes });
+  return yes;
 }
+const optedIn = r => allowList().map(String).includes(r.id) || installedHere(r.cmd);
+
+const MODES = ['never', 'ask', 'free'];
+/** The three states as the panel and the agent say them. */
+const WORDS = { never: 'Never', ask: 'Ask me first', free: 'On its own' };
+const useMap = () => { try { const v = require('../settings-schema').value('teams.outside.use'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } };
+
+/**
+ * Its switch: never | ask | free. A harness switched off is never; one set here is what it is set to; otherwise the
+ * older rule says (teams.outside.allow; empty: all of them, an opt-in one once switched on): allowed is ask, else never.
+ */
+function mode(r) {
+  if (require('../harness/harness-life').isDisabled(r.id)) return 'never';
+  const set = useMap()[r.id];
+  if (MODES.includes(set)) return set;
+  const allow = new Set(allowList().map(String));
+  return (r.team.optIn ? optedIn(r) : (!allow.size || allow.has(r.id))) ? 'ask' : 'never';
+}
+
+/** The ones that may be summoned: every switch but never. */
+function offered() { return all().filter(r => mode(r) !== 'never'); }
+
+/** The ones the Orchestrator may start itself (free). */
+function free() { return all().filter(r => mode(r) === 'free'); }
 
 /** A harness by id or label, among those offered. Throws a sentence that names what is offered. */
 function find(want) {
@@ -35,6 +78,8 @@ function find(want) {
   if (row) return row;
   const named = all().find(r => r.id === w || r.label.toLowerCase() === w);
   const list = offered().map(r => `${r.id} (${r.label})`).join(', ') || 'none';
+  if (named && useMap()[named.id] === 'never') throw bad(`${named.label} is set to "${WORDS.never}" here (Settings → Harnesses → CLI harnesses → On a team). Allowed now: ${list}.`, 403);
+  if (named?.team?.optIn && !optedIn(named)) throw bad(`${named.label} is off here: a person switches it on by installing it on the Harness tab (or the owner lists "${named.id}" in teams.outside.allow). Allowed now: ${list}.`, 403);
   if (named) throw bad(`${named.label} is not allowed to be summoned here (the owner's teams.outside.allow). Allowed: ${list}.`, 403);
   throw bad(`No outside harness "${want}" that runs without a terminal. Harnesses that can work in a team: ${list}.`, 404);
 }
@@ -46,12 +91,18 @@ function npmPackage(row) {
   return m ? m[1] : null;
 }
 
-/** The argv after the command for one task. A model on a harness with no model flag is refused, never dropped silently. */
-function argv(row, { task, model = null } = {}) {
+/**
+ * The argv after the command for one task. A model on a harness with no model flag is refused, never dropped silently;
+ * one with `team.defaultModel` always gets its flag (mini-swe-agent: the relay's first model). `{output}` is the
+ * `team.output` pair when the worker keeps a trajectory file (`output`), else nothing.
+ */
+function argv(row, { task, model = null, output = null } = {}) {
   if (model && !row.team.model) throw bad(`${row.label} takes its model from its own settings (it has no model flag); leave model out.`);
   if (model && !/^[\w.:/@-]{1,80}$/.test(String(model))) throw bad('A model id is letters, digits and . : / @ - _ (e.g. opus, gpt-5-codex).');
-  const pair = model ? row.team.model.map(x => x.replace('{model}', String(model))) : [];
-  return row.team.args.flatMap(a => (a === '{task}' ? [String(task)] : a === '{model}' ? pair : [a]));
+  const m = model || row.team.defaultModel || null;
+  const pair = m ? row.team.model.map(x => x.replace('{model}', String(m))) : [];
+  const out = output && row.team.output ? row.team.output.map(x => x.replace('{output}', String(output))) : [];
+  return row.team.args.flatMap(a => (a === '{task}' ? [String(task)] : a === '{model}' ? pair : a === '{output}' ? out : [a]));
 }
 
 /**
@@ -76,4 +127,4 @@ function keyFor(row) {
 /** A row a test adds (a stub CLI); never set by the product. */
 const _extra = [];
 
-module.exports = { all, offered, find, npmPackage, argv, keyFor, _extra };
+module.exports = { MODES, WORDS, mode, free, all, offered, find, npmPackage, argv, keyFor, optedIn, _extra, _found };

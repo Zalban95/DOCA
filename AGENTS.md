@@ -354,6 +354,44 @@ The harness gives its agent eight rules for working on any repository (charter r
   ordinary `git merge --no-ff`, refused with uncommitted changes, undone on a conflict with the files named. The
   leader merges with `team merge {team, task}`. `test/harness-teams.test.js` runs a stand-in CLI
   (`test/fixtures/harness-stub`) in real computers where the image exists.
+- **mini-swe-agent, which DOCA offers when it fits** (asked 2026-10-16: "we choose when it is the case to enable and use
+  it"; catalog row `mini`, `harness-teams/trajectory.js`): about a hundred lines of agent, bash only, a linear history
+  and a trajectory file (MIT, PyPI `mini-swe-agent`). **Off until a person switches it on** — installed on the hub from
+  the Harness tab (`uv tool install mini-swe-agent`, a click; `install_propose` only proposes it) or named in
+  `teams.outside.allow` (`team.optIn`, `harnesses.optedIn`) — and then the Orchestrator's routing table, ahead of the
+  work chat, says when to **offer it in one line**: a self-contained coding task in a git project with a command that
+  shows it works, when several tries at once help (`count`), a smaller or local model should do it, or a record of
+  every command is wanted; never for work needing DOCA's tools, long or several-repository work, or outside a computer.
+  The person's yes is the ask `teams/outside.gate` needs, unchanged (their own turn, host, a git project). **It runs every
+  command unasked (`-y`), so DOCA runs it only in agents' computers**: the row is `sandbox`, so `one-shot.js` has no road
+  for it (the floating chat, the scout's implementer) and refuses a stray adapter; a person may still start `mini` in the
+  Terminal, where it asks before each command. In the computer it is installed with uv (`team.uv`; uv by its own
+  installer the first time, into `~/.local/bin`), runs `mini -y --exit-immediately -l 0 -o <trajectory> -m
+  openai/<model> -t <task>` with `MSWEA_CONFIGURED`, `MSWEA_COST_TRACKING=ignore_errors`, and **its model is this hub's
+  own through the model relay** (`team.relay`: the computer's relay switched on, its token as `OPENAI_API_KEY` with
+  `OPENAI_BASE_URL`/`OPENAI_API_BASE` in that one process's environment; "default" is the relay's first model) — never
+  a provider key; refused with where to switch it on while the owner's relay is off or closed to computers. It writes
+  no event stream, so its trajectory (rewritten after every step) is read on each look into the same mechanical lines
+  (commands, results by return code, its words, how it ended: "Submitted" is done), and kept as an attachment at the end.
+  `test/mini-swe.test.js`.
+- **Each outside harness has a switch: Never · Ask me first · On its own** (the owner's answer, 2026-10-16;
+  `teams.outside.use.<id>` = `never | ask | free`, `harnesses.mode`, Settings → Harnesses → CLI harnesses → "On a
+  team", and a card there for those not installed on the hub). **never**: not offered, not in the routing table,
+  refused. **ask** (the default for an allowed one — `teams.outside.allow` still decides when nothing is set here, a set
+  value wins): offered — for one with a `team.when` rule (mini-swe-agent) the routing table says to offer it in one line,
+  "in a computer of its own on this hub's model, through the relay" — and run only on the person's yes, which counts as
+  `asked: true` on their turn. **free**: the Orchestrator may start it itself when a task fits (`teams/outside.gate`
+  returns `free`, no ask needed; still host, still a git project, still only in agents' computers), and says so: the
+  team tool's answer tells it to say in one line that it did and why, the team carries `outsideBy: 'free'`, and an
+  activity line names the harness, the team and the switch. A team or the missions bar stops it like any. **Moving one
+  to free asks for the password** (`auth/guarded.js` switch `outsideFree`, its PREFS row's value test now also sees
+  `from`, so only a harness newly free counts); tightening asks nothing. The section is proposable only at
+  `teams.outside.use` (`settings-schema.js` `teams.propose`, values checked in `harness/settings.js refuse`), so "it can
+  decide on its own from now on" said in chat is `settings_propose {asked: true}`: towards never or ask it applies at
+  once, towards free it stays a proposal whose Accept asks for the password — the approval mode's way, not a new one
+  (`propose: false` would have shut the person-asked route too). **The relay goes with the decision**: the worker turns
+  its computer's relay on only inside a run the gate let through — after the person's yes, or under free — with an
+  activity line naming the computer and why (`relay/computer.set(id, on, why)`); the owner's relay switches still win.
 
 ### Product names (`modules/branding.js`)
 - **Every name a person reads comes from one file**, because the panel will be sold under a customer's label and under whatever the public release is called, and a rename that means grepping forty files is a rename that does not happen. Overrides live in prefs under `branding`, so a private label is a settings change; the UI for it is deliberately absent until it can sit behind the admin password, since the only thing worse than the wrong name is one an agent changed.

@@ -76,7 +76,8 @@ function gemini(e) {
   return [];
 }
 
-const READERS = { claude, codex, dsh, gemini };
+// mini-swe-agent prints for a terminal, not a stream: its steps are read from its trajectory file (trajectory.js).
+const READERS = { claude, codex, dsh, gemini, mini: () => [] };
 
 /** One line of output: its events, or [] for a line that is not JSON (a CLI's banner) or not one it shows. */
 function parse(kind, line) {

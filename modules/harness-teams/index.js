@@ -91,7 +91,7 @@ async function dispatch(team, t, { context = '' } = {}) {
   S.patch(id, { runId: w.runId });
   missions().announce(m);
   require('../activity').note({ from: 'harness-teams', what: `started ${label} on task ${t.id} "${t.title}" of team "${team.title}" — branch ${branch}`,
-    why: 'the person asked for this harness; the team dispatched the task', sessionId: team.by });
+    why: team.outsideBy === 'free' ? 'its switch is "On its own": the Orchestrator started it; the team dispatched the task' : 'the person asked for this harness; the team dispatched the task', sessionId: team.by });
   setImmediate(() => require('./worker').run(S.get(id)));
   return m;
 }

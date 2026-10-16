@@ -136,7 +136,8 @@ test('no agent acts on a harness team\'s computer, and the Orchestrator is told 
     assert.match(require('../modules/computers/whose').refuse({ id: 'o', role: 'owner' }, 'feed1234'), /kept for claude team workers/);
   } finally { computers.save(computers.rows().filter(c => c.id !== 'feed1234')); }
   const table = require('../modules/harness/coordinator').routing({ held: new Set(['team']) });
-  assert.match(table, /only when the person names one in their request/);
+  assert.match(table, /when the person names one in their request/);
+  assert.match(table, /Never on your own initiative, except one whose switch is "On its own"/);
 });
 
 /* ── In real computers ────────────────────────────────── */

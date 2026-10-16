@@ -10,7 +10,8 @@
  *             run by argv with no shell — the message is one argument, never parsed — in the workspace, stdin closed
  *
  * A harness with neither says so and points at the Harness tab, where it runs in its own terminal; nothing silently
- * falls back to a different agent. These are other people's agents acting on this machine with their own permission
+ * falls back to a different agent. A row marked `sandbox` (mini-swe-agent: it runs every command unasked) has no road
+ * here at all — it works only inside an agents' computer, as a team worker (harness-teams/). These are other people's agents acting on this machine with their own permission
  * models, so only a host's chat reaches them (modules/chat.js). Only the built-in harness understands attachments.
  */
 const fs = require('fs');
@@ -40,6 +41,7 @@ function gatewayConfig() {
 function adapterFor(row) {
   if (!row) return null;
   if (row.id === 'openclaw') { const gw = gatewayConfig(); return gw ? { kind: 'gateway', ...gw } : null; }
+  if (row.sandbox) return null;   // runs every command unasked: only in an agents' computer (harness-teams/), never here
   if (Array.isArray(row.oneShot) && row.cmd) return { kind: 'argv', cmd: row.cmd, args: row.oneShot };
   return null;
 }
@@ -48,6 +50,7 @@ function adapterFor(row) {
 function whyNot(row) {
   if (!row) return 'No harness is the default.';
   if (row.id === 'openclaw') return 'OpenClaw answers here through its gateway: enable gateway.http.endpoints.chatCompletions in openclaw.json.';
+  if (row.sandbox) return `${row.label} runs every command without asking, so DOCA runs it only inside an agents' computer — as a team worker on a project (ask for it by name: "use ${row.label} on …"), never on the hub. In the Terminal (Harness tab) it asks before each command.`;
   if (row.id === 'opendots') return 'OpenDots answers in its own page (Controls → OpenDots → Open); talking to it from here needs its Intelligence SDK and is not built yet.';
   return `${row.label} has no one-question mode DOCA knows of: open it on the Harness tab, where it runs in its own terminal — or make DOCA's own agent the default.`;
 }
@@ -75,6 +78,7 @@ async function viaGateway(a, { history, signal, onText }) {
 
 /** A CLI's own non-interactive mode, by argv. */
 function viaArgv(a, { message, signal, onText = () => {}, onErr = () => {}, cwd, timeoutMs }) {
+  if (require('./catalog').all().some(r => r.sandbox && r.cmd === a.cmd)) return Promise.resolve({ text: '', code: 126, error: `${a.cmd} runs only inside an agents' computer, never on the hub.` });   // whatever built the adapter
   if (require('../hosted').on()) return Promise.reject(require('../hosted').refusal('Another agent run as a program on the hub'));   // hosted.js
   const shell = require('../shell');
   const bin = shell.which(a.cmd);
