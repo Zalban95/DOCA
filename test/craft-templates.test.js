@@ -222,3 +222,46 @@ test('the product-video recipe starts the render as a background job', () => {
   assert.match(r.steps[0].check.contains, /Started background job/);
   assert.doesNotMatch(fs.readFileSync(path.join(ROOT, 'skills/product-video/scripts/promo.js'), 'utf8'), /detached: true/);
 });
+
+// Each craft skill checks its own output (check_output) and shows a plan contract with the same check; the contract in
+// the skill is a valid one (plan-contracts.split keeps only a check's own fields, so a typo would vanish there).
+test('the craft skills check their output, and their contract examples are valid checks', () => {
+  const pc = require('../modules/harness/plan-contracts');
+  for (const [name, kind] of [['product-video', 'video'], ['technical-drawing', 'pdf']]) {
+    const text = fs.readFileSync(path.join(ROOT, 'skills', name, 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n');
+    assert.match(text, new RegExp(`check_output \\{kind: "${kind}"`), `${name} runs check_output`);
+    const example = text.match(/```json\n(\{ "done": [^\n]+\})\n```/);
+    assert.ok(example, `${name} shows a plan contract`);
+    const c = JSON.parse(example[1]);
+    assert.deepEqual(pc.split({ title: 'x', ...c }).contract.check, c.check, `${name}'s contract check is kept whole`);
+  }
+});
+
+// End to end where the programs are: the product-video template's own cut (lib/edit.js, ffmpeg) over frames standing in
+// for Blender's, then the video check its skill names — the template's output holds the contract it advertises.
+const findV = require(path.join(ROOT, 'skills/product-video/scripts/lib/find'));
+const FFMPEG = require('../modules/checks/bin').find('ffmpeg') && require('../modules/checks/bin').find('ffprobe');
+let FONTS = null;
+try { FONTS = findV.fonts({}); } catch { /* no system font: skipped */ }
+test('a promo cut by the template holds its video check', { skip: (!FFMPEG && 'ffmpeg is not installed here') || (!FONTS && 'no font for the cards here') }, async t => {
+  const ffmpeg = require('../modules/checks/bin').find('ffmpeg');
+  const { execFileSync } = require('node:child_process');
+  const work = fs.mkdtempSync(path.join(H.tmp, 'promo-e2e-'));
+  try {
+    const spec = { duration: 6, fps: 10, resolution: [640, 360], title: 'Bracket Kit', subtitle: 'Two printed parts', end: 'Print it.',
+      parts: [{ path: 'a.stl', name: 'Part A' }, { path: 'b.stl', name: 'Part B' }] };
+    const plan = P.shots(spec), seg = Object.fromEntries(plan.list.map(s => [s.shot, s]));
+    const dirs = {};
+    for (const [shot, src] of [['turntable', 'testsrc'], ['assemble', 'testsrc2']]) {
+      dirs[shot] = path.join(work, shot); fs.mkdirSync(dirs[shot]);
+      execFileSync(ffmpeg, ['-v', 'error', '-f', 'lavfi', '-i', `${src}=size=640x360:rate=10`, '-frames:v', String(seg[shot].frames), path.join(dirs[shot], '%04d.png')]);
+    }
+    const out = path.join(work, 'promo.mp4');
+    const argv = require(path.join(VIDEO, 'edit')).args(spec, { work, turnDir: dirs.turntable, asmDir: dirs.assemble, out, fonts: FONTS });
+    try { execFileSync(ffmpeg, argv, { stdio: 'pipe' }); }
+    catch (e) { if (/drawtext|No such filter/.test(String(e.stderr))) return t.skip('this ffmpeg has no drawtext'); throw e; }   // an ffmpeg without drawtext cannot cut the cards
+    const r = await require('../modules/checks').run({ video: out, duration: 6, width: 640, height: 360, fps: 10, frames: 4 });
+    assert.equal(r.ok, true, r.why);
+    assert.match(r.why, /6\.0 s, 640×360, 10 fps/);
+  } finally { fs.rmSync(work, { recursive: true, force: true }); }
+});

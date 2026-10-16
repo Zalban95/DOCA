@@ -30,7 +30,17 @@ few dimensions only you know matter.
    with `shell`: `node <this skill's folder>/scripts/drawing.js <spec>`.
 3. Read the report it prints: `scale`, `views` placed, "left_out" (with why) and `warnings`. A warning is a defect:
    fix the spec (a larger `sheet`, fewer `dimensions` on one side) and run again.
-4. Look at it before you hand it over: `show_media` the PDF. Then say what is on each sheet in one line each.
+4. Check it before you hand it over: `check_output {kind: "pdf", path: "<the PDF>", pages: <n>, contains: ["<the
+   part's name>", "<its drawing number>", "<a dimension that matters>"]}` — it fails text over text, a line through a
+   word and anything off the sheet, naming the page and the place in millimetres. Fix the spec and run again until it
+   holds; then `show_media` the PDF and say what is on each sheet in one line each.
+
+When the drawing is a step of a plan, put the same check in its contract, so the step can only be marked done when it
+holds:
+
+```json
+{ "done": "the bracket's sheet: title block filled, nothing overlapping", "check": { "pdf": "drawings/bracket.pdf", "pages": 1, "contains": ["Bracket", "D-001"] } }
+```
 
 ## The spec
 
@@ -69,6 +79,6 @@ few dimensions only you know matter.
 
 - Every view is labelled; the section's cutting line has arrows and letters; the detail's circle is on the front view.
 - The title block says the part, the project, the material, the scale, the date and the sheet number.
-- Nothing overlaps and nothing leaves the frame (the report says so).
+- Nothing overlaps and nothing leaves the frame (the report says so, and `check_output` holds).
 - The few dimensions that make the part work are there, not only the overall size.
 - The DXF beside the PDF opens in CADCraft or any CAD program, for changes.

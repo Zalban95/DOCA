@@ -31,9 +31,18 @@ explainer, data that moves — are the video-from-code skill.)
 4. Wait: `node <…>/promo.js wait <spec> --timeout 1500` (exit 0 done, 1 failed, 2 still running — then call it again),
    `promo.js status <spec>`, or `shell_job status`. At 1080p with EEVEE expect a few minutes on a GPU. To stop it,
    `shell_job stop` with its id: Blender goes with it and the marker says it was stopped.
-5. Look at it before you hand it over: take a frame every 2 s (`ffmpeg -ss <t> -i <video> -frames:v 1 <png>`) and look
-   at them; then `show_media` the video. A wrong colour or a caption that says the wrong thing is a spec change and
-   a run again — shots already rendered with the same scene are kept, so changing only words re-cuts in seconds.
+5. Check it before you hand it over: `check_output {kind: "video", path: "<the video>", duration: <s>, width: <px>,
+   height: <px>}` — it fails a blank stretch (a card nobody can read), text drawn twice or over other text, and the
+   wrong length or size, saying at which second. Fix what it names (a spec change and a run again — shots already
+   rendered with the same scene are kept, so changing only words re-cuts in seconds), check again, then `show_media`
+   the video.
+
+When the video is a step of a plan, put the same check in its contract, so the step can only be marked done when it
+holds:
+
+```json
+{ "done": "the promo lasts 20 s at 1920×1080, every card readable", "check": { "video": "video/promo_1080p.mp4", "duration": 20, "width": 1920, "height": 1080 } }
+```
 
 ## The spec
 
@@ -69,7 +78,8 @@ explainer, data that moves — are the video-from-code skill.)
 
 ## Checklist before handing it over
 
-- The duration is what was asked (the marker says it); the first and last frames fade from and to black.
+- `check_output` holds: the duration and size are what was asked, no blank card, no doubled text; the first and
+  last frames fade from and to black.
 - Every part is named as it arrives, in the person's words, and the names match the drawings.
 - The product fills the frame on the turntable; no part passes through another as it settles.
 - The text is readable on a phone: short title, a subtitle, at most five details.
