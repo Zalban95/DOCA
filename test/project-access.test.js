@@ -3,7 +3,7 @@
 /**
  * Whose project (projects/access.js; owner, 2026-10-16): a project belongs to whoever made it, one made before owners
  * is the hub's, its owner shares it to see or to work on, a host sees and manages every one, and everyone else gets
- * 404 for what is not theirs — in the panel's routes, the agent's tools and a conversation's place.
+ * 404 for what is not theirs — in the panel's routes, the agent's tools, a conversation's place and a device's /api/v1.
  */
 const test   = require('node:test');
 const assert = require('node:assert/strict');
@@ -94,4 +94,27 @@ test('a member makes projects only in a folder of their own; a host changes an o
   assert.equal(moved.body.audit[0].what, 'owner');
   assert.equal((await as(member, 'GET', `/api/projects/${r.body.project.id}`)).status, 404);
   assert.equal((await as(other, 'GET', `/api/projects/${r.body.project.id}`)).status, 200);
+});
+
+test('a device acts as its person: it lists, reads and saves only what that person may', async () => {
+  const member = await H.signIn('member');
+  const root = fs.mkdtempSync(path.join(H.tmp, 'dev-'));
+  fs.writeFileSync(path.join(root, 'project.params.json'), JSON.stringify(PARAMS));
+  const id = (await H.api(null, 'POST', '/api/projects', { root })).body.project.id;
+  const devices = require('../modules/api-v1/devices');
+  const { device, token } = H.mkDevice('phone', 'phone', H.PHONE_CAPS);
+  devices.update(device.id, { userId: member.user.id, orgId: member.orgId });
+  let r = await H.api(token, 'GET', '/api/v1/projects');
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(r.body.projects.some(p => p.id === id), false);
+  assert.equal((await H.api(token, 'GET', `/api/v1/projects/${id}/params`)).status, 404);
+  await H.api(null, 'POST', `/api/projects/${id}/sharing`, { personId: member.user.id, right: 'see' });
+  r = await H.api(token, 'GET', `/api/v1/projects/${id}/params`);
+  assert.equal(r.status, 200);
+  assert.equal(r.body.params[0].value, 10);
+  assert.equal((await H.api(token, 'POST', `/api/v1/projects/${id}/params`, { values: { w: 30 } })).status, 403);
+  await H.api(null, 'POST', `/api/projects/${id}/sharing`, { personId: member.user.id, right: 'work' });
+  r = await H.api(token, 'POST', `/api/v1/projects/${id}/params`, { values: { w: 30 } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, 'project.params.json'), 'utf8')).values.w, 30);
 });
