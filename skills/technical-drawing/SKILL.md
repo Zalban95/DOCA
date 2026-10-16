@@ -20,7 +20,9 @@ few dimensions only you know matter.
   exports the PDF. Missing: the template still makes the sheet as SVG (and as PDF when a Chromium is here) and says
   so — offer CADCraft for the proper CAD file.
 - The part as **STEP** (best: real circles, holes found and tabled) or STL (works; curved edges become facets and
-  holes are not tabled). Model in FreeCAD, build123d or CADCraft and export STEP alongside the STL.
+  holes are not tabled). Model in FreeCAD, build123d or CADCraft and export STEP alongside the STL — from FreeCAD
+  through a document and `Import.export` (`Part.export` can write a STEP with no geometry in it; the template then
+  says "no geometry in <file>"). The freecad-modelling skill has the rest of FreeCAD's traps.
 
 ## Doing it
 
@@ -76,10 +78,10 @@ holds:
   clearance — in `dimensions`: points in the part's own coordinates (3 numbers) or the view's (2), `side` optional;
   a diameter is `{ "view", "center", "d" }`. Put them in the `detail` view when they are small.
 - `tolerance` (default ISO 2768-m), `units`, `font` (default the OS's sans).
-
-## Checklist before handing it over
 - Notes wrap to the room left of the title block; a title block value too long for its cell is set smaller, and one
   too long even then is cut and named in `warnings` — shorten it or move the rest into `notes`.
+
+## Checklist before handing it over
 
 - Every view is labelled; the section's cutting line has arrows and letters; the detail's circle is on the front view.
 - The title block says the part, the project, the material, the scale, the date and the sheet number.

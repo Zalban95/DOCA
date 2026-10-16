@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 const tools = require('./lib/tools');
+const { assertPart, HOW } = require('./lib/part-check');
 const { compose } = require('./lib/compose');
 const { script } = require('./lib/render-cadcraft');
 const { svg } = require('./lib/render-svg');
@@ -43,6 +44,7 @@ function readSpec(a) {
 function project(sheetSpec, work, a) {
   const fc = tools.freecad(a.freecad);
   if (!fc) throw new Error('FreeCAD is not installed here (its command line, freecadcmd, projects the views). Install FreeCAD 1.0 or later, or pass --freecad PATH.');
+  assertPart(sheetSpec.part);
   fs.copyFileSync(path.join(__dirname, 'project.py'), path.join(work, 'project.py'));
   const views = sheetSpec.views || ['front', 'top', 'side', 'section', 'iso'];
   const job = {
@@ -52,14 +54,19 @@ function project(sheetSpec, work, a) {
       : { name: n, rel: n === 'side' ? (sheetSpec.side || 'right') : n }),
   };
   fs.writeFileSync(path.join(work, 'job.json'), JSON.stringify(job, null, 1));
-  const code = `import sys; sys.argv=['project.py', ${JSON.stringify(path.join(work, 'job.json'))}]; exec(open(${JSON.stringify(path.join(work, 'project.py'))}).read())`;
+  // The paths go in the environment: FreeCAD takes code after -c longer than about 250 characters for a file name and
+  // runs nothing, so a deep work folder used to end in "wrote no views".
+  const code = "import os, sys; sys.argv = ['project.py', os.environ['DOCA_DRAW_JOB']]; exec(open(os.environ['DOCA_DRAW_PY']).read())";
+  const env = { ...process.env, DOCA_DRAW_JOB: path.join(work, 'job.json'), DOCA_DRAW_PY: path.join(work, 'project.py') };
   try {
-    execFileSync(fc, ['-c', code], { cwd: work, stdio: ['ignore', 'pipe', 'pipe'], timeout: 300000 });
+    execFileSync(fc, ['-c', code], { cwd: work, env, stdio: ['ignore', 'pipe', 'pipe'], timeout: 300000 });
   } catch (e) {
     throw new Error(`FreeCAD could not project ${sheetSpec.part}: ${String(e.stderr || e.message).split('\n').filter(Boolean).slice(-4).join(' | ')}`);
   }
   if (!fs.existsSync(job.out)) throw new Error(`FreeCAD ran but wrote no views (is ${work} writable by it? A snap FreeCAD cannot read or write /tmp).`);
-  return JSON.parse(fs.readFileSync(job.out, 'utf8'));
+  const proj = JSON.parse(fs.readFileSync(job.out, 'utf8'));
+  if (proj.error) throw new Error(`no geometry in ${path.basename(sheetSpec.part)}: ${proj.error} — ${HOW}`);
+  return proj;
 }
 
 function viaChrome(svgFile, pdf, sheet, a) {

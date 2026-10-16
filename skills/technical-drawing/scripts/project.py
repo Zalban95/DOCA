@@ -191,6 +191,10 @@ def auto_cut(holes, lo, hi, key):
 def main(job_path):
     job = json.load(open(job_path))
     shape = load(job['part'])
+    # A file with no shape in it is said as such, not left to fail in projection (drawing.js reads 'error').
+    if shape.isNull() or not shape.Faces:
+        json.dump({'error': 'FreeCAD read it but found no faces or solids (%d edges)' % (0 if shape.isNull() else len(shape.Edges))}, open(job['out'], 'w'))
+        return
     bb = shape.BoundBox
     F, U, R = front_frame(bb, job.get('front'), job.get('up'))
     out = {'bbox': [bb.XMin, bb.YMin, bb.ZMin, bb.XMax, bb.YMax, bb.ZMax], 'volume': round(shape.Volume, 3),
