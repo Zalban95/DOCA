@@ -165,3 +165,18 @@ test('a skill that names its recipes lists them when it is read', () => {
   assert.match(body, /- greet-someone: Greet someone \(values: who\)/);
   assert.match(body, /- not-yet: not saved here yet/);
 });
+
+// Round 1 of 2026-10-16, #21: a failed run said only "exit 1, read that conversation".
+test('a failed run reports what ran, the end of its output and the file holding all of it', async () => {
+  const path = require('node:path');
+  const scriptPath = path.join(H.tmp, 'drawing-fails.js');
+  fs.writeFileSync(scriptPath, "console.log('x'.repeat(4000)); console.error('Error: no geometry in bracket.step'); process.exit(3);\n");
+  require('../modules/recipes/store').save({ title: 'Fails loudly', steps: [{ tool: 'shell', args: { command: `node ${scriptPath}` } }] });
+  const tool = require('../modules/harness/toolbox/recipes').find(t => t.name === 'recipe');
+  const said = await tool.run({ action: 'run', id: 'fails-loudly' }, {});
+  assert.match(said, /Recipe stopped at step 1 \(shell\): exit 3/);
+  assert.ok(said.includes(`Step 1 ran: node ${scriptPath}`), 'the command, so the script path');
+  assert.match(said, /Its output ends with:\n[\s\S]*no geometry in bracket\.step/, 'stderr is in the tail');
+  const file = said.match(/The whole result is in (.+?) \(read_file it\)/);
+  assert.ok(file && fs.readFileSync(file[1], 'utf8').includes('no geometry'), 'and the file holds the whole result');
+});
