@@ -32,19 +32,19 @@ test('a pair is offered only from a provider with a key here; without one, where
   const o = pairs().offer(doc(), keyed);
   const value = o.budgets.find(b => b.id === 'value');
   assert.equal(value.ready, true);
-  assert.equal(value.mastermind.name, 'GPT-6.1 Sol');
+  assert.equal(value.mastermind.name, 'MiMo-V2.6-Pro');
   assert.equal(value.worker.name, 'DeepSeek V4.1 Flash');
   assert.equal(o.budgets.find(b => b.id === 'strength').mastermind.name, 'Gemini 4 Argon');
   assert.equal(value.chosen, false);
 });
 
 test('applying checks both models against the provider\'s list: present gives the two values, absent refuses with the list', async () => {
-  const all = ['openai/gpt-6.1-sol', 'deepseek/deepseek-v4.1-flash', 'google/gemini-4-argon'];
+  const all = ['xiaomi/mimo-v2.6-pro', 'deepseek/deepseek-v4.1-flash', 'google/gemini-4-argon'];
   const ok = await pairs().check(doc(), 'value', { providers: keyed, models: listed(all) });
-  assert.deepEqual(ok.values, { mastermind: 'openrouter/openai/gpt-6.1-sol', worker: 'openrouter/deepseek/deepseek-v4.1-flash' });
+  assert.deepEqual(ok.values, { mastermind: 'openrouter/xiaomi/mimo-v2.6-pro', worker: 'openrouter/deepseek/deepseek-v4.1-flash' });
   assert.equal(require('../modules/harness/turn/model-route').parse(ok.values.mastermind).provider, 'openrouter', 'the provider is before the first slash');
-  await assert.rejects(pairs().check(doc(), 'value', { providers: keyed, models: listed(['openai/gpt-5.6-sol', 'deepseek/deepseek-v4.1-flash']) }),
-    e => e.status === 409 && e.code === 'not_offered' && /GPT-6\.1 Sol .*not in openrouter's model list.*openai\/gpt-5\.6-sol/.test(e.message) && e.available.length === 2);
+  await assert.rejects(pairs().check(doc(), 'value', { providers: keyed, models: listed(['xiaomi/mimo-v2.5-pro', 'deepseek/deepseek-v4.1-flash']) }),
+    e => e.status === 409 && e.code === 'not_offered' && /MiMo-V2\.6-Pro .*not in openrouter's model list.*xiaomi\/mimo-v2\.5-pro/.test(e.message) && e.available.length === 2);
   await assert.rejects(pairs().check(doc(), 'nope', { providers: keyed, models: listed(all) }), e => e.status === 400);
   await assert.rejects(pairs().check(doc(), 'value', { providers: [], models: listed(all) }), e => e.code === 'no_key' && /Field → API keys/.test(e.message));
 });
