@@ -7,9 +7,10 @@
  *   checks    every check of the task (its contract's and `checks`), run where the try worked; held of total, and the
  *             first that failed in its own words ("text over text at 17 s")
  *   test      the task's test command (`test`), as the try last ran it itself — its `shell` call in its own conversation,
- *             under its own approvals — read from its "exit N": passed, failed, or not known (never run, run before a
- *             later change, or an outside harness whose calls the hub does not keep). The hub never runs it: a check
- *             never runs a command (plan-contracts.js), so a test cannot become a way around the approvals.
+ *             under its own approvals, or for an outside harness the command its trajectory records with its return code
+ *             (harness-teams/trajectory.js `runs`) — and only a call that is exactly the test, output redirections aside
+ *             (`isTestRun`): passed, failed, or not known (never run that way, or run before a later change). The hub never
+ *             runs it: a check never runs a command (plan-contracts.js), so a test cannot become a way around the approvals.
  *   failures  the try's failed calls (results that begin "Error")
  *   cost      tokens spent, then time — tie-breakers only
  *
@@ -22,34 +23,71 @@ const argsOf = c => { try { return JSON.parse(c?.function?.arguments || '{}'); }
 /** The task's checks: its contract's, then `checks`. */
 const checksOf = t => [t.contract?.check, ...(Array.isArray(t.checks) ? t.checks : [])].filter(Boolean);
 
-/** What the try's own conversation says of its test: { state: passed|failed|unknown, why }. */
-function testEvidence(t, sessionId) {
-  if (!t.test) return null;
-  let rows = [];
-  try { rows = sessionId ? require('../harness/memory').messages(sessionId) : []; } catch { rows = []; }
-  if (!rows.length) return { state: 'unknown', why: `the hub keeps no record of \`${t.test}\` being run` };
-  const want = String(t.test).trim();
-  const calls = new Map();
-  let last = null, lastWrite = -1, i = 0;
+const norm = c => String(c ?? '').trim().replace(/\s+/g, ' ');
+/** Only output redirections may follow the test: `> f`, `>> f`, `2>&1`, `&> f`, `2>/dev/null`. */
+const REDIRECTS = /^(?:\s*(?:\d?>>?|&>>?)\s*(?:&\d|[^\s|;&<>()`$]+))*\s*$/;
+
+/**
+ * Whether a command line is a run of the test: exactly the test (trimmed, whitespace made single), or the test followed
+ * only by output redirections. Anything else — piped (`npm test | tail`, whose exit is tail's), chained (`npm test ||
+ * true`), echoed — is not a run, so its exit code says nothing about the test.
+ */
+function isTestRun(command, test) {
+  const want = norm(test), cmd = norm(command);
+  if (!want || !cmd.startsWith(want)) return false;
+  const rest = cmd.slice(want.length);
+  return rest === '' || (/^\s|^[&\d]?>/.test(rest) && REDIRECTS.test(rest));
+}
+
+/**
+ * The test's verdict from a try's commands in order — `[{command, code, changes}]`: `code` the exit code (null: did not
+ * finish), `changes` a step that may have changed the work after it. The last run of the test decides, unless a change
+ * came after it.
+ */
+function fromRuns(test, runs, where) {
+  const want = norm(test);
+  let last = -1;
+  runs.forEach((r, i) => { if (isTestRun(r.command, want)) last = i; });
+  if (last < 0) return { state: 'unknown', why: `\`${want}\` was never run${where}` };
+  if (runs.slice(last + 1).some(r => r.changes && !isTestRun(r.command, want))) return { state: 'unknown', why: `\`${want}\` was last run before a later change` };
+  const code = runs[last].code;
+  if (code === 0) return { state: 'passed', why: `\`${want}\` passed` };
+  return { state: 'failed', why: code == null ? `\`${want}\` did not finish` : `\`${want}\` exited ${code}` };
+}
+
+/** A try on the hub: its own conversation's shell calls (a write is a change), as `fromRuns` reads them. */
+function hubRuns(rows) {
+  const calls = new Map(), runs = [];
   for (const r of rows) {
-    i++;
     if (r.role === 'assistant') for (const c of r.tool_calls || []) {
       const name = c.function?.name, a = argsOf(c);
       calls.set(c.id || name, { name, a });
-      if (WRITES.has(name)) lastWrite = i;
+      if (WRITES.has(name)) runs.push({ command: '', code: null, changes: true });
     }
     if (r.role === 'tool') {
       const c = calls.get(r.tool_call_id) || { name: r.name, a: {} };
-      if (c.name === 'shell' && !c.a.background && String(c.a.command || '').includes(want)) {
+      if (c.name === 'shell' && !c.a.background) {
         const out = String(r.content || ''), m = /^exit (-?\d+)/.exec(out);
-        if (m || /^(Timed out|Not finished)/.test(out)) last = { at: i, code: m ? Number(m[1]) : null };   // a refused call is no run
+        if (m || /^(Timed out|Not finished)/.test(out)) runs.push({ command: String(c.a.command || ''), code: m ? Number(m[1]) : null, changes: false });   // a refused call is no run
       }
     }
   }
-  if (!last) return { state: 'unknown', why: `\`${want}\` was never run` };
-  if (last.at < lastWrite) return { state: 'unknown', why: `\`${want}\` was last run before a later change` };
-  if (last.code === 0) return { state: 'passed', why: `\`${want}\` passed` };
-  return { state: 'failed', why: last.code == null ? `\`${want}\` did not finish` : `\`${want}\` exited ${last.code}` };
+  return runs;
+}
+
+/** What the try's own record says of its test: { state: passed|failed|unknown, why }. */
+function testEvidence(t, sessionId) {
+  if (!t.test) return null;
+  const want = norm(t.test);
+  if (require('./outside').isOutside(t.agent)) {   // an outside harness: the commands its worker kept from its trajectory
+    const w = (() => { try { return require('../harness-teams/store').byMission(t.missionId); } catch { return null; } })();
+    if (!Array.isArray(w?.runs)) return { state: 'unknown', why: `the hub keeps no exit codes of ${w?.label || 'this harness'}'s commands, so whether \`${want}\` passed is not known` };
+    return fromRuns(want, w.runs, ` by ${w.label}`);
+  }
+  let rows = [];
+  try { rows = sessionId ? require('../harness/memory').messages(sessionId) : []; } catch { rows = []; }
+  if (!rows.length) return { state: 'unknown', why: `the hub keeps no record of \`${want}\` being run` };
+  return fromRuns(want, hubRuns(rows), '');
 }
 
 /**
@@ -70,6 +108,11 @@ async function verifyAll(t, { cwd, sessionId } = {}) {
   const said = !checks.length ? 'no check — on the agent\'s word' : failed.length ? failed[0] : results.length === 1 ? results[0].why : `all ${results.length} checks held`;
   const why = [said, test ? test.why : ''].filter(Boolean).join('; ');
   return { ok, why: ok ? why : (failed.length ? failed[0] : test.why), held, total: results.length, failed, ...(test ? { test } : {}) };
+}
+
+/** The verdict of a try with nowhere to be judged (its work never reached the hub): failed, saying why. */
+function notJudged(t, why) {
+  return { ok: false, why, held: 0, total: checksOf(t).length, failed: [why] };
 }
 
 /** One try's score, from its view, its verdict and its records. */
@@ -134,4 +177,4 @@ async function judge(team, of, tasks, views, { reviewer = null } = {}) {
   return j;
 }
 
-module.exports = { verifyAll, testEvidence, checksOf, score, rank, report, judge };
+module.exports = { verifyAll, notJudged, testEvidence, isTestRun, fromRuns, checksOf, score, rank, report, judge };

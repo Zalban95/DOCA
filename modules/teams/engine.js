@@ -115,7 +115,9 @@ async function step(id) {
       const t = team.tasks.find(x => x.id === v.id);
       if (v.state === 'checking' && !t.verdict) {
         const sessionId = t.missionId ? require('../agents/missions').get(t.missionId)?.sessionId : t.sessionId;   // its test, as it ran it
-        t.verdict = { ...(await require('./tries-score').verifyAll(t, { cwd: cwdOf(team, t), sessionId })), at: new Date().toISOString() };
+        const at = t.trial ? require('./tries').folder(t) : { cwd: cwdOf(team, t) };   // a try: in its own worktree, never the project's folder
+        const score = require('./tries-score');
+        t.verdict = { ...(at.cwd ? await score.verifyAll(t, { cwd: at.cwd, sessionId }) : score.notJudged(t, at.why)), at: new Date().toISOString() };
       }
     }
     for (const v of views(team)) if (v.state === 'failed') failed(team, team.tasks.find(x => x.id === v.id), v);

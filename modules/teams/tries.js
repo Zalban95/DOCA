@@ -18,19 +18,40 @@ const HARD_MAX = 8;
 const value = k => require('../settings-schema').value(k);
 const SUFFIX = /-try(\d+)$/;
 
+/** Whether a task has anything mechanical to be judged by: a check, checks, or a test. */
+const judged = t => !!(t?.check || (Array.isArray(t?.checks) && t.checks.length) || String(t?.test || '').trim());
+/**
+ * Whether tries of this agent can be judged: DOCA's own always (its worktree on the hub, its calls in its conversation);
+ * an outside harness only when it records each command's return code (a trajectory, harness-teams/trajectory.js) — its
+ * branch comes back as a worktree on the hub for the checks (harness-teams/index.js placeOnHub).
+ */
+function judgeable(agent) {
+  if (!require('./outside').isOutside(agent)) return true;
+  try { return !!require('../harness-teams/harnesses').all().find(r => `harness:${r.id}` === String(agent))?.team?.output; } catch { return false; }
+}
+
+/** Where a try is judged: its own worktree, never the project's folder — `{cwd}`, or `{why}` when it has none on the hub. */
+function folder(t) {
+  const at = t.place?.worktree?.path;
+  if (at && require('fs').existsSync(at)) return { cwd: at };
+  return { why: `its work is not on the hub in a worktree of its own${t.place?.why ? ` (${t.place.why})` : ''}, so there is nothing of it to judge` };
+}
+
 const maxTries = () => Math.max(1, Math.min(HARD_MAX, value('teams.maxTries')));
 
 /** The tries a task asked for, or the hive's default for a task the checks can judge; throws a sentence over the limit. */
 function wanted(t, { project = false } = {}) {
   if (t?.tries == null) {
     const d = Math.floor(Number(value('teams.tries')) || 1);
-    return d > 1 && project && (t?.check || t?.checks || t?.test) ? Math.min(d, maxTries()) : 1;
+    return d > 1 && project && judged(t) && judgeable(t?.agent) ? Math.min(d, maxTries()) : 1;   // only a task its checks or test can judge
   }
   const n = Math.floor(Number(t.tries));
   if (!Number.isInteger(n) || n < 1) throw bad(`Task ${t.id || ''}: tries is a whole number, 1 or more.`.replace('  ', ' '));
   if (n > maxTries()) throw bad(`Task ${t.id || ''}: at most ${maxTries()} tries (the setting teams.maxTries).`.replace('  ', ' '));
-  if (n > 1 && !t.check && !(Array.isArray(t.checks) && t.checks.length) && !t.test)
+  if (n > 1 && !judged(t))
     throw bad(`Task ${t.id}: tries are judged by checks alone, and this task has none — give it a check, checks or a test, or one try (the pick would be blind).`);
+  if (n > 1 && !judgeable(t.agent))
+    throw bad(`Task ${t.id}: tries of ${t.agent} cannot be judged yet — the hub reads a try's test from each command's exit code, which only a harness that records them (mini-swe-agent, harness:mini) leaves. Give this task one try, or count for several workers sharing the plan.`);
   return n;
 }
 
@@ -86,7 +107,7 @@ function groupView(team, of, tryViews) {
 /** Each try told what it is: one of N, judged by its checks (and the test it runs itself), the best one kept. */
 function brief(t) {
   if (!t.trial) return '';
-  const test = t.test ? ` and the test \`${t.test}\` passing — run it yourself with shell in your folder as the last thing you do, after your last change; the hub reads its exit code from your call` : '';
+  const test = t.test ? ` and the test \`${t.test}\` passing — run exactly \`${t.test}\` yourself, as a command of its own in your folder (output redirections only: nothing piped or chained after it), as the last thing you do after your last change; the hub reads its exit code from that call` : '';
   return `## You are try ${t.trial.n} of ${t.trial.tries}\nThe same task is given to ${t.trial.tries - 1} other${t.trial.tries === 2 ? '' : 's'} at the same time, each in a folder of its own. `
     + `The hub keeps the best one, judged only mechanically: its checks holding${test}, then fewer failed calls, then fewer tokens and less time. Do the task well; there is nothing to win by hurrying.`;
 }
@@ -173,4 +194,4 @@ function reports(team) {
   return Object.entries(team.trials || {}).filter(([, j]) => j.judgedAt).map(([of, j]) => `${of}: ${j.report}`);
 }
 
-module.exports = { expand, wanted, groups, groupView, taskFor, brief, judgeReady, pick, reports, onTie, maxTries, HARD_MAX, ENDED };
+module.exports = { expand, wanted, judged, judgeable, folder, groups, groupView, taskFor, brief, judgeReady, pick, reports, onTie, maxTries, HARD_MAX, ENDED };

@@ -159,7 +159,7 @@ test('the test a try ran itself: its exit code decides, and the hub never runs i
   assert.equal(j.winner, 'c-try2', JSON.stringify(j.scores));
   assert.equal(end.state, 'done');
   assert.match(j.report, /^2 tries — #2 kept: its check held, its test passed; #1 failed '`node t\.js` exited 1'/);
-  assert.match(errands.find(e => /You are try 1 of 2/.test(e) && e.startsWith('Fix it')), /the test `node t\.js` passing — run it yourself/);
+  assert.match(errands.find(e => /You are try 1 of 2/.test(e) && e.startsWith('Fix it')), /the test `node t\.js` passing — run exactly `node t\.js` yourself, as a command of its own/);
 });
 
 test('a try that never finishes is stopped after the wait that follows the first good one, and scored as unfinished', async () => {
