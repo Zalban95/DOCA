@@ -38,6 +38,17 @@ with Connect for what is here or an account, Install, or the maker's download pa
 3. Not added: `install_propose {kind: "mcp", id: "<app>"}` — a person's click adds it (off), with the command fixed.
 4. `mcp_connect {server: "<app>", action: "start"}`, then read its tools: each is a command with typed parameters.
 
+## Templates for the jobs that need taste
+
+Some results are judged by their craft as much as their content, and a template carries that so it does not depend on
+the model doing the work — read its skill and fill its spec instead of starting from a blank file:
+
+- **A technical drawing** of a part (sheet, title block, views that never overlap, real dimensions in CADCraft): the
+  technical-drawing skill, recipe `technical-drawing`.
+- **A product promo video** (studio, turntable, the parts coming together, title and end cards), rendered in the
+  background by Blender: the product-video skill, recipe `product-video`.
+- **A part to 3D-print** (walls, M3 clearances, keyholes, bed fit, orientation): the printable-part skill.
+
 ## Doing the work
 
 - Work on files: open from a path, save to a path in the conversation's project or the workspace, then show the result

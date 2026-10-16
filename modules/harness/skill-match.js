@@ -23,6 +23,8 @@ const SYNONYMS = [
   ['bug', 'debug', 'fix', 'error', 'issue'], ['commit', 'git', 'pr', 'pull'], ['build', 'compile'],
   ['pdf', 'document'], ['sheet', 'spreadsheet', 'excel', 'xlsx', 'csv'], ['slide', 'deck', 'presentation', 'pptx'],
   ['android', 'apk', 'gradle'], ['web', 'site', 'html', 'frontend'], ['data', 'dataset', 'database', 'sql'],
+  ['drawing', 'blueprint', 'drafting', 'dimension', 'dimensioned'], ['video', 'promo', 'film', 'clip', 'animation', 'trailer'],
+  ['printable', 'print', 'stl', 'fdm'],
 ];
 
 function stem(w) {
