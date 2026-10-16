@@ -60,9 +60,13 @@ test('mesh: size against the bed, closed or not, how many parts — read in Node
     + 'f 1 3 2\nf 1 4 3\nf 5 6 7\nf 5 7 8\nf 1 2 6\nf 1 6 5\nf 2 3 7\nf 2 7 6\nf 3 4 8\nf 3 8 7\nf 4 1 5\nf 4 5 8\n');
   assert.match((await checks.run({ mesh: at('box.obj'), watertight: true })).why, /10 × 10 × 10, 12 triangles, 1 part, closed/);
   fs.writeFileSync(at('part.step'), "ISO-10303-21;\nHEADER;\nENDSEC;\nDATA;\n#1=CARTESIAN_POINT('',(0.,0.,0.));\n#2=CARTESIAN_POINT('',(120.,80.,6.));\n#3=MANIFOLD_SOLID_BREP('',#9);\nENDSEC;\nEND-ISO-10303-21;\n");
-  r = await checks.run({ mesh: at('part.step'), maxSize: [220, 220, 250], watertight: true });
+  r = await checks.run({ mesh: at('part.step'), maxSize: [220, 220, 250] });
   assert.equal(r.ok, true, r.why);
-  assert.match(r.why, /120 × 80 × 6 \(from the points it lists\), 1 solid; not verified: whether it is closed/);
+  assert.match(r.why, /120 × 80 × 6 \(from the points it lists\), 1 solid/);
+  // Asked to be closed, a STEP cannot show it here: the requirement does not hold (checks/verdict.js).
+  r = await checks.run({ mesh: at('part.step'), maxSize: [220, 220, 250], watertight: true });
+  assert.equal(r.ok, false, r.why);
+  assert.match(r.why, /could not verify whether it is closed — a STEP solid is read as points here; check the STL exported from it instead/);
 });
 
 test('a check reads only the work: not there, outside the roots, settings — each said', async () => {
@@ -157,6 +161,50 @@ test('image: blank or not, and the words on it', { skip: !DRAWN && 'ffmpeg with 
   assert.match((await checks.run({ image: at('blank.png') })).why, /shows almost nothing/);
   const r = await checks.run({ image: at('good.png'), width: 640, contains: bin.find('tesseract') ? ['TABLET'] : undefined });
   assert.equal(r.ok, true, r.why);
+});
+
+// ── One rule: asked for and not verifiable fails; looked at by default and not verifiable is said ─────────────────
+/** PATH with every reader the checks use except `hide`, as links in a folder of their own. */
+function without(hide) {
+  const d = fs.mkdtempSync(path.join(DIR, 'path-'));
+  for (const name of Object.keys(bin.ROW)) { const p = bin.find(name); if (p && !hide.includes(name)) fs.symlinkSync(p, path.join(d, name)); }
+  return d;
+}
+async function hidden(hide, fn) {
+  bin.reset();
+  const dir = without(hide), keep = process.env.PATH;
+  process.env.PATH = dir;
+  bin.reset();
+  try { return await fn(); } finally { process.env.PATH = keep; bin.reset(); fs.rmSync(dir, { recursive: true, force: true }); }
+}
+const LINKS = process.platform !== 'win32';
+
+test('pdf: what was asked and could not be verified fails, naming what to install; a default look only says so', { skip: (!POPPLER && 'poppler is not installed here') || (!LINKS && 'linked programs need a POSIX host') }, async () => {
+  fs.writeFileSync(at('lines.pdf'), pdf([{ line: [60, 690, 400, 690] }, { line: [60, 600, 400, 600] }]));   // text drawn as lines: no text layer
+  fs.writeFileSync(at('plain.pdf'), pdf([{ text: 'Part A', x: 60, y: 760 }]));
+  await hidden(['tesseract', 'gs'], async () => {
+    let r = await checks.run({ pdf: at('lines.pdf'), contains: ['A-100'] });
+    assert.equal(r.ok, false, r.why);
+    assert.match(r.why, /could not verify its text: it has no text layer, and reading the drawn text needs tesseract is not on this machine \(Settings → System → System tools → tesseract\)/);
+    r = await checks.run({ pdf: at('lines.pdf') });
+    assert.equal(r.ok, true, `no words were asked for: ${r.why}`);
+    assert.match(r.why, /not verified: its text/);
+    r = await checks.run({ pdf: at('plain.pdf') });
+    assert.equal(r.ok, true, r.why);
+    assert.match(r.why, /not verified: lines through text — gs is not on this machine/);
+    r = await checks.run({ pdf: at('plain.pdf'), noOverlap: true });
+    assert.equal(r.ok, false, 'asked outright, the layout look must be made');
+    assert.match(r.why, /could not verify lines through text — gs is not on this machine \(Settings → System → System tools → ghostscript\)/);
+  });
+});
+
+test('image: words asked for with no tesseract fail the same way', { skip: (!DRAWN && 'ffmpeg with drawtext is not installed here') || (!LINKS && 'linked programs need a POSIX host') }, async () => {
+  await hidden(['tesseract'], async () => {
+    const r = await checks.run({ image: at('good.png'), contains: ['TABLET'] });
+    assert.equal(r.ok, false);
+    assert.match(r.why, /could not verify its words — tesseract is not on this machine/);
+    assert.equal((await checks.run({ image: at('good.png') })).ok, true, 'nothing asked that needs it');
+  });
 });
 
 // ── A plan held to these checks, and how far it is ─────────────────────────────────────────────────────────────────

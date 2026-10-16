@@ -31,7 +31,7 @@ module.exports = [
         frames: { type: 'integer', description: 'video: how many frames to read text on (default 16, at most 40).' },
         pages: { type: 'integer', description: 'pdf: how many pages.' },
         contains: { type: 'array', items: { type: 'string' }, description: 'pdf or image: words that must be on it (a dimension, a title block field).' },
-        noOverlap: { type: 'boolean', description: 'pdf: false to skip the layout look (on by default).' },
+        noOverlap: { type: 'boolean', description: 'pdf: false to skip the layout look (on by default); true to require it — then a look that cannot be made fails.' },
         notBlank: { type: 'boolean', description: 'image: false to skip the blank look (on by default).' },
         maxSize: { type: 'array', items: { type: 'number' }, description: 'mesh: [x, y, z] it must fit in, in the file\'s units (a print bed, in mm).' },
         watertight: { type: 'boolean', description: 'mesh: true when it must be closed (a print).' },
