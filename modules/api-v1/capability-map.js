@@ -74,7 +74,7 @@ const PERSON = [
   { id: 'answer', does: 'answer the agent\'s question', panel: ['POST /api/harness/questions/:id', 'GET /api/harness/questions'], v1: ['GET /prompts', 'POST /prompts/{id}/select'] },
   { id: 'proposal-decide', does: 'accept or decline a settings proposal', panel: ['POST /api/harness/proposals/:id/apply', 'POST /api/harness/proposals/:id/reject'],
     gap: 2, ask: true, why: 'the proposal is read on the phone (/harness/memory) and waits for the panel; a device applying a setting is a rule to change, not a route to add' },
-  { id: 'spent', does: 'see what was spent', panel: ['GET /api/harness/usage'], v1: ['GET /harness/usage'] },
+  { id: 'spent', does: 'see what was spent', panel: ['GET /api/harness/usage', 'GET /api/usage/providers'], v1: ['GET /harness/usage'] },
   { id: 'spending', does: 'set a money budget and decide spending permissions', panel: ['GET /api/spending', 'POST /api/spending/*', 'DELETE /api/spending/permissions/:id'],
     only: 'budgets and spending permissions change only at the panel, after a notice saying why they matter (CONSTITUTION S12, S14); a device opens /d/<id>/ for them' },
   { id: 'canvas', does: 'see and remove the pages the agent made', panel: ['GET /api/harness/canvases', 'DELETE /api/harness/canvases/:id'],

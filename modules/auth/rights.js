@@ -125,6 +125,8 @@ const TABLE = [
 
   // ── Everything else is the machine ──
   R(ANY, '/api/files/disks(/.*)?', 'host'),                  // how full each disk is, mounting and unmounting one (disks/)
+  R(GET, '/api/usage/providers', 'read'),                       // tokens and money per provider and model: the hive's for a host, else your own (usage-providers.js)
+  R(GET, '/api/keys/balances', 'host'),                         // what a provider says of its own spend or balance, asked with the hive's key (provider-balance/)
   R(ANY, '/api/(files|fm-favorites|configs|config-favorites|keys|logs|setup|snapshots|stack|action)(/.*)?', 'host'),
   // A person's own projects and those shared with them (owner, 2026-10-16; projects/access.js narrows each to its project:
   // another person's answers 404, see-only refuses work): listing, making one in their own folder, opening it, its chats,

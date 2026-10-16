@@ -143,6 +143,8 @@ function mount(app) {
   app.post('/api/keys/add-provider', handleAddProvider);
   app.post('/api/keys/test-provider', handleTestProvider);
   require('./provider-checks').mount(app);   // GET /api/keys/checks, POST /api/keys/merge
+  require('./provider-balance').mount(app);  // GET /api/keys/balances: what OpenRouter or DeepSeek say of their own
+  require('./usage-providers').mount(app);   // GET /api/usage/providers: the ledger per provider and model
 }
 
 module.exports = {

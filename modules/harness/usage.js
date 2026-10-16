@@ -116,4 +116,24 @@ async function byConversation({ since, until }) {
     .map(r => ({ session: r.session || null, person: r.person || null, key: r.key, day: r.day, calls: Number(r.calls), prompt: Number(r.prompt), completion: Number(r.completion), cached: Number(r.cached), estimated: Number(r.estimated) }));
 }
 
-module.exports = { record, summary, byConversation, fileFor };
+/**
+ * Totals per provider and model in three spans at once — since `day` (today, UTC), since `month` and in all — for
+ * Field → API keys (usage-providers.js). With `perPerson` the rows are also split by person and conversation, so a
+ * caller can keep one person's own the way spending does (the row's person, else its conversation's owner).
+ */
+async function spans({ day, month, perPerson = false } = {}) {
+  await imported();
+  const sums = (tag, cond) => ['calls', 'prompt', 'completion', 'cached', 'estimated'].map(f => {
+    const v = f === 'calls' ? '1' : f === 'estimated' ? "CASE WHEN source = 'provider' THEN 0 ELSE 1 END" : f;
+    return `coalesce(sum(CASE WHEN ${cond} THEN ${v} ELSE 0 END), 0) AS ${tag}_${f}`;
+  }).join(', ');
+  const group = `coalesce(provider, ''), coalesce(model, '')${perPerson ? ', person_id, session_id' : ''}`;
+  const rows = await db.all(`SELECT coalesce(provider, '') AS provider, coalesce(model, '') AS model${perPerson ? ', person_id AS person, session_id AS session' : ''},
+      ${sums('d', 'at >= ?')}, ${sums('m', 'at >= ?')}, ${sums('a', '1 = 1')}
+    FROM usage WHERE tenant_id = 'local' GROUP BY ${group}`, [...Array(5).fill(day), ...Array(5).fill(month)]);
+  const pick = (r, t) => Object.fromEntries(['calls', 'prompt', 'completion', 'cached', 'estimated'].map(f => [f, Number(r[`${t}_${f}`]) || 0]));
+  return rows.map(r => ({ provider: r.provider, model: r.model, ...(perPerson ? { person: r.person || null, session: r.session || null } : {}),
+    today: pick(r, 'd'), month: pick(r, 'm'), all: pick(r, 'a') }));
+}
+
+module.exports = { record, summary, byConversation, spans, fileFor };
