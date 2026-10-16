@@ -130,13 +130,13 @@ function logLines(person, f, limit) {
 function hubLines(person, f, limit) {
   const q = String(f.q || '').trim().toLowerCase(), host = isHost(person);
   const mine = require('../activity').list({ since: f.from || null, until: f.to || null, limit: 5000 }).filter(l => host || l.person?.id === person.id);
-  const lines = mine.filter(l => (!f.state || l.level === f.state) && (!f.person || l.person?.id === f.person)
+  const lines = mine.filter(l => (!f.state || l.level === f.state || (f.state === 'important' && l.important)) && (!f.person || l.person?.id === f.person)
       && (!q || `${l.from} ${l.what} ${l.why} ${l.via || ''} ${l.person?.name || ''}`.toLowerCase().includes(q)));
   const by = l => (l.from === 'person' ? `${l.person?.name || 'a person'} — ` : l.from === 'agent' ? 'agent — ' : `${l.from} — `);
   return { rows: lines.slice(0, limit).map(l => ({ source: 'hub', at: l.at, level: l.level, sessionId: l.sessionId || null, person: l.person || null,
     ...(l.machine ? { machine: l.machine, act: l.act, ok: l.ok ?? null } : {}),
-    text: `${by(l)}${l.what}${l.why ? ` (${l.why})` : ''}${l.person && l.from !== 'person' ? ` · for ${l.person.name}` : ''}` })),
-  total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', 'relay', ...(host ? ['machines', 'outside', 'log'] : [])], states: ['info', 'warn', 'error'],
+    important: !!l.important, text: `${l.important ? '⚠ ' : ''}${by(l)}${l.what}${l.why ? ` (${l.why})` : ''}${l.person && l.from !== 'person' ? ` · for ${l.person.name}` : ''}` })),
+  total: lines.length, totals: {}, facets: { sources: ['turn', 'mission', 'job', 'hub', 'call', 'relay', ...(host ? ['machines', 'outside', 'log'] : [])], states: ['info', 'warn', 'error', 'important'],
     people: [...new Map(mine.filter(l => l.person?.id).map(l => [l.person.id, l.person])).values()] } };
 }
 

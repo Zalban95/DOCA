@@ -45,6 +45,8 @@ function handleHistory(req, res) {
         messages.push({ role: row.role, content: row.content, time: row.at,
           ...(row.attachments?.length ? { attachments: row.attachments.map(a => a.name) } : {}),
           ...(row.from?.formFactor === 'hub' ? { hub: true } : {}) });   // the hub's own note: drawn as one (agentRowIsAuto)
+      } else if (row.role === 'note') {   // DOCA's own note to the person — an important change (important/), drawn red
+        messages.push({ role: 'note', content: row.content, time: row.at, hub: true, ...(row.important ? { important: true } : {}) });
       } else if (row.role === 'assistant' || row.role === 'tool') {
         let reply = messages.at(-1);
         if (reply?.role !== 'assistant') {

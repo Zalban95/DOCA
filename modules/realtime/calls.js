@@ -117,4 +117,18 @@ function reported(chatId, note) {
   return speak(sid, `${s?.title || 'The work'}: ${note.type === 'done' ? '' : `${note.type}. `}${gist(note.text)}`, s?.title || '');
 }
 
-module.exports = { open, speak, inCall, personOnCall, quietFor, follow, landed, reported, gist };
+/**
+ * An important change this person made (important/): a `notice` frame with stage `important` in every call of theirs
+ * a device has open — shown, not spoken, on the frame a device already reads (PROTOCOL §23.1). The panel's own call
+ * hears it on the live feed. Returns how many calls got it.
+ */
+function important(personId, text) {
+  let n = 0;
+  for (const set of _open.values()) for (const c of set) {
+    if (!c.deviceId || !c.frame || (c.person?.id || null) !== (personId || null)) continue;
+    try { c.frame({ type: 'notice', stage: 'important', text: String(text).slice(0, 300) }); n++; } catch { /* a call that is ending */ }
+  }
+  return n;
+}
+
+module.exports = { important, open, speak, inCall, personOnCall, quietFor, follow, landed, reported, gist };

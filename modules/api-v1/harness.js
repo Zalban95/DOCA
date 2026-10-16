@@ -178,7 +178,7 @@ function requireSession(id, device) {
 function transcript(id, { limit = 50, device } = {}) {
   const session = requireSession(id, device);
   const n = Math.min(Math.max(Number(limit) || 50, 1), MAX_HISTORY);
-  const rows = memory.messages(id).slice(-n).map(row => ({
+  const rows = memory.messages(id).filter(r => r.role !== 'note').slice(-n).map(row => ({
     role: row.role,
     content: typeof row.content === 'string' ? row.content : '',
     // Which client this was asked from, so a shared conversation reads as one.

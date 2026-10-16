@@ -23,7 +23,7 @@ async function foldSummary({ session, p, ep, signal, force = false, person = nul
   // Asked of the worker when one is set (turn/model-route.js forFold): housekeeping, not judgement.
   ({ p, ep } = require('./model-route').forFold({ p, ep, person, sessionId: session.id }));
 
-  const transcript = pending.rows
+  const transcript = pending.rows.filter(r => r.role !== 'note')   // DOCA's notes to the person (important/) are not the conversation
     .map(r => `${r.role}${r.name ? `(${r.name})` : ''}: ${tools.clip(r.content || '[tool call]', 1200)}`)
     .join('\n');
 
