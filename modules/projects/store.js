@@ -110,12 +110,12 @@ function forSession(sessionId) {
  * The project's work chat: the one bound to it, or a new one under the
  * Orchestrator. Binding is recorded on both sides.
  */
-function workChat(id) {
+function workChat(id, person = null) {
   const p = need(id);
   const memory = require('../harness/memory');
   if (p.sessionId && memory.getSession(p.sessionId)) return memory.getSession(p.sessionId);
   const org = require('../harness/organization');
-  const s = org.create({ title: `Project: ${p.name}` });
+  const s = org.create({ title: `Project: ${p.name}`, person });
   bind(p.id, s.id);
   return memory.getSession(s.id);
 }
@@ -135,10 +135,10 @@ function chats(id, { all = false } = {}) {
 }
 
 /** A new chat in this project: a work chat bound to it, as the first one is. */
-function newChat(id, { title, page } = {}) {
+function newChat(id, { title, page } = {}, person = null) {
   const p = need(id);
   const about = page ? require('./pages').check(p, page) : null;   // a chat about one page (pages.js)
-  const s = require('../harness/organization').create({ title: String(title || '').trim() || (about ? `📄 ${path.basename(about.rel, '.md')}` : `${p.name} chat`) });
+  const s = require('../harness/organization').create({ title: String(title || '').trim() || (about ? `📄 ${path.basename(about.rel, '.md')}` : `${p.name} chat`), person });
   bind(p.id, s.id);
   if (about) require('../harness/memory').updateSession(s.id, { page: about.rel });
   return require('../harness/memory').getSession(s.id);

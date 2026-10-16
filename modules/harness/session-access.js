@@ -58,26 +58,32 @@ function newestOwn(person) {
   return own.length ? own.reduce((a, b) => ((b.updatedAt || '') > (a.updatedAt || '') ? b : a)).id : null;
 }
 
-/** Where a turn with no conversation named goes for this person (making one if they have none). */
+/**
+ * Where a turn with no conversation named goes for this person: the hub owner's active conversation (the pointer is
+ * theirs), anyone else's own Orchestrator, made the first time (own-main.js; since 2026-10-16 — before, a member's newest
+ * conversation, and every host's the hub's, so a second admin's turns and their failures landed with the owner).
+ */
 function defaultFor(person) {
-  if (!person?.id || isHost(person)) return memory.activeSession().id;
-  const found = newestOwn(person);
-  if (found) return found;
-  const s = require('./organization').create({ title: 'Chat', kind: 'chat' });
-  claim(person, s.id);
-  return s.id;
+  const own = require('./own-main');
+  if (!person?.id || own.hubs(person)) return memory.activeSession().id;
+  return own.of(person);
 }
 
 /**
  * Which devices hear about a conversation: those following the harness (harness:chat) whose owner
  * may open it. A turn's summary, a mission's progress and an automatic reply used to reach every
- * person's phone and watch; they now reach the people the conversation belongs to, and hosts.
+ * person's phone and watch; they now reach the person the conversation belongs to.
  * A device paired to nobody (an older token) is not narrowed, as everywhere else.
  */
 function hears(device, sessionId) {
   const { hasScope } = require('../api-v1/scopes');
   if (device.revokedAt || !hasScope(device.scopes, 'harness:chat')) return false;
-  return !sessionId || mayUse(require('./turn/client').deviceOwner(device), sessionId);
+  if (!sessionId) return true;
+  // A conversation that is someone's reaches that person's devices alone — a host's included, so one admin's work, its
+  // wakes and failures never buzz another's wrist (2026-10-16). One that is nobody's keeps the older rule.
+  const person = require('./turn/client').deviceOwner(device), owner = ownerOf(sessionId);
+  if (owner && person?.id) return owner === person.id;
+  return mayUse(person, sessionId);
 }
 
 module.exports = { ownerOf, mayUse, check, visible, claim, newestOwn, defaultFor, isHost, hears };

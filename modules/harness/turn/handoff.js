@@ -142,7 +142,7 @@ function doneSince(sessionId, from) {
 function handOff({ session, message, from, reply, say, step, person = null, spoken = false, attachments = [] }) {
   if (free()) return require('../fork').fromSafetyNet({ session, message, from, reply, say, step, person, spoken, attachments });
   const organization = require('../organization');
-  const chat = organization.create({ title: jobTitle(message) || 'Handed-off job' });
+  const chat = organization.create({ title: jobTitle(message) || 'Handed-off job', person, from: session.id });
   require('../session-access').claim(person, chat.id);   // the person's work, under their level — not the Orchestrator's owner's
   const mention = { ...require('../mentions').work(chat.id), state: 'running' };   // started below; the first row carries a chip that opens it (mentions.js)
   reply.tool_calls.forEach((tc, i) => {

@@ -6,6 +6,7 @@ const memory = require('./memory');
 const crypto = require('crypto');
 const error = (message, status = 409) => Object.assign(new Error(message), { status });
 const short = (value, n = 600) => String(value || '').slice(0, n);
+const ownMain = () => require('./own-main');
 
 function session(id) {
   const row = memory.getSession(id);
@@ -14,7 +15,7 @@ function session(id) {
   const state = row.state || mission?.state || 'idle';
   return { ...row, kind: mission ? 'specialist' : row.kind || 'work',
     archivedAt: row.archivedAt || mission?.archivedAt || null,
-    parentId: row.parentId || mission?.by || (row.kind === 'orchestrator' ? null : memory.mainSession().id),
+    parentId: row.parentId || mission?.by || (row.kind === 'orchestrator' ? null : ownMain().forSession(id, { create: false })),
     profile: row.profile || (mission && require('../agents/missions').profileOf(
       require('../agents/registry').get(mission.agentId) || { id: mission.agentId, tools: [], role: 'Report that your definition is unavailable.' })) ||
       (row.kind === 'specialist' ? { id: 'unavailable', tools: [], memory: false, systemPrompt: 'Your specialist definition is unavailable. Report this to your superior; do not attempt the original work.' } : null),
@@ -31,8 +32,10 @@ function ancestors(id) {
     ids.push(row.parentId);
     row = session(row.parentId);
   }
-  const main = memory.mainSession().id;
-  if (id !== main && !ids.includes(main)) ids.push(main);
+  // A chain ends at its person's Orchestrator; one from before that rule (no parent) is put under it (own-main.js).
+  if (memory.getSession(ids[ids.length - 1] || id)?.kind === 'orchestrator') return ids;
+  const main = ownMain().forSession(id, { create: false });
+  if (main && id !== main && !ids.includes(main)) ids.push(main);
   return ids;
 }
 
@@ -122,10 +125,7 @@ function view(row) {
 /**
  * The inventory, filtered to the conversations the caller may act on.
  *
- * It used to return every conversation to every caller, which is how a
- * specialist came to hold the Orchestrator's row — and each row carries `brief`,
- * the first 600 characters of that conversation's last answer, so the list was
- * the same leak as reading a transcript, in miniature.
+ * It used to return every conversation to every caller (a specialist held the Orchestrator's row, `brief` and all).
  *
  * The only thing that makes one conversation another's business is being in its
  * reporting line, so `canManage` decides here too, rather than a second rule
@@ -139,7 +139,7 @@ function view(row) {
  * reading the index directly) and sees the index as it was.
  */
 function list({ all = false, offset = 0, limit = 40 } = {}, viewer = null) {
-  const main = memory.mainSession();
+  const main = { id: viewer ? ownMain().forSession(viewer, { create: false }) : memory.mainSession().id };
   const rows = memory.listSessions().sessions.map(s => session(s.id))
     .filter(s => all || !s.archivedAt)
     .filter(s => !viewer || canManage(viewer, s.id));
@@ -161,8 +161,8 @@ const under = id => require('./org-depth').under(session(id));
 
 function canManage(actor, target) {
   const s = session(actor);
-  return actor === target || s.kind === 'orchestrator' ||
-    (leads(s.kind) && ancestors(target).includes(actor));
+  if (s.kind === 'orchestrator') return actor === target || ancestors(target).includes(actor) || ownMain().sameLine(actor, target);   // its own person's work alone
+  return actor === target || (leads(s.kind) && ancestors(target).includes(actor));
 }
 
 /**
@@ -171,11 +171,13 @@ function canManage(actor, target) {
  * plan out in the same chat, as a Projects tab in Plan mode does. `planning` is the older note-only planning work chat
  * the Orchestrator may still ask for (work_chats create {planning}), whose plan was meant for another chat.
  */
-function create({ title, planning = false, kind = 'work', mode = null, fields = null, parentId = null } = {}) {   // fields: where it works (projectId: fork.js); parentId + fields.level: org-depth.under
+function create({ title, planning = false, kind = 'work', mode = null, fields = null, parentId = null, person = null, from = null } = {}) {   // fields: where it works (projectId: fork.js); parentId + fields.level: org-depth.under; person or from: whose Orchestrator it goes under
   const chat = kind === 'chat' && !planning;
   const s = memory.createSession(short(title, 100) || (chat ? 'New conversation' : planning || mode === 'plan' ? 'Planning work' : 'Work chat'), {
-    activate: false, kind: chat ? 'chat' : 'work', parentId: parentId || memory.mainSession().id, fields,
+    activate: false, kind: chat ? 'chat' : 'work', fields,
+    parentId: parentId || (person?.id ? ownMain().forPerson(person) : from ? ownMain().forSession(from) : memory.mainSession().id),
   });
+  require('./session-access').claim(person, s.id);
   memory.updateSession(s.id, { planning: !!planning, titleLocked: !!title });
   if (mode && mode !== 'agent') require('./modes').set(s.id, mode);
   report(s.id, 'created', chat ? 'Conversation started' : planning ? 'Planning work chat created' : mode === 'plan' ? 'Work chat created in Plan mode' : 'Work chat created');
@@ -243,11 +245,11 @@ function setAside(id, plan, client, note = '') {
 }
 
 function archive(id, on = true) {
-  if (id === memory.mainSession().id) throw error('The current Orchestrator stays available. Clear main chat to archive it.');
+  if (ownMain().isMain(id)) throw error('The current Orchestrator stays available. Clear main chat to archive it.');
   // An earlier Orchestrator is not brought back as a work chat named "Orchestrator" (deep test B, C9: thirteen of them
-  // beside the real one). There is one at a time, so it stays put away, its whole conversation readable.
+  // beside the real one). Each person has one at a time, so it stays put away, its whole conversation readable.
   if (!on && session(id).kind === 'orchestrator')
-    throw error('This is an earlier Orchestrator. There is one Orchestrator at a time, so it stays in the Archive with its whole conversation — Harness → "Show archived chats" reads it.', 409);
+    throw error('This is an earlier Orchestrator. Each person has one Orchestrator at a time, so it stays in the Archive with its whole conversation — Harness → "Show archived chats" reads it.', 409);
   if (require('./agent').isRunning(id) || memory.listSessions().sessions.some(s =>
     require('./agent').isRunning(s.id) && ancestors(s.id).includes(id)))
     throw error('Stop or finish this conversation and its running specialists before archiving.');
@@ -315,7 +317,7 @@ function profileFor(s) {
 function block(id, pending = []) {
   const s = session(id);
   const rows = memory.listSessions().sessions.map(row => session(row.id)).filter(row => !row.archivedAt &&
-    (s.kind === 'orchestrator' || row.parentId === id));
+    (s.kind === 'orchestrator' ? canManage(id, row.id) : row.parentId === id));
   const ordered = rows.filter(row => row.id !== id).sort((a, b) =>
     Number(b.state === 'running' || b.plan?.state === 'proposed') - Number(a.state === 'running' || a.plan?.state === 'proposed'));
   return [`# Organization — ${s.kind}, conversation ${id}`,

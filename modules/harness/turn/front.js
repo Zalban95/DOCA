@@ -84,7 +84,7 @@ function lately(sessionId) {
 function delegate({ session, message, client, say, deep, attachments = [] }) {
   if (require('./route').on()) return require('../fork').beforeModel({ session, message, client, say, deep, attachments });   // experiment alwaysFree
   const organization = require('../organization'), memory = require('../memory');
-  const chat = organization.create({ title: short(message, 80) || 'From a call' });
+  const chat = organization.create({ title: short(message, 80) || 'From a call', person: client?.user, from: session.id });
   require('../session-access').claim(client?.user, chat.id);   // the person's work, under their level
   if (deep) memory.updateSession(chat.id, { effort: 'high' });   // effort.js: this conversation's own level
   const before = lately(session.id);

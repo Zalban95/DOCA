@@ -50,7 +50,7 @@ function mount(app) {
       // A computer the person chose (self-test 2026-10-08, #8), else the type's own one (computers.ownFor).
       const computer = req.body?.computer ? lendable(person, String(req.body.computer))
         : def?.computer === 'own' ? await require('../computers').ownFor(def, person) : null;
-      const row = require('./missions').dispatch({ agentId, task: req.body?.task, context: req.body?.context, computer });
+      const row = require('./missions').dispatch({ agentId, task: req.body?.task, context: req.body?.context, computer, person });
       // Marked before its turn reaches withPerson: dispatch starts the turn, which awaits its claim first.
       if (req.auth?.user) require('../harness/memory').updateSession(row.sessionId, { person: { id: req.auth.user.id, orgId: req.auth.orgId } });
       res.json({ mission: row });

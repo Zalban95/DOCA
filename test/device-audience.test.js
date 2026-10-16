@@ -1,6 +1,7 @@
 'use strict';
 
-// A conversation's news reaches the devices of the people it belongs to, and hosts (session-access.js hears).
+// A conversation's news reaches the devices of the person it belongs to — not every host's (session-access.js hears;
+// the owner's decision of 2026-10-16: each person's work, wakes and failures reach that person alone).
 
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
@@ -34,7 +35,7 @@ test('a mission in the owner\'s conversation is told to the owner\'s devices, no
   assert.equal(types(theirs, 'agent.mission').filter(e => e.payload.missionId === 'msn_aud').length, 0);
 });
 
-test('the member\'s work chat is told to the member, and to the host', () => {
+test('the member\'s work chat is told to the member, not to the host', () => {
   const org = require('../modules/harness/organization');
   const access = require('../modules/harness/session-access');
   const s = org.create({ title: 'member work' });
@@ -42,7 +43,7 @@ test('the member\'s work chat is told to the member, and to the host', () => {
   require('../modules/harness/workview').announce(s.id);
   const got = d => types(d, 'agent.mission').some(e => e.payload.missionId === s.id);
   assert.equal(got(theirs), true);
-  assert.equal(got(mine), true, 'the owner holds host');
+  assert.equal(got(mine), false, 'holding host no longer means hearing everyone\'s work on a wrist');
   const list = require('../modules/harness/workview').forDevices({}, devices.get(theirs.id)).missions.map(m => m.missionId);
   assert.ok(list.includes(s.id));
   assert.ok(!list.includes('msn_aud') , 'the owner\'s mission is not in the member\'s list');

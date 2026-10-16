@@ -23,8 +23,11 @@ test('a member makes a conversation of their own; the host\'s active one does no
   assert.ok(after.body.sessions.some(s => s.id === id), 'the host sees it');
 
   const mine = await H.api(null, 'GET', '/api/harness/sessions', undefined, as(member));
-  assert.deepEqual(mine.body.sessions.map(s => s.id), [id], 'the member sees only theirs');
-  assert.equal(mine.body.active, id);
+  // Their conversation goes under an Orchestrator of their own, made as it was needed (own-main.js, 2026-10-16).
+  assert.deepEqual(mine.body.sessions.map(s => s.id).sort(), [id, mine.body.main].sort(), 'the member sees only theirs: it and their own Orchestrator');
+  assert.notEqual(mine.body.main, before.body.main);
+  assert.equal(mine.body.sessions.find(s => s.id === id).parentId, mine.body.main);
+  assert.ok([id, mine.body.main].includes(mine.body.active), 'their newest: the chat, or the Orchestrator its report reached');
   assert.equal((await H.api(null, 'GET', `/api/harness/sessions/${id}`, undefined, as(member))).status, 200);
 
   assert.equal((await H.api(null, 'GET', `/api/harness/sessions/${id}`, undefined, as(other))).status, 404, 'another member: as if it did not exist');

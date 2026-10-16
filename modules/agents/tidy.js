@@ -35,7 +35,7 @@ const safe = fn => { try { return fn(); } catch { return null; } };
 /** Its leader is still there to read it: a conversation not archived, and a work chat whose job is not over. */
 function leaderWaits(m) {
   const org = require('../harness/organization');
-  const lead = safe(() => org.session(m.by || require('../harness/memory').mainSession().id));
+  const lead = safe(() => org.session(m.by || require('../harness/own-main').forSession(m.sessionId, { create: false })));
   if (!lead || lead.archivedAt) return false;
   const job = lead.job;
   if (lead.kind === 'work' && job && (org.FINAL.includes(job.state) || ['stopped', 'dropped'].includes(job.state))) return false;

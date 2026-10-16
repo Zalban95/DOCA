@@ -114,7 +114,7 @@ function autoNow() {
   });
 }
 
-/** An Orchestrator's automatic reply is for the owner: to their devices too, not only the chat. */
+/** An Orchestrator's automatic reply is for its person: to their devices too (session-access.hears), not only the chat. */
 function afterOrchestrator(sessionId, r) {
   const s = memory.getSession(sessionId);
   if (s?.kind !== 'orchestrator' || !r?.text) return;
@@ -264,7 +264,7 @@ function missionStopped(s) {
 /**
  * Wake the Orchestrator for the final reports it has not been woken for yet —
  * only its own work chats' done, failed, blocked and questions. It says what
- * matters to the owner; the reports stay in its context either way.
+ * matters to its person; the reports stay in its context either way.
  */
 function deliver(orchestratorId) {
   const org = require('./organization'), leaders = require('./leaders');
@@ -282,7 +282,7 @@ function deliver(orchestratorId) {
   const latest = leaders.latestOf(rest);
   // A failed job is reported, never retried on its own (deep test B, C13): trying again is the person's call.
   const failed = latest.some(n => leaders.outcomeOf(n) === 'failed') ? 'Do not retry failed work or send it anything new: say what failed and ask whether to try again. ' : '';
-  const how = wake(ceo.id, '[panel] Work reported back. Tell the owner what matters, in a few lines. ' + failed
+  const how = wake(ceo.id, '[panel] Work reported back. Tell the person what matters, in a few lines. ' + failed
     + 'Where a decision is theirs, ask it with ask_device and give the choices — it reaches their phone, '
     + `their watch and the panel at once.\n${latest.map(leaders.lineOf).join('\n')}`, { retry: () => deliver(ceo.id) });
   if (how === 'woken') leaders.markWoken(ceo.id, rest);
@@ -333,7 +333,7 @@ function recover() {
         && wake(lead.id, `[panel] A restart stopped your specialist ${m.label || m.agentId} (${m.id}). `
           + 'Resume it with agent_resume, or do that part another way.') === 'woken') done.push(lead.id);
   }
-  deliver(memory.mainSession().id);
+  for (const id of require('./own-main').all()) deliver(id);   // every person's Orchestrator, each told only its own work
   return done;
 }
 
