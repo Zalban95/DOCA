@@ -5,8 +5,9 @@
  *
  * Since 3.101.0 a person's devices hear only their own work (session-access.hears). The owner kept that, and asked for
  * a separate place in the panel — an icon in the header, apart from the person's own notices and questions — where an
- * admin sees the work of the people they may see: missions and work chats started, finished, failed, waiting for
- * someone, stopped. Newest first, with an unread count, each opening its conversation.
+ * admin sees the work of the people they may see (the owner's included): missions and work chats started, finished,
+ * failed, waiting for someone, stopped. Grouped by person (groupsOf), newest first, with an unread count, each opening
+ * its conversation.
  *
  * Mechanical (the visibility rule): nothing is stored but each viewer's switch and how far they read. The list is read
  * from what already exists — the specialists' missions (agents/missions.js) and the work chats as devices see them
@@ -70,7 +71,9 @@ function fromWork(s) {
   if (!event) return null;
   return { id: `w:${s.id}`, kind: 'work', event, sessionId: s.id, title: `Work chat: ${line(p.label)}`,
     at: p.endedAt || p.startedAt || s.updatedAt,
-    detail: event === 'waiting' ? 'A plan waits for its person to decide.' : line(p.error || p.result) };
+    // A stopped job's own words say "Waiting for you" to its person (workview.js); here they are read by someone else.
+    detail: event === 'waiting' ? 'A plan waits for its person to decide.'
+      : halted ? `${line(s.job.stoppedWhy) || (job === 'dropped' ? 'Dropped' : 'Stopped')} — waits for its person to restart or drop it.` : line(p.error || p.result) };
 }
 
 /** Other people's work this person may see, newest first, with who and in fixed words. */
@@ -93,10 +96,26 @@ function list(person, { limit = LIMIT } = {}) {
 /** What the header icon reads: the switch, the list (when on), and how many are newer than what was read. */
 function view(person) {
   const s = settingsOf(person);
-  if (!s.on) return { on: false, unread: 0, items: [], seenAt: s.seenAt };
-  const items = list(person);
-  const unread = items.filter(i => !s.seenAt || String(i.at) > s.seenAt).length;
-  return { on: true, unread, items: items.map(i => ({ ...i, unread: !s.seenAt || String(i.at) > s.seenAt })), seenAt: s.seenAt };
+  if (!s.on) return { on: false, unread: 0, items: [], groups: [], seenAt: s.seenAt };
+  const items = list(person).map(i => ({ ...i, unread: !s.seenAt || String(i.at) > s.seenAt }));
+  return { on: true, unread: items.filter(i => i.unread).length, items, groups: groupsOf(items), seenAt: s.seenAt };
 }
 
-module.exports = { allowed, settingsOf, setOn, markSeen, list, view, fromMission, fromWork };
+/**
+ * The list by person (the owner's answer of 2026-10-16): a group per person with its heading and unread count, newest
+ * first within it; the groups ordered by their newest unread item, then — none unread — by their newest item.
+ */
+function groupsOf(items) {
+  const by = new Map();
+  for (const i of items) {
+    if (!by.has(i.personId)) by.set(i.personId, { personId: i.personId, who: i.who, unread: 0, items: [] });
+    const g = by.get(i.personId);
+    g.items.push(i);
+    if (i.unread) g.unread++;
+  }
+  const newest = (g, unread) => g.items.filter(i => !unread || i.unread).reduce((m, i) => (String(i.at) > m ? String(i.at) : m), '');
+  return [...by.values()].sort((a, b) => (Number(!!b.unread) - Number(!!a.unread))
+    || newest(b, true).localeCompare(newest(a, true)) || newest(b).localeCompare(newest(a)));
+}
+
+module.exports = { allowed, settingsOf, setOn, markSeen, list, view, groupsOf, fromMission, fromWork };

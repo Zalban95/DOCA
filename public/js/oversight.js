@@ -1,8 +1,8 @@
 /* ═══════════════════════════════════════════════════════
    Other people's work, in the header (modules/oversight; the owner's decision of 2026-10-16). Apart from the person's
    own notices and questions (agent-ui/notices.js, the questions dock): an icon with an unread count that opens a list of
-   the work of the people a host may see — missions and work chats started, finished, failed, waiting, stopped — newest
-   first, each opening its conversation. Fed by GET /api/oversight, read again when the live feed says a mission or a
+   the work of the people a host may see — missions and work chats started, finished, failed, waiting, stopped — in a
+   group per person (the person with the newest unread first), newest first within, each opening its conversation. Fed by GET /api/oversight, read again when the live feed says a mission or a
    conversation moved; nothing here is written by a model. Drawn only for someone holding host (a 403 draws nothing).
    Opt-in per person: the switch is in the list itself and in Settings → General.
    ═══════════════════════════════════════════════════════ */
@@ -62,10 +62,15 @@ function _ovsPanel() {
   }
   const h = document.querySelector('header')?.getBoundingClientRect().bottom || 52;
   p.style.top = `${Math.round(h) + 4}px`;
-  const rows = (v.items || []).map(i => `<button type="button" class="oversight-item${i.unread ? ' unread' : ''}" data-ovs-open="${escHtml(i.sessionId)}">
+  const item = i => `<button type="button" class="oversight-item${i.unread ? ' unread' : ''}" data-ovs-open="${escHtml(i.sessionId)}">
       <span class="pt ${i.event === 'failed' ? 'pt-err' : i.event === 'started' ? 'pt-run' : ''}" aria-hidden="true"></span>
-      <span class="oversight-item-body"><span class="oversight-item-head"><b>${escHtml(_OVS_EVENT[i.event] || i.event)}</b> · ${escHtml(i.who)} · <span class="desc">${escHtml(_ovsWhen(i.at))}</span></span>
-        <span class="oversight-item-title">${escHtml(i.title)}</span>${i.detail ? `<span class="desc oversight-item-detail">${escHtml(i.detail)}</span>` : ''}</span></button>`).join('');
+      <span class="oversight-item-body"><span class="oversight-item-head"><b>${escHtml(_OVS_EVENT[i.event] || i.event)}</b> · <span class="desc">${escHtml(_ovsWhen(i.at))}</span>${i.unread ? ' <span class="oversight-new">new</span>' : ''}</span>
+        <span class="oversight-item-title">${escHtml(i.title)}</span>${i.detail ? `<span class="desc oversight-item-detail">${escHtml(i.detail)}</span>` : ''}</span></button>`;
+  // A group per person (the owner's answer of 2026-10-16), headed like the header search's sections: the person with
+  // the newest unread first, newest first within.
+  const rows = (v.groups || []).map(g => `<details class="header-search-section oversight-group" open>
+      <summary>${escHtml(g.who)}<span class="header-search-count">${g.unread ? `<span class="oversight-new">${g.unread} new</span> · ` : ''}${g.items.length}</span></summary>
+      ${g.items.map(item).join('')}</details>`).join('');
   p.innerHTML = `<div class="oversight-head"><b>Other people's work</b>
       <label class="oversight-switch"><input type="checkbox" ${v.on ? 'checked' : ''} data-ovs-switch> Follow</label>
       <button type="button" class="btn btn-sm" data-ovs-close aria-label="Close">${uiIcon('close', 14)}</button></div>

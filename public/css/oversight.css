@@ -12,13 +12,17 @@
 .oversight-head b { flex: 1; }
 .oversight-switch { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
 .oversight-note { padding: 0 12px 6px; margin: 0; }
-.oversight-list { overflow-y: auto; padding: 0 6px 8px; }
+.oversight-list { overflow-y: auto; padding: 0 0 8px; }
 .oversight-list > .desc { padding: 6px; }
 .oversight-item { display: flex; gap: 8px; align-items: flex-start; width: 100%; text-align: left; padding: 8px 6px; border: 0;
-  border-top: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; font: inherit; }
+  border-top: 1px solid var(--border); background: transparent; padding-left: 10px; color: var(--text); cursor: pointer; font: inherit; }
 .oversight-item:hover, .oversight-item:focus-visible { background: var(--bg3, rgba(127, 127, 127, .08)); }
 .oversight-item .pt { margin-top: 5px; }
 .oversight-item.unread .oversight-item-head b { color: var(--accent); }
+.oversight-item.unread { box-shadow: inset 2px 0 0 var(--accent); }
+.oversight-new { color: var(--accent); font-weight: 600; }
+.oversight-group > summary { text-transform: none; font-size: 11px; color: var(--text); }
+.oversight-group > summary .header-search-count { color: var(--muted); }
 .oversight-item-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .oversight-item-head { font-size: 12px; }
 .oversight-item-title, .oversight-item-detail { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

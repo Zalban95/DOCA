@@ -51,6 +51,7 @@ test('newest first, a stopped job and a proposed plan in their words', async () 
   const r = await H.api(null, 'GET', '/api/oversight');
   const ev = id => r.body.items.find(i => i.sessionId === id)?.event;
   assert.equal(ev(stopped), 'stopped');
+  assert.match(r.body.items.find(i => i.sessionId === stopped).detail, /waits for its person/);
   assert.equal(ev(plan), 'waiting');
   const ats = r.body.items.map(i => i.at);
   assert.deepEqual(ats, [...ats].sort().reverse());
@@ -80,4 +81,23 @@ test('a mission reads in fixed words', () => {
   assert.equal(o.fromMission({ id: 'm1', state: 'running', asking: { since: '2026-10-16T10:00:00Z', what: 'click Sign in' }, sessionId: 's', task: 'x', startedAt: '2026-10-16T09:00:00Z' }).event, 'waiting');
   assert.equal(o.fromMission({ id: 'm2', state: 'done', sessionId: 's', task: 'x\nmore', label: 'Tester', result: 'ok', startedAt: 'a', endedAt: 'b' }).title, 'Tester: x');
   assert.equal(o.fromMission({ id: 'm3', state: 'cancelled', sessionId: 's', task: 'x', startedAt: 'a' }).event, 'stopped');
+});
+
+test('an admin sees the owner\'s work too, grouped by person, the newest unread group first', async () => {
+  const ada = await H.signIn('member');
+  const owners = work('The owner\'s errand', H.owner, { state: 'failed', lastError: 'x' });
+  await H.api(null, 'POST', '/api/oversight/seen', {}, as(admin));
+  const older = work('Ada\'s first', ada, { state: 'idle', brief: 'ok' });
+  await H.sleep(15);
+  const newer = work('Ada\'s second', ada, { state: 'failed', lastError: 'no' });
+  const r = await H.api(null, 'GET', '/api/oversight', undefined, as(admin));
+  const g = r.body.groups;
+  assert.ok(r.body.items.some(i => i.sessionId === owners), 'the owner\'s work is listed for an admin');
+  assert.equal(g[0].personId, ada.user.id, 'the person with the newest unread first');
+  assert.deepEqual(g[0].items.map(i => i.sessionId).slice(0, 2), [newer, older], 'newest first within the group');
+  assert.equal(g[0].unread, 2);
+  const ownerGroup = g.find(x => x.personId === H.owner.user.id);
+  assert.ok(ownerGroup && ownerGroup.unread === 0, 'read before: in its own group, after the unread ones');
+  assert.ok(g.indexOf(ownerGroup) > 0);
+  assert.equal(new Set(g.map(x => x.personId)).size, g.length, 'one group per person');
 });
