@@ -138,7 +138,7 @@ test('the edit is one filter graph: every shot, a crossfade between each, the ex
     const graph = fs.readFileSync(argv[argv.indexOf('-filter_complex_script') + 1], 'utf8');
     assert.equal((graph.match(/xfade=/g) || []).length, 3);
     assert.equal(argv[argv.lastIndexOf('-t') + 1], '20', 'the output is cut at the duration');
-    assert.ok(argv.includes('/r/asm/0225.png'), 'the end card is the assembly\'s last frame');
+    assert.ok(argv.includes(path.join('/r/asm', '0225.png')), 'the end card is the assembly\'s last frame');
     assert.equal(fs.readFileSync(path.join(work, 'title.txt'), 'utf8'), 'A: "quoted" title', 'text goes through a file, unescaped');
   } finally { fs.rmSync(work, { recursive: true, force: true }); }
 });
