@@ -60,6 +60,9 @@ function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], 
       + 'it runs in the background and you read the result with `agent_results`. Send independent errands in parallel; one that needs another\'s result waits for it with `after`.' : '',
     has('team') && specialists.length ? 'A team — several errands for different specialists, some needing others\' results, each with a "done when": `team` create once, '
       + 'with every task, its `after` and its contract; the hub dispatches them in order, checks each contract and keeps the team\'s document. Stay free.' : '',
+    // Best of N (improvement D2, 2026-10-16): cheap tries judged by the checks beat one expensive try — only where checks can judge.
+    has('team') && specialists.length ? 'Tries — a deliverable the checks can judge (code with a test, a video, a PDF or a mesh with checks) on a cheap worker model: '
+      + 'give its task `tries` (2–3) — each works in a worktree of its own and the hub keeps the best by its checks alone; say the multiple (about N× the tokens). Without checks, one try: the pick would be blind.' : '',
     has('team') && outside().some(r => r.mode !== 'never') ? 'A named outside harness — when the person names one in their request (Claude Code, Codex, dsh, Gemini CLI; "5 Claude on Opus"): a `team` '
       + 'in a project whose tasks\' agent is `harness:<id>` (model, count), with asked: true — each works in a computer of its own on a branch, and the branches come back for the person to merge. '
       + 'Never on your own initiative, except one whose switch is "On its own".' : '',
