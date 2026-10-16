@@ -56,6 +56,26 @@ test('while a page holds it, an edit in a project is heard with what it added an
   } finally { fs.rmSync(root, { recursive: true, force: true }); }
 });
 
+test('a file holding secrets is diffed masked on both sides: what was there before is never shown in clear', async () => {
+  // Found live 2026-10-16: the copy taken when watching starts kept the settings file as it is, so its first change
+  // showed every secret in clear as a removed line beside its masked self.
+  const root = fs.mkdtempSync(path.join(require('node:os').homedir(), '.doca-ws-test-'));
+  try {
+    const env = path.join(root, '.env');
+    fs.writeFileSync(env, 'API_TOKEN=supersecret-before-123\nPORT=1\n');
+    await H.api(null, 'POST', '/api/projects', { name: 'ws-secret', root });
+    const page = await open();
+    await H.api(null, 'POST', '/api/workstream/hold', { screen: page.hello.screen, on: true });
+    assert.ok(await until(() => sentinel.status().on));
+    await H.sleep(SLOW_WATCH ? 1500 : 400);   // the start copy is taken
+    fs.writeFileSync(env, 'API_TOKEN=supersecret-after-456\nPORT=2\n');
+    assert.ok(await until(() => page.got.some(c => c.what === 'file' && c.path === env)), 'the change is heard');
+    const all = JSON.stringify(page.got);
+    assert.ok(!all.includes('supersecret-before-123') && !all.includes('supersecret-after-456'), 'no secret value, old or new, reaches the page');
+    await page.close();
+  } finally { fs.rmSync(root, { recursive: true, force: true }); }
+});
+
 test('activity: thinking gathered, commands as typed, results by their first line, no secret argument named', async () => {
   const s = require('../modules/harness/memory').createSession('Kitchen', { activate: false });
   for (const t of ['Let me ', 'check the ', 'lights.']) ws.onEvent({ sessionId: s.id, type: 'thinking', text: t });

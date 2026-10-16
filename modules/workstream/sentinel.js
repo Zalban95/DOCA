@@ -71,7 +71,7 @@ function report(file) {
   const masked = secretKind(file);
   if (masked) text = view(file, text);
   let before = _seen.has(file) ? _seen.get(file) : gitHead(file);
-  if (masked && before && !_seen.has(file)) before = view(file, before);
+  if (masked && before) before = view(file, before);   // masking is idempotent: whatever the copy came from, no secret is diffed
   // Not seen and not in git: new if it was born after the sentinel started, else unknown (shown whole, marked).
   const born = before === null && st.birthtimeMs > 0 && st.birthtimeMs >= _startedAt - 1000;
   if (born) before = '';
@@ -150,7 +150,8 @@ async function snapshot(list, budget = { files: SNAP_FILES, bytes: SNAP_BYTES })
         if (st.size > SNAP_FILE) continue;
         const text = fs.readFileSync(p, 'utf8');
         if (text.includes('\u0000')) continue;
-        if (!_seen.has(p)) _seen.set(p, text);
+        // A secrets-holding file's copy is kept masked, as it is shown; a keys file is never kept (report() skips it too).
+        if (!_seen.has(p) && !keysFile(p)) _seen.set(p, secretKind(p) ? view(p, text) : text);
         budget.files--; budget.bytes -= st.size;
       } catch { /* gone */ }
       if (++n % 200 === 0) await new Promise(r => setImmediate(r));
