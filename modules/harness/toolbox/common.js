@@ -103,6 +103,8 @@ function resolvePath(p, ctx = {}, { write = false } = {}) {
     throw new Error(`Path is outside the allowed roots (${FM_ALLOWED_ROOTS.join(', ')}): ${abs}. The file tools reach only `
       + 'the home folder, other disks and the temp folder; no setting widens them. Do not reach it another way '
       + '(shell, a script, a copy) on your own: tell the person where it is and ask — they can copy it into the workspace, or say you may read it.');
+  const spill = require('../spill-access').refusal(abs, ctx);   // another person's saved tool output (spill-access.js)
+  if (spill) throw new Error(spill);
   return abs;
 }
 
