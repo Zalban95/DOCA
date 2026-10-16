@@ -113,7 +113,7 @@ test('a promo\'s frames are kept out of the video\'s folder, in the data folder,
   assert.equal(fs.readdirSync(W.root()).length, W.KEEP);
 });
 
-test('the FreeCAD runner refuses a script a snap FreeCAD cannot see, before running anything', () => {
+test('the FreeCAD runner refuses a script a snap FreeCAD cannot see, before running anything', { skip: process.platform === 'win32' && 'a snap is Linux only, and a .cmd stand-in is not a snap' }, () => {
   const { execFileSync } = require('node:child_process');
   const fake = path.join(H.tmp, 'snap', 'bin', 'freecad.cmd');   // never run: the refusal comes first
   fs.mkdirSync(path.dirname(fake), { recursive: true });
