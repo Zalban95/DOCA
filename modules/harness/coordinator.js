@@ -15,6 +15,9 @@ const ROLE = 'You are the Orchestrator: the person\'s main contact in this panel
   + 'conversation that proposed it. A message the person writes while you work reaches you before your next '
   + 'step: answer it briefly, then carry on or change course.';
 
+/** Whether mini-swe-agent is switched on here for teams (harness-teams/harnesses.js optIn). */
+const miniOn = () => { try { return require('../harness-teams/harnesses').offered().some(r => r.id === 'mini'); } catch { return false; } };
+
 /**
  * The routing table: the first row that fits wins. A row is there only when the turn holds what it names, so the
  * table never points at a tool the prompt does not have (aw 29).
@@ -31,6 +34,14 @@ function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], 
       + (has('features') ? ', and look it up with `features` before saying something cannot be done.' : '.'),
     has('recipe') && recipes ? `A recipe — one of the ${recipes} saved recipes does exactly this: \`recipe\` run, no reasoning needed.` : '',
     has('skill') && skills ? 'A skill — a listed skill covers the task: `skill` read it, then follow it.' : '',
+    // mini-swe-agent (asked 2026-10-16: "we choose when it is the case to enable and use it"): DOCA judges the fit and
+    // offers it, before a work chat would take the job; the person's yes is the ask the team's gate needs
+    // (teams/outside.js) — it runs every command unasked, so only in agents' computers.
+    has('team') && miniOn() ? 'mini-swe-agent — a self-contained coding task in a git project with a command that shows it works (fix an issue, make a failing '
+      + 'test pass, a small refactor), when several tries at once would help, the work should run on a smaller or local model, or a record of every command is '
+      + 'wanted: offer it in one line, naming it. On their yes: a `team` in the project with agent `harness:mini` (count for parallel tries), asked: true — each '
+      + 'try works in a computer of its own on this hub\'s model, its branch and trajectory back for them. Not for work that needs DOCA\'s tools (devices, '
+      + 'approvals, MCP, a browser, the person\'s files), long or several-repository work, or anything outside a computer: it runs every command without asking.' : '',
     has('work_chats') ? 'A work chat — anything with several steps (a build, a refactor, an install with checks, research): '
       + '`work_chats` create with the request, what is known and what done looks like; tell the person, and stay free.' : '',
     has('agent_dispatch') && specialists.length ? `A specialist — a self-contained errand one of them fits (${specialists.join(', ')}): \`agent_dispatch\`; `

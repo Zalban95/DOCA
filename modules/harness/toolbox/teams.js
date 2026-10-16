@@ -26,13 +26,13 @@ module.exports = [
       + 'keep_going on tries failed tasks again until every contract holds or its rounds run out; merge merges a task\'s branch into '
       + 'the project\'s current branch. The Orchestrator and any conversation it leads make teams — a project\'s chats too, for their project; '
       + 'a conversation a project\'s chat made (level 3) makes none. You do not dispatch a team\'s tasks yourself, and you are not blocked: carry on, and read status when you need it. '
-      + 'Only when the person names an outside harness in their request (Claude Code, Codex, dsh, Gemini CLI …) may a task\'s agent be '
+      + 'Only when the person names an outside harness in their request (Claude Code, Codex, dsh, Gemini CLI, mini-swe-agent …) — or says yes to your offer naming it — may a task\'s agent be '
       + '"harness:<id>" — with asked: true — and it then works in a computer of its own on a branch of the project.',
     parameters: {
       type: 'object',
       properties: {
         action: { type: 'string', enum: ['create', 'status', 'stop', 'keep_going', 'merge'] },
-        asked: { type: 'boolean', description: 'create: true only when the person named the outside harness in their own words — "use Claude Code", "5 Claude on Opus", "with dsh". Never on your own initiative.' },
+        asked: { type: 'boolean', description: 'create: true only when the person named the outside harness in their own words — "use Claude Code", "5 Claude on Opus", "with dsh" — or said yes, on this turn, to your offer that named it ("run it with mini-swe-agent?" — "yes"). Never on your own initiative.' },
         task: { type: 'string', description: 'merge: the task whose branch goes into the project\'s current branch.' },
         team: { type: 'string', description: 'status, stop, keep_going: the team id (status without one lists your teams).' },
         title: { type: 'string', description: 'create: a short name, e.g. "Landing page".' },
@@ -48,8 +48,8 @@ module.exports = [
             properties: {
               id: { type: 'string', description: 'Short id, e.g. "design" (default t1, t2…).' },
               title: { type: 'string', description: 'One short line for the board.' },
-              agent: { type: 'string', description: 'The specialist\'s id from your prompt — or "work" for a work chat (the Orchestrator and a project\'s chats only), or "harness:<catalog id>" (harness:claude, harness:codex, harness:dsh, harness:gemini) only when the person named that harness.' },
-              model: { type: 'string', description: 'For a harness: that CLI\'s own model id, e.g. opus (dsh takes none).' },
+              agent: { type: 'string', description: 'The specialist\'s id from your prompt — or "work" for a work chat (the Orchestrator and a project\'s chats only), or "harness:<catalog id>" (harness:claude, harness:codex, harness:dsh, harness:gemini, harness:mini) only when the person named that harness.' },
+              model: { type: 'string', description: 'For a harness: that CLI\'s own model id, e.g. opus (dsh takes none; mini takes one of this hub\'s relay models, default its first).' },
               count: { type: 'integer', description: 'Several alike (1–8), e.g. 5 for "five Claude Code": made into tasks <id>-1 … <id>-N sharing the plan.' },
               task: { type: 'string', description: 'The errand in full, for somebody who was not in this conversation.' },
               after: { type: 'array', items: { type: 'string' }, description: 'Ids of the tasks it needs finished first.' },
