@@ -52,6 +52,8 @@ const COVERAGE = {
   auth: { panel: 'a person signing in to the panel; a device pairs instead (/devices)' },
   'service-pages': { panel: 'a connected service\'s own web interface shown as a page of the panel (service-pages/): a device uses that service through its own API' },
   cast: { panel: 'casting a page to a screen: the panel\'s Cast button, in a phone\'s web view too, until a phone casts by itself (docs/design/cast-and-devices.md, phase 2)' },
+  'people-models': { panel: 'which models people run on: the owner\'s policy, and an admin\'s assignments for the people below them, at the panel with the password; a device reads its own model at /settings/effective' },
+  oversight: { panel: 'other people\'s work, in a host\'s header: a person\'s devices hear only their own work (3.101.0), so a device has no list of others\'' },
   licence: { panel: 'which features this hive may run, and renewing its licence: the owner\'s, at the panel (license/)' },
   // The machine and DOCA itself.
   ...Object.fromEntries(['status', 'action', 'stack', 'logs', 'stats', 'configs', 'prefs', 'config-favorites', 'fm-favorites', 'paths', 'keys', 'skills',
