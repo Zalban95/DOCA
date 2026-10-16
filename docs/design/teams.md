@@ -125,6 +125,13 @@ checks the task's contract in a worktree of it. `model` picks the CLI's model, `
 row, members, notes and the leader's report are the team's own; Projects → Team branches shows each branch's diff with
 Merge. AGENTS.md "Outside harnesses as team members" has the details.
 
+**mini-swe-agent** (`harness:mini`, 2026-10-16) is the one DOCA may *offer*: once a person has switched it on (installed
+it on the Harness tab, or the owner listed it in `teams.outside.allow`), the Orchestrator's routing table names when it
+fits — a self-contained coding task in a git project with a command that shows it works, above all several tries at
+once (`count`), a smaller or local model, or a record of every command — and offers it in one line; the person's yes is
+the ask. It runs every command without asking, so only in agents' computers (never a one-shot on the hub), on this
+hub's model through the model relay, its trajectory read for the board and kept as an attachment.
+
 ## What the apps would draw (not built)
 
 - **DocaMobile**: a team card in its missions list — the title, one thin bar with "1 of 3 · 33%" and "every task
