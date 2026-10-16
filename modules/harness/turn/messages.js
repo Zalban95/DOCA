@@ -141,8 +141,10 @@ function toApiMessages(allRows, { sessionId, provider, resendChars, capChars } =
   // so the row's own record of who produced it decides, never the model name.
   // The browser may preview the stored reasoning; echoing it to a model is
   // restricted to the provider that produced it.
+  // Long reasoning goes as head + tail with its file under lean context (turn/reasoning-resend.js): echoed whole on every
+  // step, one long thought was most of a long turn's request.
   const echo = r => (r.role === 'assistant' && r.reasoning?.text && r.reasoning.provider === provider
-    ? { reasoning_content: r.reasoning.text } : {});
+    ? { reasoning_content: require('./reasoning-resend').text(r, { sessionId, resendChars }) } : {});
 
   return rows.map((r, i) => {
     if (r.role === 'tool') {

@@ -129,7 +129,7 @@ function lines(p) {
       + `results ${Math.max(chars, require('./messages').TOOL_MAX_CHARS)}) on later steps (harness.config.doca.resultChars)`
       : `over ${require('./messages').TOOL_MAX_CHARS} characters sent as head + tail on every step`}. `
       + `Under pressure, results over ${clear.MIN_CHARS} characters except your newest ${clear.KEEP} are cleared from what you are sent, `
-      + 'and long arguments of old calls too. Nothing is lost: each shortened result names the file holding all of it — '
+      + 'and long arguments of old calls and your earlier thinking too (thinking over that size is re-sent as head + tail). Nothing is lost: each shortened result names the file holding all of it — '
       + 'read_file that path (offset, maxLength) rather than running the tool again'
       + (resultCapChars(p) < require('../toolbox/common').MAX_OUT ? `; a result is never sent over ${resultCapChars(p)} characters (${Math.round(WINDOW_RESULT * 100)}% of the model's window)` : ''),
   ];

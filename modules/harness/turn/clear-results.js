@@ -38,7 +38,9 @@ const MIN_CHARS = 1200;
 
 const ARG_CHARS = 400;   // an argument value longer than this, in an old call over MIN_CHARS, is left out on re-sends
 const longArgs = r => r?.role === 'assistant' && (r.tool_calls || []).some(c => String(c.function?.arguments || '').length > MIN_CHARS);
-const clearable = r => (r?.role === 'tool' && String(r.content || '').length > MIN_CHARS) || longArgs(r);
+// A thinking model's reasoning re-sent with its row (reasoning-resend.js) is cleared like a result.
+const clearable = r => (r?.role === 'tool' && String(r.content || '').length > MIN_CHARS) || longArgs(r)
+  || require('./reasoning-resend').long(r, MIN_CHARS);
 
 /**
  * Move the mark so that every clearable result except the newest KEEP is
@@ -65,7 +67,11 @@ function view(rows, offset, clearedThrough, sessionId) {
   if (!mark) return rows;
   return rows.map((r, j) => {
     if (!(offset + j < mark && clearable(r))) return r;
-    if (r.role === 'assistant') return { ...r, tool_calls: r.tool_calls.map(shortCall) };
+    if (r.role === 'assistant') {
+      const think = require('./reasoning-resend');
+      return { ...r, ...(longArgs(r) ? { tool_calls: r.tool_calls.map(shortCall) } : {}),
+        ...(think.long(r, MIN_CHARS) ? { reasoning: { ...r.reasoning, text: think.cleared(r, sessionId) } } : {}) };
+    }
     if (String(r.content || '').length <= MIN_CHARS) return r;
     const file = require('./messages').spillTool(sessionId, r);
     return { ...r, content: `[cleared to save context: this ${r.name || 'tool'} result (${String(r.content).length} characters, `
