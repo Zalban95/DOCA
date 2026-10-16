@@ -11,6 +11,8 @@
  *   node promo.js wait SPEC.json [--timeout 1800]   waits for it: exit 0 done, 1 failed, 2 still running
  *   node promo.js status SPEC.json    one look: running, done or failed, and how far
  *   node promo.js plan SPEC.json      the shots and timings, rendering nothing
+ *   node promo.js clean SPEC.json     removes this video's cached frames (lib/work.js: they are kept outside the
+ *                                      video's folder, so a changed word re-cuts in seconds)
  *   flags: --blender PATH  --ffmpeg PATH  --fresh (render the shots again even when their frames are complete)
  *
  * It does not detach itself: a render the hub's jobs do not know of would run unseen — no Stop, no machine reading
@@ -25,6 +27,7 @@ const { spawn } = require('child_process');
 const P = require('./lib/plan');
 const find = require('./lib/find');
 const { args: editArgs } = require('./lib/edit');
+const W = require('./lib/work');
 
 function parse(argv) {
   const o = { _: [] };
@@ -36,18 +39,23 @@ function load(file) {
   const abs = path.resolve(file), base = path.dirname(abs);
   const spec = JSON.parse(fs.readFileSync(abs, 'utf8'));
   spec.out = path.resolve(base, spec.out || 'promo.mp4');
+  if (spec.work) {
+    spec.work = path.resolve(base, spec.work);
+    // A folder of its own: `clean` removes it whole, so never the one the video (or anything above it) is in.
+    if (!path.relative(spec.work, spec.out).startsWith('..')) throw new Error('"work" is a folder of its own for the frames — not the folder the video goes in, nor one above it.');
+  }
   spec.parts = (spec.parts || []).map(p => (p.path ? { ...p, path: path.resolve(base, p.path) } : p));
   if (!spec.parts.length) throw new Error('A promo needs "parts": [{path, name, color?, note?, offset?}] — STL, OBJ, PLY, GLB or a {box}.');
   for (const p of spec.parts) if (p.path && !fs.existsSync(p.path)) throw new Error(`No such part: ${p.path}`);
+  P.motion(spec);   // a part's own axis or path, checked before anything renders
   return { spec, specFile: abs };
 }
 
-const files = spec => ({ work: spec.out.replace(/\.[^.]+$/, '') + '.work', status: spec.out + '.status.json', marker: spec.out + '.done.json' });
+const files = spec => ({ work: W.dirFor(spec), status: spec.out + '.status.json', marker: spec.out + '.done.json' });
 const writeJson = (f, v) => fs.writeFileSync(f, JSON.stringify(v, null, 2) + '\n');
 const readJson = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
 const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
 const pngs = d => { try { return fs.readdirSync(d).filter(n => /^\d{4}\.png$/.test(n)).length; } catch { return 0; } };
-  P.motion(spec);   // a part's own axis or path, checked before anything renders
 
 /**
  * Not a background job: the exact call that is (round 1 of the test of 2026-10-16 — `shell` without background: true
@@ -68,6 +76,7 @@ function start(spec, o) {
   const st = readJson(f.status);
   if (st && st.state === 'running' && st.pid !== process.pid && alive(st.pid)) return { already: true, ...st, marker: f.marker };
   fs.mkdirSync(f.work, { recursive: true });
+  fs.mkdirSync(path.dirname(spec.out), { recursive: true });
   fs.rmSync(f.marker, { force: true });
   logFile = path.join(f.work, 'render.log');
   fs.writeFileSync(logFile, '');
@@ -143,6 +152,7 @@ async function run(spec, o) {
     stopping = null;
     writeJson(f.marker, result);
     writeJson(f.status, { state: 'done', pid: process.pid, finished: result.finished });
+    if (!spec.work) W.prune();   // the shared cache keeps the newest few videos' frames
   } catch (e) {
     const result = { ok: false, error: e.message, log: path.join(f.work, 'render.log'), finished: new Date().toISOString() };
     stopping = null;
@@ -174,7 +184,7 @@ async function wait(spec, o) {
 async function main() {
   const o = parse(process.argv.slice(2));
   const [cmd, file] = o._;
-  if (!cmd || !file) throw new Error('Usage: node promo.js start|wait|status|plan|run SPEC.json');
+  if (!cmd || !file) throw new Error('Usage: node promo.js start|wait|status|plan|clean|run SPEC.json');
   const { spec, specFile } = load(file);
   let out;
   if (cmd === 'start' || cmd === 'run') {   // run: its older name
@@ -183,6 +193,7 @@ async function main() {
     out = start(spec, o); if (!out) return run(spec, o);
   }
   else if (cmd === 'status') out = status(spec);
+  else if (cmd === 'clean') { const w = files(spec).work; fs.rmSync(w, { recursive: true, force: true }); out = { removed: w }; }
   else if (cmd === 'wait') { out = await wait(spec, o); process.exitCode = out.state === 'done' ? 0 : out.state === 'failed' ? 1 : 2; }
   else if (cmd === 'plan') { const p = P.shots(spec); out = { ...p, assemble: p.list.find(s => s.shot === 'assemble') ? { ...P.schedule(spec.parts.length, p.list.find(s => s.shot === 'assemble').seconds), parts: P.motion(spec) } : null }; }
   else throw new Error(`Unknown command "${cmd}".`);

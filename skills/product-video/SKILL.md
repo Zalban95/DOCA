@@ -92,5 +92,7 @@ holds:
 - Every part is named as it arrives, in the person's words, and the names match the drawings.
 - The product fills the frame on the turntable; no part passes through another as it settles.
 - The text is readable on a phone: short title, a subtitle, at most five details.
-- Leave no render running: `promo.js status` says done or failed. The frames stay in `<video>.work` so a word change
-  re-cuts quickly; delete that folder when the person is happy.
+- Leave no render running: `promo.js status` says done or failed. Only the video and its two small markers sit in
+  the video's folder: the frames are rendered in the hub's data folder (`renders/`, the newest few videos kept; the
+  marker's `frames_kept` names it) so a word change re-cuts quickly. `promo.js clean <spec>` removes them; `"work":
+  "<folder>"` in the spec puts them in a folder of your own (never the one the video goes in).
