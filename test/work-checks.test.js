@@ -67,7 +67,8 @@ test('mesh: size against the bed, closed or not, how many parts — read in Node
 
 test('a check reads only the work: not there, outside the roots, settings — each said', async () => {
   assert.match((await checks.run({ mesh: at('nothing.stl') })).why, /is not there/);
-  assert.match((await checks.run({ image: '/etc/hostname' })).why, /outside the folders a check may read/);
+  // The protected keys folder is outside on every OS (paths.PROTECTED_DIRS).
+  assert.match((await checks.run({ image: path.join(require('../modules/paths').PROTECTED_DIRS[0], 'cover.png') })).why, /outside the folders a check may read/);
   assert.throws(() => pc.split({ title: 'x', check: { mesh: 'a.stl', maxSize: [1, 2] } }), /maxSize is \[x, y, z\]/);
   assert.throws(() => pc.split({ title: 'x', check: { video: 'a.mp4', duration: -1 } }), /duration is a number/);
   assert.deepEqual(pc.split({ title: 'Promo', check: { video: 'promo.mp4', duration: 20, junk: 1 } }).contract.check, { video: 'promo.mp4', duration: 20 }, 'only its own fields are kept');
