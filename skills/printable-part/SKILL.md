@@ -7,7 +7,8 @@ triggers: [3d print, printable, stl, bracket, mount, enclosure, fdm, stampa 3d]
 # A part that prints the first time
 
 Design in a parametric tool (FreeCAD, build123d, CADCraft for 2D) with every size a named parameter at the top, so a
-change is one number. Then go down this list before you export.
+change is one number. Then go down this list before you export. Scripting FreeCAD: read the freecad-modelling skill
+first — where the script must live, running it so a failure shows, and the exports that fail silently.
 
 ## Sizes that work on an ordinary FDM printer (0.4 mm nozzle)
 
@@ -32,5 +33,8 @@ change is one number. Then go down this list before you export.
 
 - The solid is valid and closed; the parts do not collide in the assembly; screw holes line up across parts.
 - Export **STL** for the slicer (fine tolerance: 0.05 mm) and **STEP** for anyone who edits it; name them by part.
+  From FreeCAD: STEP through a document and `Import.export`, STL with `mesh.write` (freecad-modelling says why).
+- Parts that hold something (a tablet, a board, a fan): `check_output {kind: "fit"}` with the parts and a box for the
+  held thing — it measures overlap and the clearance on each side in mm; aim at the **Fit** sizes above.
 - Say how to print each part: orientation, layer height, perimeters, infill, material, supports (none, ideally).
 - For drawings of it use the technical-drawing skill; for a video of it, the product-video skill.

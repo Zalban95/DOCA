@@ -21,7 +21,7 @@ module.exports = [
     use: 'What people use for a job — open or proprietary, marked open source, free, paid, popular — with Connect when it is here or an account, Install, or its maker\'s download page.',
     words: 'office word excel powerpoint adobe photoshop illustrator gimp inkscape libreoffice blender alternatives suggest download' },
   { id: 'craft-templates', licence: 'core', name: 'Craft templates: drawings, product videos, printable parts', page: 'settings/harness', tools: ['recipe', 'skill'],
-    use: 'Skills with templates so any model fills a spec, not a blank file: technical-drawing (dimensioned PDF + DXF sheet), product-video (Blender promo), printable-part.',
+    use: 'Skills with templates so any model fills a spec, not a blank file: technical-drawing (PDF + DXF sheet), product-video (Blender promo), printable-part, freecad-modelling.',
     words: 'technical drawing blueprint dimensions title block section promo video turntable exploded assembly blender cadcraft freecad 3d print stl step template' },
   { id: 'mcp-drafts', licence: 'core', name: 'MCP servers the agent prepared', page: 'mcp', tools: ['mcp_draft'],
     use: 'The agent drafts a server not in the catalogue; a person opens it in the form and saves it.', words: 'draft prepare new server' },
