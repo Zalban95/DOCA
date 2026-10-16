@@ -75,7 +75,7 @@ test('a long argument of an old call is left out of re-sends as valid JSON; the 
   const sent = clear.view(rows, folded, memory.getSession(s.id).clearedThrough, s.id);
   const first = JSON.parse(sent[1].tool_calls[0].function.arguments);
   assert.equal(first.path, '/tmp/p0.scad', 'short values stay');
-  assert.match(first.content, /^\[left out to save context: \d+ characters you sent here earlier/);
+  assert.match(first.content, /^⟦not content: \d+ characters of "content" left out to save context — the file is on disk at \/tmp\/p0\.scad; read_file it/);
   assert.ok(memory.messages(s.id)[1].tool_calls[0].function.arguments.includes('cube(1);'), 'the stored transcript is untouched');
 });
 
@@ -186,4 +186,62 @@ test('the spill folder is kept to its bound: a deleted or long-unused conversati
 test('a trip shortens down to 60% of the ceiling, not just under it', () => {
   assert.equal(ceiling.LOW, 0.6);
   assert.match(budget.block(providers.defaultParams()), /shortened down to 60% of it/);
+});
+
+// Round 1 of the test of 2026-10-16: inside one long turn the ceiling cannot be reached (its own rows do not fold), and
+// every step cleared one more result — sixteen `compacted` in a row, each a broken prompt cache.
+test('end to end: a long turn that cannot get under the ceiling shortens a few times as it grows, not on every step', async () => {
+  const catalog = require('../modules/harness/catalog');
+  const N = 16;
+  for (let i = 0; i < N; i++) fs.writeFileSync(path.join(H.tmp, `grow${i}.txt`), `GROW${i} ` + 'g'.repeat(8000));
+  model.use(i => (i < N
+    ? { content: '', tool_calls: [{ id: `g${i}`, type: 'function', function: { name: 'read_file', arguments: JSON.stringify({ path: path.join(H.tmp, `grow${i}.txt`) }) } }] }
+    : { content: 'Read them all.' }));
+  // The prompt and tool schemas alone are over 6000 tokens: no shortening can ever get this turn under the ceiling.
+  catalog.saveConfig('doca', { provider: 'leanstub', model: 'm', compactTokens: 500000, summarizeAfter: 0, contextWindow: 1000000, maxSteps: N + 2, fallbackChain: [], stepTokens: 6000 });
+  const events = [];
+  try {
+    const s = memory.createSession('lean grow', { activate: false });
+    const r = await require('../modules/harness/agent').turn({ message: 'read the files', sessionId: s.id, emit: e => events.push(e) });
+    assert.equal(r.text, 'Read them all.');
+    const trips = events.filter(e => e.type === 'compacted' && e.setting === 'stepTokens');
+    assert.ok(trips.length >= 1, 'it does shorten');
+    assert.ok(trips.length <= 5, `a handful of times over ${N + 1} steps, not every step (${trips.length})`);
+    for (let i = 1; i < trips.length; i++)
+      assert.ok(trips[i].contextTokens >= trips[i - 1].after + Math.min(Math.round(trips[i - 1].after * ceiling.GROW), ceiling.GROW_TOKENS),
+        'each try waits until the request has grown by a meaningful margin');
+    const warned = events.filter(e => e.type === 'warning' && e.kind === 'step-ceiling');
+    assert.equal(warned.length, 1, 'said once');
+    assert.ok(memory.getSession(s.id).clearedThrough > 0, 'and what was cleared stays cleared (the mark only moves forward)');
+  } finally {
+    catalog.saveConfig('doca', { compactTokens: 40000, summarizeAfter: 40, contextWindow: 0, maxSteps: 8, stepTokens: 60000 });
+  }
+});
+
+// Round 1 of the test of 2026-10-16: a write_file's content left out of a re-send was copied by the model into the next
+// write, and the spec on disk became a 127-byte marker.
+test('a lean-context marker is never written into a file: write_file and replace_in_files refuse it, saying why', async () => {
+  const files = require('../modules/harness/toolbox/files');
+  const project = require('../modules/harness/toolbox/project');
+  const write = files.find(t => t.name === 'write_file'), replace = project.find(t => t.name === 'replace_in_files');
+  const marks = require('../modules/harness/turn/context-marks');
+  const target = path.join(H.tmp, 'promo-spec.json');
+  fs.writeFileSync(target, '{"title":"real spec"}');
+  const copied = [
+    marks.argument('content', 'x'.repeat(4321), { args: { path: target }, tool: 'write_file' }),
+    '[left out to save context: 4321 characters you sent here earlier — what the call did is unchanged; the transcript keeps them]',
+    `{"a": 1}\n… [full output: /x/y.txt — 9000 characters, 40 lines; shown: the first 4000 and the last 4000. read_file to retrieve the rest (offset, maxLength)]\n}`,
+  ];
+  for (const content of copied) {
+    assert.throws(() => write.run({ path: target, content }, {}), /Not written: .*marker DOCA puts in place of content it left out/);
+    assert.equal(fs.readFileSync(target, 'utf8'), '{"title":"real spec"}', 'the file keeps its real content');
+  }
+  assert.throws(() => replace.run({ path: H.tmp, query: 'real spec', replacement: copied[0] }, {}), /Not written/);
+  // Ordinary text, and DOCA's own source that builds the markers, is written as before.
+  assert.match(write.run({ path: target, content: '{"title":"new spec"}' }, {}), /^Wrote 20 bytes/);
+  assert.equal(marks.carries(fs.readFileSync(require.resolve('../modules/harness/turn/clear-results'), 'utf8')), false);
+  assert.equal(marks.carries(fs.readFileSync(require.resolve('../modules/harness/turn/messages'), 'utf8')), false);
+  // The marker is short, says it is not content, and names where the file's text is.
+  assert.ok(copied[0].length - target.length < 160, 'short: little beyond the path it names');
+  assert.match(copied[0], /^⟦not content: 4321 characters .* on disk at .*promo-spec\.json; read_file it, never copy this marker⟧$/);
 });

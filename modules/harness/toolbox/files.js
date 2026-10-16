@@ -155,6 +155,8 @@ module.exports = [
       require('../control-plane').refuse(abs, ctx);   // what governs the agent: only with this call's yes (H-19)
       const masked = require('../secret-view').maskedWrite(abs, content);   // dots read back would replace the secrets
       if (masked) throw new Error(masked);
+      const marked = require('../turn/context-marks').refusal(content, abs);   // a note about left-out content, not content
+      if (marked) throw new Error(marked);
       // Charter rule 16, held here rather than only asked for: a repository's
       // own rules are read before the first change to it.
       const unread = repo.unreadRoot(ctx.sessionId, abs);

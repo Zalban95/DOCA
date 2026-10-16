@@ -81,9 +81,11 @@ function shortCall(c) {
   let args;
   try { args = JSON.parse(raw); } catch { return c; }
   if (!args || typeof args !== 'object' || Array.isArray(args)) return c;
+  // Marked so it cannot pass for content, and a file write names where its text is (turn/context-marks.js: a copied
+  // marker once landed in a file in place of a spec, round 1 of the test of 2026-10-16).
+  const mark = require('./context-marks');
   const out = Object.fromEntries(Object.entries(args).map(([k, v]) => [k, typeof v === 'string' && v.length > ARG_CHARS
-    ? `[left out to save context: ${v.length} characters you sent here earlier — what the call did is unchanged; the transcript keeps them]`
-    : v]));
+    ? mark.argument(k, v, { args, tool: c.function?.name }) : v]));
   return { ...c, function: { ...c.function, arguments: JSON.stringify(out) } };
 }
 

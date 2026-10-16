@@ -59,7 +59,9 @@ function start(command, { cwd, sessionId = null, env } = {}) {
   let child;
   try {
     // Its own process group (detached), so stopping it stops what it started too.
-    child = shell.spawnShell(command, { cwd, detached: !shell.WIN, stdio: ['ignore', fd, fd], ...(env ? { env } : {}) });
+    // DOCA_JOB tells what runs that it is a background job (a script that must not run in the foreground checks it:
+    // skills/product-video's promo.js start).
+    child = shell.spawnShell(command, { cwd, detached: !shell.WIN, stdio: ['ignore', fd, fd], env: { ...(env || process.env), DOCA_JOB: id } });
   } finally { fs.closeSync(fd); }
 
   const job = { id, command: String(command).slice(0, 2000), cwd: cwd || null, pid: child.pid || null,

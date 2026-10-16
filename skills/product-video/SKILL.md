@@ -27,7 +27,8 @@ explainer, data that moves — are the video-from-code skill.)
 3. Start it: `recipe {action: "run", id: "product-video", values: {spec: "<the spec file>"}}` — or `shell` with
    `background: true` and `node <…>/promo.js start <spec>`. Either way it is a background job: it returns at once with
    the job id, keeps going after the turn ends, and `shell_job` sees it (status, output, stop). Never start the
-   render any other way — a render no job holds runs unseen and nobody can stop it.
+   render any other way — a render no job holds runs unseen and nobody can stop it. Run without `background: true`,
+   `start` refuses (exit 3) and prints the exact call to make.
 4. Wait: `node <…>/promo.js wait <spec> --timeout 1500` (exit 0 done, 1 failed, 2 still running — then call it again),
    `promo.js status <spec>`, or `shell_job status`. At 1080p with EEVEE expect a few minutes on a GPU. To stop it,
    `shell_job stop` with its id: Blender goes with it and the marker says it was stopped.

@@ -4,8 +4,10 @@
 /**
  * The product video template: parts in, a promo out — title card, turntable, the parts coming together, end card.
  *
- *   node promo.js start SPEC.json     renders it, printing as it goes — start it as a background job (shell with
- *                                      background: true), so it is seen, stopped and waited for like any other job
+ *   node promo.js start SPEC.json     renders it, printing as it goes — only as a background job (shell with
+ *                                      background: true, or the product-video recipe), so it is seen, stopped and waited
+ *                                      for like any other job. Run any other way it refuses, printing the exact call to
+ *                                      make (the hub's jobs set DOCA_JOB); --foreground renders here anyway (a terminal)
  *   node promo.js wait SPEC.json [--timeout 1800]   waits for it: exit 0 done, 1 failed, 2 still running
  *   node promo.js status SPEC.json    one look: running, done or failed, and how far
  *   node promo.js plan SPEC.json      the shots and timings, rendering nothing
@@ -45,6 +47,20 @@ const writeJson = (f, v) => fs.writeFileSync(f, JSON.stringify(v, null, 2) + '\n
 const readJson = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
 const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
 const pngs = d => { try { return fs.readdirSync(d).filter(n => /^\d{4}\.png$/.test(n)).length; } catch { return 0; } };
+
+/**
+ * Not a background job: the exact call that is (round 1 of the test of 2026-10-16 — `shell` without background: true
+ * waited 100 s on a render of minutes, timed out, and the render was lost). Null when it may go on.
+ */
+function notAJob(specFile, o) {
+  if (process.env.DOCA_JOB || o.foreground) return null;
+  const cmd = `node ${JSON.stringify(path.resolve(__filename))} start ${JSON.stringify(specFile)}`;
+  return 'Not started: a render takes minutes, so it runs only as a background job. Make exactly this call:\n'
+    + `  shell ${JSON.stringify({ command: cmd, background: true })}\n`
+    + `or: recipe ${JSON.stringify({ action: 'run', id: 'product-video', values: { spec: specFile } })}\n`
+    + `Then wait with: node ${JSON.stringify(path.resolve(__filename))} wait ${JSON.stringify(specFile)} --timeout 1500`
+    + ' (a person at a terminal may add --foreground to render here).';
+}
 
 function start(spec, o) {
   const f = files(spec);
@@ -158,9 +174,13 @@ async function main() {
   const o = parse(process.argv.slice(2));
   const [cmd, file] = o._;
   if (!cmd || !file) throw new Error('Usage: node promo.js start|wait|status|plan|run SPEC.json');
-  const { spec } = load(file);
+  const { spec, specFile } = load(file);
   let out;
-  if (cmd === 'start' || cmd === 'run') { out = start(spec, o); if (!out) return run(spec, o); }   // run: its older name
+  if (cmd === 'start' || cmd === 'run') {   // run: its older name
+    const no = notAJob(specFile, o);
+    if (no) { process.stderr.write(`promo: ${no}\n`); process.exitCode = 3; return; }
+    out = start(spec, o); if (!out) return run(spec, o);
+  }
   else if (cmd === 'status') out = status(spec);
   else if (cmd === 'wait') { out = await wait(spec, o); process.exitCode = out.state === 'done' ? 0 : out.state === 'failed' ? 1 : 2; }
   else if (cmd === 'plan') { const p = P.shots(spec); out = { ...p, assemble: p.list.find(s => s.shot === 'assemble') ? P.schedule(spec.parts.length, p.list.find(s => s.shot === 'assemble').seconds) : null }; }

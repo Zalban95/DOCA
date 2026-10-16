@@ -30,6 +30,14 @@ const { foldSummary } = require('./summary');
 /** Where a trip shortens down to, as a share of the ceiling: a fixed ratio, so there is one setting to explain. */
 const LOW = 0.6;
 
+/**
+ * After a shortening that changed something and still left the request over the ceiling — inside one long turn its own
+ * rows cannot fold, so it never can — the next try waits until the request has grown by GROW of its size or GROW_TOKENS,
+ * whichever comes first (round 1 of the test of 2026-10-16: sixteen `compacted` in a row, one result cleared a step,
+ * each clear breaking the provider's prompt cache for nothing).
+ */
+const GROW = 0.25, GROW_TOKENS = 20000;
+
 const num = v => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0);
 
 /**
@@ -78,6 +86,8 @@ async function fit({ p, ep, session, signal, say = () => {}, step, led, schemas,
   const key = `${ep?.id || p.provider}/${p.model}`;   // the estimate's correction is this model's own
   let size = sizeOf(req.messages, schemas, led, key);
   if (size < at) return { req, summary };
+  const held = Number(led?.ceilingHeld) || 0;   // the size a fruitless shortening left, this turn
+  if (held && size < held + Math.min(Math.round(held * GROW), GROW_TOKENS)) return { req, summary };
   const before = size;
   // Hysteresis: once tripped, shorten down to LOW of the ceiling — clearing takes every old result but the newest three
   // at once, and the fold runs while the request is still over the target, not just over the ceiling — so the next
@@ -94,11 +104,14 @@ async function fit({ p, ep, session, signal, say = () => {}, step, led, schemas,
     say({ type: 'compacted', at: step, contextTokens: before, after: size, contextWindow: budget.windowFor(p) || null,
       setting: 'stepTokens', threshold: at, target, ...(cleared ? { cleared } : {}), ...(folded ? { folded: true } : {}) });
   }
+  // Still over after changing something: held until the request has grown enough to be worth another try (GROW).
+  if (led && (cleared || folded)) led.ceilingHeld = size >= at ? size : 0;
   if (size >= at && led && !led.ceilingWarned) {
     led.ceilingWarned = true;
     say({ type: 'warning', step, kind: 'step-ceiling', tokens: size, threshold: at,
       text: `This step's request is about ${size} tokens, over ${at === num(p.stepTokens) ? 'harness.config.doca.stepTokens' : `${Math.round(WINDOW_CEILING * 100)}% of ${p.model}'s window`} (${at}); nothing more can be `
-        + 'left out without cutting into this turn\'s newest work, so it is sent as it is.' });
+        + 'left out without cutting into this turn\'s newest work, so it is sent as it is'
+        + (led.ceilingHeld ? ` — and not shortened again until it has grown by ${Math.round(GROW * 100)}% or ${GROW_TOKENS} tokens, so the provider's cache is not broken on every step.` : '.') });
   }
   return { req, summary };
 }
@@ -122,4 +135,4 @@ function lines(p) {
   ];
 }
 
-module.exports = { fit, ceilingFor, resendChars, resultCapChars, sizeOf, lines, LOW, WINDOW_CEILING, WINDOW_RESULT };
+module.exports = { fit, ceilingFor, resendChars, resultCapChars, sizeOf, lines, LOW, GROW, GROW_TOKENS, WINDOW_CEILING, WINDOW_RESULT };
