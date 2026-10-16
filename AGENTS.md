@@ -374,6 +374,24 @@ The harness gives its agent eight rules for working on any repository (charter r
   no event stream, so its trajectory (rewritten after every step) is read on each look into the same mechanical lines
   (commands, results by return code, its words, how it ended: "Submitted" is done), and kept as an attachment at the end.
   `test/mini-swe.test.js`.
+- **Each outside harness has a switch: Never · Ask me first · On its own** (the owner's answer, 2026-10-16;
+  `teams.outside.use.<id>` = `never | ask | free`, `harnesses.mode`, Settings → Harnesses → CLI harnesses → "On a
+  team", and a card there for those not installed on the hub). **never**: not offered, not in the routing table,
+  refused. **ask** (the default for an allowed one — `teams.outside.allow` still decides when nothing is set here, a set
+  value wins): offered — for one with a `team.when` rule (mini-swe-agent) the routing table says to offer it in one line,
+  "in a computer of its own on this hub's model, through the relay" — and run only on the person's yes, which counts as
+  `asked: true` on their turn. **free**: the Orchestrator may start it itself when a task fits (`teams/outside.gate`
+  returns `free`, no ask needed; still host, still a git project, still only in agents' computers), and says so: the
+  team tool's answer tells it to say in one line that it did and why, the team carries `outsideBy: 'free'`, and an
+  activity line names the harness, the team and the switch. A team or the missions bar stops it like any. **Moving one
+  to free asks for the password** (`auth/guarded.js` switch `outsideFree`, its PREFS row's value test now also sees
+  `from`, so only a harness newly free counts); tightening asks nothing. The section is proposable only at
+  `teams.outside.use` (`settings-schema.js` `teams.propose`, values checked in `harness/settings.js refuse`), so "it can
+  decide on its own from now on" said in chat is `settings_propose {asked: true}`: towards never or ask it applies at
+  once, towards free it stays a proposal whose Accept asks for the password — the approval mode's way, not a new one
+  (`propose: false` would have shut the person-asked route too). **The relay goes with the decision**: the worker turns
+  its computer's relay on only inside a run the gate let through — after the person's yes, or under free — with an
+  activity line naming the computer and why (`relay/computer.set(id, on, why)`); the owner's relay switches still win.
 
 ### Product names (`modules/branding.js`)
 - **Every name a person reads comes from one file**, because the panel will be sold under a customer's label and under whatever the public release is called, and a rename that means grepping forty files is a rename that does not happen. Overrides live in prefs under `branding`, so a private label is a settings change; the UI for it is deliberately absent until it can sit behind the admin password, since the only thing worse than the wrong name is one an agent changed.

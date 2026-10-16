@@ -132,6 +132,11 @@ once (`count`), a smaller or local model, or a record of every command — and o
 the ask. It runs every command without asking, so only in agents' computers (never a one-shot on the hub), on this
 hub's model through the model relay, its trajectory read for the board and kept as an attachment.
 
+Every outside harness has a switch (2026-10-16), Settings → Harnesses → CLI harnesses → On a team: **Never** (not
+offered), **Ask me first** (offered; used when the person names it or says yes) and **On its own** (the Orchestrator
+starts it itself when a task fits, says so, and an activity line records why). Moving one to On its own asks for the
+password, whether from the panel or by accepting a proposal the person asked for in chat.
+
 ## What the apps would draw (not built)
 
 - **DocaMobile**: a team card in its missions list — the title, one thin bar with "1 of 3 · 33%" and "every task
