@@ -117,6 +117,7 @@ const TABLE = {
     return `${exists ? 'Replaces' : 'Creates'} the file ${home(a.path)} on this machine (${plural(String(a.content || '').split('\n').length, 'line')})${exists ? '; the old version is kept as a backup' : ''}.`;
   },
   read_file: a => `Reads the file ${home(a.path)} on this machine.`,
+  check_output: a => `Looks at the ${a.kind || 'file'} ${home(a.path)} on this machine as a person would (reads it; changes nothing).`,
   api_call: a => `Sends a ${String(a.method || (a.form || a.files ? 'POST' : 'GET')).toUpperCase()} request to ${hostOf(a.url) || 'an address'}${keyNamed(a.key)}`
     + `${a.files ? `, uploading ${plural(Object.keys(a.files).length, 'file')}` : ''}${a.save_as ? `, keeping the answer as ${q(a.save_as)}` : ''}.`,
   http_fetch: a => `Reads the page ${hostOf(a.url) || String(a.url || '')} from the web.`,
