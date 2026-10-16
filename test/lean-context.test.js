@@ -187,3 +187,33 @@ test('a trip shortens down to 60% of the ceiling, not just under it', () => {
   assert.equal(ceiling.LOW, 0.6);
   assert.match(budget.block(providers.defaultParams()), /shortened down to 60% of it/);
 });
+
+// Round 1 of the test of 2026-10-16: inside one long turn the ceiling cannot be reached (its own rows do not fold), and
+// every step cleared one more result — sixteen `compacted` in a row, each a broken prompt cache.
+test('end to end: a long turn that cannot get under the ceiling shortens a few times as it grows, not on every step', async () => {
+  const catalog = require('../modules/harness/catalog');
+  const N = 16;
+  for (let i = 0; i < N; i++) fs.writeFileSync(path.join(H.tmp, `grow${i}.txt`), `GROW${i} ` + 'g'.repeat(8000));
+  model.use(i => (i < N
+    ? { content: '', tool_calls: [{ id: `g${i}`, type: 'function', function: { name: 'read_file', arguments: JSON.stringify({ path: path.join(H.tmp, `grow${i}.txt`) }) } }] }
+    : { content: 'Read them all.' }));
+  // The prompt and tool schemas alone are over 6000 tokens: no shortening can ever get this turn under the ceiling.
+  catalog.saveConfig('doca', { provider: 'leanstub', model: 'm', compactTokens: 500000, summarizeAfter: 0, contextWindow: 1000000, maxSteps: N + 2, fallbackChain: [], stepTokens: 6000 });
+  const events = [];
+  try {
+    const s = memory.createSession('lean grow', { activate: false });
+    const r = await require('../modules/harness/agent').turn({ message: 'read the files', sessionId: s.id, emit: e => events.push(e) });
+    assert.equal(r.text, 'Read them all.');
+    const trips = events.filter(e => e.type === 'compacted' && e.setting === 'stepTokens');
+    assert.ok(trips.length >= 1, 'it does shorten');
+    assert.ok(trips.length <= 5, `a handful of times over ${N + 1} steps, not every step (${trips.length})`);
+    for (let i = 1; i < trips.length; i++)
+      assert.ok(trips[i].contextTokens >= trips[i - 1].after + Math.min(Math.round(trips[i - 1].after * ceiling.GROW), ceiling.GROW_TOKENS),
+        'each try waits until the request has grown by a meaningful margin');
+    const warned = events.filter(e => e.type === 'warning' && e.kind === 'step-ceiling');
+    assert.equal(warned.length, 1, 'said once');
+    assert.ok(memory.getSession(s.id).clearedThrough > 0, 'and what was cleared stays cleared (the mark only moves forward)');
+  } finally {
+    catalog.saveConfig('doca', { compactTokens: 40000, summarizeAfter: 40, contextWindow: 0, maxSteps: 8, stepTokens: 60000 });
+  }
+});

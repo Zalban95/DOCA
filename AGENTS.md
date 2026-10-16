@@ -188,7 +188,9 @@ The harness gives its agent eight rules for working on any repository (charter r
   away) — older tool results cleared first (`clearOld`, the newest three kept whole), then, still over the 60%,
   earlier turns folded (`pendingFold` force — never the turn in progress, never a call from its result; a chat set to fold nothing early
   is only cleared), said as `compacted` with `setting: 'stepTokens'`, or once a turn as a `step-ceiling` warning when
-  nothing more can go. So an old conversation's new request starts lean too. **`resultChars`** (8000; 0 = the old
+  nothing more can go. A shortening that changed something and still left the request over the ceiling (one long turn:
+  its own rows cannot fold) holds the next try until the request has grown by 25% or 20k tokens (`GROW`,
+  `GROW_TOKENS`; round 1 of the test of 2026-10-16 had sixteen `compacted` in a row, one cache break a step). So an old conversation's new request starts lean too. **`resultChars`** (8000; 0 = the old
   16000 clip on every step): a tool result goes **whole on the step it arrives** (the tool's own `MAX_OUT` guard aside)
   and as head + tail on every later step, `read_file`'s keeping at least 16000 — a file the agent asked for is what it
   works on. **Nothing the agent sees the first time is cut, and nothing is lost**: every shortened or cleared result
