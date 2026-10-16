@@ -18,7 +18,7 @@ const bus = require('../modules/api-v1/bus');
 
 const DIR = path.join(__dirname, '..', 'docs', 'api', 'fixtures');
 const WRITE = process.env.DOCA_WRITE_FIXTURES === '1';
-const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-seen', 'agent.mission-work-stopped',
+const NAMES = ['agent.mission-running', 'agent.mission-done', 'agent.mission-archived', 'agent.mission-seen', 'agent.mission-work-stopped', 'agent.mission-work-progress',
   'prompt.new', 'prompt.new-approval', 'prompt.closed', 'alert', 'alert-files', 'alert-meeting', 'meeting.control', 'settings.changed', 'device.approved', 'device.refused',
   'agent.team-running', 'agent.team-done', 'people.message'];
 
@@ -63,6 +63,14 @@ async function frames() {
   const w = memory.createSession('Laya MCP server', { activate: false, kind: 'work', parentId: memory.mainSession().id });
   memory.updateSession(w.id, { state: 'idle', job: { state: 'stopped', stoppedWhy: 'Stopped from the missions bar' } });
   require('../modules/harness/workview').announce(w.id); out['agent.mission-work-stopped'] = last('agent.mission');
+  // A work chat under way with its plan: `plan` and `progress` as a specialist's mission carries them (harness/plan-progress.js).
+  const wp = memory.createSession('Tablet mount', { activate: false, kind: 'work', parentId: memory.mainSession().id });
+  memory.updateSession(wp.id, { state: 'running', plan: { title: 'Tablet mount', state: 'living', steps: ['Model it', 'Export the print', 'Drawings', 'Promo video'],
+    contracts: [null, { done: 'the STL is closed', check: { mesh: 'print/part1.stl', watertight: true } }, null, null], progress: { 1: 'done', 2: 'done', 3: 'running' } } });
+  const agent = require('../modules/harness/agent'), isRunning = agent.isRunning;
+  agent.isRunning = id => id === wp.id || isRunning(id);   // its turn is under way (a fixture has no model to run one)
+  try { require('../modules/harness/workview').announce(wp.id); } finally { agent.isRunning = isRunning; }
+  out['agent.mission-work-progress'] = last('agent.mission');
 
   const reach = require('../modules/harness/reach');
   const ctrl = new AbortController();

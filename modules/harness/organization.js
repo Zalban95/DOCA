@@ -109,7 +109,7 @@ function view(row) {
     archivedAt: s.archivedAt || null, updatedAt: s.updatedAt, count: s.count,
     summary: s.summary || '', brief: short(s.brief || s.summary), tokens: s.tokens || 0,
     provider: s.profile?.provider || p.provider, model: s.profile?.model || p.model,
-    plan: s.plan || null, unread: (s.reports || []).filter(n => !n.readAt).length,
+    plan: s.plan || null, progress: require('./plan-progress').forSession(s), unread: (s.reports || []).filter(n => !n.readAt).length,
     job: s.job ? { state: s.job.state, since: s.job.since, autoTurns: s.job.autoTurns || 0 } : null,
     missionId: require('../agents/missions').forSession(s.id)?.id || null,
     // What a chat tab draws (tab-routes.js): how it works, whether it asks, and what is waiting for it.
@@ -294,7 +294,7 @@ function plan(id, { action = 'read', title, steps, contracts, note, revision, st
   next.updatedAt = new Date().toISOString();
   next.version = (old?.version || 0) + 1;   // every write: a stale rewrite can be told apart (living-plan.js)
   if (edit) next.fulfilledAt = require('./plan-contracts').fulfilled(next) ? (old?.fulfilledAt || next.updatedAt) : null;
-  memory.updateSession(id, { plan: next });
+  memory.updateSession(id, { plan: next }); require('./plan-progress').changed(id);   // pages drawing how far it is redraw
   report(id, edit ? 'plan edited' : action === 'progress' ? 'plan progress' : 'plan ' + next.state,
     edit ? `${edit.who || (by === 'person' ? 'The person' : 'The work chat')} ${edit.action === 'add' ? 'added' : edit.action === 'change' ? 'changed' : edit.action === 'split' ? 'moved out' : edit.asked ? 'asked to cancel' : 'cancelled'} step ${edit.step}: ${short(edit.text, 200)}`
       : `Revision ${next.revision}: ${next.title}${action === 'progress' ? `; step ${step} ${state}` : ''}`, user || by === 'person' ? 'user' : 'agent');

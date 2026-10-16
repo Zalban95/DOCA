@@ -25,6 +25,7 @@ function visible(change, person, host) {
   const access = require('../harness/session-access');
   if (change.topic === 'conversation') return access.mayUse(person, change.id);
   if (change.topic === 'missions') return !!change.sessionId && access.mayUse(person, change.sessionId);
+  if (change.topic === 'progress') return access.mayUse(person, change.id);   // how far a job is (harness/plan-progress.js)
   if (change.topic === 'teams') return !!change.sessionId && access.mayUse(person, change.sessionId);   // a team, by its leader's conversation (teams/)
   if (change.topic === 'org') return !!person?.id;   // the organisation tree moved: every signed-in page may redraw it (org/)
   if (change.topic === 'schedules') return !!person?.id && change.by === person.id;   // their own schedules

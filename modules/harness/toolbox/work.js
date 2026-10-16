@@ -84,6 +84,7 @@ module.exports = [
         if (contract) {
           let cwd; try { cwd = require('../../projects/store').forSession(id)?.root; } catch { /* no project */ }
           const v = await require('../plan-contracts').verify(contract, { cwd });
+          if (contract.check) require('../plan-progress').noteCheck(id, args.step, v);   // the bar shows a failing check, with why
           if (!v.ok) return JSON.stringify({ step: args.step, done: false, contract: contract.done, check: v.why,
             note: 'Not marked done: its contract does not hold yet. Finish the step, then mark it again — or revise the plan if the contract was wrong.' });
         }
