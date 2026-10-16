@@ -241,3 +241,22 @@ test('its model is the relay\'s or nothing: refused, with where to switch it on,
   await assert.rejects(tr.relayEnv({ id: 'x' }, row()), e => e.status === 409 && /model relay, which is off/.test(e.message) && /Field → API keys → Model relay/.test(e.message));
   assert.deepEqual(await tr.relayEnv({ id: 'x' }, catalog.KNOWN.find(r => r.id === 'claude')), {}, 'a harness with its own key needs none');
 });
+
+test('its kept trajectory is scrubbed: the relay token, a kept key, and anything named like a secret', async () => {
+  const tr = require('../modules/harness-teams/trajectory');
+  const RELAY = 'relay-tok-0123456789abcdef', KEPT = 'svc-kept-secret-9876';
+  require('../modules/service-keys').save({ name: 'traj-test', origin: 'https://api.example.com', key: KEPT });
+  try {
+    const text = JSON.stringify({ trajectory_format: 'mini-swe-agent-1.1', info: { config: { model: { model_kwargs: { api_key: RELAY, api_base: 'http://hub/relay' } } } },
+      messages: [{ role: 'user', content: 'Fix the test' },
+        { role: 'assistant', content: 'Look at env', extra: { actions: [{ command: `curl -H "Authorization: Bearer ${RELAY}" http://x; export OTHER_TOKEN=abc123xyz` }] } },
+        { role: 'tool', content: `<returncode>0</returncode>\n<output>OPENAI_API_KEY=${RELAY}\nsvc=${KEPT}\npassword: hunter2hunter</output>` }] });
+    const name = await tr.keep(text, { given: [RELAY], name: 'w1.traj.json' });
+    const kept = fs.readFileSync(require('../modules/attachments').list().find(a => a.name === name).path, 'utf8');
+    for (const s of [RELAY, KEPT, 'abc123xyz', 'hunter2hunter']) assert.ok(!kept.includes(s), `${s} is not in the kept trajectory`);
+    assert.ok(JSON.parse(kept).messages.length === 3, 'still the trajectory, still JSON');
+    assert.match(kept, /Fix the test/);
+    assert.equal(await tr.keep('  ', {}), null, 'nothing written: nothing kept');
+  } finally { require('../modules/service-keys').remove('traj-test'); }
+  assert.match(fs.readFileSync(path.join(__dirname, '../modules/harness-teams/worker.js'), 'utf8'), /trajectory\.keep\(/, 'the worker keeps it through the scrub');
+});
