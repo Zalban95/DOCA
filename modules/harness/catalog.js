@@ -110,7 +110,12 @@ const KNOWN = [
     // relay (OPENAI_BASE_URL / OPENAI_API_KEY, litellm's `openai/<model>`; "default" is the relay's first), never a key.
     team: { args: ['-y', '--exit-immediately', '-l', '0', '{output}', '{model}', '-t', '{task}'], model: ['-m', 'openai/{model}'], defaultModel: 'default',
       output: ['-o', '{output}'], events: 'mini', uv: 'mini-swe-agent', relay: true, optIn: true,
-      env: { MSWEA_CONFIGURED: 'true', MSWEA_COST_TRACKING: 'ignore_errors', MSWEA_SILENT_STARTUP: '1' } },
+      env: { MSWEA_CONFIGURED: 'true', MSWEA_COST_TRACKING: 'ignore_errors', MSWEA_SILENT_STARTUP: '1' },
+      // When it fits — what the Orchestrator's routing table says (harness/coordinator.js), asked 2026-10-16.
+      when: 'a self-contained coding task in a git project with a command that shows it works (fix an issue, make a failing test pass, a small refactor), '
+        + 'when several tries at once would help (count), the work should run on a smaller or local model, or a record of every command is wanted. '
+        + 'Not for work that needs DOCA\'s tools (devices, approvals, MCP, a browser, the person\'s files), long or several-repository work, or anything outside a computer: '
+        + 'it runs every command without asking' },
     installCmd: 'uv tool install mini-swe-agent',
     url: 'https://mini-swe-agent.com',
     configPathHint: '~/.config/mini-swe-agent/.env',
@@ -249,6 +254,7 @@ async function list() {
     isDefault:  h.id === hp.default,
     disabled:   (hp.disabled || []).includes(h.id),   // switched off (harness-life.js)
     config:     configFor(h.id),
+    ...(h.team ? { teamUse: require('../harness-teams/harnesses').mode(h) } : {}),   // its switch on a team: never | ask | free
     ...(h.kind === 'builtin' ? { foldWarning: require('./fold-check').warning(configFor(h.id)) } : {}),
   })));
   return { harnesses: rows, default: defaultId() };

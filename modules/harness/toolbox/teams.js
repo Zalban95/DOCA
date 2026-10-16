@@ -27,7 +27,7 @@ module.exports = [
       + 'the project\'s current branch. The Orchestrator and any conversation it leads make teams — a project\'s chats too, for their project; '
       + 'a conversation a project\'s chat made (level 3) makes none. You do not dispatch a team\'s tasks yourself, and you are not blocked: carry on, and read status when you need it. '
       + 'Only when the person names an outside harness in their request (Claude Code, Codex, dsh, Gemini CLI, mini-swe-agent …) — or says yes to your offer naming it — may a task\'s agent be '
-      + '"harness:<id>" — with asked: true — and it then works in a computer of its own on a branch of the project.',
+      + '"harness:<id>" — with asked: true — and it then works in a computer of its own on a branch of the project. A harness whose switch is "On its own" (your prompt names it) you may start without asked, saying so.',
     parameters: {
       type: 'object',
       properties: {
@@ -80,7 +80,8 @@ module.exports = [
           if (typeof ctx.show === 'function' && team.doc?.name) ctx.show({ name: team.doc.name, mime: 'text/markdown', kind: 'doc',
             bytes: Buffer.byteLength(require('../../teams/doc').render(team, v.tasks)), caption: `Team: ${team.title} — its board, written again at every change` });
           const manual = require('../manual-note').note(ctx.sessionId);
-          return `Team ${team.id} made — the hub runs it from here. ${said(v)}\nTell the person what you set going; you are not waiting.${manual ? `\nSay this to them too, in your words:${manual}` : ''}`;
+          const own = team.outsideBy === 'free' ? `\nYou started ${[...new Set(team.tasks.filter(x => String(x.agent).startsWith('harness:')).map(x => x.agent))].join(', ')} on your own — its switch is "On its own": say so in one line, and why it fits.` : '';
+          return `Team ${team.id} made — the hub runs it from here. ${said(v)}\nTell the person what you set going; you are not waiting.${own}${manual ? `\nSay this to them too, in your words:${manual}` : ''}`;
         }
         if (a.action === 'status') {
           if (!a.team) {

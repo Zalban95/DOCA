@@ -16,6 +16,13 @@
  *                 one process's environment, never a provider key
  *   team.env      fixed environment for the process (no secrets)
  *   team.optIn    offered only once switched on here (installed on the Harness tab, or named in teams.outside.allow)
+ *   team.when     when it fits a task: the rule the Orchestrator's routing table reads (harness/coordinator.js)
+ *
+ * Each has a switch (asked 2026-10-16), `teams.outside.use.<id>`: never — not offered, refused; ask — used when the
+ * person names it or says yes to the Orchestrator's offer (the default for one that is allowed); free — the
+ * Orchestrator may start it itself when a task fits, still only in agents' computers, and says so. Moving one to free
+ * asks for the password (auth/guarded.js); a person's own words in chat reach it as settings_propose {asked: true},
+ * which leaves it a proposal whose Accept asks.
  *   team.output   the flag pair a trajectory file goes in ('{output}' in args); the worker keeps it as an attachment
  */
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
@@ -41,12 +48,28 @@ function installedHere(cmd) {
 }
 const optedIn = r => allowList().map(String).includes(r.id) || installedHere(r.cmd);
 
-/** The ones the owner lets be summoned (teams.outside.allow; empty: all of them, an opt-in one once switched on). */
-function offered() {
-  const set = new Set(allowList().map(String));
-  const off = require('../harness/harness-life');
-  return all().filter(r => (r.team.optIn ? optedIn(r) : (!set.size || set.has(r.id))) && !off.isDisabled(r.id));   // a switched-off harness is not summoned
+const MODES = ['never', 'ask', 'free'];
+/** The three states as the panel and the agent say them. */
+const WORDS = { never: 'Never', ask: 'Ask me first', free: 'On its own' };
+const useMap = () => { try { const v = require('../settings-schema').value('teams.outside.use'); return v && typeof v === 'object' && !Array.isArray(v) ? v : {}; } catch { return {}; } };
+
+/**
+ * Its switch: never | ask | free. A harness switched off is never; one set here is what it is set to; otherwise the
+ * older rule says (teams.outside.allow; empty: all of them, an opt-in one once switched on): allowed is ask, else never.
+ */
+function mode(r) {
+  if (require('../harness/harness-life').isDisabled(r.id)) return 'never';
+  const set = useMap()[r.id];
+  if (MODES.includes(set)) return set;
+  const allow = new Set(allowList().map(String));
+  return (r.team.optIn ? optedIn(r) : (!allow.size || allow.has(r.id))) ? 'ask' : 'never';
 }
+
+/** The ones that may be summoned: every switch but never. */
+function offered() { return all().filter(r => mode(r) !== 'never'); }
+
+/** The ones the Orchestrator may start itself (free). */
+function free() { return all().filter(r => mode(r) === 'free'); }
 
 /** A harness by id or label, among those offered. Throws a sentence that names what is offered. */
 function find(want) {
@@ -55,6 +78,7 @@ function find(want) {
   if (row) return row;
   const named = all().find(r => r.id === w || r.label.toLowerCase() === w);
   const list = offered().map(r => `${r.id} (${r.label})`).join(', ') || 'none';
+  if (named && useMap()[named.id] === 'never') throw bad(`${named.label} is set to "${WORDS.never}" here (Settings → Harnesses → CLI harnesses → On a team). Allowed now: ${list}.`, 403);
   if (named?.team?.optIn && !optedIn(named)) throw bad(`${named.label} is off here: a person switches it on by installing it on the Harness tab (or the owner lists "${named.id}" in teams.outside.allow). Allowed now: ${list}.`, 403);
   if (named) throw bad(`${named.label} is not allowed to be summoned here (the owner's teams.outside.allow). Allowed: ${list}.`, 403);
   throw bad(`No outside harness "${want}" that runs without a terminal. Harnesses that can work in a team: ${list}.`, 404);
@@ -103,4 +127,4 @@ function keyFor(row) {
 /** A row a test adds (a stub CLI); never set by the product. */
 const _extra = [];
 
-module.exports = { all, offered, find, npmPackage, argv, keyFor, optedIn, _extra, _found };
+module.exports = { MODES, WORDS, mode, free, all, offered, find, npmPackage, argv, keyFor, optedIn, _extra, _found };

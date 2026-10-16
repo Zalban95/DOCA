@@ -4,8 +4,9 @@
  * Tasks for an outside harness on a team (harness-teams/; asked 2026-10-12): `agent: "harness:<catalog id>"`, with an
  * optional `model` (that CLI's own model id) and `count` (several alike: "5 Claude Code on Opus" is one task with count
  * 5, made into five tasks t-1 … t-5 that share the plan). A team is DOCA's own specialists and work chats by default; a
- * harness is used only when the person named it in their request — `team create {asked: true}` on that person's own
- * turn (turn/tool-calls.js byPerson) — and only by someone holding host, since the worker runs another vendor's agent
+ * harness is used only when the person named it in their request (or said yes to the Orchestrator's offer of it) —
+ * `team create {asked: true}` on that person's own turn (turn/tool-calls.js byPerson) — or, with no ask, when the
+ * owner set its switch to "On its own" (teams.outside.use, harness-teams/harnesses.js mode); and only by someone holding host, since the worker runs another vendor's agent
  * with its approvals off (inside its own computer) on the hub's keys. A mission, an automatic turn or a specialist never
  * adds one: the gate below refuses, whatever the prompt said.
  */
@@ -39,14 +40,21 @@ function check(id, t) {
   return { model: t.model ? String(t.model) : null };
 }
 
-/** The person's ask, their right, and a project with git: every `harness:` task needs all three. */
+/**
+ * The person's ask (or the harness's own switch at "On its own"), their right, and a project with git: every `harness:`
+ * task needs all three. Returns how it was started — 'asked', 'free' (no ask: every one of them is free) or null.
+ */
 function gate(tasks, { asked = false, person = null, project = null } = {}) {
   const outside = tasks.filter(t => isOutside(t.agent));
-  if (!outside.length) return;
+  if (!outside.length) return null;
   const names = [...new Set(outside.map(t => t.agent))].join(', ');
-  if (!asked) throw bad(`${names}: a team uses an outside harness only when the person asked for it in their request (name it, and call team create with asked: true on their turn). Otherwise give the task to a specialist or a work chat.`, 403);
+  const harnesses = require('../harness-teams/harnesses');
+  const rowOf = t => harnesses.all().find(r => r.id === String(t.agent).slice(PREFIX.length));
+  const unfree = outside.filter(t => { const r = rowOf(t); return !r || harnesses.mode(r) !== 'free'; });
+  if (!asked && unfree.length) throw bad(`${[...new Set(unfree.map(t => t.agent))].join(', ')}: a team uses an outside harness only when the person asked for it in their request (name it, or say yes to your offer of it, and call team create with asked: true on their turn) — or when its switch is "On its own". Otherwise give the task to a specialist or a work chat.`, 403);
   if (person?.id && !require('../auth/rights').can(person.role, 'host')) throw bad(`${names}: summoning another vendor's agent onto the hub's computers and keys is an admin's; ${person.name || 'this person'} does not hold host.`, 403);
   if (!project) throw bad(`${names}: an outside harness works on a project and comes back as a git branch — name the project (project: <name>).`);
+  return asked ? 'asked' : 'free';
 }
 
 module.exports = { isOutside, expand, check, gate, PREFIX, MAX_COUNT };
