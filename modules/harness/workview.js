@@ -43,6 +43,9 @@ function payloadOf(s) {
     result: state === 'done' && s.brief ? String(s.brief).slice(0, 600) : undefined,
     error: halted ? (job === 'dropped' ? DROPPED : `${s.job.stoppedWhy || 'Stopped by a person'}. ${WAITING}`)
       : s.state === 'paused' ? RESTARTED : state === 'failed' ? (s.lastError || undefined) : undefined,
+    // Its plan as a mission's checklist, and how far it is (plan-progress.js) — the fields a device already draws.
+    plan: require('./plan-progress').devicePlan(s.plan),
+    progress: (p => (p ? { done: p.done, total: p.total, percent: p.percent } : undefined))(require('./plan-progress').of(s.plan)),
     archivedAt: s.archivedAt || undefined,
     seenAt: state !== 'running' && s.seenAt || undefined,   // its person opened the result: done (seen.js)
   };

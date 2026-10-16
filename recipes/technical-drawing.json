@@ -1,0 +1,12 @@
+{
+  "id": "technical-drawing",
+  "title": "Technical drawing of a part (PDF + DXF)",
+  "description": "Draws a dimensioned sheet from a drawing spec: FreeCAD projects the views, the template lays them out so nothing overlaps (front, side, section, isometric, a detail), CADCraft draws real dimensions, a title block and notes. Write the spec first (skills/technical-drawing says what goes in it).",
+  "params": [
+    { "name": "spec", "description": "The drawing spec, a JSON file (one part, or { \"sheets\": [...] } for several)." }
+  ],
+  "steps": [
+    { "tool": "shell", "args": { "command": "node \"{{skills}}/technical-drawing/scripts/drawing.js\" {spec}", "timeoutSec": 600 }, "check": { "contains": "\"sheets\"" },
+      "note": "Prints a report: the PDF, the scale, the views placed, anything left out and any warning." }
+  ]
+}

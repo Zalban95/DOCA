@@ -15,15 +15,19 @@ not hold, and know when to stop.
 Write the list of checks down once, in this order, and keep it for every round:
 
 1. **The plan's contracts.** `work_plan` with `read`: each step's contract is its "done when …" and maybe a check
-   (`{file}`, `{file, contains}`, `{url}`, `{page, contains, selector, noErrors}`, `{absent}`, `{free: port}`). Marking a
-   step done with `work_plan` `progress` runs its check — a check that fails keeps the step open and says why.
-2. **The project's own tests.** `project` with `info` names its commands; run them by name with `project` `run`
+   (`{file}`, `{file, contains}`, `{url}`, `{page, contains, selector, noErrors}`, `{absent}`, `{free: port}`, and for a
+   piece of craft `{video}`, `{pdf}`, `{mesh}`, `{image}`). Marking a step done with `work_plan` `progress` runs its
+   check — a check that fails keeps the step open and says why.
+2. **The work itself, looked at.** A video, a drawing, a model or a picture you made: `check_output` before you call it
+   done — it says at which second a card is blank or text is doubled, on which page text overlaps or runs off the
+   sheet, whether a print is closed and fits. "It renders" and "it is bright enough" are not the check.
+3. **The project's own tests.** `project` with `info` names its commands; run them by name with `project` `run`
    (`test`, `build`, `lint` — whatever this project has), never a command you made up. A long one comes back as a
    background job: follow it with `shell_job`.
-3. **The page, when there is one.** A front-end change is checked as it renders: a `{page, …, noErrors: true}`
+4. **The page, when there is one.** A front-end change is checked as it renders: a `{page, …, noErrors: true}`
    contract, or the page opened for the person with `canvas` preview. "The tests pass" says nothing about a page
    nobody opened.
-4. **What the person asked for, in their words.** Reread the request: a check list that passes while the request is
+5. **What the person asked for, in their words.** Reread the request: a check list that passes while the request is
    unmet is the wrong list.
 
 If there is no plan and no tests, say so, and name the one check you will use instead (a command's output, a file's

@@ -9,7 +9,8 @@ triggers: [remotion, video from code, motion graphics, animated video, explainer
 Remotion writes a video as React components — each frame is a page, rendered by a headless Chromium and joined by
 ffmpeg into an MP4 or WebM. It suits titles, explainers, data that moves, captions, the same video in many versions.
 It is a suggestion, never a requirement: the person's own tool wins, and Field → MCP → "Software for a job" (Motion
-graphics and effects) lists the others side by side.
+graphics and effects) lists the others side by side. A promo of a 3D-modelled product (parts turning and coming
+together) is the product-video skill's template, with Blender.
 
 ## 1. The licence, first — and ask once
 

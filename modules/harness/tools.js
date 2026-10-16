@@ -24,6 +24,7 @@ const TOOLS = [
   ...require('./toolbox/console'),
   ...require('./toolbox/background'),
   ...require('./toolbox/files'),
+  ...require('./toolbox/checks'),   // the work itself, looked at (modules/checks)
   ...require('./toolbox/repo'),
   ...require('./toolbox/memory'),
   ...require('./toolbox/settings'),
