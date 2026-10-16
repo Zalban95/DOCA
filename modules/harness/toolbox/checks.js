@@ -8,7 +8,8 @@
  */
 const { resolvePath, cwd } = require('./common');
 
-const KINDS = ['video', 'pdf', 'mesh', 'image', 'built', 'literals'];
+const KINDS = ['video', 'pdf', 'mesh', 'image', 'built', 'literals', 'fit'];
+const XYZ = { type: 'array', items: { type: 'number' } };
 
 module.exports = [
   {
@@ -18,7 +19,9 @@ module.exports = [
       + 'pdf: page count, words that must be on it, no text over text, no line through a word, nothing off the sheet; '
       + 'mesh (STL, OBJ, GLB, STEP): size against maxSize, closed (watertight), how many parts; image: not blank, words on it; '
       + 'built (path: project.params.json): the deliverables were built by the hub from the values in the file now; '
-      + 'literals (path: a spec or template): no parameter\'s value typed into it instead of ${name}. '
+      + 'literals (path: a spec or template): no parameter\'s value typed into it instead of ${name}; '
+      + 'fit (an assembly: path is one part\'s STL, parts the others, placed as assembled): parts overlapping each other, a held object (held: a box) '
+      + 'overlapping them, its clearance on each side in mm (clearance: {min, max}), screws through matching holes. '
       + 'It says what failed and where (the second, the page and millimetres, the edge count), and what it could not verify. '
       + 'Put the same check in the plan step\'s contract (check: {video: "<path>", duration: 20}) so the step can only be marked done when it holds.',
     parameters: {
@@ -39,6 +42,16 @@ module.exports = [
         watertight: { type: 'boolean', description: 'mesh: true when it must be closed (a print).' },
         minParts: { type: 'integer', description: 'mesh: at least this many separate parts.' },
         maxParts: { type: 'integer', description: 'mesh: at most this many separate parts (1 for a single print).' },
+        parts: { type: 'array', items: { anyOf: [{ type: 'string' }, { type: 'object', properties: { path: { type: 'string' }, offset: XYZ, rotation: XYZ } }] },
+          description: 'fit: the assembly\'s other parts (STL, OBJ, GLB), each a path or {path, offset: [x, y, z] mm, rotation: [x, y, z] degrees} to place it as assembled.' },
+        offset: { ...XYZ, description: 'fit: where the first part (path) sits in the assembly, mm.' },
+        rotation: { ...XYZ, description: 'fit: how the first part is turned in the assembly, degrees about X, Y, Z.' },
+        held: { type: 'object', properties: { box: XYZ, at: XYZ, radius: { type: 'number' }, name: { type: 'string' } },
+          description: 'fit: the object the parts hold, as a box — {box: [200, 125, 8] its size, at: [x, y, z] its lowest corner, radius: its corners\' radius (a tablet\'s), mm}.' },
+        clearance: { type: 'object', properties: { min: { type: 'number' }, max: { type: 'number' } }, description: 'fit: the gap each held side must have, mm (e.g. {min: 0.2, max: 0.6}).' },
+        sides: { type: 'array', items: { type: 'string', enum: ['+x', '-x', '+y', '-y', '+z', '-z'] }, description: 'fit: the sides the clearance applies to (default: the sides a part covers for at least half the face).' },
+        screws: { type: 'array', items: { type: 'object', properties: { at: XYZ, axis: XYZ, d: { type: 'number' }, length: { type: 'number' }, name: { type: 'string' } } },
+          description: 'fit: screws as placed — at (where the head sits), axis (the way it goes in), d, length, mm; each must find a hole in every part it passes.' },
       },
       required: ['kind', 'path'],
     },
