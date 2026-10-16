@@ -55,6 +55,11 @@ function fromModelEntry(m) {
   return null;
 }
 
+/** The most completion tokens one `/models` entry says the model takes, or null. */
+function maxOutputOf(m) {
+  return n(m.top_provider?.max_completion_tokens) || n(m.max_completion_tokens) || n(m.max_output_tokens) || n(m.top_provider?.max_output_tokens) || null;
+}
+
 const sameModel = (a, b) => a === b || String(a).split('/').pop() === String(b).split('/').pop();
 const root = base => String(base).replace(/\/+$/, '').replace(/\/v1$/, '');
 
@@ -79,6 +84,10 @@ async function discover(provider, model) {
       const entry = (list.data || list.models || []).find(m => sameModel(m.id || m.name, model));
       const w = entry && fromModelEntry(entry);
       if (w) found = { tokens: w.tokens, source: `${label} /models, ${w.field}` };
+      // The most a reply may be, where the list says it (OpenRouter's top_provider.max_completion_tokens): kept as the
+      // model's contract (contracts.js maxOutput), so a reply cap over it is never sent — a lesson from the list, not a guess.
+      const most = entry && maxOutputOf(entry);
+      if (most) require('./contracts').learn(ep.id, model, { maxOutput: most }, { perModel: true, quiet: true });
     } catch { /* not answering, or no list */ }
   }
   if (!found) {
@@ -107,4 +116,4 @@ function known(provider, model) {
   return hit && Date.now() - hit.at < TTL ? hit.r : null;
 }
 
-module.exports = { discover, known, fromModelEntry };
+module.exports = { discover, known, fromModelEntry, maxOutputOf };

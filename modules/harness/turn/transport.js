@@ -40,8 +40,15 @@ async function post(ep, body, signal, p) {
     const detail = await r.text();
     const effortRetry = require('./effort').retry(body, detail, r.status);
 
+    const most = r.status === 400 ? contracts.maxOutputFrom(detail) : null;
+    // A reply cap over the model's own maximum (round 1, 2026-10-16: 256000 asked of a model that takes 131072): once
+    // with the cap it named, and kept per model, so the refusal is paid once and never fails a turn.
+    if (most && most < contracts.outputOf(body)) {
+      r = await send(contracts.capOutput(body, most));
+      if (r.ok) contracts.learn(ep.id, body.model, { maxOutput: most }, { perModel: true });
+
     // Newer OpenAI models reject max_tokens and want max_completion_tokens.
-    if (r.status === 400 && body.max_tokens && detail.includes('max_completion_tokens')) {
+    } else if (r.status === 400 && body.max_tokens && detail.includes('max_completion_tokens')) {
       const { max_tokens, ...rest } = body;
       r = await send({ ...rest, max_completion_tokens: max_tokens });
       if (r.ok) contracts.learn(ep.id, body.model, { tokenField: 'max_completion_tokens' }, { perModel: true });

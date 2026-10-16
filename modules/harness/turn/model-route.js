@@ -132,15 +132,22 @@ function paramsFor(role, p, { person, sessionId } = {}) {
 /** Ask a role model's server for its window when nothing is known yet, waiting at most `ms` (the answer is cached). */
 async function warm(role, ms = 1500) {
   const t = modelFor(role);
-  if (!t || num(settingOf(`harness.models.${role}Window`)) || require('../context-window').known(t.provider, t.model)) return;
+  if (!t || require('../context-window').known(t.provider, t.model)) return;
+  // A declared window still asks once, when the model's reply maximum is not known yet (the list may say it).
+  if (num(settingOf(`harness.models.${role}Window`)) && require('../contracts').forProvider(t.provider, t.model).maxOutput) return;
   const asked = require('../context-window').discover(t.provider, t.model).catch(() => null);
   await Promise.race([asked, new Promise(r => { const h = setTimeout(r, ms); h.unref?.(); })]);
 }
 
-/** The step's model: its parameters, its endpoint and its role (null when the turn is not routed). `rows` may be a function. */
-async function step({ p, ep, profile, session, client, step: n, rows }) {
+/**
+ * The step's model: its parameters, its endpoint and its role (null when the turn is not routed). `rows` may be a function;
+ * `failed`: the roles whose model failed earlier in this turn (turn/role-fallback.js) — those steps are the turn's own.
+ */
+async function step({ p, ep, profile, session, client, step: n, rows, failed }) {
   const role = routed({ profile, session, client }) ? roleOf({ profile, session, client, step: n, rows: typeof rows === 'function' ? rows() : rows }) : null;
   if (!role) return { p, ep, role: null };
+  // Its model failed earlier this turn (turn/role-fallback.js): the turn's own answers, already said once.
+  if (failed?.[role]) return { p: { ...p, _role: role, _roleSkipped: 'failed this turn' }, ep, role };
   await warm(role);
   const sp = paramsFor(role, p, { person: client?.user, sessionId: session?.id });
   return { p: sp, ep: sp.provider === p.provider ? ep : require('../providers').endpoint(sp.provider), role };
