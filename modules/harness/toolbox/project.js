@@ -65,7 +65,8 @@ module.exports = [
   {
     name: 'replace_in_files',
     description: 'Replace text in one file, or across every file under a folder, with the same options as search_files ($1 works in '
-      + 'regex mode). It is a dry run unless apply is true: look at the changes it lists first, then call again with '
+      + 'regex mode). It matches within single lines only: a query spanning lines finds nothing — for a multi-line change, '
+      + 'write the file with write_file. It is a dry run unless apply is true: look at the changes it lists first, then call again with '
       + 'apply: true (and `only` to limit it to some of those files).',
     parameters: {
       type: 'object',
