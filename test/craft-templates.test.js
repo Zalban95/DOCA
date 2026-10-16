@@ -66,7 +66,7 @@ test('the scale is the largest that fits, and a part too big for the sheet is sa
   const small = L.layout({ views: { front: { bbox: [-10, -10, 10, 10] } }, sheet: L.sheetSize('A3') });
   assert.equal(small.scale, 10, 'a 20 mm part on A3 is drawn at 10:1');
   const plate = compose({ sheet: 'A3' }, fakePart(207, 172, 13));
-  assert.equal(plate.report.scale, '1:1', 'the tablet mount fits A3 at 1:1 once the top view gives way');
+  assert.equal(plate.report.scale, '1:1', 'a 207 × 172 mm plate fits A3 at 1:1 once the top view gives way');
   assert.match(plate.report.left_out.join(' '), /top: left out/);
   const asked = compose({ sheet: 'A3', views: ['front', 'top', 'side', 'section', 'iso'] }, fakePart(207, 172, 13));
   assert.ok(asked.report.views.includes('top'), 'a top view asked for by name stays');
@@ -175,7 +175,93 @@ test('a request for drawings or a promo finds its skill', () => {
     return { name, description: text.match(/^description: (.*)$/m)[1], body: text.split('\n---\n').slice(1).join('\n') };
   });
   const top = q => search(q, skills)[0]?.name;
-  assert.equal(top('pdf drawings with dimensions of the mount'), 'technical-drawing');
+  assert.equal(top('pdf drawings with dimensions of the bracket'), 'technical-drawing');
   assert.equal(top('a 20 second promo video of the parts'), 'product-video');
   assert.equal(top('design a printable bracket for M3 screws'), 'printable-part');
+});
+
+// The render is a background job of the hub's (harness/jobs.js), never a process of its own that detaches: shell_job
+// lists it, its pid is the render's, and shell_job stop ends it, Blender with it, and the marker says it was stopped
+// (CONSTITUTION §1, V11). A stand-in Blender that only sleeps; POSIX, since it is a shell script.
+test('a promo render runs as the job that started it, and stopping the job stops the render', { skip: process.platform === 'win32' && 'a stand-in Blender script needs a POSIX shell' }, async () => {
+  const jobs = require('../modules/harness/jobs');
+  const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'promo-job-'));
+  const sleeper = path.join(dir, 'blender');
+  const pidFile = path.join(dir, 'blender.pid');
+  fs.writeFileSync(sleeper, `#!/bin/sh\necho $$ > ${JSON.stringify(pidFile)}\nexec sleep 60\n`);
+  fs.chmodSync(sleeper, 0o755);
+  fs.writeFileSync(path.join(dir, 'a.stl'), 'solid a\nendsolid a\n');
+  const font = path.join(dir, 'f.ttf'); fs.writeFileSync(font, '');
+  const spec = path.join(dir, 'spec.json');
+  fs.writeFileSync(spec, JSON.stringify({ out: 'v.mp4', duration: 6, font_bold: font, font_regular: font, parts: [{ path: 'a.stl', name: 'Part A' }] }));
+  const script = path.join(ROOT, 'skills/product-video/scripts/promo.js');
+  const job = jobs.start(`"${process.execPath}" "${script}" start "${spec}" --blender "${sleeper}" --ffmpeg "${sleeper}"`, { cwd: dir });
+  const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
+  try {
+    const until = Date.now() + 10000;
+    while (!fs.existsSync(pidFile) && Date.now() < until) await H.sleep(100);
+    assert.ok(fs.existsSync(pidFile), 'the stand-in Blender started');
+    const status = JSON.parse(fs.readFileSync(path.join(dir, 'v.mp4.status.json'), 'utf8'));
+    assert.equal(status.state, 'running');
+    assert.equal(jobs.get(job.id).state, 'running', 'still running as the job: start did not hand it to a detached process and return');
+    const blenderPid = Number(fs.readFileSync(pidFile, 'utf8'));
+    jobs.stop(job.id);
+    const gone = Date.now() + 10000;
+    while ((alive(blenderPid) || !fs.existsSync(path.join(dir, 'v.mp4.done.json'))) && Date.now() < gone) await H.sleep(100);
+    assert.ok(!alive(blenderPid), 'Blender went with the job');
+    const marker = JSON.parse(fs.readFileSync(path.join(dir, 'v.mp4.done.json'), 'utf8'));
+    assert.equal(marker.ok, false);
+    assert.match(marker.error, /stopped/);
+  } finally { try { jobs.stop(job.id); } catch { /* ended */ } fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('the product-video recipe starts the render as a background job', () => {
+  const r = require('../modules/recipes/store').get('product-video');
+  assert.equal(r.steps[0].tool, 'shell');
+  assert.equal(r.steps[0].args.background, true);
+  assert.match(r.steps[0].check.contains, /Started background job/);
+  assert.doesNotMatch(fs.readFileSync(path.join(ROOT, 'skills/product-video/scripts/promo.js'), 'utf8'), /detached: true/);
+});
+
+// Each craft skill checks its own output (check_output) and shows a plan contract with the same check; the contract in
+// the skill is a valid one (plan-contracts.split keeps only a check's own fields, so a typo would vanish there).
+test('the craft skills check their output, and their contract examples are valid checks', () => {
+  const pc = require('../modules/harness/plan-contracts');
+  for (const [name, kind] of [['product-video', 'video'], ['technical-drawing', 'pdf']]) {
+    const text = fs.readFileSync(path.join(ROOT, 'skills', name, 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n');
+    assert.match(text, new RegExp(`check_output \\{kind: "${kind}"`), `${name} runs check_output`);
+    const example = text.match(/```json\n(\{ "done": [^\n]+\})\n```/);
+    assert.ok(example, `${name} shows a plan contract`);
+    const c = JSON.parse(example[1]);
+    assert.deepEqual(pc.split({ title: 'x', ...c }).contract.check, c.check, `${name}'s contract check is kept whole`);
+  }
+});
+
+// End to end where the programs are: the product-video template's own cut (lib/edit.js, ffmpeg) over frames standing in
+// for Blender's, then the video check its skill names — the template's output holds the contract it advertises.
+const findV = require(path.join(ROOT, 'skills/product-video/scripts/lib/find'));
+const FFMPEG = require('../modules/checks/bin').find('ffmpeg') && require('../modules/checks/bin').find('ffprobe');
+let FONTS = null;
+try { FONTS = findV.fonts({}); } catch { /* no system font: skipped */ }
+test('a promo cut by the template holds its video check', { skip: (!FFMPEG && 'ffmpeg is not installed here') || (!FONTS && 'no font for the cards here') }, async t => {
+  const ffmpeg = require('../modules/checks/bin').find('ffmpeg');
+  const { execFileSync } = require('node:child_process');
+  const work = fs.mkdtempSync(path.join(H.tmp, 'promo-e2e-'));
+  try {
+    const spec = { duration: 6, fps: 10, resolution: [640, 360], title: 'Bracket Kit', subtitle: 'Two printed parts', end: 'Print it.',
+      parts: [{ path: 'a.stl', name: 'Part A' }, { path: 'b.stl', name: 'Part B' }] };
+    const plan = P.shots(spec), seg = Object.fromEntries(plan.list.map(s => [s.shot, s]));
+    const dirs = {};
+    for (const [shot, src] of [['turntable', 'testsrc'], ['assemble', 'testsrc2']]) {
+      dirs[shot] = path.join(work, shot); fs.mkdirSync(dirs[shot]);
+      execFileSync(ffmpeg, ['-v', 'error', '-f', 'lavfi', '-i', `${src}=size=640x360:rate=10`, '-frames:v', String(seg[shot].frames), path.join(dirs[shot], '%04d.png')]);
+    }
+    const out = path.join(work, 'promo.mp4');
+    const argv = require(path.join(VIDEO, 'edit')).args(spec, { work, turnDir: dirs.turntable, asmDir: dirs.assemble, out, fonts: FONTS });
+    try { execFileSync(ffmpeg, argv, { stdio: 'pipe' }); }
+    catch (e) { if (/drawtext|No such filter/.test(String(e.stderr))) return t.skip('this ffmpeg has no drawtext'); throw e; }   // an ffmpeg without drawtext cannot cut the cards
+    const r = await require('../modules/checks').run({ video: out, duration: 6, width: 640, height: 360, fps: 10, frames: 4 });
+    assert.equal(r.ok, true, r.why);
+    assert.match(r.why, /6\.0 s, 640×360, 10 fps/);
+  } finally { fs.rmSync(work, { recursive: true, force: true }); }
 });

@@ -13,6 +13,7 @@ function said(v) {
   return [`${v.id} "${v.title}"${v.project ? ` in the project ${v.project.name}` : ''}: ${v.state}, ${v.progress.done} of ${v.progress.total} tasks done (${v.progress.percent}%, every task counts the same)`
     + `${v.loop?.on ? `; keep going round ${v.loop.rounds || 0} of ${v.maxRounds}` : ''}.`, ...t,
   v.doc?.name ? `Its document: ${v.doc.project ? `${v.doc.project} in the project, and ` : ''}${v.doc.name} in the attachments.` : '',
+  ...require('../../teams/tries').reports(v),
   v.notes?.length ? `${v.notes.length} note${v.notes.length === 1 ? '' : 's'} from the team; the latest: ${v.notes.slice(-1)[0].from} — ${v.notes.slice(-1)[0].text.slice(0, 160)}` : '',
   ].filter(Boolean).join('\n');
 }
@@ -27,13 +28,15 @@ module.exports = [
       + 'the project\'s current branch. The Orchestrator and any conversation it leads make teams — a project\'s chats too, for their project; '
       + 'a conversation a project\'s chat made (level 3) makes none. You do not dispatch a team\'s tasks yourself, and you are not blocked: carry on, and read status when you need it. '
       + 'Only when the person names an outside harness in their request (Claude Code, Codex, dsh, Gemini CLI, mini-swe-agent …) — or says yes to your offer naming it — may a task\'s agent be '
-      + '"harness:<id>" — with asked: true — and it then works in a computer of its own on a branch of the project. A harness whose switch is "On its own" (your prompt names it) you may start without asked, saying so.',
+      + '"harness:<id>" — with asked: true — and it then works in a computer of its own on a branch of the project. A harness whose switch is "On its own" (your prompt names it) you may start without asked, saying so. '
+      + 'A task the checks can judge (a check, checks, or a test) may ask for tries: N — N attempts at once, each in a worktree of its own, the best kept by its checks alone; pick keeps another.',
     parameters: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['create', 'status', 'stop', 'keep_going', 'merge'] },
+        action: { type: 'string', enum: ['create', 'status', 'stop', 'keep_going', 'merge', 'pick'] },
+        try: { type: 'integer', description: 'pick: which try of the task (task) to keep instead of the one the checks chose.' },
         asked: { type: 'boolean', description: 'create: true only when the person named the outside harness in their own words — "use Claude Code", "5 Claude on Opus", "with dsh" — or said yes, on this turn, to your offer that named it ("run it with mini-swe-agent?" — "yes"). Never on your own initiative.' },
-        task: { type: 'string', description: 'merge: the task whose branch goes into the project\'s current branch.' },
+        task: { type: 'string', description: 'merge: the task whose branch goes into the project\'s current branch (a try is <id>-try<N>). pick: the task tried several times.' },
         team: { type: 'string', description: 'status, stop, keep_going: the team id (status without one lists your teams).' },
         title: { type: 'string', description: 'create: a short name, e.g. "Landing page".' },
         goal: { type: 'string', description: 'create: what the whole team delivers, in a sentence.' },
@@ -54,7 +57,10 @@ module.exports = [
               task: { type: 'string', description: 'The errand in full, for somebody who was not in this conversation.' },
               after: { type: 'array', items: { type: 'string' }, description: 'Ids of the tasks it needs finished first.' },
               done: { type: 'string', description: 'Its contract: "done when …", in a sentence.' },
-              check: { type: 'object', description: 'Optional check the hub runs when it finishes: {file}, {file, contains}, {url}, {page, contains}, {absent}, {free: port}.' },
+              check: { type: 'object', description: 'Optional check the hub runs when it finishes: {file}, {file, contains}, {url}, {page, contains}, {absent}, {free: port}, or the work itself: {video}, {pdf}, {mesh}, {image}.' },
+              checks: { type: 'array', items: { type: 'object' }, description: 'More checks, every one must hold (up to 8).' },
+              test: { type: 'string', description: 'For code: the test command, e.g. "npm test". The specialist runs it itself as its last step; the hub reads that run\'s exit code (it never runs it).' },
+              tries: { type: 'integer', description: 'Several attempts at once (2–the setting teams.maxTries), each in a worktree of its own, the best kept by its checks and test alone — only when they can judge it and the worker is cheap; each try spends its own tokens. after naming this task waits for the kept try. Not with count; of the outside harnesses only harness:mini takes tries.' },
               worktree: { type: 'boolean', description: 'In a project: true for a git worktree of its own, false to share the project\'s folder (default: its own when it changes files while another task of the team may too).' },
             },
             required: ['agent', 'task'],
@@ -81,7 +87,8 @@ module.exports = [
             bytes: Buffer.byteLength(require('../../teams/doc').render(team, v.tasks)), caption: `Team: ${team.title} — its board, written again at every change` });
           const manual = require('../manual-note').note(ctx.sessionId);
           const own = team.outsideBy === 'free' ? `\nYou started ${[...new Set(team.tasks.filter(x => String(x.agent).startsWith('harness:')).map(x => x.agent))].join(', ')} on your own — its switch is "On its own": say so in one line, and why it fits.` : '';
-          return `Team ${team.id} made — the hub runs it from here. ${said(v)}\nTell the person what you set going; you are not waiting.${own}${manual ? `\nSay this to them too, in your words:${manual}` : ''}`;
+          const tried = Object.entries(require('../../teams/tries').groups(team)).map(([of, ts]) => `${of} runs ${ts.length} tries at once — about ${ts.length}× the tokens of one, each under the same budgets; the best is kept by its checks.`);
+          return `Team ${team.id} made — the hub runs it from here. ${said(v)}${tried.length ? `\n${tried.join('\n')} Say the multiple to the person.` : ''}\nTell the person what you set going; you are not waiting.${own}${manual ? `\nSay this to them too, in your words:${manual}` : ''}`;
         }
         if (a.action === 'status') {
           if (!a.team) {
@@ -99,7 +106,8 @@ module.exports = [
           const r = await require('../../harness-teams/branches').merge(v.project.root, task.place.branch, { by: 'the team\'s leader' });
           return `Merged ${r.merged} into ${r.into}: ${r.head}.`;
         }
-        return 'Error: action is create, status, stop, keep_going or merge.';
+        if (a.action === 'pick') { mine(a.team); return await require('../../teams/tries').pick(a.team, String(a.task || ''), a.try, { by: 'the team\'s leader' }); }
+        return 'Error: action is create, status, stop, keep_going, merge or pick.';
       } catch (e) { return `Error: ${e.message}`; }
     },
   },

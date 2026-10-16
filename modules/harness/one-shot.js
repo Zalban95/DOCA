@@ -50,7 +50,7 @@ function adapterFor(row) {
 function whyNot(row) {
   if (!row) return 'No harness is the default.';
   if (row.id === 'openclaw') return 'OpenClaw answers here through its gateway: enable gateway.http.endpoints.chatCompletions in openclaw.json.';
-  if (row.sandbox) return `${row.label} runs every command without asking, so DOCA runs it only inside an agents' computer — as a team worker on a project (ask for it by name: "use ${row.label} on …"), never on the hub. In the Terminal (Harness tab) it asks before each command.`;
+  if (row.sandbox) return `${row.label} runs every command without asking, so ${require('../branding').name('product')} runs it only inside an agents' computer — as a team worker on a project (ask for it by name: "use ${row.label} on …"), never on the hub. In the Terminal (Harness tab) it asks before each command.`;
   if (row.id === 'opendots') return 'OpenDots answers in its own page (Controls → OpenDots → Open); talking to it from here needs its Intelligence SDK and is not built yet.';
   return `${row.label} has no one-question mode DOCA knows of: open it on the Harness tab, where it runs in its own terminal — or make DOCA's own agent the default.`;
 }

@@ -37,16 +37,33 @@ const allowList = () => { try { return require('../settings-schema').value('team
 /**
  * Whether an opt-in row (`team.optIn`: mini-swe-agent) is switched on here: a person installed it on the hub from the
  * Harness tab, or the owner named it in teams.outside.allow. Off until then — the agent never installs it itself.
+ * Installed means its command on PATH *is* that tool (review of 2026-10-16): `mini` is a common name, so a program
+ * found by it counts only when its real path or its launcher names the package (`team.uv`: uv, pipx and a venv's
+ * launcher all carry it — the tools folder, or the module the script imports). Read, never run.
  */
 const _found = new Map();   // cmd → {at, yes}: PATH is walked at most every 30 s (the routing table asks on every step)
-function installedHere(cmd) {
-  const k = _found.get(cmd);
+function isTheTool(file, pkg) {
+  if (!pkg) return true;
+  const fs = require('fs');
+  const marks = [pkg, pkg.replace(/-/g, '_'), pkg.replace(/-/g, '')].map(m => m.toLowerCase());
+  let real = file;
+  try { real = fs.realpathSync(file); } catch { /* as found */ }
+  if (marks.some(m => real.toLowerCase().includes(m))) return true;
+  try {   // a launcher script (or uv's trampoline on Windows) names its package; the first 2 MB is plenty
+    const fd = fs.openSync(real, 'r');
+    try { const buf = Buffer.alloc(2 << 20); const n = fs.readSync(fd, buf, 0, buf.length, 0); const text = buf.subarray(0, n).toString('latin1').toLowerCase(); return marks.some(m => text.includes(m)); }
+    finally { fs.closeSync(fd); }
+  } catch { return false; }
+}
+function installedHere(r) {
+  const k = _found.get(r.cmd);
   if (k && Date.now() - k.at < 30000) return k.yes;
-  const yes = !!require('../shell').which(cmd);
-  _found.set(cmd, { at: Date.now(), yes });
+  const at = require('../shell').which(r.cmd);
+  const yes = !!at && isTheTool(at, r.team?.uv || null);
+  _found.set(r.cmd, { at: Date.now(), yes });
   return yes;
 }
-const optedIn = r => allowList().map(String).includes(r.id) || installedHere(r.cmd);
+const optedIn = r => allowList().map(String).includes(r.id) || installedHere(r);
 
 const MODES = ['never', 'ask', 'free'];
 /** The three states as the panel and the agent say them. */

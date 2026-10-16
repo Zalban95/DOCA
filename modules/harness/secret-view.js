@@ -20,7 +20,7 @@ const same = (a, b) => (process.platform === 'win32' ? a.toLowerCase() === b.toL
 const inside = (abs, dir) => { const r = path.relative(dir, abs); return !!r && !r.startsWith('..') && !path.isAbsolute(r); };
 const secretName = k => mask({ [k]: 'x' })[k] === MASK;
 
-/** 'json', 'checkpoint', 'env' or null: how `abs` holds secrets, if it is one of these files. */
+/** 'json', 'checkpoint', 'env', 'spill' or null: how `abs` holds secrets, if it is one of these files. */
 function kindOf(abs) {
   const paths = require('../paths');
   const { realOf } = require('../utils');
@@ -37,6 +37,8 @@ function kindOf(abs) {
   if (under(path.join(data, 'migrations')) && /^prefs-.*\.json$/.test(base)) return 'json';
   if (under(path.join(data, 'harness', 'backups')) && named.some(f => same(path.basename(f), base))) return 'json';
   if (/^\.env(\..+)?$/.test(base) && !/\.(example|sample|template)$/.test(base)) return 'env';
+  // A shortened tool result's whole text: whatever the tool printed — a settings file or a .env, by `cat` (spill-access.js).
+  if (under(path.join(data, 'harness', 'tool-results'))) return 'spill';
   return null;
 }
 
@@ -65,6 +67,9 @@ function view(abs, text) {
       return JSON.stringify(mask(c), null, 2);
     }
   } catch { /* not JSON after all: line by line */ }
+  // Any text, so both shapes, in place: a value masked where it stands, so the offsets a shortened result named still
+  // land near the same text (a re-formatted JSON would move them all).
+  if (kind === 'spill') return maskLines(maskLines(text, 'json'), 'env');
   return maskLines(text, kind === 'env' ? 'env' : 'json');
 }
 

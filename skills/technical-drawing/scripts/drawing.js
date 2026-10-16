@@ -5,7 +5,7 @@
  * The technical-drawing template: a part in, a dimensioned sheet out (PDF and DXF), laid out so nothing overlaps.
  *
  *   node drawing.js SPEC.json                        a spec (see ../SKILL.md); { "sheets": [ … ] } for several
- *   node drawing.js --part P.step --out D.pdf [--title "Back tray"] [--project …] [--material …] [--sheet A3]
+ *   node drawing.js --part P.step --out D.pdf [--title "Bracket"] [--project …] [--material …] [--sheet A3]
  *   flags: --freecad PATH  --cadcraft PATH  --keep (leave the work folder)  --svg (also write the SVG preview)
  *
  * FreeCAD projects the views (project.py); lib/compose.js lays the sheet out and plans the dimensions; CADCraft draws

@@ -52,7 +52,8 @@ function changed(team, views, { changed = [], ended = false, title = id => id, f
   if (ended) {
     const p = team.progress;
     const text = `Team "${team.title}" ${team.state}: ${p.done} of ${p.total} tasks done (${p.percent}%).`
-      + `${views.filter(v => v.state !== 'done').map(v => ` ${v.id} ${board.say(v, title)}.`).join('')}`
+      + `${board.units(team, views).filter(v => v.state !== 'done').map(v => ` ${v.id} ${board.say(v, title)}.`).join('')}`
+      + `${require('./tries').reports(team).map(r => ` ${r}.`).join('')}`
       + `${team.doc?.name ? ` Its document: ${team.doc.project || team.doc.name}.` : ''}`;
     line(team, text);
     // To the leader itself (organization.report sends upward, to the leader's own leaders): an unread report, read in its next step.

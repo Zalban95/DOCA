@@ -23,9 +23,9 @@ function fitting(team) {
   if (!team) return [];
   return outside().filter(x => x.row.team.when && x.mode !== 'never').map(({ row, mode }) => (mode === 'free'
     ? `${row.label} — ${row.team.when}. Its switch is "On its own": start it yourself, a \`team\` in the project with agent \`harness:${row.id}\` (no asked needed), `
-      + 'each try in a computer of its own on this hub\'s model through the model relay, its branch back for the person; then say in one line that you started it and why.'
+      + 'each task in a computer of its own on this hub\'s model through the model relay, its branch back for the person; then say in one line that you started it and why.'
     : `${row.label} — ${row.team.when}. Offer it in one line, naming it and saying it runs in a computer of its own on this hub's model, through the relay. On their yes: `
-      + `a \`team\` in the project with agent \`harness:${row.id}\` (count for parallel tries), asked: true — its branch and record come back for them.`));
+      + `a \`team\` in the project with agent \`harness:${row.id}\`, asked: true — its branch and record come back for them.`));
 }
 
 /** Outside harnesses without a rule of their own whose switch is "On its own". */
@@ -60,8 +60,12 @@ function routing({ held = new Set(), skills = 0, recipes = 0, specialists = [], 
       + 'it runs in the background and you read the result with `agent_results`. Send independent errands in parallel; one that needs another\'s result waits for it with `after`.' : '',
     has('team') && specialists.length ? 'A team — several errands for different specialists, some needing others\' results, each with a "done when": `team` create once, '
       + 'with every task, its `after` and its contract; the hub dispatches them in order, checks each contract and keeps the team\'s document. Stay free.' : '',
+    // Best of N (improvement D2, 2026-10-16): cheap tries judged by the checks beat one expensive try — only where checks can judge.
+    has('team') && specialists.length ? 'Tries — a deliverable the checks can judge (code with a test, a video, a PDF or a mesh with checks) on a cheap worker model: '
+      + 'give its task `tries` (2–3) — each works in a worktree of its own and the hub keeps the best by its checks alone; say the multiple (about N× the tokens). Without checks, one try: the pick would be blind. `count` is not tries: it is several workers sharing one plan, none judged; '
+      + 'of the outside harnesses only one that records each command\'s exit code (mini-swe-agent) takes tries.' : '',
     has('team') && outside().some(r => r.mode !== 'never') ? 'A named outside harness — when the person names one in their request (Claude Code, Codex, dsh, Gemini CLI; "5 Claude on Opus"): a `team` '
-      + 'in a project whose tasks\' agent is `harness:<id>` (model, count), with asked: true — each works in a computer of its own on a branch, and the branches come back for the person to merge. '
+      + 'in a project whose tasks\' agent is `harness:<id>` (model; count for several sharing the plan), with asked: true — each works in a computer of its own on a branch, and the branches come back for the person to merge. '
       + 'Never on your own initiative, except one whose switch is "On its own".' : '',
     ...freeRow(has('team')),
     'Ask — the choice is the person\'s (money, something outward or irreversible, a matter of taste): ask once, with the options.',

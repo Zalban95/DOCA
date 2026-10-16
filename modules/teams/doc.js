@@ -41,11 +41,22 @@ function render(team, views) {
     `**State** ${team.state} — ${p.done} of ${p.total} tasks done (${p.percent}%; every task counts the same) · ${loop}`, '',
     `**Started** ${when(team.createdAt)}${team.endedAt ? ` · **ended** ${when(team.endedAt)}` : ''} · ${team.id}`, '',
     '## Tasks', '', '| # | Task | Who | State | After | Done when |', '|---|---|---|---|---|---|', ...rows, '',
+    ...tries(team),
     ...(branches.length ? ['## Where the work is', '', 'Tasks that change files while others do work in git worktrees of their own:', '', ...branches, ''] : []),
     '## Decisions', '', ...(decisions.length ? decisions : ['*None reported yet.*']), '',
     '## Notes from the team', '', ...(notes.length ? notes : ['*None yet.*']), '',
     '## Results', '', ...(results.length ? results.flatMap(r => [r, '']) : ['*Nothing delivered yet.*', '']),
   ].join('\n');
+}
+
+/** Tasks tried several times: each group's report and every try's score, so a person can pick another (tries.js). */
+function tries(team) {
+  const judged = Object.entries(team.trials || {}).filter(([, j]) => j.judgedAt);
+  if (!judged.length) return [];
+  const row = (s, j) => `| ${s.n} | ${s.kept ? (j.partial ? 'kept, best so far' : 'kept') : s.finished ? (s.eligible ? 'set aside' : 'failed') : 'did not finish'} | ${s.total ? `${s.held} of ${s.total}` : '—'} | ${s.test || '—'} | ${s.failures} | ${s.tokens} | ${cell(s.branch || '—')} |`;
+  return ['## Tries', '', 'Tasks tried several times at once; the hub kept the best by its checks alone (no model judged). The others stay on their branches.', '',
+    ...judged.flatMap(([of, j]) => [`**${of}** — ${cell(j.report)}`, '', '| Try | Outcome | Checks held | Test | Failed calls | Tokens | Branch |', '|---|---|---|---|---|---|---|',
+      ...[...(j.scores || [])].sort((a, b) => a.n - b.n).map(s => row(s, j)), ''])];
 }
 
 /** Write it: the project page (when the leader has a project) and the attachment copy. Records where on the team. */

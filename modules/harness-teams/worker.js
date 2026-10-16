@@ -124,10 +124,11 @@ async function run(w) {
     const env = { ...(row.team.env || {}), ...(key ? { [key.env]: key.value } : {}), ...relay };
     const child = box.run(c, { dir, bin, args: harnesses.argv(row, { task: index().preamble(w), model: w.model, output: traj }), env, pidfile });
     live.set(w.id, { c, pidfile, child });
-    let buf = '', err = '', final = null, seen = 0;
+    let buf = '', err = '', final = null, seen = 0, trajText = '';
     const readTraj = async () => {   // a CLI that writes a trajectory, not a stream: its new messages, said the same way
       if (!traj) return;
-      const r = trajectory.read(await box.read(c, traj), seen);
+      trajText = await box.read(c, traj);
+      const r = trajectory.read(trajText, seen);
       seen = r.seen; r.events.forEach(ev => say(w, ev, scrub));
       if (r.final) final = r.final;
     };
@@ -152,8 +153,11 @@ async function run(w) {
     live.delete(w.id);
     take(buf);
     await readTraj().catch(() => {});
+    const ran = traj ? trajectory.runs(trajText) : null;   // its commands' exit codes, read for a test's verdict (teams/tries-score.js)
+    if (ran) S.patch(w.id, { runs: ran.map(r => ({ ...r, command: scrub(r.command) })) });
     let kept = null;
-    if (traj) kept = await require('../computers').fetchFile(c.id, traj).then(a => a.name, () => null);   // its trajectory, as an attachment
+    // Its trajectory, as an attachment — scrubbed first like its live events, and of every secret DOCA keeps (trajectory.scrub).
+    if (traj) kept = await box.read(c, traj).then(text => trajectory.keep(text, { given: [key?.value, relay.OPENAI_API_KEY], name: `${w.id}.traj.json`, from: `mcp:computer-${c.id}` }), () => null).catch(() => null);
     if (kept && final) final = { ...final, text: `${final.text}\n\nIts trajectory (every step, as it ran) is kept as the attachment ${kept}.` };
 
     tick(w, PLAN[3], code === 0 ? 'done' : 'failed'); tick(w, PLAN[4], 'running');

@@ -9,6 +9,7 @@
 const bin = require('./bin');
 const raster = require('./raster');
 const ocr = require('./ocr');
+const { verdict } = require('./verdict');
 
 function normalize(c, bad) {
   const out = { image: String(c.image).slice(0, 500) };
@@ -28,7 +29,7 @@ async function check(c, file) {
     size = j.streams?.[0];
   } catch (e) { return { ok: false, why: e.missing ? `could not look at the picture: ${e.message}` : `not a picture ffmpeg can read (${e.message})` }; }
   if (!size?.width) return { ok: false, why: 'not a picture ffmpeg can read' };
-  const problems = [], unverified = [];
+  const problems = [], unproven = [];
   if (c.width && size.width !== c.width) problems.push(`it is ${size.width} wide, not ${c.width}`);
   if (c.height && size.height !== c.height) problems.push(`it is ${size.height} high, not ${c.height}`);
   const w = Math.min(2400, size.width), h = Math.max(1, Math.round(w * size.height / size.width));
@@ -38,16 +39,14 @@ async function check(c, file) {
   const s = raster.stats(small);
   if (c.notBlank !== false && s.edges < 1 && s.sd < 12) problems.push(`it shows almost nothing (contrast ${s.sd.toFixed(1)}, ${s.edges.toFixed(1)} edges per thousand pixels)`);
   if (c.contains) {
-    if (!bin.find('tesseract')) unverified.push(`its words — ${bin.missing('tesseract')}`);
+    if (!bin.find('tesseract')) unproven.push(`its words — ${bin.missing('tesseract')}`);
     else {
       const read = (await ocr.read(pic)).text.toLowerCase();
       const absent = c.contains.filter(x => !read.includes(x.toLowerCase()));
       if (absent.length) problems.push(`the OCR does not find ${absent.map(x => `"${x}"`).join(', ')} on it (it read: "${read.slice(0, 120)}")`);
     }
   }
-  const tail = `${size.width}×${size.height}, contrast ${s.sd.toFixed(1)}${unverified.length ? `; not verified: ${unverified.join('; ')}` : ''}`;
-  if (unverified.length && c.contains) problems.push(`its words could not be read`);
-  return problems.length ? { ok: false, why: `${problems.join('; ')} (${tail})` } : { ok: true, why: tail };
+  return verdict({ problems, unproven, facts: `${size.width}×${size.height}, contrast ${s.sd.toFixed(1)}` });
 }
 
 module.exports = { normalize, check };

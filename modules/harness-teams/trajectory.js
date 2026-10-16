@@ -51,6 +51,41 @@ function read(text, seen = 0) {
   return { events, seen: msgs.length, final };
 }
 
+// Commands that read, or only record what is already there: after the test, these leave its verdict standing.
+const READS = new Set(['ls', 'cat', 'head', 'tail', 'wc', 'grep', 'pwd', 'echo', 'find', 'stat', 'file', 'diff', 'true']);
+const GIT_READS = new Set(['status', 'diff', 'log', 'show', 'add', 'commit', 'branch', 'rev-parse']);
+/** Whether a command could change the work: anything but plain reads, git's own bookkeeping, or a redirection-free line. */
+function changes(command) {
+  const c = String(command || '');
+  if (/[`<>]|\$\(/.test(c)) return true;
+  return c.split(/&&|\|\||;|\||\n/).map(x => x.trim()).filter(Boolean).some(seg => {
+    const [verb, sub] = seg.split(/\s+/);
+    return verb === 'git' ? !GIT_READS.has(sub) : !READS.has(verb);
+  });
+}
+
+/**
+ * Every command it ran, in order, with its return code (null: no code came back) — what tries-score.js reads a test's
+ * verdict from (`[{command, code, changes}]`). Commands and observations pair in order, as the trajectory writes them.
+ */
+function runs(text) {
+  let data;
+  try { data = JSON.parse(String(text || '')); } catch { return null; }
+  const msgs = Array.isArray(data?.messages) ? data.messages : [];
+  const out = [], pending = [];
+  msgs.forEach((m, i) => {
+    if (i < 2) return;
+    if (m.role === 'assistant') for (const a of m.extra?.actions || []) if (a?.command) pending.push(String(a.command));
+    if ((m.role === 'tool' || m.role === 'user') && pending.length) {
+      const command = pending.shift();
+      const rc = /<returncode>\s*(-?\d+)\s*<\/returncode>/.exec(textOf(m.content));
+      const code = rc ? Number(rc[1]) : Number.isInteger(m.extra?.returncode) ? m.extra.returncode : null;
+      out.push({ command: command.slice(0, 400), code, changes: changes(command) });
+    }
+  });
+  return out.slice(-300);
+}
+
 /**
  * The model relay's variables for the worker's process (`team.relay`): the computer's switch turned on when it is off
  * (as the computer tool's `relay` action does), so its programs use the hub's models. Refused, with where to switch
@@ -61,7 +96,7 @@ async function relayEnv(c, row, why = null) {
   const relay = require('../relay');
   if (!relay.enabled() || !relay.forComputers()) throw bad(`${row.label} uses this hub's own model through the model relay, which is ${relay.enabled() ? 'not open to agents\' computers' : 'off'}: `
     + 'its owner switches it on in Field → API keys → Model relay. Then try the task again (team keep_going).', 409);
-  if (!relay.offered().length) throw bad(`${row.label} uses this hub's own model through the model relay, and the relay offers none: choose DOCA's model (Controls → DOCA ⚙) or list models in Field → API keys → Model relay.`, 409);
+  if (!relay.offered().length) throw bad(`${row.label} uses this hub's own model through the model relay, and the relay offers none: choose ${require('../branding').name('product')}'s model (Controls → ${require('../branding').name('product')} ⚙) or list models in Field → API keys → Model relay.`, 409);
   const computers = require('../computers'), rc = require('../relay/computer');
   let rec = computers.get(c.id);
   // Switched on as part of the decision to run it — the person's yes (ask) or its switch (free); said with the computer's name.
@@ -70,4 +105,36 @@ async function relayEnv(c, row, why = null) {
   return { ...v, OPENAI_API_BASE: v.OPENAI_BASE_URL };   // litellm reads either name
 }
 
-module.exports = { read, observation, relayEnv };
+/**
+ * The trajectory as text a person may read, with nothing secret in it — the same rule as its live events (worker.js
+ * scrub), and wider, since a whole file outlives the run as an attachment: the values given (the relay token, a
+ * provider key) and every secret DOCA keeps (secrets-kept.js) become [key]; then the masking rules for what looks like
+ * a secret by its name — NAME_TOKEN=…, a bearer value, "api_key": "…", token: … (machines/busy-read.js maskCommand).
+ */
+async function scrub(text, given = []) {
+  const { MASK } = require('../secrets-mask');
+  let kept = [];
+  try { kept = await require('../secrets-kept').values(); } catch { /* none readable */ }
+  const values = [...new Set([...given, ...kept].filter(v => typeof v === 'string' && v.length >= 4))].sort((a, b) => b.length - a.length);
+  const plain = t => values.reduce((s, v) => s.split(v).join('[key]'), String(t ?? ''))
+    .replace(/\b([A-Za-z_]\w*(?:TOKEN|KEY|SECRET|PASSWORD|PASSWD)\w*=)[^\s'"\\]+/gi, `$1${MASK}`)              // NAME_TOKEN=…
+    .replace(/(\bbearer\s+)[^\s'"\\]+/gi, `$1${MASK}`)                                                           // Authorization: Bearer …
+    .replace(/(\b(?:token|key|secret|password|passwd)\s*[=:]\s*)(?!\[key\])[^\s'"\\,}]+/gi, `$1${MASK}`);   // token: …
+  const named = k => /token|key|secret|password|passwd|credential/i.test(k);
+  // A trajectory is JSON: its strings are read decoded (a "\n" before a word is a line break, not an "n"), and a value
+  // under a secret's name (api_key, …) is masked whole. Text that is not JSON is scrubbed as it stands.
+  const walk = v => (typeof v === 'string' ? plain(v) : Array.isArray(v) ? v.map(walk)
+    : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, typeof x === 'string' && named(k) && x ? MASK : walk(x)])) : v);
+  let data;
+  try { data = JSON.parse(text); } catch { return plain(text); }
+  return JSON.stringify(walk(data), null, 2);
+}
+
+/** Keep a finished worker's trajectory as an attachment, scrubbed first; its name, or null when there is nothing. */
+async function keep(text, { given = [], name = 'trajectory.traj.json', from = null } = {}) {
+  if (!String(text || '').trim()) return null;
+  const clean = await scrub(text, given);
+  return require('../attachments').save(Buffer.from(clean), name, from ? { from } : {}).name;
+}
+
+module.exports = { read, observation, runs, changes, relayEnv, scrub, keep };

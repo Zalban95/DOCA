@@ -58,7 +58,10 @@ async function teamsPageLoad() {
     + section('Recently ended', ended, days ? `Put away in the Archive ${days} day${days === 1 ? '' : 's'} after they end.` : '')
     + `<details class="tp-archived" ${TP.showArchived ? 'open' : ''} ontoggle="teamsPageArchived(this.open)"><summary>Put away${TP.archived ? ` (${TP.archived.length})` : ''}</summary>
       ${TP.showArchived ? (TP.archived?.length ? `<div class="tp-grid">${TP.archived.map(_tpCard).join('')}</div>` : '<p class="desc">Nothing put away.</p>') : ''}
-      <p class="desc">Also in <a href="#" onclick="nav('archive');return false">Agents → Archive</a>, where a team comes back with one click.</p></details>`;
+      <p class="desc">Also in <a href="#" onclick="nav('archive');return false">Agents → Archive</a>, where a team comes back with one click.</p></details>
+    <div id="tp-settings"></div>`;
+  if (typeof leafFieldsDraw === 'function') leafFieldsDraw(document.getElementById('tp-settings'), ['teams.tries', 'teams.maxTries', 'teams.triesWaitMin', 'teams.maxRounds', 'teams.archiveAfterDays'],
+    { label: 'Advanced — tries, rounds and putting away', id: 'teams-limits' });
 }
 
 function teamsPageArchived(open) {

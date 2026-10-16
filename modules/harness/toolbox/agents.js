@@ -39,6 +39,10 @@ module.exports = [
           + 'a Linux desktop in a container. The specialist gets that computer\'s tools and no other\'s. For testing something risky, '
           + 'browsing as a person would, or recording a demo: send the tester. A specialist whose definition keeps a computer of its '
           + 'own gets that one without this (the same logins and files every time).' },
+        tries: { type: 'integer', description: 'Optional: several attempts at once (2 to the setting teams.maxTries), each in a git worktree of its own, the best kept by `check`/`test` alone — only when they can judge it. Made into a one-task team (`team` status reads it); about N× the tokens of one.' },
+        check: { type: 'object', description: 'With tries: the check that judges each try, as a team task\'s check ({file, contains}, {video}, {pdf}, {mesh}, {image} …).' },
+        test: { type: 'string', description: 'With tries: the test command each try runs itself last (e.g. "npm test"); the hub reads its exit code.' },
+        project: { type: 'string', description: 'With tries: the git project they work in (default: this conversation\'s).' },
         vnc: { type: 'string', description: 'Optional: a VNC screen (name or id, Machines → VNC) lent to the mission — the specialist gets vnc_look and vnc_input for that screen alone, and every vnc_input of its is asked of the person the mission works for.' },
         plan: {
           type: 'array',
@@ -57,7 +61,14 @@ module.exports = [
       },
       required: ['agent', 'task'],
     },
-    run: async ({ agent, task, context, plan, computer, after, vnc }, ctx = {}) => {
+    run: async ({ agent, task, context, plan, computer, after, vnc, tries, check, test, project }, ctx = {}) => {
+      // Best of N (teams/tries.js): several tries are a one-task team, so they are run, judged and kept as a team's are.
+      if (Number(tries) > 1) {
+        if (computer || vnc || (Array.isArray(after) && after.length)) return 'Error: tries each work in a worktree of their own; a computer, a VNC screen or after are for one mission. Use a team for that.';
+        const tool = require('./teams').find(x => x.name === 'team');
+        return tool.run({ action: 'create', title: String(task).replace(/\s+/g, ' ').slice(0, 60), goal: String(task).slice(0, 300), context, project,
+          tasks: [{ id: 'task', agent, task, tries: Math.floor(Number(tries)), ...(check ? { check } : {}), ...(test ? { test } : {}) }] }, ctx);
+      }
       // A specialist that keeps a computer of its own works in it, unless a computer is named (computers.ownFor).
       const def = require('../../agents/registry').get(agent);
       if (computer) { const no = require('../../computers/whose').refuse(ctx.user, computer); if (no) return `Error: ${no}`; }   // lent only by its person (S13)

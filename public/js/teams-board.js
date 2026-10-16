@@ -16,7 +16,7 @@ function _tbLanes(tasks) {
     if (lane[id] != null) return lane[id];
     if (seen.has(id)) return 0;
     seen.add(id);
-    const after = (byId[id]?.after || []).filter(a => byId[a]);
+    const after = (byId[id]?.after || []).flatMap(a => (byId[a] ? [a] : tasks.filter(t => t.trial?.of === a).map(t => t.id)));   // a task with tries: after all of them
     return (lane[id] = after.length ? 1 + Math.max(...after.map(a => of(a, seen))) : 0);
   };
   tasks.forEach(t => of(t.id));
@@ -48,6 +48,7 @@ function _tbTask(x, d) {
     ${line ? `<blockquote class="tb-line" title="${escHtml(line.kind === 'report' ? 'The first line of its report — its own words' : 'Its newest words — its own')}">${escHtml(line.text)}${line.at ? ` <small>${escHtml(_tpWhen(line.at))}</small>` : ''}</blockquote>` : ''}
     <div class="tb-foot">${member.branch ? `<span class="tmm-branch" title="Its own git worktree: ${escHtml(member.root || '')}">⑂ ${escHtml(member.branch)}</span>` : member.root ? '<span class="tmm-where">shared folder</span>' : ''}
       <span class="tb-acts">${member.sessionId ? `<button class="btn btn-xs" onclick="teamMemberOpen(${jsArg(member.sessionId)})" title="Open its conversation">Conversation</button>` : ''}
+      ${x.trial && x.keepable ? `<button class="btn btn-xs" onclick="teamsBoardPick(${jsArg(team.id)}, ${jsArg(x.trial.of)}, ${x.trial.n})" title="${x.chosen ? 'Go on with this try as it is, though its checks did not all hold' : 'Keep this try instead of the one kept now'}">Keep this try</button>` : ''}
       ${x.missionId && typeof hcMissionLog === 'function' ? `<button class="btn btn-xs" onclick="hcMissionLog(${jsArg(x.missionId)})" title="Its specialist's log">Log</button>` : ''}</span></div>
   </article>`;
 }
@@ -109,6 +110,13 @@ async function teamsBoardDraw(page, id) {
   if (docEl && typeof mdInto === 'function') mdInto(docEl, String(d.doc || '').replace(/^# .*\n+/, ''));
   else if (docEl) docEl.textContent = d.doc || '';
   page.scrollTop = keepY;
+}
+
+/** A person keeps another try of a task tried several times (teams/tries.js pick). */
+async function teamsBoardPick(id, of, n) {
+  try { await apiFetch(`/api/harness/missions/teams/${encodeURIComponent(id)}/pick`, { method: 'POST', body: { task: of, try: n } }); }
+  catch (e) { return appAlert(e.message); }
+  teamsPageLoad();
 }
 
 async function teamsBoardArchive(id, on) {

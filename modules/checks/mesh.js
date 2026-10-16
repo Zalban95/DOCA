@@ -7,6 +7,7 @@
  * separate parts it is. Read in Node (checks/mesh-read.js); a STEP file gives its size only, and says so.
  */
 const { read } = require('./mesh-read');
+const { verdict } = require('./verdict');
 
 function normalize(c, bad) {
   const out = { mesh: String(c.mesh).slice(0, 500) };
@@ -56,7 +57,7 @@ function topology({ positions: p, triangles: t }, size) {
 const fmt = v => (Math.round(v * 10) / 10).toString();
 
 async function check(c, file) {
-  const m = read(file), problems = [], unverified = [];
+  const m = read(file), problems = [], unproven = [], notes = [];
   const pts = m.step ? m.points : m.positions;
   if (!pts.length) return { ok: false, why: m.step ? 'a STEP file with no points in it' : 'it has no triangles' };
   if (pts.some(v => !Number.isFinite(v))) return { ok: false, why: 'it has coordinates that are not numbers' };
@@ -65,13 +66,13 @@ async function check(c, file) {
     const fitsAsIs = size.every((v, i) => v <= c.maxSize[i] + 1e-6);
     const s = [...size].sort((a, b) => a - b), mx = [...c.maxSize].sort((a, b) => a - b);
     if (!s.every((v, i) => v <= mx[i] + 1e-6)) problems.push(`it is ${dims}, larger than ${c.maxSize.join(' × ')} however it is turned`);
-    else if (!fitsAsIs) unverified.push(`it fits ${c.maxSize.join(' × ')} only turned`);
+    else if (!fitsAsIs) notes.push(`it fits ${c.maxSize.join(' × ')} only turned`);
   }
   let facts = `${dims}${m.step ? ' (from the points it lists)' : ''}`;
   if (m.step) {
     facts += `, ${m.solids} solid${m.solids === 1 ? '' : 's'}`;
     if (!m.solids) problems.push('it names no solid (MANIFOLD_SOLID_BREP)');
-    if (c.watertight) unverified.push('whether it is closed — a STEP solid is read as points here; check the STL exported from it');
+    if (c.watertight) unproven.push('whether it is closed — a STEP solid is read as points here; check the STL exported from it instead');
     if (c.minParts && m.solids < c.minParts) problems.push(`it has ${m.solids} solid${m.solids === 1 ? '' : 's'}, fewer than ${c.minParts}`);
     if (c.maxParts && m.solids > c.maxParts) problems.push(`it has ${m.solids} solids, more than ${c.maxParts}`);
   } else {
@@ -83,8 +84,7 @@ async function check(c, file) {
     if (c.minParts && tp.parts < c.minParts) problems.push(`it is ${tp.parts} part${tp.parts === 1 ? '' : 's'}, fewer than ${c.minParts}`);
     if (c.maxParts && tp.parts > c.maxParts) problems.push(`it is ${tp.parts} separate parts, more than ${c.maxParts} — pieces that do not touch print loose`);
   }
-  const tail = `${facts}${unverified.length ? `; not verified: ${unverified.join('; ')}` : ''}`;
-  return problems.length ? { ok: false, why: `${problems.join('; ')} (${tail})` } : { ok: true, why: tail };
+  return verdict({ problems, unproven, facts: `${facts}${notes.length ? `; ${notes.join('; ')}` : ''}` });
 }
 
 module.exports = { normalize, check, box, topology };

@@ -23,14 +23,8 @@ function reach(ref, ctx) {
   return { t };
 }
 
-/** Every secret DOCA keeps that could end up typed: VNC passwords, logins' passwords, keys for services, the hub's sealed secrets. */
-async function secrets() {
-  const out = [...require('../../vnc-targets/store').passwords()];
-  try { const l = require('../../logins'); for (const x of l.list()) out.push(l.secretOf(x.id)?.value); } catch { /* none */ }
-  try { const k = require('../../service-keys'); for (const x of k.list()) out.push(k.secretOf(x.name)?.value); } catch { /* none */ }
-  try { const v = require('../../sealed/vault'); for (const x of await v.list()) out.push((await v.reveal(x.name))?.value); } catch { /* none */ }
-  return out.filter(s => typeof s === 'string' && s.length >= 4);
-}
+/** Every secret DOCA keeps that could end up typed (secrets-kept.js). */
+const secrets = () => require('../../secrets-kept').values();
 
 async function look({ target, question, how }, ctx = {}) {
   const { t, no } = reach(target, ctx);
