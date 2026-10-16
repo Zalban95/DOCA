@@ -292,11 +292,11 @@ const handlePromptSize = wrap(async (req, res) => {
 const handleSettingsRead = wrap(async (_req, res) =>
   res.json({ settings: settings.readable(), sections: settings.SETTABLE }));
 
-// Who decides a proposal (approved 2026-10-07): the hive's settings are for a level holding `propose`; a proposal for one
-// screen is also its person's, whatever their level — they may change that screen themselves (/api/screen is `read`).
+// Who decides a proposal (2026-10-07): the hive's settings a level holding `propose`; one screen's also its person's; models for people an admin's.
 const proposalPerson = req => req.auth?.user ? { ...req.auth.user, role: req.auth.role } : null;
 const mayDecide = (req, p) => {
   const person = proposalPerson(req);
+  if (p?.kind === 'people-models') return !person?.role || require('../people-models/assign').isAdmin(person);   // whoever may assign; each change is checked as them
   if (!person?.role || require('../auth/rights').can(person.role, 'propose')) return true;
   if (!p?.screen) return false;
   if (p.screen.id === `person:${person.id}`) return true;   // their own layer, on every device (panel layout)
@@ -317,7 +317,7 @@ const handleProposalApply = wrap(async (req, res) => {
   if (p && !mayDecide(req, p)) return res.status(403).json({ error: 'Only someone whose level holds "propose" decides the hive\'s settings; a proposal for one screen is its person\'s.' });
   const person = req.auth && { ...req.auth.user, role: req.auth.role };
   // A screen's own settings are its person's to change at any level (/api/screen is `read`); whose screen it is decides.
-  const outside = p?.screen ? [] : (p?.changes || []).map(c => c.path).filter(path => person?.role && !require('../auth/permits').holds(person, `setting:${path}`));
+  const outside = p?.screen || p?.kind ? [] : (p?.changes || []).map(c => c.path).filter(path => person?.role && !require('../auth/permits').holds(person, `setting:${path}`));
   if (outside.length) return res.status(403).json({ error: `Your level does not cover ${outside.join(', ')}; someone whose level does can apply it.` });
   res.json({ ok: true, ...settings.apply(req.params.id, { person: req.auth?.user ? person : null }) });
 });

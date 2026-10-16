@@ -49,6 +49,7 @@ const PURPOSE = {
   mcp_draft: 'prepare an MCP server that is not in the catalogue',
   service_draft: 'prepare a web API that needs a key the person pastes',
   spend_propose: 'ask to be allowed to spend money',
+  people_models: 'see or assign the models people run on',
   permission_grant: 'give a dispatched mission one more permission',
   mcp_status: 'the MCP servers, their state and tools',
   agent_resume: 'carry on or drop a paused mission',
@@ -101,6 +102,7 @@ const CUES = {
   mcp_status: /\bmcp\b/i,
   service_draft: /\b(set up|connect|add|integrate|hook up|use)\b[^.?!]{0,40}\bapi\b|\bapi key\b/i,
   spend_propose: /\b(spend|spending|euros?|dollars?|budget)\b|[€$]\s?\d/i,
+  people_models: /\b(models? for (people|him|her|them|everyone)|assign(ed)? (a |the )?model|(give|gives) \w+ (the|a) [\w-]* ?model|model (assigned|assignment))\b/i,
   permission_grant: /\b(let|allow|permit|grant)\b[^.?!]{0,40}\b(coder|tester|researcher|scout|reporter|archivist|blender|specialist|mission)\b/i,
   shell_job: /\b(dev server|in the background|npm run|start the (app|server|site|web ?app)|serve it)\b/i,
 };

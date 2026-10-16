@@ -144,6 +144,7 @@ function prefsBody(body, replace = false) {
 function proposal(id) {
   const p = require('../harness/settings').find(id);
   if (!p || p.screen) return null;   // a screen's own layer is not a switch
+  if (p.kind === 'people-models') return sw('peopleModels');   // an agent's people_models proposal: its Accept asks the password
   const live = require('../utils').loadPrefs();
   return prefsTouched(p.changes.map(c => ({ path: c.path, from: get(live, c.path), to: c.to })));
 }

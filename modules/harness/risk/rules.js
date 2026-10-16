@@ -72,6 +72,7 @@ const TOOLS = {
   settings_propose: [{ tier: 'reversible', way: `${WAY.proposal}; a saved setting is checkpointed (Settings → System → Checkpoints)` }],
   install_propose: [{ tier: 'reversible', way: WAY.proposal }],
   spend_propose: [{ tier: 'reversible', way: WAY.proposal }],
+  people_models: [{ tier: 'reversible', way: WAY.proposal }],
   mcp_draft: [{ tier: 'reversible', way: WAY.proposal }],
   service_draft: [{ tier: 'reversible', way: WAY.proposal }],
   memory_write: [{ tier: 'reversible', way: WAY.memory }],

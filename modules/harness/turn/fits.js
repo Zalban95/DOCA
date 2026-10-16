@@ -47,6 +47,15 @@ function likely(message, held, sessionId = null, already = [], schemas = []) {
     }
     for (const a of require('./tool-cues').advice(text)) rows.push(`- ${a}`);
   } catch { /* none */ }
+  if (held.has('people_models') && person?.id) {
+    try {
+      const as = require('../../people-models/assign');
+      if (as.isAdmin(person)) {
+        const v = require('../../people-models/routes').view(person);
+        out.push(`- Models for people: ${person.name || 'your person'} may assign to ${v.people.length} ${v.people.length === 1 ? 'person' : 'people'} and ${v.levels.length} level${v.levels.length === 1 ? '' : 's'} below them (\`people_models\` show; propose prepares the change as a card they accept with their password).`);
+      }
+    } catch { /* no accounts */ }
+  }
   if (held.has('recipe')) {
     let recipes = [];
     try { recipes = require('../../recipes/store').list().map(r => ({ name: r.id, description: `${r.title || ''}. ${r.description || ''}` })); } catch { /* none */ }

@@ -30,6 +30,7 @@ const TOOLS = [
   ...require('./toolbox/settings'),
   ...require('./toolbox/panel'),
   ...require('./toolbox/spending'),
+  ...require('./toolbox/people-models'),   // models for people: show, and propose what a person asked (people-models/)
   ...require('./toolbox/agents'),
   ...require('./toolbox/teams'),
   ...require('./toolbox/scout'),
