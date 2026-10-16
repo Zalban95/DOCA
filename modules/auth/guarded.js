@@ -43,6 +43,7 @@ const SWITCHES = {
   sealed:         { what: 'secrets for devices', password: 'a secret kept or replaced is one the agents will type on a device' },
   licence:        { what: 'the licence', password: 'the licence decides which features exist here; a wrong one turns them read-only' },
   door:           { what: 'unlocking a door or disarming an alarm', password: 'it opens a house: a borrowed session must not' },
+  peopleModels:   { what: 'which models people run on', password: 'it decides what every person\'s agents run on and spend: a borrowed session must not hand itself a model (2026-10-16)' },
 
   // ── A notice: what it does and why it matters, then Continue ──
   approval:       { what: 'the approval mode', notice: 'The approval mode decides which of the agents\' actions wait for your click. On Auto they act without asking; on Manual they ask first.' },
@@ -79,6 +80,7 @@ const PREFS = [
   ['tracing', 'tracing'],
   ['logs', 'logs'],
   ['usagePrices', 'prices', () => moneyBudgets()],
+  ['peopleModels', 'peopleModels'],   // which models people run on (people-models/)
 ];
 
 /** Whether a change of teams.outside.use (one harness's value, or the whole map) moves any harness to "free". */

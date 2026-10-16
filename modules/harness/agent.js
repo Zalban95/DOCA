@@ -131,7 +131,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   // at their own budget, on their own turn, they are asked first whether to go over it this once (spending/over.js).
   const overAsk = require('../spending/over').askable({ client, profile, sessionId }) && (e => require('../spending/over').ask(e, { client, sessionId, signal, say }));
   let p = await require('./turn/ceiling').check(require('./turn/choice').apply(turnParams(profile), sessionId), new Date(), { person: client?.user, sessionId, ask: overAsk });
-  p = require('../auth/allot').narrowModel(p, client?.user);   // only the models allotted to the person (S13)
+  p = require('../auth/allot').narrowModel(require('../people-models').apply(p, { person: client?.user, sessionId }), client?.user);   // the owner's model policy for people, then only what is allotted (S13)
   if (p._allotted) say({ type: 'warning', kind: 'allotted', text: p._allotted });
   // Assistant mode (a call from the face) may have a quicker model of its own, and every turn knows its thinking effort.
   // Its model is held to the person's allotment too: not allotted, the turn keeps the narrowed one (review 2026-10-07).

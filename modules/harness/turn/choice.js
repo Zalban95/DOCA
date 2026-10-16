@@ -30,7 +30,9 @@ function apply(p, sessionId) { return require('./compact-choice').apply(applyMod
 function applyModel(p, sessionId) {
   let s = null;
   try { s = memory.getSession(sessionId || memory.activeSession()?.id); } catch { /* no session yet */ }
-  const pick = s?.modelChoice;
+  let pick = s?.modelChoice;
+  // A person's own choice counts only where the owner lets people choose (people-models/); the rest of it still does.
+  if (pick?.model && !require('../../people-models').choiceCounts(s.id)) pick = pick.fallback === false ? { fallback: false } : null;
   if (!pick || (!pick.model && pick.fallback !== false)) return p;
   const list = order(p);
   const at = pick.model ? list.findIndex(e => e.provider === pick.provider && e.model === pick.model) : 0;
