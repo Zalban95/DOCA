@@ -44,6 +44,7 @@ const TOOLS = [
   ...require('./toolbox/services'),
   ...require('./toolbox/canvas'),
   ...require('./toolbox/project'),
+  ...require('./toolbox/params'),   // a project's parameters and its build without a model (modules/params)
   ...require('./toolbox/skills'),
   ...require('./toolbox/computers'),
   ...require('./toolbox/vnc'),

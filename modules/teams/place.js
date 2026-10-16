@@ -16,11 +16,14 @@ const WRITING_TOOLS = new Set(['write_file', 'replace_in_files', 'shell', 'shell
 
 /** The project a team names: by id or name (not one put away); null for none. Throws a sentence for a wrong name. */
 function resolve(project, leaderId) {
-  const projects = require('../projects/store');
+  const projects = require('../projects/store'), access = require('../projects/access');
   if (project != null && String(project).trim()) {
     const want = String(project).trim();
-    const p = projects.get(want) || projects.list().find(x => !x.archivedAt && x.name.toLowerCase() === want.toLowerCase());
-    if (!p || p.archivedAt) throw Object.assign(new Error(`No project called "${want}". Projects: ${projects.list().filter(x => !x.archivedAt).map(x => x.name).join(', ') || 'none'}.`), { status: 404 });
+    // Only a project the leader's person may work on (projects/access.js); another person's is not named.
+    const owner = require('../harness/session-access').ownerOf(leaderId), person = owner ? access.personById(owner) : null;
+    const mine = projects.list().filter(x => !x.archivedAt && access.mayWork(person, x));
+    const p = mine.find(x => x.id === want) || mine.find(x => x.name.toLowerCase() === want.toLowerCase());
+    if (!p) throw Object.assign(new Error(`No project called "${want}". Projects: ${mine.map(x => x.name).join(', ') || 'none'}.`), { status: 404 });
     return p;
   }
   try { const p = projects.forSession(leaderId); return p ? projects.get(p.id) : null; } catch { return null; }

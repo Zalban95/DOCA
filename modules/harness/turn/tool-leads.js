@@ -30,6 +30,7 @@ const LEADS = {
   search_files: 'Search the text of files under a folder — use it instead of grep in the shell to find where something is.',
   git: 'Status, log, diff, show, branches, stage, commit and switch in a repository — use it for git work; it never pushes or resets.',
   project: 'A project\'s commands, info and worktrees — use it to run a project\'s build or test, or to work in a worktree of its own.',
+  project_params: 'A project\'s parameters and its build with no model — use it to read or change values in project.params.json and rebuild.',
   tool_note: 'Propose a note about a tool that this install taught you — use it when a tool has a quirk its description does not say.',
   skill: 'Read, list or write a skill (a procedure for a kind of task) — read one when the task matches a skill in your prompt.',
   computer: 'Make or manage a Linux desktop in a container — use it for risky tests, sites used as a person would, or recording a demo.',

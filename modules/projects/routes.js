@@ -1,9 +1,11 @@
 'use strict';
 
 /**
- * /api/projects — the Projects tab. Every route is the host right (a project
- * is files and a shell), and every one calls the same module the agent's tools
- * call. Files themselves are read and written through /api/files, as the Files
+ * /api/projects — the Projects tab. A project's files, git, commands and
+ * checkpoints are the host right (a project is files and a shell); listing,
+ * opening, its chats, its parameters and who has it are a person's, narrowed to
+ * the projects they own or were shared (access.js; rights.js lists which).
+ * Every one calls the same module the agent's tools call. Files themselves are read and written through /api/files, as the Files
  * tab does: one implementation of "open a file", with its root checks.
  */
 const path     = require('path');
@@ -12,7 +14,9 @@ const git      = require('./git');
 
 const fail = (res, e) => res.status(e.status || 500).json({ error: e.message });
 const h = fn => async (req, res) => { try { res.json(await fn(req, res)); } catch (e) { fail(res, e); } };
-const P = req => projects.need(req.params.id);
+const access   = require('./access');
+const who = req => access.personOfReq(req);
+const P = (req, o) => access.need(who(req), req.params.id, o);   // 404 for a project this person may not see
 
 async function detail(p) {
   const { info, commands } = await require('./run').commands(p);
@@ -23,14 +27,21 @@ async function detail(p) {
 
 function mount(app) {
   require('../harness-teams/routes').mount(app, { h, P });   // Team branches: a team's work, with its diff and Merge
-  app.get('/api/projects', h(req => ({ projects: projects.list().filter(p => req.query.all === '1' || !p.archivedAt) })));   // archived ones: the Archive page
-  app.post('/api/projects', h(req => ({ project: projects.create(req.body || {}) })));
+  app.get('/api/projects', h(req => ({ projects: access.visible(who(req), projects.list()).filter(p => req.query.all === '1' || !p.archivedAt)
+    .map(p => ({ ...p, yours: access.rightOn(who(req), p) })) })));   // archived ones: the Archive page
+  app.post('/api/projects', h(req => ({ project: projects.create(req.body || {}, who(req)) })));
   app.get('/api/projects/:id', h(async req => {
+    P(req);
     const p = projects.update(req.params.id, { openedAt: new Date().toISOString() });
-    return detail(p);
+    return { ...(await detail(p)), yours: access.rightOn(who(req), p) };
   }));
-  app.post('/api/projects/:id', h(req => { require('./brief').forget(req.params.id); return { project: projects.update(req.params.id, req.body || {}) }; }));
-  app.delete('/api/projects/:id', h(req => { projects.remove(req.params.id); return { ok: true }; }));
+  app.post('/api/projects/:id', h(req => { P(req); require('./brief').forget(req.params.id); return { project: projects.update(req.params.id, req.body || {}) }; }));
+  app.delete('/api/projects/:id', h(req => { P(req, { manage: true }); projects.remove(req.params.id); return { ok: true }; }));
+  // Who has it (access.js): its owner, its shares and who set what; sharing is its owner's or a host's, the owner a host's.
+  app.get('/api/projects/:id/sharing', h(req => access.view(who(req), req.params.id)));
+  app.post('/api/projects/:id/sharing', h(req => { access.share(who(req), req.params.id, req.body || {}); return access.view(who(req), req.params.id); }));
+  app.post('/api/projects/:id/owner', h(req => { access.setOwner(who(req), req.params.id, req.body?.personId); return access.view(who(req), req.params.id); }));
+  require('../params/routes').mount(app, { h, P, who });   // the project's parameters, its mask and its build (params/)
 
   app.post('/api/projects/:id/search', h(req => require('./search').search(P(req).root, req.body || {})));
   app.post('/api/projects/:id/replace', h(async req => {
@@ -118,19 +129,18 @@ function mount(app) {
   app.post('/api/projects/lsp/servers/:name/install', h(req => require('./lsp').install(req.params.name)));
 
   // The project's conversation: its bound work chat, made on first use.
-  app.post('/api/projects/:id/chat', h(req => ({ sessionId: projects.workChat(req.params.id, personOf(req)).id })));
+  app.post('/api/projects/:id/chat', h(req => { P(req, { work: true }); return { sessionId: projects.workChat(req.params.id, who(req)).id }; }));
   // Its chat tabs: every conversation working here, sub-agents included, and a new one.
-  app.get('/api/projects/:id/chats', h(req => ({ chats: projects.chats(req.params.id, { all: req.query.all === '1' }) })));
+  app.get('/api/projects/:id/chats', h(req => { P(req); return { chats: projects.chats(req.params.id, { all: req.query.all === '1', person: who(req) }) }; }));
   // A page: a markdown file beginning with its title (pages.js).
-  app.post('/api/projects/:id/pages', h(req => require('./pages').newPage(req.params.id, req.body?.title)));
+  app.post('/api/projects/:id/pages', h(req => { P(req); return require('./pages').newPage(req.params.id, req.body?.title); }));
   app.post('/api/projects/:id/chats', h(async req => {   // { worktree: true }: its own git worktree (worktrees.js); { page }: about one page (pages.js)
-    const chat = projects.newChat(req.params.id, req.body || {}, personOf(req));
+    P(req, { work: true });
+    if ((req.body?.worktree || req.body?.page) && !access.isHost(who(req))) throw Object.assign(new Error('A worktree or a page is the project\'s files: an admin\'s.'), { status: 403 });
+    const chat = projects.newChat(req.params.id, req.body || {}, who(req));
     if (req.body?.worktree) chat.worktree = await require('./worktrees').create(chat.id);
     return { chat };
   }));
 }
-
-/** Who asked: a project's chats go under their own Orchestrator (harness/own-main.js). */
-function personOf(req) { return require('../harness/turn/client').personOf(req.auth); }
 
 module.exports = { mount, detail };

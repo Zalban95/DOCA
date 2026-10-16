@@ -99,6 +99,6 @@ module.exports = [
   row('evals', 'write and run evaluation sets', ['POST /api/evals/*', 'PUT /api/evals/:id', 'DELETE /api/evals/:id'], { only: 'a run spends tokens and its results hold answers: a host\'s' }),
 
   // ── Projects: folders and git on this machine ──
-  row('projects', 'make projects, their chats, pages and worktrees; edit, run and commit', ['POST /api/projects', 'POST /api/projects/*', 'DELETE /api/projects/:id', 'PATCH /api/projects/:id/checkpoints/:cp',
+  row('projects', 'open a folder of this machine as a project; its chats, pages and worktrees; edit, run and commit', ['POST /api/projects/*', 'PATCH /api/projects/:id/checkpoints/:cp',
     'DELETE /api/projects/:id/checkpoints/:cp'], { only: 'a project is a folder on this machine and its git; its chats are conversations a device reaches at /api/v1/harness' }),
 ];

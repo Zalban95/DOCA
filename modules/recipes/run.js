@@ -52,17 +52,18 @@ function resolveParams(recipe, given = {}) {
 
 /**
  * @param {object} recipe
- * @param {{ params?: object, person?: object, client?: object, parentId?: string, signal?: AbortSignal, emit?: Function }} o
+ * @param {{ params?: object, person?: object, client?: object, parentId?: string, signal?: AbortSignal, emit?: Function, fields?: object }} o
+ *   fields: where the run's conversation works (a project's build: {projectId, paramsBuild}, params/build.js)
  * @returns {Promise<{ ok, recipe, revision, sessionId, steps: Array<{n, tool, ok, why?, result}>, failedAt? }>}
  */
-async function run(recipe, { params = {}, person = null, client = null, parentId = null, signal, emit = () => {} } = {}) {
+async function run(recipe, { params = {}, person = null, client = null, parentId = null, signal, emit = () => {}, fields = null } = {}) {
   const values = resolveParams(recipe, params);
   const memory = require('../harness/memory');
   const tools = require('../harness/tools');
   const { disabledFor } = require('../harness/turn/prompt');
   const { runToolCalls } = require('../harness/turn/tool-calls');
   const lifecycle = require('../harness/turn/lifecycle');
-  const session = memory.createSession(`Recipe · ${recipe.title}`.slice(0, 120), { activate: false, parentId });
+  const session = memory.createSession(`Recipe · ${recipe.title}`.slice(0, 120), { activate: false, parentId, fields });
   if (person?.id) require('../harness/session-access').claim(person, session.id);
   const ctrl = new AbortController();
   if (signal) signal.addEventListener('abort', () => ctrl.abort(), { once: true });

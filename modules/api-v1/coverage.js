@@ -18,7 +18,7 @@ const HOST = 'the machine\'s own administration: a host\'s, at the panel';
 const COVERAGE = {
   harness: { v1: ['/harness'] },
   chat: { v1: ['/harness'], note: 'the floating chat is a conversation like any other' },
-  projects: { v1: ['/harness'], note: 'a project\'s chats are conversations; its files and git are the machine\'s', panel: HOST },
+  projects: { v1: ['/harness', '/projects'], note: 'a project\'s chats are conversations, its parameters and build /projects (as the device\'s person); its files and git are the machine\'s', panel: HOST },
   attachments: { v1: ['/media', '/harness/images'] },
   devices: { v1: ['/devices'] },
   screen: { v1: ['/settings/effective', '/settings/look'] },
