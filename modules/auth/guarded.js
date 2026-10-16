@@ -33,6 +33,7 @@ const SWITCHES = {
   releasing:      { what: 'who may release unasked', password: 'it lets a model merge, tag and push without a person: a grant of who may do what' },
   packIn:         { what: 'bringing a pack in (it can carry a level, specialists and rules)', password: 'an edition can create or replace a level; an upload cannot be read before the gate' },
   unattended:     { what: 'Unattended (nothing is asked, proposals apply themselves)', password: 'it removes every question a person would otherwise answer' },
+  outsideFree:    { what: 'an outside harness starting on its own ("On its own")', password: 'it lets the Orchestrator start another vendor\'s agent, which runs every command unasked in an agents\' computer, without asking you' },
   guardsOff:      { what: 'turning a guard off, loosening or removing it', password: 'the guards are what stands between outside text and the agents' },
   restoreSettings:{ what: 'restoring settings', password: 'it writes back every setting, the password-guarded ones included' },
   restoreBackup:  { what: 'restoring a backup', password: 'it replaces the settings and the keys with what the backup holds' },
@@ -66,6 +67,7 @@ const SWITCHES = {
 /** Settings that are switches. A path guards everything under it; the first row that matches a change decides. */
 const PREFS = [
   ['harness.approval.mode', 'unattended', null, to => to === 'unattended'],   // only Unattended asks for the password
+  ['teams.outside.use', 'outsideFree', null, (to, from) => newlyFree(to, from)],   // only moving one to "free"; tightening asks nothing (2026-10-16)
   ['harness.approval', 'approval'],
   ['agents.enabled', 'specialists'],
   ['developer.releaseUnasked', 'releasing'],
@@ -78,6 +80,13 @@ const PREFS = [
   ['logs', 'logs'],
   ['usagePrices', 'prices', () => moneyBudgets()],
 ];
+
+/** Whether a change of teams.outside.use (one harness's value, or the whole map) moves any harness to "free". */
+function newlyFree(to, from) {
+  if (typeof to === 'string' || to == null) return to === 'free' && from !== 'free';
+  const was = from && typeof from === 'object' ? from : {};
+  return typeof to === 'object' && Object.entries(to).some(([k, v]) => v === 'free' && was[k] !== 'free');
+}
 
 /** Whether any money budget exists: only then do the prices decide whether a turn starts (spending/budgets.js). */
 function moneyBudgets() {
@@ -110,7 +119,7 @@ function prefsTouched(changes) {
     for (const [p, key, when, valueIs] of PREFS) {
       if (!(path === p || path.startsWith(`${p}.`) || p.startsWith(`${path}.`))) continue;
       const under = v => (p.length > path.length ? get({ v }, `v${p.slice(path.length)}`) : v);
-      if (same(under(to), under(from)) || (when && !when()) || (valueIs && !valueIs(under(to)))) continue;
+      if (same(under(to), under(from)) || (when && !when()) || (valueIs && !valueIs(under(to), under(from)))) continue;
       hit = stronger(hit, sw(key));
     }
   }

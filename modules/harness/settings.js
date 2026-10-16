@@ -116,6 +116,13 @@ function refuse(dotted, value, { screen = null } = {}) {
   if (dotted.startsWith('toolNotes')) { const why = require('./tool-notes').refuseValue(dotted, value); if (why) return why; }
   if (dotted === 'agents.enabled' && typeof value !== 'boolean')
     return 'agents.enabled must be a boolean (true or false)';
+  if (/^teams\.outside\.use(\.|$)/.test(dotted)) {   // one harness's switch, by catalog id (harness-teams/harnesses.js)
+    const ok = v => ['never', 'ask', 'free'].includes(v);
+    const ids = new Set(require('../harness-teams/harnesses').all().map(r => r.id));
+    const one = dotted.split('.')[3];
+    if (dotted.split('.').length > 4 || (one && (!ids.has(one) || !ok(value))) || (!one && !(value && typeof value === 'object' && !Array.isArray(value) && Object.entries(value).every(([k, v]) => ids.has(k) && ok(v)))))
+      return `teams.outside.use.<harness> is "never", "ask" or "free", for one of: ${[...ids].join(', ')}`;
+  }
 
   if (value === undefined)                            return `${dotted}: no value given`;
   if (typeof value === 'function' || typeof value === 'bigint') return `${dotted}: value is not JSON`;
