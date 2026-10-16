@@ -9,7 +9,8 @@
  *   { mesh, maxSize?: [x, y, z], watertight?, minParts? }     checks/mesh.js
  *   { image, notBlank?, contains?, width?, height? }          checks/image.js
  * Each answers { ok, why }: what failed and where (the second, the page and the place on it, the edge count), and what it
- * could not verify — a program that is missing is named, never passed over in silence. Every reader runs a program the
+ * could not verify — a program that is missing is named, never passed over in silence. A requirement the contract asked
+ * for that could not be verified does not hold: it fails, saying what to install (checks/verdict.js, the one rule). Every reader runs a program the
  * hub knows by argv (checks/bin.js) on a file under the allowed roots; nothing here runs a command the agent wrote, and
  * no model reads the file.
  */

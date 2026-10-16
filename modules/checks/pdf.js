@@ -6,12 +6,15 @@
  *   - `contains`: words that must be on it — a dimension, a title block's fields
  *   - laid out cleanly (on unless `noOverlap: false`): no text over other text, no line run through a word (the page
  *     drawn without its text by Ghostscript, inked where a word sits), nothing running off the sheet (ink at its edge)
+ *     — `noOverlap: true` asks for it outright, and then a look that cannot be made (no Ghostscript, text drawn as lines)
+ *     fails rather than being said as not verified (checks/verdict.js)
  * A drawing with views over each other and leaders off the sheet passed as "a PDF exists" (2026-10-16); this fails it,
  * naming the page and the place in millimetres from the sheet's top left.
  */
 const bin = require('./bin');
 const raster = require('./raster');
 const ocr = require('./ocr');
+const { verdict } = require('./verdict');
 
 const MM = 25.4 / 72;
 const mm = v => Math.round(v * MM);
@@ -25,6 +28,7 @@ function normalize(c, bad) {
     if (list.length) out.contains = list;
   }
   if (c.noOverlap === false) out.noOverlap = false;
+  else if (c.noOverlap === true) out.noOverlap = true;   // asked outright: what cannot be looked at fails (checks/verdict.js)
   return out;
 }
 
@@ -86,23 +90,25 @@ async function check(c, file) {
   let pages;
   try { pages = await textLayer(file); } catch (e) { return { ok: false, why: e.missing ? `could not read the PDF: ${e.message}` : `not a PDF poppler can read (${e.message})` }; }
   if (!pages.length) return { ok: false, why: 'it has no pages' };
-  const problems = [], unverified = [], tidy = c.noOverlap !== false;
+  const problems = [], unproven = [], unverified = [], tidy = c.noOverlap !== false;
+  // Asked for (contains, noOverlap: true): what cannot be looked at fails; looked at by default: said only (verdict.js).
+  const textMiss = c.contains ? unproven : unverified, tidyMiss = c.noOverlap === true ? unproven : unverified;
   if (c.pages && pages.length !== c.pages) problems.push(`it has ${pages.length} page${pages.length === 1 ? '' : 's'}, not ${c.pages}`);
   const words = pages.reduce((n, p) => n + p.words.length, 0);
   // Its text: the text layer, else what the OCR reads off the drawn pages (a CAD program may draw text as lines).
-  let text = norm(pages.map(p => p.words.map(w => w.t).join(' ')).join(' '));
+  let text = norm(pages.map(p => p.words.map(w => w.t).join(' ')).join(' ')), read = !!words;
   if (!words) {
     if (bin.find('tesseract') && bin.find('pdftoppm')) {
-      try { const read = []; for (let n = 1; n <= Math.min(pages.length, 6); n++) read.push(await ocrPage(file, n)); text = norm(read.join(' ')); }
-      catch (e) { unverified.push(`its text (${e.message})`); }
-    } else if (c.contains) unverified.push(`its text: it has no text layer, and reading the drawn text needs ${bin.find('tesseract') ? bin.missing('pdftoppm') : bin.missing('tesseract')}`);
+      try { const got = []; for (let n = 1; n <= Math.min(pages.length, 6); n++) got.push(await ocrPage(file, n)); text = norm(got.join(' ')); read = true; }
+      catch (e) { textMiss.push(`its text (${e.message})`); }
+    } else textMiss.push(`its text: it has no text layer, and reading the drawn text needs ${bin.find('tesseract') ? bin.missing('pdftoppm') : bin.missing('tesseract')}`);
   }
-  if (!text.trim()) problems.push('no text could be read on it (no text layer, and none the OCR could make out)');
-  const absent = (c.contains || []).filter(want => text.trim() && !text.includes(norm(want)));
+  if (read && !text.trim()) problems.push('no text could be read on it (no text layer, and none the OCR could make out)');
+  const absent = read ? (c.contains || []).filter(want => text.trim() && !text.includes(norm(want))) : [];
   // Read off drawn lines, a miss may be the OCR's: said with what it did read, so the agent can tell which.
   if (absent.length) problems.push(`it does not show ${absent.map(w => `"${w}"`).join(', ')}${words ? '' : ` as far as the OCR can read its drawn text (it read: "${text.trim().slice(0, 160)}")`}`);
   if (tidy) {
-    if (!words) unverified.push('text over text and lines through text (its text is drawn as lines, so there are no word boxes to compare)');
+    if (!words) tidyMiss.push('text over text and lines through text (its text is drawn as lines, so there are no word boxes to compare)');
     for (let i = 0; i < pages.length && i < 30; i++) {
       const p = pages[i], n = i + 1, on = pages.length > 1 ? `page ${n}: ` : '';
       const off = offPage(p);
@@ -111,17 +117,16 @@ async function check(c, file) {
       if (over.length) problems.push(`${on}text is drawn over other text in ${over.length} place${over.length === 1 ? '' : 's'} — ${some(over, ([a, b]) => `"${a.t}" over "${b.t}" at ${mm(a.x0)},${mm(a.y0)} mm`)}`);
       if (p.words.length && bin.find('gs')) {
         try { const hit = await crossed(file, n, p); if (hit.length) problems.push(`${on}a drawn line runs through ${hit.length} word${hit.length === 1 ? '' : 's'} — ${some(hit, at, 4)}`); }
-        catch (e) { unverified.push(`${on}lines through text (${e.message})`); }
-      } else if (p.words.length && i === 0) unverified.push(`lines through text — ${bin.missing('gs')}`);
+        catch (e) { tidyMiss.push(`${on}lines through text (${e.message})`); }
+      } else if (p.words.length && i === 0) tidyMiss.push(`lines through text — ${bin.missing('gs')}`);
       if (bin.find('pdftoppm')) {
         try { const cut = await edges(file, n); if (cut.length) problems.push(`${on}the drawing runs off the sheet at the ${cut.join(' and ')}`); }
-        catch (e) { unverified.push(`${on}the sheet's edges (${e.message})`); }
-      } else if (i === 0) unverified.push(`the sheet's edges — ${bin.missing('pdftoppm')}`);
+        catch (e) { tidyMiss.push(`${on}the sheet's edges (${e.message})`); }
+      } else if (i === 0) tidyMiss.push(`the sheet's edges — ${bin.missing('pdftoppm')}`);
     }
   }
-  const tail = `${pages.length} page${pages.length === 1 ? '' : 's'}, ${mm(pages[0].w)}×${mm(pages[0].h)} mm, ${words ? `${words} words` : 'text drawn as lines'}`
-    + `${unverified.length ? `; not verified: ${unverified.join('; ')}` : ''}`;
-  return problems.length ? { ok: false, why: `${problems.join('; ')} (${tail})` } : { ok: true, why: tail };
+  const facts = `${pages.length} page${pages.length === 1 ? '' : 's'}, ${mm(pages[0].w)}×${mm(pages[0].h)} mm, ${words ? `${words} words` : 'text drawn as lines'}`;
+  return verdict({ problems, unproven, unverified, facts });
 }
 
 module.exports = { normalize, check, textLayer, overlaps };

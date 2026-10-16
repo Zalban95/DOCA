@@ -75,7 +75,7 @@ test('a long argument of an old call is left out of re-sends as valid JSON; the 
   const sent = clear.view(rows, folded, memory.getSession(s.id).clearedThrough, s.id);
   const first = JSON.parse(sent[1].tool_calls[0].function.arguments);
   assert.equal(first.path, '/tmp/p0.scad', 'short values stay');
-  assert.match(first.content, /^\[DOCA: \d+ characters you sent here earlier, left out/);
+  assert.match(first.content, /^\[left out to save context: \d+ characters you sent here earlier/);
   assert.ok(memory.messages(s.id)[1].tool_calls[0].function.arguments.includes('cube(1);'), 'the stored transcript is untouched');
 });
 

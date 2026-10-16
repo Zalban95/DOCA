@@ -1,12 +1,12 @@
 {
   "id": "product-video",
   "title": "Product promo video (starts the render in the background)",
-  "description": "Starts a promo render from a video spec: title card, turntable, the parts coming together in list order with their names, end card, cut to the exact duration. Returns at once; the render keeps going after the turn ends and writes <video>.done.json when it finishes. skills/product-video says what goes in the spec and how to wait.",
+  "description": "Starts a promo render from a video spec as a background job (shell_job sees it, stops it and lists it): title card, turntable, the parts coming together in list order with their names, end card, cut to the exact duration. Returns at once with the job id; the job keeps going after the turn ends and writes <video>.done.json when it finishes. skills/product-video says what goes in the spec and how to wait.",
   "params": [
     { "name": "spec", "description": "The video spec, a JSON file (parts, title, subtitle, end line, duration, resolution, style)." }
   ],
   "steps": [
-    { "tool": "shell", "args": { "command": "node \"{{skills}}/product-video/scripts/promo.js\" start {spec}", "timeoutSec": 60 }, "check": { "contains": "\"marker\"" },
-      "note": "Then: node <same script> wait <spec> (exit 0 done, 1 failed, 2 still running), or status." }
+    { "tool": "shell", "args": { "command": "node \"{{skills}}/product-video/scripts/promo.js\" start {spec}", "background": true }, "check": { "contains": "Started background job" },
+      "note": "Then: node <same script> wait <spec> (exit 0 done, 1 failed, 2 still running), or status; shell_job status, output or stop with the job id." }
   ]
 }

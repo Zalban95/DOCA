@@ -13,6 +13,7 @@
 const bin = require('./bin');
 const raster = require('./raster');
 const ocr = require('./ocr');
+const { verdict } = require('./verdict');
 
 const SAMPLE_W = 480;   // the blank look's frames: small is enough to count edges
 const BLANK = s => s.edges < 1 && s.sd < 12;
@@ -96,8 +97,8 @@ async function check(c, file) {
     if (over[0]) { const g = over[0];
       problems.push(`at ${sec(g.t)} text is drawn over other text at (${g.x},${g.y}) px: in the line "${g.line.slice(0, 80)}" the OCR cannot make out "${g.word.slice(0, 30)}"${also(over)}`); }
   }
-  const tail = `${facts}; ${list.length} moments sampled${looked ? `, text read on ${looked} frames` : ''}${unverified.length ? `; not verified: ${unverified.join('; ')}` : ''}`;
-  return problems.length ? { ok: false, why: `${problems.join('; ')} (${tail})` } : { ok: true, why: tail };
+  // Every look here is made by default (a video's contract asks for facts, which ffprobe always gives): said, never failed.
+  return verdict({ problems, unverified, facts: `${facts}; ${list.length} moments sampled${looked ? `, text read on ${looked} frames` : ''}` });
 }
 
 module.exports = { normalize, check, probe, samples, blanks };

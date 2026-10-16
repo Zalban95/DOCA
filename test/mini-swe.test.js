@@ -62,11 +62,28 @@ test('off until a person switches it on: installed here, or named in the allow l
     assert.deepEqual(harnesses.offered().map(r => r.id), ['mini']);
     setAllow([]);
     const bin = path.join(process.env.PATH, process.platform === 'win32' ? 'mini.exe' : 'mini');
-    fs.writeFileSync(bin, '#!/bin/sh\n'); fs.chmodSync(bin, 0o755);
+    fs.writeFileSync(bin, '#!/bin/sh\necho "some other mini"\n'); fs.chmodSync(bin, 0o755);
     harnesses._found.clear();
-    assert.ok(harnesses.offered().some(r => r.id === 'mini'), 'installed on the Harness tab: on');
+    assert.ok(!harnesses.offered().some(r => r.id === 'mini'), 'another program called mini is not mini-swe-agent: still off');
+    fs.writeFileSync(bin, '#!/home/u/.local/share/uv/tools/mini-swe-agent/bin/python\nimport sys\nfrom minisweagent.run.mini import app\nsys.exit(app())\n');
+    harnesses._found.clear();
+    assert.ok(harnesses.offered().some(r => r.id === 'mini'), 'installed on the Harness tab (its launcher names the package): on');
     assert.equal(harnesses.find('mini-swe-agent').id, 'mini', 'found by its label too');
   } finally { fs.rmSync(process.env.PATH, { recursive: true, force: true }); process.env.PATH = saved; harnesses._found.clear(); setAllow([]); }
+});
+
+test('installed by uv, its command is a link into the package\'s own folder: that counts too', { skip: process.platform === 'win32' && 'a symlinked command needs a POSIX host' }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-uvmini-'));
+  const tool = path.join(dir, 'tools', 'mini-swe-agent', 'bin');
+  fs.mkdirSync(tool, { recursive: true });
+  fs.writeFileSync(path.join(tool, 'mini'), '\x7fELF not a script'); fs.chmodSync(path.join(tool, 'mini'), 0o755);
+  fs.mkdirSync(path.join(dir, 'bin'));
+  fs.symlinkSync(path.join(tool, 'mini'), path.join(dir, 'bin', 'mini'));
+  const saved = process.env.PATH;
+  process.env.PATH = path.join(dir, 'bin');
+  harnesses._found.clear();
+  try { assert.ok(harnesses.optedIn(row())); }
+  finally { process.env.PATH = saved; harnesses._found.clear(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('the Orchestrator\'s rule: when to offer it, before a work chat takes the job, and only on the person\'s yes', () => {
@@ -138,6 +155,23 @@ test('On its own: the Orchestrator starts it unasked, says so, and an activity l
     assert.ok(require('../modules/activity').list({ limit: 50 }).some(l => /started harness:mini on its own for team "Free try"/.test(l.what) && /On its own/.test(l.why)));
     await require('../modules/teams').stop(team.id, { why: 'test' }).catch(() => {});
   } finally { setUse({}); fs.rmSync(root, { recursive: true, force: true }); }
+});
+
+test('On its own, on an automatic turn: the conversation\'s owner must hold host; nobody owning it is refused', async () => {
+  setUse({ mini: 'free' });
+  const memory = require('../modules/harness/memory');
+  const outside = require('../modules/teams/outside');
+  const member = await H.signIn('member');
+  const mk = person => { const s = memory.createSession('auto', { activate: false }); if (person) memory.updateSession(s.id, { person: { id: person.id, orgId: member.orgId } }); return s.id; };
+  const child = parent => memory.createSession('woken work chat', { activate: false, parentId: parent }).id;
+  const p = { id: 'p' };
+  try {
+    assert.throws(() => outside.gate(tasks, { asked: false, by: mk(member.user), project: p }), e => e.status === 403 && /member does not hold host/.test(e.message), 'a member\'s conversation woken by the supervisor');
+    assert.throws(() => outside.gate(tasks, { asked: false, by: child(mk(member.user)), project: p }), /does not hold host/, 'up the chain');
+    assert.throws(() => outside.gate(tasks, { asked: false, by: mk(null), project: p }), e => e.status === 403 && /nobody owns this conversation/.test(e.message));
+    assert.throws(() => outside.gate(tasks, { asked: false, project: p }), /nobody owns this conversation/);
+    assert.equal(outside.gate(tasks, { asked: false, by: child(mk(H.owner.user)), project: p }), 'free', 'the owner\'s conversation, woken');
+  } finally { setUse({}); }
 });
 
 test('moving a harness to "On its own" asks for the password; tightening does not; the person\'s words leave it a proposal', async () => {
@@ -223,4 +257,37 @@ test('its model is the relay\'s or nothing: refused, with where to switch it on,
   const tr = require('../modules/harness-teams/trajectory');
   await assert.rejects(tr.relayEnv({ id: 'x' }, row()), e => e.status === 409 && /model relay, which is off/.test(e.message) && /Field → API keys → Model relay/.test(e.message));
   assert.deepEqual(await tr.relayEnv({ id: 'x' }, catalog.KNOWN.find(r => r.id === 'claude')), {}, 'a harness with its own key needs none');
+});
+
+test('its kept trajectory is scrubbed: the relay token, a kept key, and anything named like a secret', async () => {
+  const tr = require('../modules/harness-teams/trajectory');
+  const RELAY = 'relay-tok-0123456789abcdef', KEPT = 'svc-kept-secret-9876';
+  require('../modules/service-keys').save({ name: 'traj-test', origin: 'https://api.example.com', key: KEPT });
+  try {
+    const text = JSON.stringify({ trajectory_format: 'mini-swe-agent-1.1', info: { config: { model: { model_kwargs: { api_key: RELAY, api_base: 'http://hub/relay' } } } },
+      messages: [{ role: 'user', content: 'Fix the test' },
+        { role: 'assistant', content: 'Look at env', extra: { actions: [{ command: `curl -H "Authorization: Bearer ${RELAY}" http://x; export OTHER_TOKEN=abc123xyz` }] } },
+        { role: 'tool', content: `<returncode>0</returncode>\n<output>OPENAI_API_KEY=${RELAY}\nsvc=${KEPT}\npassword: hunter2hunter</output>` }] });
+    const name = await tr.keep(text, { given: [RELAY], name: 'w1.traj.json' });
+    const kept = fs.readFileSync(require('../modules/attachments').list().find(a => a.name === name).path, 'utf8');
+    for (const s of [RELAY, KEPT, 'abc123xyz', 'hunter2hunter']) assert.ok(!kept.includes(s), `${s} is not in the kept trajectory`);
+    assert.ok(JSON.parse(kept).messages.length === 3, 'still the trajectory, still JSON');
+    assert.match(kept, /Fix the test/);
+    assert.equal(await tr.keep('  ', {}), null, 'nothing written: nothing kept');
+  } finally { require('../modules/service-keys').remove('traj-test'); }
+  assert.match(fs.readFileSync(path.join(__dirname, '../modules/harness-teams/worker.js'), 'utf8'), /trajectory\.keep\(/, 'the worker keeps it through the scrub');
+});
+
+test('what it says carries the product\'s own name, never a fixed one', async () => {
+  const u = require('../modules/utils'), p = u.loadPrefs();
+  u.savePrefs({ ...p, branding: { product: 'Acme' } });
+  try {
+    assert.match(row().note, /run by Acme only/);
+    assert.match(row().team.when, /needs Acme's tools/);
+    assert.match(require('../modules/harness/one-shot').whyNot(row()), /so Acme runs it only/);
+    assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '../modules/harness-teams/trajectory.js'), 'utf8'), /choose DOCA's model/, 'the relay\'s refusal names the product by branding');
+    for (const s of [row().note, row().team.when, require('../modules/harness/one-shot').whyNot(row())]) assert.doesNotMatch(s, /DOCA/);
+    const src = fs.readFileSync(path.join(__dirname, '../modules/harness/turn/clear-results.js'), 'utf8');
+    assert.doesNotMatch(src, /`\[DOCA:/, 'the left-out stub reads like the cleared one, with no name in it');
+  } finally { u.savePrefs(p); }
 });
