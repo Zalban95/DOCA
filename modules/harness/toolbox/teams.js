@@ -60,7 +60,7 @@ module.exports = [
               check: { type: 'object', description: 'Optional check the hub runs when it finishes: {file}, {file, contains}, {url}, {page, contains}, {absent}, {free: port}, or the work itself: {video}, {pdf}, {mesh}, {image}.' },
               checks: { type: 'array', items: { type: 'object' }, description: 'More checks, every one must hold (up to 8).' },
               test: { type: 'string', description: 'For code: the test command, e.g. "npm test". The specialist runs it itself as its last step; the hub reads that run\'s exit code (it never runs it).' },
-              tries: { type: 'integer', description: 'Several attempts at once (2–the setting teams.maxTries), each in a worktree of its own, the best kept by its checks and test alone — only when they can judge it and the worker is cheap; each try spends its own tokens. after naming this task waits for the kept try.' },
+              tries: { type: 'integer', description: 'Several attempts at once (2–the setting teams.maxTries), each in a worktree of its own, the best kept by its checks and test alone — only when they can judge it and the worker is cheap; each try spends its own tokens. after naming this task waits for the kept try. Not with count; of the outside harnesses only harness:mini takes tries.' },
               worktree: { type: 'boolean', description: 'In a project: true for a git worktree of its own, false to share the project\'s folder (default: its own when it changes files while another task of the team may too).' },
             },
             required: ['agent', 'task'],

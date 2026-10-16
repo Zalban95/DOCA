@@ -113,7 +113,7 @@ const KNOWN = [
       env: { MSWEA_CONFIGURED: 'true', MSWEA_COST_TRACKING: 'ignore_errors', MSWEA_SILENT_STARTUP: '1' },
       // When it fits — what the Orchestrator's routing table says (harness/coordinator.js), asked 2026-10-16.
       when: 'a self-contained coding task in a git project with a command that shows it works (fix an issue, make a failing test pass, a small refactor), '
-        + 'when several tries at once would help (count), the work should run on a smaller or local model, or a record of every command is wanted. '
+        + 'when several tries at once would help (tries: N — each judged by the task\'s check or test, the best kept), the work should run on a smaller or local model, or a record of every command is wanted. '
         + 'Not for work that needs DOCA\'s tools (devices, approvals, MCP, a browser, the person\'s files), long or several-repository work, or anything outside a computer: '
         + 'it runs every command without asking' },
     installCmd: 'uv tool install mini-swe-agent',
