@@ -38,7 +38,15 @@ const MIN_CHARS = 1200;
 
 const ARG_CHARS = 400;   // an argument value longer than this, in an old call over MIN_CHARS, is left out on re-sends
 const longArgs = r => r?.role === 'assistant' && (r.tool_calls || []).some(c => String(c.function?.arguments || '').length > MIN_CHARS);
-const clearable = r => (r?.role === 'tool' && String(r.content || '').length > MIN_CHARS) || longArgs(r);
+// A thinking model's reasoning re-sent with its row (reasoning-resend.js) is cleared like a result.
+const clearable = r => (r?.role === 'tool' && String(r.content || '').length > MIN_CHARS) || longArgs(r)
+  || require('./reasoning-resend').long(r, MIN_CHARS);
+
+/** A skill this turn read is being followed: never cleared (skill-steps.isRead). `i` indexes `rows`. */
+function followed(rows) {
+  const steps = require('./skill-steps'), from = steps.turnStart(rows);
+  return (r, i) => i >= from && steps.isRead(r);
+}
 
 /**
  * Move the mark so that every clearable result except the newest KEEP is
@@ -47,7 +55,8 @@ const clearable = r => (r?.role === 'tool' && String(r.content || '').length > M
 function clearOld(sessionId) {
   const rows = memory.messages(sessionId);
   const seen = rows.map(r => r.role).lastIndexOf('assistant');   // after it: this step's results, not yet read
-  const at = rows.map((r, i) => (clearable(r) && i < seen ? i : -1)).filter(i => i >= 0);
+  const follows = followed(rows);
+  const at = rows.map((r, i) => (clearable(r) && i < seen && !follows(r, i) ? i : -1)).filter(i => i >= 0);
   if (at.length <= KEEP) return 0;
   const through = at[at.length - KEEP];
   const prev = Number(memory.getSession(sessionId)?.clearedThrough) || 0;
@@ -63,9 +72,14 @@ function clearOld(sessionId) {
 function view(rows, offset, clearedThrough, sessionId) {
   const mark = Number(clearedThrough) || 0;
   if (!mark) return rows;
+  const follows = followed(rows);
   return rows.map((r, j) => {
-    if (!(offset + j < mark && clearable(r))) return r;
-    if (r.role === 'assistant') return { ...r, tool_calls: r.tool_calls.map(shortCall) };
+    if (!(offset + j < mark && clearable(r)) || follows(r, j)) return r;
+    if (r.role === 'assistant') {
+      const think = require('./reasoning-resend');
+      return { ...r, ...(longArgs(r) ? { tool_calls: r.tool_calls.map(shortCall) } : {}),
+        ...(think.long(r, MIN_CHARS) ? { reasoning: { ...r.reasoning, text: think.cleared(r, sessionId) } } : {}) };
+    }
     if (String(r.content || '').length <= MIN_CHARS) return r;
     const file = require('./messages').spillTool(sessionId, r);
     return { ...r, content: `[cleared to save context: this ${r.name || 'tool'} result (${String(r.content).length} characters, `

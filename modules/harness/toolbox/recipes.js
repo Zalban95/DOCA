@@ -5,6 +5,18 @@
  * and run what was kept. A run is model-less and goes through the same gate as your own calls, in a
  * conversation of its own; its result is the summary and which step stopped it, if one did.
  */
+/** The failed step, said where the run is reported: what ran, the end of its output, the whole result's file. */
+function failedLines(s, sessionId) {
+  if (!s || s.ok) return '';
+  let file = null;
+  try {
+    const row = require('../memory').messages(sessionId).filter(r => r.role === 'tool').pop();
+    if (row) file = require('../turn/messages').spillTool(sessionId, row);
+  } catch { /* the run's conversation still holds it */ }
+  return `\nStep ${s.n} ran: ${s.ran}\nIts output ends with:\n${s.tail || '(nothing)'}`
+    + (file ? `\nThe whole result is in ${file} (read_file it); the run's conversation is ${sessionId}.` : '');
+}
+
 module.exports = [
   {
     name: 'recipe',
@@ -54,7 +66,7 @@ module.exports = [
         if (!r) return `Error: no recipe "${id}". ${store.list().length ? `Saved: ${store.list().map(x => x.id).join(', ')}.` : ''}`;
         const out = await require('../../recipes/run').run(r, { params: values || {}, person: ctx.user || null, parentId: ctx.sessionId || null, signal: ctx.signal });
         return `${out.summary} (conversation ${out.sessionId})\n${out.steps.map(s => `  ${s.n}. ${s.tool}: ${s.ok ? 'ok' : `FAILED — ${s.why}`}`).join('\n')}`
-          + (out.ok ? '' : `\nRead that conversation for the full result, repair the steps, and save revision ${r.revision + 1} with id "${r.id}".`);
+          + (out.ok ? '' : failedLines(out.steps.at(-1), out.sessionId) + `\nRepair the steps and save revision ${r.revision + 1} with id "${r.id}".`);
       }
       return 'Error: action is list, show, run, save or save_last.';
     },

@@ -22,6 +22,21 @@ function hands(deviceId) {
   } catch { return ''; }
 }
 
+/**
+ * Whose a device is, from its record and the auth store (round 1 of 2026-10-16, #3/#23: the agent tried the owner's
+ * phone for another person's notice and was refused, with nothing having said whose it was). `yours` marks the turn's
+ * person's own; another person is named to a host's turn, and only as "someone else's" to anyone else's.
+ */
+function whose(d, person) {
+  if (!d.userId) return 'whose=the hive\'s (no person: any turn may reach it)';
+  if (person?.id && d.userId === person.id) return 'whose=yours';
+  const host = !person || require('../session-access').isHost(person);
+  if (!host) return 'whose=someone else\'s';
+  let u = null;
+  try { u = require('../../auth/store').userById(d.userId); } catch { /* no accounts yet */ }
+  return `whose=${u ? (u.name || u.email) : 'a person no longer here'}`;
+}
+
 module.exports = [
   {
     name: 'system_status',
@@ -76,9 +91,9 @@ module.exports = [
   },
   {
     name: 'doca_clients',
-    description: 'The devices paired with this hub and which of them are reachable right now: form factor, online state, queued events, last seen, what each is allowed to do, and which lend you tools (hands=…: their MCP server, to act on that device). Use it before deciding where to reach the user — asking a watch that is offline gets queued, asking one that cannot chat gets nothing.',
+    description: 'The devices paired with this hub and which of them are reachable right now: whose each is (yours = the person this turn acts for), form factor, online state, queued events, last seen, what each is allowed to do, and which lend you tools (hands=…: their MCP server, to act on that device). Use it before deciding where to reach the user — asking a watch that is offline gets queued, asking one that cannot chat gets nothing, and a question or notice goes only to the person\'s own devices.',
     parameters: { type: 'object', properties: {} },
-    run: () => {
+    run: (_a, ctx = {}) => {
       // Required here rather than at the top: this is the harness reaching into
       // the client layer, and the client layer's own adapter reaches back here.
       const devices = require('../../api-v1/devices');
@@ -108,6 +123,7 @@ module.exports = [
           q.pending ? `queued=${q.pending} (${q.delivered} fetched but not acknowledged, ${q.unfetched} not fetched; oldest ${ago(q.oldestPendingAt)})` : 'queued=0',
           `lastSeen=${ago(d.lastSeenAt)}`,
           `can=${can}`,
+          whose(d, ctx.user),
           // That it has a console and where it goes; what it streams never reaches a model.
           require('../../device-console').summary(d.id, id => devices.get(id)?.name || id),
           hands(d.id),

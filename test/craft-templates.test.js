@@ -241,7 +241,9 @@ test('promo.js start outside a background job refuses, printing the exact call; 
     let seen = '';
     while (Date.now() < until && !(seen = require('../modules/harness/jobs').output(job.id))) await H.sleep(100);
     assert.equal(seen, job.id, 'a background job carries DOCA_JOB');
-  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+  } finally {   // the job may still hold its folder for a moment on Windows (EBUSY): retry, and a folder left in the temp dir is not a failure
+    try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 300 }); } catch { /* left for the OS */ }
+  }
 });
 
 test('the product-video recipe starts the render as a background job', () => {

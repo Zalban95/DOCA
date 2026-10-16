@@ -77,7 +77,10 @@ module.exports = [
         case 'list': return require('../skill-use').offered().map(s => `${s.name} (${s.source}): ${s.description}`).join('\n') || 'No skills yet.';
         case 'read': {
           if (require('../skill-use').isOff(a.name)) return `The skill ${a.name} is switched off on this hub (Settings → Harness → Skills): the person can switch it back on, or attach it to this chat.`;
-          const s = skills.read(a.name); return `# ${s.name}\n${s.body}${s.files.length ? `\n\nFiles beside it (skill action file): ${s.files.join(', ')}` : ''}`; }
+          // The folder on the second line (round 1 of 2026-10-16, #12): scripts beside the skill are run by that path.
+          const s = skills.read(a.name);
+          return `# ${s.name}\nThis skill's folder: ${s.dir} — the scripts and files it names are there; run them by that path.\n${s.body}`
+            + `${s.files.length ? `\n\nFiles beside it (in that folder; skill action file reads one): ${s.files.join(', ')}` : ''}`; }
         case 'file': return skills.file(a.name, a.path).text;
         case 'write': { const s = skills.write(a.name, a); return `Skill ${s.name} kept on this machine; it is in the Skills list from the next turn.`; }
         case 'search': {

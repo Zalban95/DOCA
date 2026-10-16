@@ -42,6 +42,22 @@ test('doca_clients says which device lends tools, and what kind (audit 2026-10-0
   assert.match(out, new RegExp(`Pocket.*hands=${made.id} \\(stopped: screen, apps — mcp_connect starts it\\)`));
 });
 
+// Round 1 of 2026-10-16, #3/#23: nothing said whose a device was, so a notice went to the owner's phone and was refused.
+test('doca_clients says whose each device is, marking the turn\'s person\'s own', async () => {
+  const devices = require('../modules/api-v1/devices');
+  const member = await H.signIn('member');
+  const mine = H.mkDevice('Member phone', 'phone', H.PHONE_CAPS).device;
+  devices.update(mine.id, { userId: member.user.id });
+  const theirs = H.mkDevice('Owner watch', 'watch', H.WATCH_CAPS).device;
+  devices.update(theirs.id, { userId: H.owner.user.id });
+  const asMember = await tools.call('doca_clients', {}, [], { user: { ...member.user, role: 'member' } });
+  assert.match(asMember, /Member phone .* whose=yours/);
+  assert.match(asMember, /Owner watch .* whose=someone else's/, 'another person is not named to a member');
+  const asOwner = await tools.call('doca_clients', {}, [], { user: { ...H.owner.user, role: 'owner' } });
+  assert.match(asOwner, /Owner watch .* whose=yours/);
+  assert.match(asOwner, /Member phone .* whose=member/, 'a host is told whose, by the account record');
+});
+
 test('memory inventory filters and pages keys without touching their values or usage counters', async () => {
   memory.memWrite({ key: 'gpu', value: 'GPU first line\nHidden second line', category: 'Machine', pinned: true, locked: true });
   memory.memDispute('gpu', { note: 'Hardware changed' });

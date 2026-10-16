@@ -57,6 +57,8 @@ function clipToolContent(content, spill, max = TOOL_MAX_CHARS) {
  * results — the ones sent uncached a step ago anyway — never further up (ISSUES.md H-9b).
  */
 function maxFor(row, fresh, resendChars, capChars) {
+  // A skill read goes whole every time (skills.js bounds it): it is the procedure the turn is following (skill-steps.js).
+  if (require('./skill-steps').isRead(row)) return capChars > 0 ? Math.min(require('../toolbox/common').MAX_OUT, capChars) : require('../toolbox/common').MAX_OUT;
   const base = !(resendChars > 0) ? TOOL_MAX_CHARS : fresh ? require('../toolbox/common').MAX_OUT
     : row.name === 'read_file' ? Math.max(resendChars, TOOL_MAX_CHARS) : resendChars;
   // On a model whose window is known, never more than its share of it (step-ceiling.resultCapChars): two whole 64k
@@ -141,8 +143,10 @@ function toApiMessages(allRows, { sessionId, provider, resendChars, capChars } =
   // so the row's own record of who produced it decides, never the model name.
   // The browser may preview the stored reasoning; echoing it to a model is
   // restricted to the provider that produced it.
+  // Long reasoning goes as head + tail with its file under lean context (turn/reasoning-resend.js): echoed whole on every
+  // step, one long thought was most of a long turn's request.
   const echo = r => (r.role === 'assistant' && r.reasoning?.text && r.reasoning.provider === provider
-    ? { reasoning_content: r.reasoning.text } : {});
+    ? { reasoning_content: require('./reasoning-resend').text(r, { sessionId, resendChars }) } : {});
 
   return rows.map((r, i) => {
     if (r.role === 'tool') {

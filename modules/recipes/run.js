@@ -38,6 +38,17 @@ function passed(result, check = {}) {
   return { ok: true };
 }
 
+/**
+ * What a failed step needs said where the run is reported (round 1 of 2026-10-16, #21: "exit 1, read that conversation"
+ * sent the agent off to find the error): what ran — a shell step's command, which names its script — the end of its
+ * output, where stderr lands (the whole result stays in the run's conversation; the agent's tool names its file).
+ */
+const TAIL = 1500;
+function failure(step, args, result) {
+  const ran = step.tool === 'shell' && typeof args?.command === 'string' ? args.command : JSON.stringify(args ?? {});
+  return { ran: ran.slice(0, 600), tail: result.length > TAIL ? result.slice(-TAIL) : result };
+}
+
 /** The values a run uses: given ones, then defaults; a missing one is refused before anything runs. */
 function resolveParams(recipe, given = {}) {
   const out = {};
@@ -83,7 +94,8 @@ async function run(recipe, { params = {}, person = null, client = null, parentId
         client: who, profile: null, isMission: false, step: i + 1, say: emit, announced: new Set() });
       const result = String(memory.messages(session.id).filter(r => r.role === 'tool').pop()?.content || '');
       const verdict = passed(result, step.check);
-      out.steps.push({ n: i + 1, tool: step.tool, ok: verdict.ok, ...(verdict.why ? { why: verdict.why } : {}), result: result.slice(0, 600) });
+      out.steps.push({ n: i + 1, tool: step.tool, ok: verdict.ok, ...(verdict.why ? { why: verdict.why } : {}), result: result.slice(0, 600),
+        ...(verdict.ok ? {} : failure(step, args, result)) });
       emit({ type: 'recipe_step', n: i + 1, of: recipe.steps.length, tool: step.tool, ok: verdict.ok, why: verdict.why });
       if (!verdict.ok) { out.ok = false; out.failedAt = i + 1; break; }
     }
