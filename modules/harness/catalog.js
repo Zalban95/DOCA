@@ -97,6 +97,25 @@ const KNOWN = [
     configPathHint: '~/.gemini/settings.json',
   },
   {
+    // mini-swe-agent (MIT; github.com/SWE-agent/mini-swe-agent, https://mini-swe-agent.com/latest/usage/mini/): about a
+    // hundred lines of agent with bash as its only tool, a linear history and a trajectory file, models through litellm.
+    // Checked against `mini --help` of v2.4.6: -t task, -y yolo (no confirmation), --exit-immediately, -l cost limit (0
+    // off), -o trajectory, -m model; MSWEA_CONFIGURED skips its first-run wizard, MSWEA_COST_TRACKING=ignore_errors lets a
+    // model litellm has no price for run. With -y it runs every command without asking, so `sandbox`: DOCA runs it only in
+    // an agents' computer, as a team worker — never on the hub (one-shot.js refuses it; a person may still start it in
+    // the Terminal, where it asks before each command).
+    id: 'mini', label: 'mini-swe-agent', vendor: 'SWE-agent', kind: 'cli', cmd: 'mini', sandbox: true,
+    note: 'A small bash-only coding agent: one task in a repository, a test to pass — run by DOCA only in an agents\' computer',
+    // A worker in an agents' computer (harness-teams/): installed there with uv, its model DOCA's own through the model
+    // relay (OPENAI_BASE_URL / OPENAI_API_KEY, litellm's `openai/<model>`; "default" is the relay's first), never a key.
+    team: { args: ['-y', '--exit-immediately', '-l', '0', '{output}', '{model}', '-t', '{task}'], model: ['-m', 'openai/{model}'], defaultModel: 'default',
+      output: ['-o', '{output}'], events: 'mini', uv: 'mini-swe-agent', relay: true, optIn: true,
+      env: { MSWEA_CONFIGURED: 'true', MSWEA_COST_TRACKING: 'ignore_errors', MSWEA_SILENT_STARTUP: '1' } },
+    installCmd: 'uv tool install mini-swe-agent',
+    url: 'https://mini-swe-agent.com',
+    configPathHint: '~/.config/mini-swe-agent/.env',
+  },
+  {
     id: 'copilot', label: 'Copilot CLI', vendor: 'GitHub', kind: 'cli', cmd: 'copilot',
     oneShot: ['-p', '{message}'],   // one question without a terminal (harness/one-shot.js)
     installCmd: 'npm install -g @github/copilot',
