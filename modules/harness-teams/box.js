@@ -5,7 +5,8 @@
  * reached with `docker exec` and `docker cp` by argv — never a shell string with a task or a name in it.
  *
  *   install   the CLI from its catalog installCmd's npm package, into the computer's own home (~/.npm-global, on its
- *             volume), so it is installed once per computer and never on the hub
+ *             volume), so it is installed once per computer and never on the hub — or a Python one (`team.uv`) with uv,
+ *             itself put in ~/.local/bin by its own installer the first time
  *   project   the project's HEAD (or the branch of the task before) goes in as a git bundle and is cloned into ~/teams/<worker>, on the worker's branch
  *   run       the CLI in that folder, in a process group of its own whose id is kept in a file, so Stop ends it whole
  *   pull      what it committed comes back as a bundle of base..branch, fetched into the project's repository on the hub
@@ -21,7 +22,8 @@ const { execFile, spawn } = require('child_process');
 
 const HOME = '/home/agent';
 const BIN = `${HOME}/.npm-global/bin`;
-const PATH_IN = `${BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`;
+const LOCAL_BIN = `${HOME}/.local/bin`;   // uv and the Python CLIs it installs (team.uv)
+const PATH_IN = `${BIN}:${LOCAL_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin`;
 const name = c => `doca-computer-${c.id}`;
 const cli = () => require('../containers').cli();
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
@@ -58,18 +60,42 @@ function docker(args, timeout = 120000) {
     (err, stdout, stderr) => (err ? reject(bad(String(stderr || err.message).trim().split('\n').pop(), 500)) : resolve(String(stdout)))));
 }
 
+/** A package file on the hub (an offline or test package) copied into the computer; returns its path there. */
+async function copyIn(c, file) {
+  const spec = `/tmp/${path.basename(file)}`;
+  await docker(['cp', file, `${name(c)}:${spec}`]);
+  await exec(c, ['chown', 'agent:agent', spec], { user: '0' });
+  return spec;
+}
+
+/** A Python CLI (`team.uv`) in the computer: uv first when it has none (astral's installer, into ~/.local/bin), then `uv tool install`. */
+async function installUv(c, row) {
+  const bin = `${LOCAL_BIN}/${row.cmd}`;
+  if ((await exec(c, ['test', '-x', bin])).code === 0) return { bin, installed: false };
+  const pkg = String(row.team.uv);
+  let spec = pkg;
+  if (path.isAbsolute(pkg) && fs.existsSync(pkg)) spec = await copyIn(c, pkg);
+  else if (!/^[A-Za-z0-9][\w.-]*(==[\w.]+)?$/.test(pkg)) throw bad(`Not a Python package name: ${pkg}`);
+  const uv = `${LOCAL_BIN}/uv`;
+  if ((await exec(c, ['test', '-x', uv])).code !== 0) {
+    // uv's documented installer; where it goes is an argument ($0), never spliced into the script.
+    await must(c, ['sh', '-c', 'curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR="$0" UV_NO_MODIFY_PATH=1 INSTALLER_NO_MODIFY_PATH=1 sh', LOCAL_BIN], { timeout: 10 * 60000 });
+  }
+  await must(c, [uv, 'tool', 'install', '--quiet', spec], { timeout: 15 * 60000, env: { UV_TOOL_BIN_DIR: LOCAL_BIN } });
+  if ((await exec(c, ['test', '-x', bin])).code !== 0) throw bad(`${pkg} installed, but it has no ${row.cmd} command.`, 500);
+  return { bin, installed: true };
+}
+
 /** The CLI in the computer: installed already, else from its npm package (a package file on the hub is copied in first). */
 async function install(c, row) {
+  if (row.team?.uv) return installUv(c, row);
   const bin = `${BIN}/${row.cmd}`;
   if ((await exec(c, ['test', '-x', bin])).code === 0) return { bin, installed: false };
   const pkg = require('./harnesses').npmPackage(row);
   if (!pkg) throw bad(`${row.label} is not installed with npm, so DOCA cannot put it in a computer by itself.`, 409);
   let spec = pkg;
-  if (path.isAbsolute(pkg) && fs.existsSync(pkg)) {   // an offline or test package: copied in, then installed from there
-    spec = `/tmp/${path.basename(pkg)}`;
-    await docker(['cp', pkg, `${name(c)}:${spec}`]);
-    await exec(c, ['chown', 'agent:agent', spec], { user: '0' });
-  } else if (!/^[@\w./:-]+$/.test(pkg)) throw bad(`Not an npm package name: ${pkg}`);
+  if (path.isAbsolute(pkg) && fs.existsSync(pkg)) spec = await copyIn(c, pkg);   // an offline or test package: copied in, then installed from there
+  else if (!/^[@\w./:-]+$/.test(pkg)) throw bad(`Not an npm package name: ${pkg}`);
   await must(c, ['npm', 'install', '-g', '--prefix', `${HOME}/.npm-global`, '--no-fund', '--no-audit', spec], { timeout: 15 * 60000 });
   if ((await exec(c, ['test', '-x', bin])).code !== 0) throw bad(`${pkg} installed, but it has no ${row.cmd} command.`, 500);
   return { bin, installed: true };
