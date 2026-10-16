@@ -85,6 +85,27 @@ test('the rule: the Orchestrator plans, a specialist works, a conversation plans
   } finally { setRoles('', ''); }
 });
 
+// Round 1 of 2026-10-16, #7: the mastermind answered 3–4 of 44–63 steps — a non-zero exit, a traceback after exit 0,
+// a stopped recipe and a failing check were all read as carrying on.
+test('setbacks the typed failures do not read, a check and a hand-over all go to the mastermind', () => {
+  setRoles('rolestub/big', 'rolestub/small');
+  try {
+    const r = route(), work = { kind: 'work' };
+    const after = (name, content) => [{ role: 'user', content: 'x' },
+      { role: 'assistant', content: '', tool_calls: [{ id: 'c', function: { name, arguments: '{}' } }] },
+      { role: 'tool', tool_call_id: 'c', name, content }];
+    const role = (name, content) => r.roleOf({ session: work, step: 4, rows: after(name, content) });
+    assert.equal(role('shell', 'exit 1\nmake: *** [all] Error 2'), 'mastermind', 'a non-zero exit');
+    assert.equal(role('shell', 'exit 0\nTraceback (most recent call last):\n  File "x.py", line 3'), 'mastermind', 'a traceback, whatever the exit');
+    assert.equal(role('recipe', 'Recipe stopped at step 1 (shell): exit 1.'), 'mastermind', 'a stopped recipe');
+    assert.equal(role('check_output', 'Does not hold — drawing.pdf: text over text'), 'mastermind', 'a failed check');
+    assert.equal(role('check_output', 'Holds — part.stl: closed'), 'mastermind', 'a check that holds: the review');
+    assert.equal(role('show_media', 'Shown in the chat: video.mp4'), 'mastermind', 'handed over: the last look and the answer');
+    assert.equal(role('shell', 'exit 0\nall good'), 'worker', 'a plain success carries on with the worker');
+    assert.equal(role('shell', 'exit 0\nexit 1 was the last run'), 'worker');
+  } finally { setRoles('', ''); }
+});
+
 test('empty settings are the old behaviour: every step on the harness\'s model, no role named', async () => {
   setRoles('', '');
   const m = model.use(fourSteps);

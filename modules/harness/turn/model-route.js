@@ -19,7 +19,9 @@
  *       – a step after a call that plans or coordinates (PLANNING: work_plan — a step marked done, the plan revised —
  *         mission_plan, agent_dispatch, agent_results, work_chats, team…) → mastermind: deciding what comes next, and,
  *         after the plan's last step is marked done, the review and the final answer;
- *       – a step after a call that failed (the row's `failure`, turn/failures.js) → mastermind: a re-plan;
+ *       – a step after a setback (a failed call, a non-zero exit, a traceback, a stopped recipe, a check that does not
+ *         hold — `setback`) → mastermind: choosing what to do instead;
+ *       – a step after a check or a hand-over (REVIEW: check_output, show_media, tell_device) → mastermind: the review;
  *       – every other step after tool results → worker: carrying out the plan.
  * It does not route at all — the turn's own model answers every step, as before — when the person chose a model for
  * the conversation (`session.modelChoice`, and a stuck job's escalation, which sets it), when a specialist's
@@ -81,8 +83,31 @@ function roleOf({ profile, session, client, step, rows = [] }) {
   const last = lastStep(rows);
   if (!last.calls.length) return 'mastermind';   // no tool result to carry on from (a claim check's note, a queued message)
   if (last.calls.some(n => PLANNING.has(n))) return 'mastermind';
-  if (last.results.some(r => r.failure || require('./failures').classify(r.content))) return 'mastermind';
+  if (last.results.some(setback)) return 'mastermind';
+  if (last.calls.some(n => REVIEW.has(n))) return 'mastermind';
   return 'worker';
+}
+
+/**
+ * Calls whose next step is a review (round 1 of 2026-10-16, #7: the mastermind answered 3–4 of 44–63 steps): a check
+ * just ran — held or not, what it says decides what comes next — or the work was just handed over (shown, sent), so the
+ * next step is the last look and the final answer.
+ */
+const REVIEW = new Set(['check_output', 'show_media', 'show_image', 'tell_device']);
+
+/**
+ * A result that went wrong, read mechanically (no model): a typed failure (turn/failures.js) — which reads only
+ * "Error:"-shaped results — and the setbacks it does not read, all seen in round 1's craft turns: a command that exited
+ * non-zero ("exit 1"), a Python traceback in a command's output whatever its exit (FreeCAD's freecadcmd exits 0 after
+ * one), a recipe that stopped, a check that does not hold. Choosing what to do after one is the mastermind's.
+ */
+function setback(r) {
+  if (r.failure || require('./failures').classify(r.content)) return true;
+  const s = String(r.content || '');
+  if (r.name === 'shell' && (/^exit (?!0\b)-?\d+/.test(s) || /^Traceback \(most recent call last\):/m.test(s))) return true;
+  if (r.name === 'recipe' && /^Recipe stopped at step/.test(s)) return true;
+  if (r.name === 'check_output' && /^Does not hold/.test(s)) return true;
+  return false;
 }
 
 const same = (a, b) => a && b && a.provider === b.provider && a.model === b.model;
@@ -175,4 +200,4 @@ function describe() {
   return `mastermind ${n(m)} (plans, routes, reviews); worker ${n(w)} (carries out steps)`;
 }
 
-module.exports = { ROLES, PLANNING, parse, modelFor, routed, roleOf, paramsFor, windowOf, warm, step, forFold, describe };
+module.exports = { ROLES, PLANNING, REVIEW, setback, parse, modelFor, routed, roleOf, paramsFor, windowOf, warm, step, forFold, describe };
