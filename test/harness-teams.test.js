@@ -85,7 +85,7 @@ test('a team uses an outside harness only when the person asked for it: unasked 
   const p = { id: 'prj_x', name: 'p', root: os.tmpdir() };
   assert.throws(() => outside.gate(tasks, { asked: false, project: p }), e => e.status === 403 && /only when the person asked for it/.test(e.message));
   assert.throws(() => outside.gate(tasks, { asked: true, person: { id: 'u', role: 'member', name: 'M' }, project: p }), e => e.status === 403 && /does not hold host/.test(e.message));
-  assert.throws(() => outside.gate(tasks, { asked: true }), /works on a project/);
+  assert.throws(() => outside.gate(tasks, { asked: true, person: { id: 'o', role: 'owner' } }), /works on a project/);
   assert.doesNotThrow(() => outside.gate(tasks, { asked: true, person: { id: 'o', role: 'owner' }, project: p }));
   assert.doesNotThrow(() => outside.gate([{ agent: 'work' }], { asked: false }), 'a team of DOCA\'s own is untouched');
   // Through the tool: asked: true on a turn that is not the person's own (an automatic turn, a mission) is not an ask.
@@ -165,7 +165,7 @@ test('two stub workers in their own computers: commands seen, branches back on t
   await setup();
   const team = await teams.create({ title: 'Stub pair', project: 'stubproj', tasks: [
     { id: 'w', agent: 'harness:stub', model: 'opus', task: 'Write the stub file', count: 2, done: 'the stub file exists', check: { file: 'STUB-Write-the-stub-file.md' } }] },
-  { by: lead(), asked: true });
+  { by: lead(), asked: true, person: { id: H.owner.user.id, role: 'owner' } });
   const ended = await doneTeam(team.id);
   const v = teams.view(ended);
   assert.equal(ended.state, 'done', JSON.stringify(v.tasks.map(x => [x.id, x.state, x.why])));
@@ -206,7 +206,7 @@ test('two stub workers in their own computers: commands seen, branches back on t
 test('Stop ends the CLI in its computer at once; what it committed still comes back', { timeout: 300000 }, async t => {
   if (!ready) return t.skip('no Docker image doca/computer:1 here');
   await setup();
-  const team = await teams.create({ title: 'Slow one', project: 'stubproj', tasks: [{ id: 's', agent: 'harness:stub', task: 'SLOW work' }] }, { by: lead(), asked: true });
+  const team = await teams.create({ title: 'Slow one', project: 'stubproj', tasks: [{ id: 's', agent: 'harness:stub', task: 'SLOW work' }] }, { by: lead(), asked: true, person: { id: H.owner.user.id, role: 'owner' } });
   const mid = await waitFor(() => teams.get(team.id)?.tasks[0]?.missionId, 30000, 'its mission');
   await waitFor(() => require('../modules/agents/missions').events(mid).some(e => e.type === 'tool_call'), 180000, 'the CLI at work');
   const r = await H.api(null, 'POST', `/api/harness/missions/${mid}/stop`);
@@ -226,7 +226,7 @@ test('with no key and no sign-in in its computer, the task fails saying how to s
   if (!ready) return t.skip('no Docker image doca/computer:1 here');
   await setup();
   require('../modules/provider-keys').remove('anthropic');
-  const team = await teams.create({ title: 'No key', project: 'stubproj', tasks: [{ id: 'k', agent: 'harness:stub', task: 'Write' }] }, { by: lead(), asked: true });
+  const team = await teams.create({ title: 'No key', project: 'stubproj', tasks: [{ id: 'k', agent: 'harness:stub', task: 'Write' }] }, { by: lead(), asked: true, person: { id: H.owner.user.id, role: 'owner' } });
   const ended = await doneTeam(team.id);
   const why = teams.view(ended).tasks[0].why;
   assert.match(why, /needs signing in once/); assert.match(why, /Take over/);

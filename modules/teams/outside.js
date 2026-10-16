@@ -40,11 +40,18 @@ function check(id, t) {
   return { model: t.model ? String(t.model) : null };
 }
 
+/** The person who owns conversation `by` (up its chain), as they are now — null when nobody does or they are gone. */
+function ownerPerson(by) {
+  const id = by ? require('../harness/session-access').ownerOf(by) : null;
+  if (!id) return null;
+  return require('../harness/turn/client').personById({ id, orgId: require('../auth/store').defaultOrg()?.id });
+}
+
 /**
  * The person's ask (or the harness's own switch at "On its own"), their right, and a project with git: every `harness:`
  * task needs all three. Returns how it was started — 'asked', 'free' (no ask: every one of them is free) or null.
  */
-function gate(tasks, { asked = false, person = null, project = null } = {}) {
+function gate(tasks, { asked = false, person = null, project = null, by = null } = {}) {
   const outside = tasks.filter(t => isOutside(t.agent));
   if (!outside.length) return null;
   const names = [...new Set(outside.map(t => t.agent))].join(', ');
@@ -52,9 +59,11 @@ function gate(tasks, { asked = false, person = null, project = null } = {}) {
   const rowOf = t => harnesses.all().find(r => r.id === String(t.agent).slice(PREFIX.length));
   const unfree = outside.filter(t => { const r = rowOf(t); return !r || harnesses.mode(r) !== 'free'; });
   if (!asked && unfree.length) throw bad(`${[...new Set(unfree.map(t => t.agent))].join(', ')}: a team uses an outside harness only when the person asked for it in their request (name it, or say yes to your offer of it, and call team create with asked: true on their turn) — or when its switch is "On its own". Otherwise give the task to a specialist or a work chat.`, 403);
-  if (person?.id && !require('../auth/rights').can(person.role, 'host')) throw bad(`${names}: summoning another vendor's agent onto the hub's computers and keys is an admin's; ${person.name || 'this person'} does not hold host.`, 403);
+  const who = person?.id ? person : ownerPerson(by);   // an automatic turn (a wake, a woken work chat) answers for its conversation's owner
+  if (!who) throw bad(`${names}: summoning another vendor's agent onto the hub's computers and keys is an admin's, and nobody owns this conversation to answer for it.`, 403);
+  if (!require('../auth/rights').can(who.role, 'host')) throw bad(`${names}: summoning another vendor's agent onto the hub's computers and keys is an admin's; ${who.name || 'this person'} does not hold host.`, 403);
   if (!project) throw bad(`${names}: an outside harness works on a project and comes back as a git branch — name the project (project: <name>).`);
   return asked ? 'asked' : 'free';
 }
 
-module.exports = { isOutside, expand, check, gate, PREFIX, MAX_COUNT };
+module.exports = { isOutside, expand, check, gate, ownerPerson, PREFIX, MAX_COUNT };

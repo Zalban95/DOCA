@@ -82,7 +82,7 @@ function shortCall(c) {
   try { args = JSON.parse(raw); } catch { return c; }
   if (!args || typeof args !== 'object' || Array.isArray(args)) return c;
   const out = Object.fromEntries(Object.entries(args).map(([k, v]) => [k, typeof v === 'string' && v.length > ARG_CHARS
-    ? `[DOCA: ${v.length} characters you sent here earlier, left out of what is re-sent to save context — what the call did is unchanged; the transcript keeps them]`
+    ? `[left out to save context: ${v.length} characters you sent here earlier — what the call did is unchanged; the transcript keeps them]`
     : v]));
   return { ...c, function: { ...c.function, arguments: JSON.stringify(out) } };
 }

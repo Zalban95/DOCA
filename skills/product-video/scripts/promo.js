@@ -4,14 +4,17 @@
 /**
  * The product video template: parts in, a promo out — title card, turntable, the parts coming together, end card.
  *
- *   node promo.js start SPEC.json     starts the render in the background and returns at once (prints where to look)
+ *   node promo.js start SPEC.json     renders it, printing as it goes — start it as a background job (shell with
+ *                                      background: true), so it is seen, stopped and waited for like any other job
  *   node promo.js wait SPEC.json [--timeout 1800]   waits for it: exit 0 done, 1 failed, 2 still running
  *   node promo.js status SPEC.json    one look: running, done or failed, and how far
  *   node promo.js plan SPEC.json      the shots and timings, rendering nothing
  *   flags: --blender PATH  --ffmpeg PATH  --fresh (render the shots again even when their frames are complete)
  *
- * The render runs detached from whatever started it, so a turn or a shell that ends does not take it down; when it
- * ends it writes <video>.done.json — {ok, video, seconds, …} or {ok: false, error} — the marker to wait on.
+ * It does not detach itself: a render the hub's jobs do not know of would run unseen — no Stop, no machine reading
+ * naming it (CONSTITUTION §1, V11). The background job outlives the turn that started it; when the render ends it
+ * writes <video>.done.json — {ok, video, seconds, …} or {ok: false, error} — the marker to wait on, and shell_job
+ * stop ends it and Blender with it (the marker then says it was stopped).
  */
 const fs = require('fs');
 const path = require('path');
@@ -43,38 +46,44 @@ const readJson = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } c
 const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
 const pngs = d => { try { return fs.readdirSync(d).filter(n => /^\d{4}\.png$/.test(n)).length; } catch { return 0; } };
 
-function start(spec, specFile, o) {
+function start(spec, o) {
   const f = files(spec);
   const st = readJson(f.status);
-  if (st && st.state === 'running' && alive(st.pid)) return { already: true, ...st, marker: f.marker };
+  if (st && st.state === 'running' && st.pid !== process.pid && alive(st.pid)) return { already: true, ...st, marker: f.marker };
   fs.mkdirSync(f.work, { recursive: true });
   fs.rmSync(f.marker, { force: true });
-  const log = path.join(f.work, 'render.log');
-  const fd = fs.openSync(log, 'w');
-  const extra = ['blender', 'ffmpeg'].flatMap(k => (o[k] ? [`--${k}`, o[k]] : [])).concat(o.fresh ? ['--fresh'] : []);
-  const child = spawn(process.execPath, [__filename, 'run', specFile, ...extra], { detached: true, stdio: ['ignore', fd, fd], windowsHide: true });
-  child.unref();
-  writeJson(f.status, { state: 'running', pid: child.pid, started: new Date().toISOString(), step: 'starting' });
-  return { started: true, pid: child.pid, log, marker: f.marker, video: spec.out, wait: `node ${JSON.stringify(__filename)} wait ${JSON.stringify(specFile)}` };
+  logFile = path.join(f.work, 'render.log');
+  fs.writeFileSync(logFile, '');
+  writeJson(f.status, { state: 'running', pid: process.pid, started: new Date().toISOString(), step: 'starting' });
+  say({ started: true, pid: process.pid, log: logFile, marker: f.marker, video: spec.out });
+  return null;
 }
+let logFile = null;
+const say = v => { const t = JSON.stringify(v, null, 2) + '\n'; process.stdout.write(t); if (logFile) fs.appendFileSync(logFile, t); };
 
 function runChild(cmd, argv, step, f, expect) {
   return new Promise((resolve, reject) => {
     const c = spawn(cmd, argv, { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
     running = c;
     let tail = '';
-    const keep = d => { tail = (tail + d).slice(-4000); process.stdout.write(d); };
+    const keep = d => { tail = (tail + d).slice(-4000); process.stdout.write(d); if (logFile) fs.appendFileSync(logFile, d); };
     c.stdout.on('data', keep); c.stderr.on('data', keep);
     const tick = setInterval(() => { const st = readJson(f.status) || {}; writeJson(f.status, { ...st, step, ...(expect ? { frames: pngs(expect.dir), of: expect.frames } : {}) }); }, 3000);
     c.on('close', code => { clearInterval(tick); running = null; code === 0 ? resolve() : reject(new Error(`${step} failed (exit ${code}): ${tail.split('\n').filter(Boolean).slice(-3).join(' | ')}`)); });
     c.on('error', e => { clearInterval(tick); running = null; reject(e); });
   });
 }
-let running = null;
-for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(sig, () => { if (running) running.kill(); process.exit(1); });
+let running = null, stopping = null;
+// Stopped (shell_job stop, a person's Stop): Blender goes with it, and the marker says so — never a render left running.
+for (const sig of ['SIGTERM', 'SIGINT', 'SIGHUP']) process.on(sig, () => {
+  if (running) running.kill();
+  if (stopping) { const at = new Date().toISOString(); writeJson(stopping.marker, { ok: false, error: `stopped (${sig})`, finished: at }); writeJson(stopping.status, { state: 'failed', error: `stopped (${sig})`, finished: at }); }
+  process.exit(1);
+});
 
 async function run(spec, o) {
   const f = files(spec);
+  stopping = f;
   const t0 = Date.now();
   const st0 = readJson(f.status) || {};
   writeJson(f.status, { ...st0, state: 'running', pid: process.pid, step: 'planning' });
@@ -114,10 +123,12 @@ async function run(spec, o) {
     await runChild(ffmpeg, argv, 'cutting', f);
     const result = { ok: true, video: spec.out, duration: plan.duration, resolution: res, fps: plan.fps, shots: plan.list.map(s => ({ shot: s.shot, seconds: s.seconds })),
       seconds: Math.round((Date.now() - t0) / 1000), frames_kept: f.work, finished: new Date().toISOString() };
+    stopping = null;
     writeJson(f.marker, result);
     writeJson(f.status, { state: 'done', pid: process.pid, finished: result.finished });
   } catch (e) {
     const result = { ok: false, error: e.message, log: path.join(f.work, 'render.log'), finished: new Date().toISOString() };
+    stopping = null;
     writeJson(f.marker, result);
     writeJson(f.status, { state: 'failed', error: e.message, finished: result.finished });
     process.exitCode = 1;
@@ -147,10 +158,9 @@ async function main() {
   const o = parse(process.argv.slice(2));
   const [cmd, file] = o._;
   if (!cmd || !file) throw new Error('Usage: node promo.js start|wait|status|plan|run SPEC.json');
-  const { spec, specFile } = load(file);
+  const { spec } = load(file);
   let out;
-  if (cmd === 'start') out = start(spec, specFile, o);
-  else if (cmd === 'run') return run(spec, o);
+  if (cmd === 'start' || cmd === 'run') { out = start(spec, o); if (!out) return run(spec, o); }   // run: its older name
   else if (cmd === 'status') out = status(spec);
   else if (cmd === 'wait') { out = await wait(spec, o); process.exitCode = out.state === 'done' ? 0 : out.state === 'failed' ? 1 : 2; }
   else if (cmd === 'plan') { const p = P.shots(spec); out = { ...p, assemble: p.list.find(s => s.shot === 'assemble') ? P.schedule(spec.parts.length, p.list.find(s => s.shot === 'assemble').seconds) : null }; }

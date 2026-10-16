@@ -96,7 +96,7 @@ async function create(args, { by, keepGoing = false, maxRounds = null, asked = f
     const root = require('./place').rootOf({ projectId: project.id, by }) || project.root;
     if (!require('fs').existsSync(require('path').join(root, '.git'))) throw bad(`Tries each work in a git worktree of their own, and the project ${project.name} is not a git repository.`);
   }
-  const started = require('./outside').gate(shaped.tasks, { asked, person, project });   // 'asked', 'free' (its switch) or null
+  const started = require('./outside').gate(shaped.tasks, { asked, person, project, by });   // 'asked', 'free' (its switch) or null
   if (shaped.tasks.some(t => t.agent !== 'work' && !require('./outside').isOutside(t.agent)) && !require('../agents/registry').enabled())
     throw require('../agents/off')('Specialist agents are switched off (agents.enabled). Ask the person to turn them on.');
   const rounds = maxRounds == null ? null : Math.max(0, Math.min(20, Math.floor(Number(maxRounds)) || 0));
