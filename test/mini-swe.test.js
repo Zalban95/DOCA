@@ -62,11 +62,28 @@ test('off until a person switches it on: installed here, or named in the allow l
     assert.deepEqual(harnesses.offered().map(r => r.id), ['mini']);
     setAllow([]);
     const bin = path.join(process.env.PATH, process.platform === 'win32' ? 'mini.exe' : 'mini');
-    fs.writeFileSync(bin, '#!/bin/sh\n'); fs.chmodSync(bin, 0o755);
+    fs.writeFileSync(bin, '#!/bin/sh\necho "some other mini"\n'); fs.chmodSync(bin, 0o755);
     harnesses._found.clear();
-    assert.ok(harnesses.offered().some(r => r.id === 'mini'), 'installed on the Harness tab: on');
+    assert.ok(!harnesses.offered().some(r => r.id === 'mini'), 'another program called mini is not mini-swe-agent: still off');
+    fs.writeFileSync(bin, '#!/home/u/.local/share/uv/tools/mini-swe-agent/bin/python\nimport sys\nfrom minisweagent.run.mini import app\nsys.exit(app())\n');
+    harnesses._found.clear();
+    assert.ok(harnesses.offered().some(r => r.id === 'mini'), 'installed on the Harness tab (its launcher names the package): on');
     assert.equal(harnesses.find('mini-swe-agent').id, 'mini', 'found by its label too');
   } finally { fs.rmSync(process.env.PATH, { recursive: true, force: true }); process.env.PATH = saved; harnesses._found.clear(); setAllow([]); }
+});
+
+test('installed by uv, its command is a link into the package\'s own folder: that counts too', { skip: process.platform === 'win32' && 'a symlinked command needs a POSIX host' }, () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'doca-uvmini-'));
+  const tool = path.join(dir, 'tools', 'mini-swe-agent', 'bin');
+  fs.mkdirSync(tool, { recursive: true });
+  fs.writeFileSync(path.join(tool, 'mini'), '\x7fELF not a script'); fs.chmodSync(path.join(tool, 'mini'), 0o755);
+  fs.mkdirSync(path.join(dir, 'bin'));
+  fs.symlinkSync(path.join(tool, 'mini'), path.join(dir, 'bin', 'mini'));
+  const saved = process.env.PATH;
+  process.env.PATH = path.join(dir, 'bin');
+  harnesses._found.clear();
+  try { assert.ok(harnesses.optedIn(row())); }
+  finally { process.env.PATH = saved; harnesses._found.clear(); fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
 test('the Orchestrator\'s rule: when to offer it, before a work chat takes the job, and only on the person\'s yes', () => {
