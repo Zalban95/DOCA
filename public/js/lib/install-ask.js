@@ -9,6 +9,7 @@ const INSTALL_SIZES = {
   'tool:docker-compose': 'about 60 MB', 'tool:node-pty': 'about 5 MB, built here', 'tool:build-tools': 'about 200 MB',
   'tool:curl': 'about 1 MB', 'tool:ollama': 'about 1–2 GB (its GPU libraries); models are separate', 'tool:ollama-mlx': 'about 1.3 GB download, 2.2 GB unpacked',
   'tool:llama-server': 'about 50–200 MB', 'tool:nvidia-ctk': 'about 10 MB', 'tool:uv': 'about 15 MB', 'tool:restic': 'about 25 MB', 'tool:ffmpeg': 'about 80 MB',
+  'tool:poppler': 'about 15 MB', 'tool:ghostscript': 'about 40 MB',
   'tool:python3': 'about 30 MB', 'tool:pip': 'about 10 MB', 'tool:huggingface-cli': 'about 10 MB', 'tool:tesseract': 'about 30 MB',
   'tool:opencv': 'about 60 MB', 'tool:catt': 'about 10 MB', 'tool:libvirt': 'about 100 MB', 'tool:jdk': 'about 200 MB',
   'tool:jdk11': 'about 200 MB', 'tool:jdk21': 'about 200 MB', 'tool:android-sdk': 'about 1 GB', 'tool:android-emulator': 'about 2 GB',
