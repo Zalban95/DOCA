@@ -69,7 +69,7 @@ function mount(app) {
   // The main chat's fold also lists its background jobs, by step (experiment alwaysFree; background.js) — each the person may open.
   app.get('/api/harness/sessions/:id/inbox', handle(req => ({ waiting: require('./inbox').waiting(req.params.id),
     plan: memory.getSession(req.params.id)?.plan || null,
-    ...((req.params.id === memory.mainSession().id || req.params.id === require('./own-main').of(who(req), { create: false })) && require('../experiments').on('alwaysFree')
+    ...(require('./own-main').isMain(req.params.id) && require('../experiments').on('alwaysFree')
       ? { background: require('./background').rows(req.params.id).filter(r => require('./session-access').mayUse(who(req), r.id)) } : {}) })));
   app.delete('/api/harness/sessions/:id/inbox/:qid', handle(req => {
     require('./inbox').withdraw(req.params.id, req.params.qid);

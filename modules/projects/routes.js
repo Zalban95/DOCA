@@ -118,16 +118,19 @@ function mount(app) {
   app.post('/api/projects/lsp/servers/:name/install', h(req => require('./lsp').install(req.params.name)));
 
   // The project's conversation: its bound work chat, made on first use.
-  app.post('/api/projects/:id/chat', h(req => ({ sessionId: projects.workChat(req.params.id).id })));
+  app.post('/api/projects/:id/chat', h(req => ({ sessionId: projects.workChat(req.params.id, personOf(req)).id })));
   // Its chat tabs: every conversation working here, sub-agents included, and a new one.
   app.get('/api/projects/:id/chats', h(req => ({ chats: projects.chats(req.params.id, { all: req.query.all === '1' }) })));
   // A page: a markdown file beginning with its title (pages.js).
   app.post('/api/projects/:id/pages', h(req => require('./pages').newPage(req.params.id, req.body?.title)));
   app.post('/api/projects/:id/chats', h(async req => {   // { worktree: true }: its own git worktree (worktrees.js); { page }: about one page (pages.js)
-    const chat = projects.newChat(req.params.id, req.body || {});
+    const chat = projects.newChat(req.params.id, req.body || {}, personOf(req));
     if (req.body?.worktree) chat.worktree = await require('./worktrees').create(chat.id);
     return { chat };
   }));
 }
+
+/** Who asked: a project's chats go under their own Orchestrator (harness/own-main.js). */
+function personOf(req) { return require('../harness/turn/client').personOf(req.auth); }
 
 module.exports = { mount, detail };

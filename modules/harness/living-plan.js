@@ -123,7 +123,7 @@ function tell(id, e, who, asker = null) {
   if (ended && Date.now() - Date.parse(job.at || s.updatedAt || 0) > REOPEN_MS)
     throw error(`"${s.title}" finished more than ${REOPEN_MS / 60e3} minutes ago: start a new job for this instead.`);
   const text = message(e, who);
-  if (ended) { organization.start(id, text, memory.mainSession().id, { asker }); markRead(id, e.id); return 'started'; }
+  if (ended) { organization.start(id, text, require('./own-main').forSession(id), { asker }); markRead(id, e.id); return 'started'; }
   const r = agent.send({ sessionId: id, message: text, client: { name: 'Delegated by Orchestrator', kind: 'agent', ...(asker?.id ? { askedBy: asker } : {}) } }, { onRead: () => markRead(id, e.id) });
   if (r.queued) return 'queued';
   r.catch?.(() => { /* the runner records failure and reports it upward */ });
@@ -133,7 +133,7 @@ function tell(id, e, who, asker = null) {
 
 /** A step the worker found is not this job's: a work chat of its own, under the main chat, for the same person. */
 function split(workerId, e) {
-  const main = memory.mainSession();
+  const main = memory.getSession(require('./own-main').forSession(workerId));   // the worker's person's Orchestrator
   const owner = require('./session-access').ownerOf(workerId);
   const person = owner ? { id: owner, orgId: memory.getSession(workerId)?.person?.orgId } : null;
   const made = require('./fork').make({ session: main, message: e.text.replace(/^Do what was asked: /, ''), person });

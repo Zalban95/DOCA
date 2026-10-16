@@ -62,7 +62,7 @@ function make({ session, message, person = null, deep = false, spoken = false, a
   const name = title || (/^\[panel\]/.test(String(message || '')) ? require('./turn/handoff').jobTitle(message) : titleOf(message));
   let projectId = null;
   try { projectId = require('../projects/store').forSession(session.id)?.id || null; } catch { /* no project */ }
-  const chat = organization.create({ title: name, fields: projectId ? { projectId } : null });
+  const chat = organization.create({ title: name, fields: projectId ? { projectId } : null, person, from: session.id });   // under the person's own Orchestrator (own-main.js)
   require('./session-access').claim(person, chat.id);   // the person's work, under their level — not the Orchestrator's owner's
   if (deep) memory.updateSession(chat.id, { effort: 'high' });   // effort.js: this conversation's own level
   require('./living-plan').seed(chat.id, { title: name, request: message, by: person });

@@ -92,10 +92,15 @@ function mount(app) {
   // The model this conversation runs on, chosen in the chat, with or without the fallback order (turn/choice.js).
   const own = req => require('./session-access').check(req.auth && { ...req.auth.user, role: req.auth.role }, req.params.id);
   app.get('/api/harness/sessions/:id/model', (req, res) => {
-    try { own(req); res.json(require('./turn/choice').view(req.params.id)); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
+    try { own(req); res.json({ ...require('./turn/choice').view(req.params.id), mayChoose: require('../people-models').mayChoose(require('./turn/client').personOf(req.auth)) }); } catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   app.post('/api/harness/sessions/:id/model', (req, res) => {
-    try { own(req); require('./turn/choice').set(req.params.id, req.body || {}); res.json(require('./turn/choice').view(req.params.id)); }
+    try {
+      own(req);
+      // Choosing a model is a person's only where the owner lets people choose (people-models/; Settings → Users).
+      if (String(req.body?.model || '').trim() && !require('../people-models').mayChoose(require('./turn/client').personOf(req.auth)))
+        throw Object.assign(new Error('The owner has not let people choose their own model here (Settings → Users → Models for people).'), { status: 403 });
+      require('./turn/choice').set(req.params.id, req.body || {}); res.json(require('./turn/choice').view(req.params.id)); }
     catch (e) { res.status(e.status || 500).json({ error: e.message }); }
   });
   // The owner's price list for the usage window (prices.js): read with the by-model usage, replaced here.

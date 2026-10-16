@@ -230,6 +230,7 @@ const SCHEMA = {
       doorPort: { type: 'integer', min: 1024, max: 65535, default: 4250, propose: false, hint: 'The cast door\'s port (not the panel\'s, nor the previews\' next to it).' } } },
   migrations:       { is: 'travels', home: 'hive', note: 'which prefs migrations this file has had, and what they changed (migrations.js) — the record travels with the file' },
   usagePrices:      { is: 'travels', home: 'hive', note: 'the owner\'s price list for the usage window (harness/prices.js)' },
+  peopleModels:     require('./people-models/schema'),   // which models people run on (people-models/), declared beside its code
   // No box in the panel on purpose: learned by harness/contracts.js from a provider's refusals; the file is where an
   // expert corrects one, and a form would invite guessing at a provider's quirks.
   providerContracts: { is: 'mixed', home: 'hive', note: 'the owner\'s corrections to what a provider accepts (harness/contracts.js): about a remote provider they travel, about a server on this machine they are local' },

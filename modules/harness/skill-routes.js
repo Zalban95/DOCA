@@ -18,8 +18,8 @@ const h = fn => async (req, res) => { try { res.json(await fn(req)); } catch (e)
 
 function mount(app) {
   app.get('/api/harness/skills/suggest', h(req => {
-    // `main`: the floating chat's conversation (the Orchestrator's), which the page does not name.
-    const session = req.query.session === 'main' ? require('./memory').mainSession().id : req.query.session ? String(req.query.session) : null;
+    // `main`: the floating chat's conversation (this person's Orchestrator, own-main.js), which the page does not name.
+    const session = req.query.session === 'main' ? require('./own-main').forPerson(who(req)) : req.query.session ? String(req.query.session) : null;
     if (session) require('./session-access').check(who(req), session);
     const skip = session ? require('./skill-use').resolve(session).skills.map(x => x.name) : [];
     return { sessionId: session, auto: session ? require('./skill-next').auto(session) : { on: false },

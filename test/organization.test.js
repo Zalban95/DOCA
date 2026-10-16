@@ -162,7 +162,7 @@ test('resetting main retains ownership and unread reports; an old main is not re
   assert.equal(org.session(work.id).parentId, next.id);
   assert.ok(org.notices(next.id).some(n => n.id === notice.id));
   // Deep test B, C9: it came back as a work chat named "Orchestrator". It stays put away, as what it was, and says why.
-  assert.throws(() => org.archive(old.id, false), /earlier Orchestrator\. There is one Orchestrator at a time.*Show archived chats/);
+  assert.throws(() => org.archive(old.id, false), /earlier Orchestrator\. Each person has one Orchestrator at a time.*Show archived chats/);
   assert.equal(org.session(old.id).kind, 'orchestrator');
   assert.ok(memory.getSession(old.id).archivedAt);
   assert.equal(memory.mainSession().id, next.id);

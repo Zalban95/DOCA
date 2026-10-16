@@ -61,7 +61,7 @@ function upgradePanel(req, socket, head) {
   const client = { ...require('../harness/turn/client').dashboardClient({ auth: who }), name: 'Live call (realtime voice)' };
   const access = require('../harness/session-access'), memory = require('../harness/memory');
   const asked = new URL(req.url, 'http://x').searchParams.get('session');
-  let sessionId = access.isHost(client.user) ? memory.mainSession().id : access.defaultFor(client.user);   // as the floating chat and harness.post choose
+  let sessionId = require('../harness/own-main').forPerson(client.user);   // the person's own Orchestrator, as the floating chat and a device's call
   if (asked) {
     try { access.check(client.user, asked); sessionId = asked; } catch { return refuse(socket, 404, 'Not Found'); }
   }

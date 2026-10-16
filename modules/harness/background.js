@@ -86,8 +86,8 @@ function pick(mainId, job) {
 /** `background`'s actions, as the person the turn acts for. Returns the words for the person, rendered from the plan. */
 function act(args, ctx) {
   const org = require('./organization'), living = require('./living-plan');
-  const main = memory.mainSession().id;
-  if (ctx.sessionId !== main) throw new Error('Only the main chat steers background jobs; a work chat edits its own plan with work_plan.');
+  const main = ctx.sessionId;   // each person's own Orchestrator steers its own (own-main.js)
+  if (!require('./own-main').isMain(main)) throw new Error('Only the main chat steers background jobs; a work chat edits its own plan with work_plan.');
   if (args.action === 'status' || !args.action) return block(main).join('\n');
   const r = pick(main, args.job);
   if (ctx.user && !require('./session-access').mayUse(ctx.user, r.id)) throw new Error(`No background job "${args.job || r.id}".`);

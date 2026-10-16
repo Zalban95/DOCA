@@ -258,7 +258,7 @@ function profileOf(def) {
  * the orchestrator chose to hand over, and nothing else. That is the point of
  * the arrangement, not a limitation of it.
  */
-function dispatch({ agentId, task, context, by, chainId, plan, computer = null, vnc = null, place = null } = {}) {   // place: a team's task's project or worktree (teams/place.js)
+function dispatch({ agentId, task, context, by, chainId, plan, computer = null, vnc = null, place = null, person = null } = {}) {   // person: sent from the panel, under their Orchestrator   // place: a team's task's project or worktree (teams/place.js)
   const no = by ? require('../harness/organization').mayCreate(by, 'dispatch') : null;   // the depth rule (harness/org-depth.js)
   if (no) throw Object.assign(new Error(no), { status: 403 });
   if (!registry.enabled())
@@ -278,7 +278,7 @@ function dispatch({ agentId, task, context, by, chainId, plan, computer = null, 
   // Its own conversation, so the orchestrator's is not held by `_running` and
   // the two transcripts never interleave.
   const session = memory.createSession(`${def.label}: ${text.slice(0, 40)}`, {
-    activate: false, kind: 'specialist', parentId: by || memory.mainSession().id, fields: place, profile: { ...profileOf(def), ...(computer ? { computer: require('../computers').lend(computer, id) } : {}), ...(vnc ? { vnc } : {}) },   // + its computer (computers/), a VNC target lent
+    activate: false, kind: 'specialist', parentId: by || require('../harness/own-main').forPerson(person), fields: place, profile: { ...profileOf(def), ...(computer ? { computer: require('../computers').lend(computer, id) } : {}), ...(vnc ? { vnc } : {}) },   // + its computer (computers/), a VNC target lent
   });
 
   const row = {

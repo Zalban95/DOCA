@@ -23,7 +23,8 @@
  *       – every other step after tool results → worker: carrying out the plan.
  * It does not route at all — the turn's own model answers every step, as before — when the person chose a model for
  * the conversation (`session.modelChoice`, and a stuck job's escalation, which sets it), when a specialist's
- * definition names its own model, or on a spoken turn (a call keeps assistant mode's quick model, turn/front.js).
+ * definition names its own model, on a spoken turn (a call keeps assistant mode's quick model, turn/front.js), or when the
+ * owner assigned the turn's person a model of their own (people-models/).
  *
  * A role's model is held to the same rules as the turn's: only when allotted to the person (auth/allot.js), only when
  * priced under a money budget (spending.priced), and the harness's order — its model, then its fallback chain, already
@@ -56,7 +57,7 @@ function routed({ profile, session, client }) {
   if (session?.modelChoice?.model) return false;                     // the person's choice (or an escalation) wins
   if (profile && profile.level !== 'orchestrator' && (profile.model || profile.provider)) return false;   // a definition's own model
   if (client?.front || require('./effort').spokenProfile(client)) return false;   // a call keeps its quick model
-  return true;
+  return require('../../people-models').routes(client?.user, session);   // a person on a model the owner assigned keeps it
 }
 
 /** The rows of the step before this one: its assistant row's calls, and their results. */
