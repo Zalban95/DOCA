@@ -10,6 +10,7 @@ const L = require('./layout');
 const D = require('./dims');
 const S = require('./sheet');
 const V = require('./views');
+const T = require('./tags');
 
 const ORTHO = ['front', 'top', 'side', 'section'];
 const LABELS = { front: 'FRONT VIEW', top: 'TOP VIEW', side: 'SIDE VIEW', section: 'SECTION' };
@@ -19,7 +20,7 @@ const boxOf = pts => [Math.min(...pts.map(p => p[0])), Math.min(...pts.map(p => 
 function entityBox(e) {
   if (e.k === 'line') return boxOf(e.pts);
   if (e.k === 'circle' || e.k === 'arc') return [e.c[0] - e.r, e.c[1] - e.r, e.c[0] + e.r, e.c[1] + e.r];
-  if (e.k === 'text') { const w = e.text.length * e.h * 0.62; const x = /R$/.test(e.justify) ? e.at[0] - w : /C$/.test(e.justify) ? e.at[0] - w / 2 : e.at[0]; return [x, e.at[1], x + w, e.at[1] + e.h]; }
+  if (e.k === 'text') return T.textBox(e);
   if (e.k === 'arrow') return boxOf([e.from, e.to]);
   if (e.k === 'hatch') return boxOf(e.loops.flat());
   if (e.k === 'dim') return boxOf([e.p1, e.p2, e.at]);
@@ -74,9 +75,12 @@ function compose(spec, proj, { sheetNo = 1, sheets = 1, date = new Date().toISOS
   const front = views.front;
   if (!front) throw new Error('The projection has no front view.');
 
-  // Holes: lettered groups, the letters drawn beside each hole of the front view.
-  const groups = D.holeGroups(front.holes || []);
+  // Holes: lettered groups, the letters drawn beside each hole of the front view (`hole_tags: false` leaves the
+  // letters off the views; the notes still list the holes by size).
+  const tagHoles = spec.hole_tags !== false;
+  const groups = D.holeGroups(front.holes || []).map(g => (tagHoles ? g : { ...g, tag: '' }));
   for (const g of groups) for (const h of g.holes) h.tag = g.tag;
+  const tags = [];
 
   const names = ORTHO.filter(n => views[n]);
   const planned = {}, layoutViews = {};
@@ -115,6 +119,7 @@ function compose(spec, proj, { sheetNo = 1, sheets = 1, date = new Date().toISOS
     const pl = lay.views[n], v = views[n];
     entities.push(...V.viewEntities(v, pl, { hidden: hidden === 'all' || (hidden === 'front' && n === 'front') }));
     entities.push(...dimEntities(planned[n].dims, pl, 'DIM_MAIN'));
+    if (n === 'front') tags.push(...V.holeTags(v, pl).map(t => ({ ...t, within: pl.box })));
     const cutLabel = (spec.section && spec.section.label) || 'A';
     entities.push(label(pl, n === 'section' ? `SECTION ${cutLabel}–${cutLabel}` : LABELS[n]));
     if (n === 'section' && v.cut) entities.push(...V.cuttingLine(v.cut, lay.views.front, lay.views.front.outline, cutLabel));
@@ -136,8 +141,8 @@ function compose(spec, proj, { sheetNo = 1, sheets = 1, date = new Date().toISOS
       entities.push(...V.viewEntities(front, pl, { hidden: false, clip: { c, r } }));
       entities.push({ k: 'circle', c: V.toPaper(pl, c), r: r * pl.scale, layer: 'DIM' });
       const fc = V.toPaper(lay.views.front, c);
-      entities.push({ k: 'circle', c: fc, r: r * lay.scale, layer: 'DIM' },
-        { k: 'text', at: [fc[0] + r * lay.scale * 0.72 + 0.8, fc[1] + r * lay.scale * 0.72 + 0.8], text: tag, h: 3.5, justify: 'BL', layer: 'TXT' });
+      entities.push({ k: 'circle', c: fc, r: r * lay.scale, layer: 'DIM' });
+      tags.push({ c: fc, r0: r * lay.scale, text: tag, h: 3.5, layer: 'TXT', within: lay.views.front.box, detail: true });
       entities.push(...dimEntities(dplan.dims, pl, 'DIM_DETAIL'));
       entities.push(label(pl, `DETAIL ${tag} (${pl.scaleText})`));
       report.views.push('detail');
@@ -155,6 +160,16 @@ function compose(spec, proj, { sheetNo = 1, sheets = 1, date = new Date().toISOS
       free = L.freeRects([lay.area.x0, lay.area.y0, lay.area.x1, lay.area.y1], boxes());
     } else report.left_out.push('iso: no free cell large enough at or below the sheet scale');
   }
+  // The tags last, each clear of everything drawn so far — the detail's letter first, as it names a whole circle.
+  const obs = T.obstacles(entities);
+  for (const t of tags.sort((a, b) => (b.detail ? 1 : 0) - (a.detail ? 1 : 0))) {
+    const got = T.place(t, obs, t.within);
+    if (got) { entities.push(...got); continue; }
+    const where = `${Math.round(t.c[0])},${Math.round(t.c[1])} mm from the sheet's lower left`;
+    if (t.detail) report.left_out.push(`the letter of detail ${t.text} on the front view (at ${where}): no place clear of the line work beside its circle`);
+    else report.left_out.push(`tag ${t.text} at ${where}: no place clear of the line work within ${16} mm of its hole — the hole table still lists it; set "hole_tags": false to leave every tag off`);
+  }
+
   // The sheet itself: frame, centring marks (ISO 5457), title block, notes.
   entities.push(S.rect(...inner, 'FRAME'));
   const mx = sheet[0] / 2, my = sheet[1] / 2;
@@ -162,6 +177,7 @@ function compose(spec, proj, { sheetNo = 1, sheets = 1, date = new Date().toISOS
     S.seg([5, my], [inner[0], my], 'FRAME'), S.seg([sheet[0] - 5, my], [inner[2], my], 'FRAME'));
   const tb = S.titleBlock(inner[2], inner[1], t, { scaleText: lay.scaleText, projection, units: spec.units || 'mm' });
   entities.push(...tb.entities, ...notes.entities);
+  if (tb.cut.length) report.warnings.push(`title block: ${tb.cut.join(', ')} too long for its cell even in small text, cut with "…" — shorten it, or put the rest in "notes"`);
 
   // The checks a drawing is judged by: nothing off the sheet, no two parts of it on top of each other.
   const all = { ...Object.fromEntries(Object.entries(placed).map(([k, p]) => [k, p.box])), title: tb.box, notes: notes.box };

@@ -70,12 +70,16 @@ holds:
 - `section`: `{ "axis": "vertical" | "horizontal", "at": <mm along the front view> }`; without `at` it cuts through the
   hole nearest the middle. `hidden`: `front` (default), `all` or `none`.
 - What is dimensioned without asking: overall size, depth, and the holes' positions; holes are tagged H1, H2 … and
-  listed with size and depth (or THRU). Add the dimensions that carry the design — a hole's spacing, a slot, a
+  listed with size and depth (or THRU). A tag is set outside the outermost ring around its hole (a countersink, a nut
+  trap) where no line runs through it, with a short leader when it had to go further out; one that finds no clear
+  place is named in "left_out". `"hole_tags": false` leaves the tags off the views (the notes still list the holes). Add the dimensions that carry the design — a hole's spacing, a slot, a
   clearance — in `dimensions`: points in the part's own coordinates (3 numbers) or the view's (2), `side` optional;
   a diameter is `{ "view", "center", "d" }`. Put them in the `detail` view when they are small.
 - `tolerance` (default ISO 2768-m), `units`, `font` (default the OS's sans).
 
 ## Checklist before handing it over
+- Notes wrap to the room left of the title block; a title block value too long for its cell is set smaller, and one
+  too long even then is cut and named in `warnings` — shorten it or move the rest into `notes`.
 
 - Every view is labelled; the section's cutting line has arrows and letters; the detail's circle is on the front view.
 - The title block says the part, the project, the material, the scale, the date and the sheet number.
