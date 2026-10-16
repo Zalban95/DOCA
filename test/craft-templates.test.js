@@ -147,7 +147,7 @@ test('the skills name shipped recipes, and the recipes name scripts that are the
   const store = require('../modules/recipes/store');
   const named = [];
   for (const name of ['technical-drawing', 'product-video', 'printable-part']) {
-    const text = fs.readFileSync(path.join(ROOT, 'skills', name, 'SKILL.md'), 'utf8');
+    const text = fs.readFileSync(path.join(ROOT, 'skills', name, 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n');   // a Windows checkout
     const meta = text.match(/^---\n([\s\S]*?)\n---/)[1];
     assert.match(meta, new RegExp(`^name: ${name}$`, 'm'));
     assert.match(meta, /^description: .{40,}$/m);
@@ -171,7 +171,7 @@ test('a request for drawings or a promo finds its skill', () => {
   const { matcher } = require('../modules/harness/skill-match');
   const search = (q, list) => { const m = matcher(q); return list.map(s => ({ ...s, score: m(s) })).filter(s => s.score > 0).sort((a, b) => b.score - a.score); };
   const skills = ['technical-drawing', 'product-video', 'printable-part'].map(name => {
-    const text = fs.readFileSync(path.join(ROOT, 'skills', name, 'SKILL.md'), 'utf8');
+    const text = fs.readFileSync(path.join(ROOT, 'skills', name, 'SKILL.md'), 'utf8').replace(/\r\n/g, '\n');
     return { name, description: text.match(/^description: (.*)$/m)[1], body: text.split('\n---\n').slice(1).join('\n') };
   });
   const top = q => search(q, skills)[0]?.name;
