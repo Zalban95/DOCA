@@ -40,6 +40,8 @@ function roles() {
   return [
     { id: 'harness', label: 'The agent\'s model', scout: true, tasks: ['text-generation', 'image-text-to-text', 'gguf'], current: pm(c.provider, c.model), setting: 'harness.config.doca.model', where: 'Controls → DOCA ⚙' },
     { id: 'fallback', label: 'When the agent\'s model goes quiet', tasks: ['text-generation'], current: chain || null, setting: 'harness.config.doca.fallbackChain', where: 'Controls → DOCA ⚙ → Fallback' },
+    { id: 'mastermind', label: 'Planning and reviewing (the mastermind)', tasks: ['text-generation'], current: val('harness.models.mastermind'), setting: 'harness.models.mastermind', where: 'Controls → DOCA ⚙ → Advanced — mastermind and worker' },
+    { id: 'worker', label: 'Carrying out steps (the worker)', tasks: ['text-generation'], current: val('harness.models.worker'), setting: 'harness.models.worker', where: 'Controls → DOCA ⚙ → Advanced — mastermind and worker' },
     { id: 'escalate', label: 'A stronger model for a stuck job', tasks: ['text-generation'], current: esc, setting: 'harness.config.doca.escalateTo', where: 'Controls → DOCA ⚙ → Escalate' },
     { id: 'assistant', label: 'Live call (the face, Ambient’s assistant)', tasks: ['text-generation'], current: pm(val('assistant.provider'), val('assistant.model')), setting: 'assistant.model', where: 'Settings → Voice → Live call', feature: 'assistant-mode' },
     { id: 'specialists', label: 'Specialists with a model of their own', tasks: ['text-generation'], current: specialists || null, setting: 'agents (each definition)', where: 'Agents → Harness → Specialists', feature: 'specialists' },

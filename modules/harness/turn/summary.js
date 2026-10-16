@@ -17,9 +17,11 @@ const { splitTopics } = require('../recall');
  * Fold the older half of a long conversation into prose, so the window stays
  * small while nothing the user said simply vanishes.
  */
-async function foldSummary({ session, p, ep, signal, force = false }) {
+async function foldSummary({ session, p, ep, signal, force = false, person = null }) {
   const pending = memory.pendingFold(session.id, Number(p.summarizeAfter) || 0, { force });
   if (!pending) return session.summary || '';
+  // Asked of the worker when one is set (turn/model-route.js forFold): housekeeping, not judgement.
+  ({ p, ep } = require('./model-route').forFold({ p, ep, person, sessionId: session.id }));
 
   const transcript = pending.rows
     .map(r => `${r.role}${r.name ? `(${r.name})` : ''}: ${tools.clip(r.content || '[tool call]', 1200)}`)

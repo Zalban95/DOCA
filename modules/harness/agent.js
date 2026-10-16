@@ -178,7 +178,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
   // How much work this turn does before the job moves to a work chat, by the request's size (turn/handoff.js).
   const hand = require('./turn/handoff').counter({ p, profile, front, message, client, session: memory.getSession(session.id), auto });
 
-  let summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal });
+  let summary = await foldSummary({ session: memory.getSession(session.id), p, ep, signal, person: client?.user });
   // An allowlist is expressed as its complement, because `schemas()` filters by
   // what is switched off and there is no second mechanism worth adding. A
   // profile with no list gets the user's ordinary disabled-tools setting.
@@ -243,6 +243,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
 
     // Messages written to this conversation while it works are read now, before the next step (inbox.js).
     read.push(...require('./inbox').takeInto(session, { say, append: i => userRow(i.message, i.client, attachments.resolve(i.attachments || [])) }));
+    // Mastermind or worker: which model answers this step, by what the step is (turn/model-route.js); the turn's own when unset.
+    const r = await require('./turn/model-route').step({ p, ep, profile, session, client, step, rows: () => memory.messages(session.id) }), sp = r.p, sep = r.ep;
 
     const isMission = isMissionProfile(profile);
     // A mission keeps its last step for its report (turn/mission-report.js) — unless, still advancing, it is extended.
@@ -253,8 +255,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       if (more) { maxSteps = more; reporting = false; } else memory.append(session.id, report.row(profile, maxSteps, verdict));
     }
     // Held under the per-step ceiling: old results cleared, then earlier turns folded (turn/step-ceiling.js).
-    const lean = await require('./turn/step-ceiling').fit({ p, ep, session, signal, say, step, led, schemas, summary,
-      build: sum => stepRequest({ p, ep, message, summary: sum, client, profile, projectBrief, schemas, disabled, session, led, toolNews, contextSkips }) });
+    const lean = await require('./turn/step-ceiling').fit({ p: sp, ep: sep, session, signal, say, step, led, schemas, summary, person: client?.user,
+      build: sum => stepRequest({ p: sp, ep: sep, message, summary: sum, client, profile, projectBrief, schemas, disabled, session, led, toolNews, contextSkips }) });
     summary = lean.summary;
     const { messages, acknowledge } = lean.req;
 
@@ -268,12 +270,12 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     const startedAt = Date.now();
     // A reply that was all thinking is asked once more with room to answer (turn/think-retry.js).
     const reply = await require('./turn/think-retry').withRoom(body => complete({
-      ep, signal, p, meta: { kind: 'step', sessionId: session.id, agent: profile?.id, person: client?.user }, body,
+      ep: sep, signal, p: sp, meta: { kind: r.role ? `step:${r.role}` : 'step', sessionId: session.id, agent: profile?.id, person: client?.user }, body,
       onText: t => { const shown = tones ? tones.push(t) : t; text += shown; say({ type: 'text', text: shown, ...(tones ? { spoken: t } : {}) }); },
       onThinking: t => say({ type: 'thinking', text: t }),
       // Silence is a state worth drawing: without it the console shows the session line and then nothing,
       // which reads as a broken panel rather than a provider that has not started answering.
-      onWaiting: w => say({ type: 'waiting', step, provider: ep.label || ep.id, ...w }),
+      onWaiting: w => say({ type: 'waiting', step, provider: sep.label || sep.id, ...w }),
       onSkip: skipped => {
         contextSkips.set(`${skipped.provider}/${skipped.model}`, skipped.text);
         say({ type: 'warning', step, kind: 'context-preflight', text: skipped.text });
@@ -282,7 +284,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       onHop: hopReporter({ fallbacks, say, step }),
       onRetry: r => say({ type: 'warning', step, kind: 'rate-limit', text: r.text, waitMs: r.waitMs, attempt: r.attempt }),
       onStart: s => say({ type: 'warning', step, kind: 'starting', text: s.text }),   // a stopped model server started (service-life/)
-    }), { body: { ...base, ...require('./turn/effort').fields(effort.level, ep, p.model), messages, ...(schemas.length && !reporting ? { tools: schemas, tool_choice: 'auto' } : {}) }, p, say, step, who: ep.label || ep.id });
+    }), { body: { ...base, model: sp.model, ...require('./turn/effort').fields(effort.level, sep, sp.model), messages, ...(schemas.length && !reporting ? { tools: schemas, tool_choice: 'auto' } : {}) }, p: sp, say, step, who: sep.label || sep.id });
     const held = tones?.rest();   // a "[" that never became a tag is words after all
     if (held) { text += held; say({ type: 'text', text: held, spoken: '' }); }
     const stepMs = Date.now() - startedAt;
@@ -291,14 +293,14 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     acknowledge();
     budget.record(led, {
       usage: reply.usage,
-      promptEstimate,
+      promptEstimate, model: reply.provider && reply.provider !== sep.id ? `${reply.provider}/${reply.model}` : `${sep.id}/${sp.model}`,   // per model
       completionEstimate: budget.estimate(reply.content) + budget.estimate(JSON.stringify(reply.tool_calls || [])),
       ms: stepMs,
     });
     const spend = budget.report(led, p);
     say({ type: 'usage', step, ...spend, thinking: { level: effort.level, from: effort.from, mode: effort.mode } });
     // What this step sent and what came back, as numbers and names: the trace's model span (trace.js).
-    say({ type: 'step', step, provider: reply.provider || ep.id, model: reply.model || p.model, ms: stepMs, finish: reply.finish || null, usage: reply.usage || null,
+    say({ type: 'step', step, provider: reply.provider || sep.id, model: reply.model || sp.model, ...(r.role ? { role: r.role } : {}), ms: stepMs, finish: reply.finish || null, usage: reply.usage || null,
       cached: budget.cachedOf(reply.usage), estimate: promptEstimate, messages: messages.length, tools: schemas.length,
       system: require('./trace').fingerprint(messages[0]?.content), calls: reply.tool_calls.map(c => c.function?.name).filter(Boolean) });
 
@@ -318,7 +320,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       ...(reply.finish === 'length' ? { truncated: true } : {}),
     });
     // Cut off at the reply cap: said, marked, and never passed off as the whole answer (turn/fallback.js).
-    if (reply.finish === 'length') say(truncationNotice({ step, p, provider: reply.provider || ep.id, thinkingOnly: reply.thinkingOnly, cap: reply.tried }));
+    if (reply.finish === 'length') say(truncationNotice({ step, p: sp, provider: reply.provider || sep.id, thinkingOnly: reply.thinkingOnly, cap: reply.tried }));
 
     // Advisory, once per turn, to the user and to the agent. The hard stop
     // belongs to the provider; this is the part that arrives before it.
@@ -350,23 +352,23 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     const note = require('./turn/handoff').step(hand, { reply, session, message, from, say, step, person: client?.user, attachments: attached });
     if (typeof note === 'string') return { sessionId: session.id, text: text + note, steps: step, usage: spend, handedOff: true, ...(fallbacks.length ? { fallbacks } : {}) };
 
-    await runToolCalls({ reply: note ? { ...reply, tool_calls: note.run } : reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read });
+    await runToolCalls({ reply: note ? { ...reply, tool_calls: note.run } : reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read, stepModel: r.role ? (reply.model || sp.model) : null });
 
     // Token pressure folds the conversation early, before the message count
     // would have. `compactTokens` is the honest trigger — a window nobody
     // declared cannot be a percentage of anything, and message count treats
     // twenty lines of chat and twenty screens of tool output as the same.
-    const reason = budget.compactReason(p, led.lastPrompt);
+    const reason = budget.compactReason(sp, led.lastPrompt);   // against the window of the model that answered
     if (reason) {
-      const folded = await foldSummary({ session: memory.getSession(session.id), p, ep, signal, force: true });
+      const folded = await foldSummary({ session: memory.getSession(session.id), p, ep, signal, force: true, person: client?.user });
       if (folded !== summary) {
         summary = folded;
-        say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: budget.windowFor(p) || null,
+        say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: budget.windowFor(sp) || null,
           setting: reason.setting, threshold: reason.at });
       } else {
         // Nothing earlier to fold: the pressure is this turn. Clear its older tool results instead (turn/clear-results.js).
         const cleared = require('./turn/clear-results').clearOld(session.id);
-        if (cleared) say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: budget.windowFor(p) || null,
+        if (cleared) say({ type: 'compacted', at: step, contextTokens: led.lastPrompt, contextWindow: budget.windowFor(sp) || null,
           setting: reason.setting, threshold: reason.at, cleared });
       }
     }

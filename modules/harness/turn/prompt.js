@@ -104,25 +104,14 @@ function systemPrompt({ p, userText, summary, toolCount, disabledCount, client, 
   if (profile) {
     return [
       providers.charterFor(held),
-      profile.systemPrompt,
+      // The errand's role and its binding rules, short (improvement D1): what it is for, what it delivers, what it may not.
+      `# Your errand — ${profile.label || profile.id}\n${profile.systemPrompt || ''}\n\n${require('./errand').RULES}`,
       clientBlock(client), require('../../auth/permits').describe({ person: client?.user, profile }),
-      `You are "${profile.label || profile.id}", working on one errand handed to you by the agent the `
-        + 'user is talking to. You cannot change settings, install anything, or dispatch another agent. '
-        + 'When you are done, answer with the result — that answer is the whole of what gets back. If '
-        + 'something is in your way that only the user can clear, say so plainly and stop rather than '
-        + 'working around it.',
-      // A specialist always has `mission_plan`, whatever its definition lists,
-      // and nothing here used to say so — so the plan stayed empty and every
-      // client drew "STEP 0" until the mission was already over. The tool's own
-      // description explains how; this is what makes it expected.
-      'Say what you are going to do before you do it: call `mission_plan` once at the start with the '
-        + 'few steps you intend to take, and tick each one as you finish it. Nobody is watching you work, '
-        + 'so that list is the only thing a phone or a watch can draw while you are running.',
       profile.environment === 'full'
         ? environment.block({ provider: p.provider, model: p.model, toolCount, disabledCount })
         : environmentBrief(p, toolCount),
       toolList,
-      budget.block(p),
+      require('./errand').limits(p),   // the mission's own, short (errand.js)
       projectBrief,
       // A specialist sees the skills its definition names, or all with the skills kit.
       profile.skills?.length ? require('../skills').manifestBlock(profile.skills) : (profile.kits || []).includes('skills') ? require('../skills').manifestBlock() : '',

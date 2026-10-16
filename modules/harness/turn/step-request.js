@@ -30,7 +30,7 @@ function stepRequest({ p, ep, message, summary, client, profile, projectBrief, s
     },
     // `provider` is the one this request is addressed to, which decides which
     // echoes travel — see `toApiMessages`.
-    ...toApiMessages(rows, { sessionId: session.id, provider: ep.id, resendChars: require('./step-ceiling').resendChars(p) }),
+    ...toApiMessages(rows, { sessionId: session.id, provider: ep.id, resendChars: require('./step-ceiling').resendChars(p), capChars: require('./step-ceiling').resultCapChars(p) }),
   ];
 
   // The readings go last, after the history. Everything above is now

@@ -101,4 +101,10 @@ async function discover(provider, model) {
   return r;
 }
 
-module.exports = { discover, fromModelEntry };
+/** What a server last said within TTL, without asking (null when nothing is known): for a caller that cannot wait. */
+function known(provider, model) {
+  const hit = _cache.get(`${provider}|${model}`);
+  return hit && Date.now() - hit.at < TTL ? hit.r : null;
+}
+
+module.exports = { discover, known, fromModelEntry };

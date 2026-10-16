@@ -14,6 +14,8 @@
  *   GET  /api/guided/suggestions          the suggested models in use: which list, the day checked, what was accepted here
  *   POST /api/guided/suggestions/check    ask the model scout to look for newer ones now (its experiment on), else say how
  *   POST /api/guided/suggestions/forget   {role, id} — take back one accepted here (docs/design/model-suggestions.md)
+ *   POST /api/guided/pairs/check          {budget} — a mastermind and worker pair checked against its provider's /models;
+ *                                         answers the two values, which the panel saves (pairs.js). Writes nothing.
  */
 const machine = require('./assess');   // called through the module, so a test can stand in a made-up machine
 const suggestions = require('./suggestions');
@@ -48,6 +50,7 @@ async function overview() {
     devices: Object.entries(plan.DEVICES).map(([id, d]) => ({ id, label: d.label })),
     answers: plan.get(),
     have: got,
+    pairs: require('./pairs').offer(doc),   // a mastermind and a worker per budget, from providers with a key here
     suggestions: suggestions.about(),
     // Whether "Check for newer models" can do anything: the model scout is an experiment, and an install that is not a
     // developer's never meets experiments (deep test B, C11: a newcomer was told to turn on developer mode).
@@ -69,6 +72,10 @@ function mount(app) {
   app.post('/api/guided/suggestions/forget', h(req => require('./overlay').forget(String(req.body?.role || ''), String(req.body?.id || ''))));
   app.post('/api/guided/apply', h(async req => plan.apply(req.body?.answers || {}, await machine.assess(), suggestions.load(),
     { by: req.auth?.user?.id || null, have: await have() })));
+  app.post('/api/guided/pairs/check', async (req, res) => {
+    try { res.json(await require('./pairs').check(suggestions.load(), String(req.body?.budget || ''))); }
+    catch (e) { res.status(e.status || 500).json({ error: e.message, code: e.code, ...(e.available ? { available: e.available } : {}) }); }
+  });
   app.get('/api/guided/run', h(() => ({ run: require('./run').view() })));
   app.post('/api/guided/run', async (req, res) => {
     try {

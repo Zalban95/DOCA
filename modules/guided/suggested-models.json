@@ -159,5 +159,32 @@
     "xai": "https://console.x.ai",
     "together": "https://api.together.xyz/settings/api-keys",
     "cerebras": "https://cloud.cerebras.ai"
+  },
+  "pairs": {
+    "version": 2,
+    "checked": "2026-10-16",
+    "source": "Artificial Analysis Intelligence Index v4.3.2 (checked 2026-10-16); model ids and prices from OpenRouter's /models the same day",
+    "about": "Mastermind and worker (harness.models.*): a stronger model plans, routes and reviews; a quicker, cheaper one carries out the steps. Per budget, the first entry of each role whose provider has a key here is offered; applying checks each id against that provider's own /models list. index: the Intelligence Index; usdPerM: its price per million tokens on OpenRouter, blended 7:2:1 (cache read : input : output).",
+    "budgets": [
+      {
+        "id": "value", "label": "Value", "what": "good judgement for little: the mastermind costs about what the worker does",
+        "mastermind": [
+          {"provider": "openrouter", "model": "xiaomi/mimo-v2.6-pro", "name": "MiMo-V2.6-Pro", "index": 46, "usdPerM": 0.18}
+        ],
+        "worker": [
+          {"provider": "openrouter", "model": "deepseek/deepseek-v4.1-flash", "name": "DeepSeek V4.1 Flash", "index": 39, "usdPerM": 0.09, "tokPerSec": 180}
+        ]
+      },
+      {
+        "id": "strength", "label": "Strength", "what": "the strongest judgement at a fair price, the steps still on a quick, cheap worker",
+        "mastermind": [
+          {"provider": "openrouter", "model": "google/gemini-4-argon", "name": "Gemini 4 Argon", "index": 53, "usdPerM": 1.47},
+          {"provider": "openrouter", "model": "meta/muse-wonder", "name": "Muse Wonder", "index": 52, "usdPerM": 2.94, "tokPerSec": 184}
+        ],
+        "worker": [
+          {"provider": "openrouter", "model": "deepseek/deepseek-v4.1-flash", "name": "DeepSeek V4.1 Flash", "index": 39, "usdPerM": 0.09, "tokPerSec": 180}
+        ]
+      }
+    ]
   }
 }

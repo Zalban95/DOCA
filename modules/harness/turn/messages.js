@@ -56,10 +56,12 @@ function clipToolContent(content, spill, max = TOOL_MAX_CHARS) {
  * The form changes once, from fresh to re-sent, and is then fixed, so the prefix cache breaks only at the newest
  * results — the ones sent uncached a step ago anyway — never further up (ISSUES.md H-9b).
  */
-function maxFor(row, fresh, resendChars) {
-  if (!(resendChars > 0)) return TOOL_MAX_CHARS;
-  if (fresh) return require('../toolbox/common').MAX_OUT;
-  return row.name === 'read_file' ? Math.max(resendChars, TOOL_MAX_CHARS) : resendChars;
+function maxFor(row, fresh, resendChars, capChars) {
+  const base = !(resendChars > 0) ? TOOL_MAX_CHARS : fresh ? require('../toolbox/common').MAX_OUT
+    : row.name === 'read_file' ? Math.max(resendChars, TOOL_MAX_CHARS) : resendChars;
+  // On a model whose window is known, never more than its share of it (step-ceiling.resultCapChars): two whole 64k
+  // results in one step would overflow a 32k local model.
+  return capChars > 0 ? Math.min(base, capChars) : base;
 }
 
 /**
@@ -123,7 +125,7 @@ function pairedRows(rows) {
  * that — an old result sent once verbatim must still be verbatim after new
  * results arrive.
  */
-function toApiMessages(allRows, { sessionId, provider, resendChars } = {}) {
+function toApiMessages(allRows, { sessionId, provider, resendChars, capChars } = {}) {
   const rows = pairedRows(allRows);
   // Results after the last assistant row are this step's own: the model has not seen them yet.
   const freshFrom = rows.map(r => r.role).lastIndexOf('assistant') + 1;
@@ -146,7 +148,7 @@ function toApiMessages(allRows, { sessionId, provider, resendChars } = {}) {
     if (r.role === 'tool') {
       // Each row decides its own form, so appending a result cannot change how
       // an earlier one is sent. See the note on TOOL_MAX_CHARS.
-      const content = clipToolContent(r.content, () => spillTool(sessionId, r), maxFor(r, i >= freshFrom, resendChars));
+      const content = clipToolContent(r.content, () => spillTool(sessionId, r), maxFor(r, i >= freshFrom, resendChars, capChars));
       return { role: 'tool', tool_call_id: r.tool_call_id, name: r.name, content };
     }
     // A call stored cut off by an older version is sent whole (turn/cut-calls.js): replayed broken, a provider that parses

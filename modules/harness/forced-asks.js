@@ -48,7 +48,8 @@ function of(name, args, summarize, ctx = {}) {
     const c = require('../api-v1/commands').describe(String(args.id || ''));
     if (c?.confirm) return { tool: name, keys: null, forced: true, summary: `Run the hub command ${c.id} — ${c.title}${args.params ? ` ${JSON.stringify(args.params)}` : ''}. Always asked, whatever the approval mode.` };
   }
-  return null;
+  // A release act by a step whose model may not release unasked, in a turn of two models (release-asks.js, W2).
+  return require('./release-asks').of(name, args, ctx);
 }
 
 module.exports = { of };

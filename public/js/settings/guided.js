@@ -39,6 +39,7 @@ async function guidedLoad() {
       ${g.uses.map(u => box('guided-use', u.id, u.label, uses.has(u.id))).join('')}
       <textarea id="guided-free" aria-label="Anything else, in your own words" class="input guided-free" rows="2" placeholder="Anything else, in your own words (optional)">${escHtml(a.free || '')}</textarea></div>
     ${routeQ}
+    <div id="guided-pairs"></div>
     <div class="guided-q"><div class="guided-q-title">3. Where will you use it?${infoBtn('The devices you will talk to it from. Each one ticked gets a line below saying how it joins (an app to install, a code to pair). Nothing is installed on them from here.')}</div>
       ${g.devices.map(d => box('guided-device', d.id, d.label, devices.has(d.id))).join('')}</div>
     <div class="guided-actions">
@@ -50,6 +51,7 @@ async function guidedLoad() {
     <p class="guided-muted">A fresh install of a machine you backed up? <a href="#settings/backups" onclick="if (typeof MB === 'object') MB.bring = true; settingsSubNav('backups'); return false">Bring back a machine backup</a> — your folders return into this home (Settings → Backups → This machine's files).</p>
     ${g.mode === 'advanced' ? '<p class="guided-muted">This hub was set up by hand (advanced). Nothing here changes that: it only adds what you choose.</p>' : ''}
   </div><div id="guided-plan"></div>`;
+  if (typeof guidedPairsDraw === 'function') guidedPairsDraw(g.pairs);   // a mastermind and a worker (guided-pairs.js)
   if (g.suggestions.local) guidedAcceptedDraw();
   // Always drawn (a preview writes nothing): "a model you already run" sits in the plan, and was found only by pressing
   // "Only show what it would do" (self-test round two, C4).

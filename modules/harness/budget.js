@@ -216,7 +216,7 @@ function cachedOf(usage) {
     ?? null;
 }
 
-function record(l, { usage, promptEstimate = 0, completionEstimate = 0, ms = 0 } = {}) {
+function record(l, { usage, promptEstimate = 0, completionEstimate = 0, ms = 0, model = null } = {}) {
   const measuredPrompt     = Number(usage?.prompt_tokens);
   const measuredCompletion = Number(usage?.completion_tokens);
   const havePrompt     = Number.isFinite(measuredPrompt) && measuredPrompt > 0;
@@ -231,6 +231,7 @@ function record(l, { usage, promptEstimate = 0, completionEstimate = 0, ms = 0 }
   l.totalTokens       = l.promptTokens + l.completionTokens;
   l.lastPrompt        = prompt;
   l.lastEstimate      = promptEstimate;   // beside lastPrompt: how far the estimate is off (turn/step-ceiling.js)
+  if (model) (l.byModel ||= {})[model] = { lastPrompt: prompt, lastEstimate: promptEstimate };   // per model: tokenizers differ
   l.peakPrompt        = Math.max(l.peakPrompt, prompt);
   if (Number(ms) > 0) l.ms += Number(ms);
 
