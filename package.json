@@ -12,6 +12,7 @@
     "prove": "node bin/doca-prove.js",
     "guard-eval": "node bin/doca-guard-eval.js",
     "db-bench": "node bin/doca-db-bench.js",
+    "lean-bench": "node bin/doca-lean-bench.js",
     "smoke": "node bin/doca-smoke.js",
     "experiment": "node bin/doca-experiment.js",
     "test": "node --test --test-timeout=240000 \"test/**/*.test.js\"",
