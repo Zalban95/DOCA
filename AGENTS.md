@@ -348,24 +348,34 @@ The harness gives its agent eight rules for working on any repository (charter r
   `teams/tries.js`, `tries-score.js`; measured: DOCA on DeepSeek flash cost $0.48–0.92 for a craft task Opus did for $3.25,
   with quality varying run to run). A team's task — or `agent_dispatch {tries, check|test, project}`, made into a one-task
   team — may ask for `tries: N` (2 to `teams.maxTries`, 5, at most 8): tasks `<id>-try1…N`, each in a git worktree of its
-  own (an outside harness: its own computer and branch, under its switch exactly as `count` is — nothing widened), all
-  with the same contract and told they are one of N. Refused without a check, `checks` (up to 8, every one must hold) or
+  own (an outside harness: its own computer and branch, under its switch exactly as `count` is — nothing widened — and
+  only one whose trajectory records each command's return code, mini-swe-agent today; any other is refused `tries`,
+  `tries.judgeable`), all with the same contract and told they are one of N. Refused without a check, `checks` (up to 8, every one must hold) or
   a `test`, since the pick would be blind; refused outside a git project; `count` and `tries` are one or the other. When
   every try has ended — or `teams.triesWaitMin` (30) after the first whose checks all held, the laggards then stopped —
   the hub scores each **mechanically**: finished, checks held, the test, failed calls, then tokens and time as
   tie-breakers. **The hub never runs the test** (a check never runs a command, `plan-contracts.js`): each try runs it
-  itself as its last step, under its own approvals, and its own `shell` call's `exit N` is read from its transcript —
-  passed, failed, or not known (never run, run before a later change, an outside CLI whose calls are not kept). The best
+  itself as its last step, under its own approvals, and its own `shell` call's `exit N` is read from its transcript (an
+  outside harness's from its trajectory, kept on its worker as `runs`) — only a call that is **exactly the test**,
+  whitespace aside, or the test followed by output redirections (`isTestRun`: `npm test | tail`, `npm test || true`,
+  `echo npm test` are not runs) — passed, failed, or not known (never run that way, run before a later change). A try is
+  checked only in its own worktree (`tries.folder`) — an outside harness's branch brought back to the hub as one
+  (`harness-teams placeOnHub`) — never in the project's folder: one that committed nothing has nothing judged. The best
   eligible try is kept: `after: ["<id>"]` waits for it and starts from its branch and report; the board counts the group
   as one task; a failed try is never retried on its own. The others keep their worktrees and branches, their missions put
   away, their scores in `team.trials` and the team document's "## Tries"; the report is one line in fixed words — "3
   tries — #2 kept: all 5 checks held; #1 failed 'text over text at 17 s'; #3 did not finish: …" — in the Workstream, the
   leader's end-of-team report and `team status`. A person keeps another finished try (board: Keep this try, `POST
-  …/teams/:id/pick {task, try}`, `team pick`). An exact tie goes to the cheaper try, or to a reviewer registered with
+  …/teams/:id/pick {task, try}`, `team pick`); a pick after the tasks behind it started is recorded and says so, and
+  never restarts them. **When no try holds**, the best one that finished is kept as the best so far (`trials.partial`:
+  the group reads failed, the tasks after it wait), the report says what failed and offers trying again — never done by
+  itself: `team keep_going` on the person's yes starts every try of that group once more (`tries.again`, the earlier
+  report kept under `earlier`), and Keep this try on the kept one goes on with it as it is. An exact tie goes to the cheaper try, or to a reviewer registered with
   `tries.onTie(fn)` — the hook a model review (the "mastermind") would use; none ships. Budgets and spending are checked
-  per try (each is its own mission's turn). `teams.tries` (1) is the default for a task the checks can judge; all three
+  per try (each is its own mission's turn). `teams.tries` (1) is the default for a task the checks can judge (a check,
+  a non-empty `checks` or a test — any other task gets one try); all three
   settings are the owner's (not proposable), boxes under Agents → Teams → Advanced. The routing table has one line for
-  when tries help. `test/team-tries.test.js`.
+  when tries help, and says `count` is not tries. `test/team-tries.test.js`, `test/team-tries-outside.test.js`.
 
 ### Outside harnesses as team members (asked 2026-10-12, `modules/harness-teams`, `teams/outside.js`)
 - **A team's task may be another vendor's agent, only when the person names it**: `agent: "harness:<catalog id>"`
@@ -408,7 +418,7 @@ The harness gives its agent eight rules for working on any repository (charter r
   the Harness tab (`uv tool install mini-swe-agent`, a click; `install_propose` only proposes it) or named in
   `teams.outside.allow` (`team.optIn`, `harnesses.optedIn`) — and then the Orchestrator's routing table, ahead of the
   work chat, says when to **offer it in one line**: a self-contained coding task in a git project with a command that
-  shows it works, when several tries at once help (`count`), a smaller or local model should do it, or a record of
+  shows it works, when several tries at once help (`tries`, judged by its check or test), a smaller or local model should do it, or a record of
   every command is wanted; never for work needing DOCA's tools, long or several-repository work, or outside a computer.
   The person's yes is the ask `teams/outside.gate` needs, unchanged (their own turn, host, a git project). **It runs every
   command unasked (`-y`), so DOCA runs it only in agents' computers**: the row is `sandbox`, so `one-shot.js` has no road
