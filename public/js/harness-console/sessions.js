@@ -159,7 +159,7 @@ async function hcOpenSession(id, skipReload) {
         if (m.content) _hcAppendContent('assistant', m.content);
         (m.tool_calls || []).forEach(tc =>
           _hcAppend('tool-call', tc.function?.arguments || '', tc.function?.name));
-      } else if (m.content && agentRowIsAuto(m)) box.appendChild(agentAutoNoteEl(m.content));
+      } else if (m.content && agentRowIsAuto(m)) box.appendChild(agentAutoNoteEl(m.content, m));
       else if (m.content) _hcAppend(m.role, m.content, m.from?.name);
       // The transcript stores when each row was written, and a rebuilt turn has
       // no other way to know how long it took — so the newest row carries it and

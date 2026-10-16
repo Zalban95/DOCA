@@ -54,6 +54,8 @@ function agentEventSink(ui) {
       case 'error': settleCall(); ui.stream.finish(); ui.error(evt.text); break;
       case 'stderr': ui.stream.finish(); ui.error(evt.text); break;
       case 'proposal': ui.onProposal?.(evt); break;
+      // An important change (modules/important/): a red line, DOCA's own words, never the model's.
+      case 'important': if (ui.important) ui.important(evt); else ui.note('warning', evt.text, 'important'); break;
       // A message written while this turn worked, read before its next step (modules/harness/inbox.js): the
       // reply so far ends, the message shows (unless this page sent it and drew it already), the reply goes on.
       case 'user_added':
@@ -101,9 +103,10 @@ function agentApprovalEvent(evt, box, { note, onSettle, scroll } = {}) {
    that opens to the whole text, never as the person's own bubble (2026-10-11: "[panel] Work reported back…" read as
    if the owner had written it). */
 function agentRowIsAuto(m) {
-  return /^\[panel\]/.test(String(m?.content || '')) || m?.from?.formFactor === 'hub' || m?.hub === true;
+  return /^\[panel\]/.test(String(m?.content || '')) || m?.from?.formFactor === 'hub' || m?.hub === true || m?.role === 'note';
 }
-function agentAutoNoteEl(text) {
+function agentAutoNoteEl(text, m) {
+  if (m?.important || m?.role === 'note') return agentImportantEl(text);
   const body = String(text || '').replace(/^\[panel\]\s*/, '');
   const d = document.createElement('details');
   d.className = 'agent-auto-note';
@@ -113,5 +116,16 @@ function agentAutoNoteEl(text) {
   const p = document.createElement('div');
   p.textContent = body;
   d.append(s, p);
+  return d;
+}
+
+/* An important change (modules/important/: the approval mode, a level, a guard…), said mechanically — "⚠ Changed: what:
+   old → new" — as one red line in the transcript, from the stored row or the live feed (important.js). DOCA's note to
+   the person: no model wrote it and none reads it. */
+function agentImportantEl(text) {
+  const d = document.createElement('div');
+  d.className = 'agent-important';
+  d.setAttribute('role', 'status');
+  d.textContent = /^⚠/.test(String(text || '')) ? String(text) : `⚠ Changed: ${text || ''}`;
   return d;
 }

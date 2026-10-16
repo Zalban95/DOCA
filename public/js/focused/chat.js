@@ -60,8 +60,8 @@ async function _fcChatLoad() {
   const rows = (data.messages || []).slice(-40);
   if (!rows.length && !_fcChat.turn) box.append(_fcGreetEl());
   for (const m of rows) {
-    if (m.role === 'user') {
-      if (typeof agentRowIsAuto === 'function' && agentRowIsAuto(m)) box.append(Object.assign(document.createElement('div'), { className: 'fc-note', textContent: String(m.content).replace(/^\[panel\]\s*/, '').split('\n')[0].slice(0, 160) }));
+    if (m.role === 'user' || m.role === 'note') {
+      if (typeof agentRowIsAuto === 'function' && agentRowIsAuto(m)) box.append(Object.assign(document.createElement('div'), { className: m.role === 'note' ? 'fc-note agent-important' : 'fc-note', textContent: String(m.content).replace(/^\[panel\]\s*/, '').split('\n')[0].slice(0, 160) }));
       else _fcMsg('me', _fcPlain(m.content), box);
       continue;
     }
