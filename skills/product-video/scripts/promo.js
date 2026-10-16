@@ -47,6 +47,7 @@ const writeJson = (f, v) => fs.writeFileSync(f, JSON.stringify(v, null, 2) + '\n
 const readJson = f => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
 const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
 const pngs = d => { try { return fs.readdirSync(d).filter(n => /^\d{4}\.png$/.test(n)).length; } catch { return 0; } };
+  P.motion(spec);   // a part's own axis or path, checked before anything renders
 
 /**
  * Not a background job: the exact call that is (round 1 of the test of 2026-10-16 — `shell` without background: true
@@ -183,7 +184,7 @@ async function main() {
   }
   else if (cmd === 'status') out = status(spec);
   else if (cmd === 'wait') { out = await wait(spec, o); process.exitCode = out.state === 'done' ? 0 : out.state === 'failed' ? 1 : 2; }
-  else if (cmd === 'plan') { const p = P.shots(spec); out = { ...p, assemble: p.list.find(s => s.shot === 'assemble') ? P.schedule(spec.parts.length, p.list.find(s => s.shot === 'assemble').seconds) : null }; }
+  else if (cmd === 'plan') { const p = P.shots(spec); out = { ...p, assemble: p.list.find(s => s.shot === 'assemble') ? { ...P.schedule(spec.parts.length, p.list.find(s => s.shot === 'assemble').seconds), parts: P.motion(spec) } : null }; }
   else throw new Error(`Unknown command "${cmd}".`);
   process.stdout.write(JSON.stringify(out, null, 2) + '\n');
 }

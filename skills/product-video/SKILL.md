@@ -60,7 +60,9 @@ holds:
   "parts": [
     { "path": "print/part_a.stl", "name": "Part A", "note": "base · two screw holes", "color": "#d6d9de" },
     { "box": [100, 60, 2], "offset": [-50, -30, 3], "name": "The board", "color": "#1d2228" },
-    { "path": "print/part_b.stl", "offset": [0, 0, 8], "name": "Part B", "note": "snap-on lid", "color": "#ff7a2f" }
+    { "path": "print/part_b.stl", "offset": [0, 0, 8], "name": "Part B", "note": "snap-on lid", "color": "#ff7a2f" },
+    { "path": "print/fan.stl", "name": "Fan", "axis": [-1, 0, 0] },
+    { "path": "print/clip.stl", "name": "Clip", "via": [[0, 0, 40], [0, -12, 40]] }
   ]
 }
 ```
@@ -68,6 +70,12 @@ holds:
 - **Parts in assembly order**: the first stays, each next one settles onto it. Their files may be in print
   orientation — `offset` (mm) and `rotation` (degrees XYZ) put each where it sits in the assembled product. The
   parts come together along "explode_axis" (default the parts' own +Z).
+- **A part that comes its own way** says so — the others keep the shared axis:
+  - `"axis": [x, y, z]` — it starts out on that side and moves against it: `[-1, 0, 0]` slides it on along +X,
+    `[0, 0, 1]` lowers it down onto the others (`"distance"` in mm sets how far out it starts);
+  - `"via": [[x, y, z], …]` — a path: offsets in mm from where it sits, travelled in order, then its place. A clip
+    that hooks over a panel edge: lifted above it, moved over it, pushed down — `[[0, 0, 40], [0, -12, 40]]`.
+  `promo.js plan` lists how each part comes in; the first part never moves.
 - `rotate` turns the whole product for the camera (a flat part tilted toward the viewer: `[60, 0, 0]`). The camera
   frames it by itself; `elevation`, `azimuth`, `lens` only when asked.
 - `style` `dark` or `light`; `accent` is the one colour of the cards, captions and highlights — give the hero part the
