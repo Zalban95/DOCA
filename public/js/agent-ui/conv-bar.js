@@ -59,6 +59,7 @@ async function chatModelPicker(host, sessionId) {
   host.dataset.session = sessionId;
   let v;
   try { v = await apiFetch(`/api/harness/sessions/${encodeURIComponent(sessionId)}/model`); } catch { host.innerHTML = ''; return; }
+  if (v.mayChoose === false) { host.innerHTML = ''; return; }   // the owner has not let people choose (Settings → Users → Models for people)
   const key = e => `${e.provider}/${e.model}`;
   const shown = e => (e.model ? key(e) : `${e.provider} · no model`);
   const chosen = v.choice?.model ? key(v.choice) : '';

@@ -139,6 +139,10 @@ browser out. `GET /settings/effective` answers any token with that device's sett
 also carries `panelModeResolved: {mode: focused|extended, source: device|person|hive|role}` — which face of the panel
 the device's screen shows (Focused, the calm everyday view, or Extended, the whole panel); an app opening the panel in
 its web view may open `/?view=focused` when `mode` is `focused`.
+Since hub 3.101 (additive, read-only) it also carries `model: {provider, model, why, mayChoose}` — the model the
+device's person's turns start on under the owner's model policy (`why`: `owner`, `assigned:person|level|everyone`,
+`allotted`, or `none`/`not-allotted` with `provider` and `model` null and a `note`), and whether that person may choose
+a conversation's model; `null` when it could not be read. A client may show it; it cannot change it here.
 Since hub 2.168.0 `POST /mcp` is the hub as an MCP server (JSON-RPC: initialize, tools/list, tools/call), for
 any MCP client holding a device token; its tools follow the token's scopes.
 Since hub 2.187.0 `POST /agui` (scope `harness:chat`) is the hub as an AG-UI agent: AG-UI's RunAgentInput in

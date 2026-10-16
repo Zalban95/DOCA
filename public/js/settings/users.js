@@ -17,6 +17,7 @@ async function usersLoad() {
   } catch (e) { panel.innerHTML = `<div class="card"><div class="placeholder">${escHtml(e.message)}</div></div>`; return; }
   panel.innerHTML = '';
   panel.append(_usersPeopleCard(), _usersLevelsCard(), _usersGrantsCard());
+  if (typeof _usersModelsCard === 'function') _usersModelsCard().then(c => { if (c && panel.isConnected) panel.insertBefore(c, panel.children[2] || null); });   // settings/people-models.js
 }
 
 const _levelName = id => _usersData.levels.find(l => l.id === id)?.name || id;

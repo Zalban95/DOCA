@@ -208,7 +208,7 @@
         ],
         "summary": "This device's settings: its own layer over the person's and the hive's",
         "operationId": "getEffectiveSettings",
-        "description": "For the keys a device keeps (settings-schema.js: home device, on screen — theme, tabs, sidebar…). `from` says which layer each value came from: device, person or hive. Any token; it answers for the device that asks. The look those settings draw, resolved to colours and fonts, is `GET /settings/look`. `panelModeResolved` is which face of the panel this device's screen shows — Focused (the calm everyday view) or Extended (the whole panel) — as the hub resolves it: `settings.panelMode` when set on the device, its person or the hive, else by the person's role (a host Extended, everyone else Focused); `source` says which.",
+        "description": "For the keys a device keeps (settings-schema.js: home device, on screen — theme, tabs, sidebar…). `from` says which layer each value came from: device, person or hive. Any token; it answers for the device that asks. The look those settings draw, resolved to colours and fonts, is `GET /settings/look`. `model` (read-only, additive) is the model its person's turns start on under the owner's model policy, why, and whether they may choose a conversation's model. `panelModeResolved` is which face of the panel this device's screen shows — Focused (the calm everyday view) or Extended (the whole panel) — as the hub resolves it: `settings.panelMode` when set on the device, its person or the hive, else by the person's role (a host Extended, everyone else Focused); `source` says which.",
         "responses": {
           "200": {
             "description": "OK",

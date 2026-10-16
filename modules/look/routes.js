@@ -22,7 +22,10 @@ function mountDevice(router) {
   router.get('/settings/effective', (req, res) => {
     const eff = screens().effective(req.device.id, req.device.userId);
     // Additive (PROTOCOL §14.1): Focused or Extended as the panel resolves it — `settings.panelMode` when set, else by role.
-    res.json({ deviceId: req.device.id, ...eff, panelModeResolved: require('../screens/panel-mode').forDevice(req.device, eff) });
+    // Additive (2026-10-16): the model its person's turns start on and why (people-models/), read-only — never a key.
+    let model = null;
+    try { model = require('../people-models').effective(require('../harness/turn/client').deviceOwner(req.device)); } catch { /* the settings answer without it */ }
+    res.json({ deviceId: req.device.id, ...eff, panelModeResolved: require('../screens/panel-mode').forDevice(req.device, eff), model });
   });
   router.get('/settings/look', (req, res) => {
     try { res.json({ deviceId: req.device.id, look: lookFor(req.device.id, req.device.userId) }); }
