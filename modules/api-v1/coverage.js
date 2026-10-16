@@ -53,6 +53,7 @@ const COVERAGE = {
   'service-pages': { panel: 'a connected service\'s own web interface shown as a page of the panel (service-pages/): a device uses that service through its own API' },
   cast: { panel: 'casting a page to a screen: the panel\'s Cast button, in a phone\'s web view too, until a phone casts by itself (docs/design/cast-and-devices.md, phase 2)' },
   licence: { panel: 'which features this hive may run, and renewing its licence: the owner\'s, at the panel (license/)' },
+  usage: { v1: ['/harness/usage'], note: 'a device reads its person\'s tokens per provider/model there (by=model); the per-provider card with money and the providers\' own balances is the panel\'s Field → API keys' },
   // The machine and DOCA itself.
   ...Object.fromEntries(['status', 'action', 'stack', 'logs', 'stats', 'configs', 'prefs', 'config-favorites', 'fm-favorites', 'paths', 'keys', 'skills',
     'setup', 'snapshots', 'files', 'host', 'experiments', 'features', 'developer', 'screens', 'workstream', 'machines', 'network', 'settings', 'search', 'retrieval', 'vision', 'scout', 'assistant', 'evals', 'connectors', 'channels', 'computers', 'models',
