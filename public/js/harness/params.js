@@ -29,6 +29,8 @@ async function harnessConfigToggle(id, keepOpen) {
   _harnessLoadModels(id, h.config.provider, h.config.model);
   _harnessFallbacksMount(id, h.config.fallbackChain);
   _harnessEscalateMount(id, h.config.escalateTo);
+  // Which model plans and reviews, and which carries out the steps (modules/harness/turn/model-route.js): two declared leaves.
+  leafFieldsDraw(strip.appendChild(document.createElement('div')), ['harness.models.mastermind', 'harness.models.worker'], { label: 'Advanced — mastermind and worker models', id: 'harness-model-roles' });
   harnessContractsMount(id);   // what providers were found to accept, with Forget (harness/contracts.js)
   harnessOllamaHint(id);   // the context Ollama really serves (harness/ollama-hint.js)
   harnessContextFind(id, { onlyIfUnknown: true });   // what the server reports, offered (harness/context-find.js)

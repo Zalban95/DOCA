@@ -15,7 +15,7 @@ function start({ provider, url, model, kind = 'ask', sessionId = null, agent = n
   const id = ++_seq;
   _now.set(id, { provider, url, model, kind, sessionId, agent, at: new Date().toISOString() });
   const used = require('../service-life/usage').begin(url);   // a service at this address was used (its idle clock)
-  try { require('../library/room').wanted(url, `${kind === 'step' ? 'a turn' : `a ${kind}`} asked ${model || 'a model'}`); } catch { /* the Library holds no room */ }
+  try { require('../library/room').wanted(url, `${String(kind).startsWith('step') ? 'a turn' : `a ${kind}`} asked ${model || 'a model'}`); } catch { /* the Library holds no room */ }
   return () => { _now.delete(id); used(); };
 }
 

@@ -24,7 +24,7 @@ function otlp(run, spans, { service = 'doca' } = {}) {
     const a = s.kind === 'model'
       ? attrs({ 'gen_ai.operation.name': 'chat', 'gen_ai.system': d.provider, 'gen_ai.request.model': d.model, 'gen_ai.usage.input_tokens': d.prompt,
         'gen_ai.usage.output_tokens': d.completion, 'gen_ai.response.finish_reasons': d.finish, 'doca.step': s.step, 'doca.messages': d.messages,
-        'doca.tools': d.tools, 'doca.system_prompt_sha256': d.system, 'doca.cached_tokens': d.cached, 'doca.tool_calls': (d.calls || []).join(',') || null })
+        'doca.tools': d.tools, 'doca.system_prompt_sha256': d.system, 'doca.cached_tokens': d.cached, 'doca.tool_calls': (d.calls || []).join(',') || null, 'doca.role': d.role || null })
       : attrs({ 'gen_ai.operation.name': 'execute_tool', 'gen_ai.tool.name': s.name, 'doca.step': s.step, 'doca.args': (d.args || []).join(',') || null,
         'doca.result_chars': d.chars, 'doca.failure': d.failure, 'doca.risk.tier': d.tier, 'doca.risk.way': d.way });
     return { traceId, spanId: hex(`${run.id}/${s.seq}`, 8), parentSpanId: rootId, name: s.kind === 'model' ? `chat ${d.model || ''}`.trim() : `execute_tool ${s.name}`,

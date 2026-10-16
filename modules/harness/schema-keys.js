@@ -15,4 +15,11 @@ module.exports = {
   // Never proposed either: what an unanswered machine question becomes — hold (it stays open, the mission waits) or deny.
   'approval.missionAskTimeout': { type: 'string', oneOf: ['hold', 'deny'], default: 'hold', propose: false,
     hint: 'When nobody answers a mission\'s machine question in time: hold — the question stays open in Harness → Approvals and the mission waits, paused, until someone answers — or deny.' },
+  // Mastermind and worker (turn/model-route.js): which model plans and reviews, and which carries out the steps. Empty is
+  // the harness's model for every step, as before. Not proposable: the harness's own model is (harness.config), but a
+  // second model a turn may call is a question for the owner (D1's open question).
+  'models.mastermind': { type: 'string', default: '', propose: false,
+    hint: 'provider/model that plans, routes, re-plans and reviews: every step of the Orchestrator, and in a work chat or a chat the first step, the step after a plan changes or a step is marked done (the review and the final answer), and the step after a call fails. Empty: the harness\'s model. A person\'s choice of model in a chat wins; only a model allotted to the person is used.' },
+  'models.worker': { type: 'string', default: '', propose: false,
+    hint: 'provider/model that carries out the steps: in a work chat or a chat every step that follows tool results, and every step of a specialist whose definition names no model. Empty: the harness\'s model.' },
 };

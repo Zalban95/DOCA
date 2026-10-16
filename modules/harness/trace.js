@@ -39,7 +39,7 @@ function onEvent(evt) {
       return write(t, 'model', { name: `${evt.provider} / ${evt.model}`, step: evt.step, ms: evt.ms, data: {
         provider: evt.provider, model: evt.model, finish: evt.finish || null, messages: evt.messages, tools: evt.tools, system: evt.system,
         prompt: evt.usage?.prompt_tokens ?? null, completion: evt.usage?.completion_tokens ?? null, cached: evt.cached ?? null,
-        estimate: evt.estimate ?? null, calls: evt.calls || [] } });
+        estimate: evt.estimate ?? null, calls: evt.calls || [], ...(evt.role ? { role: evt.role } : {}) } });   // mastermind or worker (turn/model-route.js)
     case 'tool_call': {
       const list = t.open.get(evt.name) || [];
       list.push(Date.now());
