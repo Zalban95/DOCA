@@ -45,6 +45,8 @@ function sseHeaders(res) {
  * shortens it for tests.
  */
 function sseKeepalive(res, ms = Number(process.env.DOCA_SSE_KEEPALIVE_MS) || 15000) {
+  // A real response only: a handler run in-process (api-v1/jobs.js invokeHandler) has no socket to keep and no end event.
+  if (typeof res?.once !== 'function' || typeof res.writableEnded !== 'boolean') return () => {};
   const t = setInterval(() => {
     if (res.writableEnded || res.destroyed) return clearInterval(t);
     try { res.write(': keepalive\n\n'); } catch { clearInterval(t); }
