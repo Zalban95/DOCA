@@ -56,6 +56,8 @@ module.exports = [
       + 'Their approval starts the work here, with a message telling you to carry it out. Progress marks a numbered step without changing the approved scope. '
       + 'Give each step its contract in contracts (same order: {done: "done when …", check}) so finished means every contract holds: marking a step done runs '
       + 'its check first ({file}, {file, contains}, {url}, {page, contains, selector, noErrors} — the page as rendered —, {absent} or {free: port}; run tests yourself), and the plan reads fulfilled when all are done. '
+      + 'A step that makes craft is checked as a person would look at it: {video, duration?, width?, height?, fps?} (no blank card, no doubled or overlapping text), '
+      + '{pdf, pages?, contains?} (no text over text or off the sheet), {mesh, maxSize?, watertight?, maxParts?}, {image, contains?} — check_output runs the same check before you mark it. '
       + 'A job handed on from the main chat has a living plan (state living, no approval needed): grow it with add (a step, with its contract), change a step '
       + 'not started yet (its text or contract), cancel one with why, or split one that is not this job\'s into a work chat of its own; steps added by the person '
       + 'arrive as "[plan]" messages and stay theirs — keep them, or cancel or split one with why. Draft over a plan the person changed needs basedOn: its version. '
@@ -68,7 +70,7 @@ module.exports = [
       contract: { type: 'object', description: 'add / change: the step\'s contract, {done: "done when …", check?}.', properties: { done: { type: 'string' }, check: { type: 'object' } } },
       basedOn: { type: 'integer', description: 'draft over a living plan: the version you read (work_plan read), so nothing the person added since is lost.' },
       steps: { type: 'array', items: { type: 'string' } },
-      contracts: { type: 'array', description: 'draft: one per step, in order — {done: "done when …", check?: {file} | {file, contains} | {url}}; {} for a step without one.',
+      contracts: { type: 'array', description: 'draft: one per step, in order — {done: "done when …", check?: {file} | {file, contains} | {url} | {video…} | {pdf…} | {mesh…} | {image…}}; {} for a step without one.',
         items: { type: 'object', properties: { done: { type: 'string' }, check: { type: 'object' } } } },
       step: { type: 'integer', description: 'One-based step number for progress, change, cancel and split.' },
       state: { type: 'string', enum: ['queued', 'running', 'done', 'blocked'] },
@@ -82,6 +84,7 @@ module.exports = [
         if (contract) {
           let cwd; try { cwd = require('../../projects/store').forSession(id)?.root; } catch { /* no project */ }
           const v = await require('../plan-contracts').verify(contract, { cwd });
+          if (contract.check) require('../plan-progress').noteCheck(id, args.step, v);   // the bar shows a failing check, with why
           if (!v.ok) return JSON.stringify({ step: args.step, done: false, contract: contract.done, check: v.why,
             note: 'Not marked done: its contract does not hold yet. Finish the step, then mark it again — or revise the plan if the contract was wrong.' });
         }

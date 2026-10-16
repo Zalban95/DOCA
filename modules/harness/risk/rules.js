@@ -76,6 +76,7 @@ const TOOLS = {
   memory_flag: [{ tier: 'reversible', way: WAY.memory }],
   memory_forget: [{ tier: 'reversible', way: WAY.none }],
   memory_rules_write: [{ tier: 'reversible', way: 'the rules can be put back to their defaults' }],
+  check_output: [{ tier: 'read' }],   // reads a file of the work through the hub's own readers (modules/checks)
   tell_device: [{ tier: 'reversible', way: WAY.devices }],
   // A page or a sound on a TV or a speaker lands in a room: heard and seen by whoever is there (cast/things.js).
   cast: [{ when: { action: ['list'] }, tier: 'read' }, { tier: 'outward', why: 'a page or a sound on a device in a room' }],
