@@ -5,6 +5,7 @@
 async function loadKeys() {
   devicesLoad();        // this server's /api/v1 device tokens
   if (!(typeof _settingsNoHost !== 'undefined' && _settingsNoHost)) keysLoadProviders();  // third-party LLM providers: the machine's keys
+  else keysUsageLoad();   // without host: the person's own use of each provider (keys-usage.js)
   clientAppsRender();   // DOCA's Android apps: the newest builds, built here (settings/client-apps.js)
   if (!(typeof _settingsNoHost !== 'undefined' && _settingsNoHost)) modelRelayRender();   // the hub's models for agents' computers (settings/model-relay.js)
 }
@@ -25,6 +26,7 @@ async function keysLoadProviders() {
       return;
     }
     list.innerHTML = Object.entries(providers).map(([name, p]) => _providerCardHtml(name, p)).join('');
+    keysUsageLoad();   // tokens and money on each row, the provider's own figure beside them (keys-usage.js)
   } catch (e) {
     list.innerHTML = `<div class="placeholder" style="color:var(--red)">${escHtml(e.message)}</div>`;
   }
@@ -54,6 +56,7 @@ function _providerCardHtml(name, p) {
         <button class="btn btn-sm btn-green" onclick="saveKey(${jsArg(name)})">Save</button>
         <button class="btn btn-sm btn-red"   onclick="deleteProvider(${jsArg(name)})">✕</button>
       </div>
+      <div class="kuse" id="key-usage-${escHtml(name)}"></div>
       <div class="status-line mt4" id="key-status-${escHtml(name)}"></div>
     </div>`;
 }

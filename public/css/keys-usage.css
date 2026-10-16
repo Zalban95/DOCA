@@ -1,0 +1,22 @@
+/* Tokens per provider on Field → API keys (js/keys-usage.js): a small table under each provider row. Theme variables only. */
+.kuse:empty { display: none; }
+.kuse { margin-top: 8px; font-size: 11px; color: var(--text); }
+.kuse-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.kuse-table th { text-align: left; font-weight: 500; color: var(--muted); font-size: 10px; padding: 2px 6px 2px 0; }
+.kuse-table td { padding: 3px 6px 3px 0; vertical-align: top; overflow-wrap: anywhere; }
+.kuse-table th:first-child, .kuse-table td:first-child { width: 22%; }
+.kuse-name { color: var(--bright); }
+.kuse-money { color: var(--muted); }
+.kuse-muted { color: var(--muted); }
+.kuse-models { margin-top: 6px; }
+.kuse-models > summary { cursor: pointer; color: var(--muted); font-size: 10px; }
+.kuse-theirs { margin-top: 6px; }
+.kuse-tag { font-size: 10px; padding: 1px 6px; border: 1px solid var(--border2); color: var(--muted); margin-right: 4px; }
+@media (max-width: 600px) {
+  .kuse-table, .kuse-table tbody, .kuse-table tr, .kuse-table td { display: block; width: auto !important; }
+  .kuse-table thead { display: none; }
+  .kuse-table td:not(:first-child)::before { color: var(--muted); font-size: 10px; display: block; }
+  .kuse-table td:nth-child(2)::before { content: 'Today'; }
+  .kuse-table td:nth-child(3)::before { content: 'This month'; }
+  .kuse-table td:nth-child(4)::before { content: 'In all'; }
+}
