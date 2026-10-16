@@ -56,6 +56,7 @@ function mount(router) {
     catch (e) { return res.status(e.status || 500).json({ error: { code: 'error', message: e.message } }); }
 
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache', Connection: 'keep-alive' });
+    require('../utils').sseKeepalive(res);   // a long silent step must not look like a dead stream
     const send = evt => { if (!res.writableEnded) res.write(`data: ${JSON.stringify(evt)}\n\n`); };
     send({ type: 'RUN_STARTED', threadId, runId });
     const ignored = [Array.isArray(input.tools) && input.tools.length ? 'the front end\'s own tools (the hive uses its own)' : '',

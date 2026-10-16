@@ -29,12 +29,31 @@ function resolveEnvVars(str) {
   return str.replace(/\$\{([^}]+)\}/g, (_, name) => process.env[name] ?? '');
 }
 
-/** Set standard SSE headers on an Express response. */
+/** Set standard SSE headers on an Express response, and keep the stream alive while it is open (sseKeepalive). */
 function sseHeaders(res) {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
+  sseKeepalive(res);
+}
+
+/**
+ * An SSE comment every ~15 s until the response ends (round 1 of the test of 2026-10-16): a model reasoning in silence
+ * sent no event for over five minutes, a client with a 300 s idle limit (Node's fetch, a proxy, a phone app) dropped the
+ * stream, and a dropped stream is a Stop. A comment is not an event: every SSE reader skips it. `DOCA_SSE_KEEPALIVE_MS`
+ * shortens it for tests.
+ */
+function sseKeepalive(res, ms = Number(process.env.DOCA_SSE_KEEPALIVE_MS) || 15000) {
+  const t = setInterval(() => {
+    if (res.writableEnded || res.destroyed) return clearInterval(t);
+    try { res.write(': keepalive\n\n'); } catch { clearInterval(t); }
+  }, ms);
+  t.unref?.();
+  const stop = () => clearInterval(t);
+  res.once('close', stop);
+  res.once('finish', stop);
+  return stop;
 }
 
 /** Return true if the resolved path falls within an allowed root, and is not a protected file. */
@@ -277,6 +296,7 @@ module.exports = {
   run,
   resolveEnvVars,
   sseHeaders,
+  sseKeepalive,
   fmSafe,
   loadPrefs,
   savePrefs,
