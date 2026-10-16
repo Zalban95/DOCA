@@ -109,7 +109,7 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
     // conversation with a thinking model is measurably larger than its visible
     // text, and this reading exists to explain exactly that kind of gap.
     tokens: budget.estimateMessages(toApiMessages(rows.slice(-(Number(p.historyTurns) || 0)),
-      { sessionId: sessionId || memory.activeSession()?.id, provider: p.provider })),
+      { sessionId: sessionId || memory.activeSession()?.id, provider: p.provider, resendChars: require('./step-ceiling').resendChars(p) })),
     note: 'this conversation only — a new conversation starts empty',
   };
 
@@ -129,6 +129,8 @@ function breakdown({ message = '', client = null, sessionId = null } = {}) {
     perStep: promptTokens + toolTokens,
     maxSteps: Number(p.maxSteps) || 0,
     worstCase: (promptTokens + toolTokens) * (Number(p.maxSteps) || 1),
+    // The ceiling one step's request is held under, by clearing old results and folding earlier turns (turn/step-ceiling.js).
+    stepTokens: require('./step-ceiling').ceilingFor(p) || null,
     source: 'estimated',
   };
 }

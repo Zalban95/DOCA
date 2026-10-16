@@ -252,8 +252,11 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       const more = require('./turn/extend').atLimit({ v: verdict, step, budget: maxSteps, sessionId: session.id, from, signal, planOpenAtStart, say });
       if (more) { maxSteps = more; reporting = false; } else memory.append(session.id, report.row(profile, maxSteps, verdict));
     }
-    const { messages, acknowledge } = stepRequest({ p, ep, message, summary, client, profile, projectBrief,
-      schemas, disabled, session, led, toolNews, contextSkips });
+    // Held under the per-step ceiling: old results cleared, then earlier turns folded (turn/step-ceiling.js).
+    const lean = await require('./turn/step-ceiling').fit({ p, ep, session, signal, say, step, led, schemas, summary,
+      build: sum => stepRequest({ p, ep, message, summary: sum, client, profile, projectBrief, schemas, disabled, session, led, toolNews, contextSkips }) });
+    summary = lean.summary;
+    const { messages, acknowledge } = lean.req;
 
     // Measured when the provider answers with a usage frame, estimated when it
     // does not. Both are recorded; only one is called a measurement.

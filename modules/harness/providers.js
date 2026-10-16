@@ -143,6 +143,12 @@ function defaultParams() {
     contextWindow:  0,
     compactTokens:  40000,  // fold when the last prompt reaches this many tokens, window or not
     compactAt:      60,     // % of the window at which older messages fold early
+    // Lean context (turn/step-ceiling.js): one step's request is held under this many tokens, window or not — older
+    // tool results cleared from what is re-sent first, then earlier turns folded. 0: no ceiling, as before 2026-10-16.
+    stepTokens:     60000,
+    // A tool result goes whole on the step it arrives, then as head + tail of this many characters, the rest in a
+    // file read_file reads (turn/messages.js). 0: the old clip, 16000 on every step.
+    resultChars:    8000,
     warnAt:         80,     // % at which clients and the agent are warned
     // How long to wait for the *first* token of a reply. Not a cap on the turn:
     // once the provider starts answering it may take as long as it likes. This

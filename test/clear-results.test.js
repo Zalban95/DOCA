@@ -41,7 +41,9 @@ test('all but the newest results are cleared from what is sent; the transcript k
   assert.equal(clear.clearOld(s.id), 2, 'five large results, three kept');
   const tools = sent(s).filter(m => m.role === 'tool');
   assert.equal(tools.length, 6, 'every call keeps its result row, so no pair is broken');
-  assert.match(tools[0].content, /^\[cleared to save context: this read_file result \(5006 characters\)/);
+  assert.match(tools[0].content, /^\[cleared to save context: this read_file result \(5006 characters, 1 lines\).*Nothing is lost: the whole result is in (\S+) — read_file it/);
+  const file = tools[0].content.match(/whole result is in (\S+) — /)[1];
+  assert.equal(require('node:fs').readFileSync(file, 'utf8'), `FILE0 ${'x'.repeat(5000)}`, 'the file named holds the whole result');
   assert.match(tools[1].content, /^\[cleared to save context/);
   for (const i of [2, 3, 4]) assert.match(tools[i].content, new RegExp(`^FILE${i} x{5000}$`), `result ${i} is kept word for word`);
   assert.equal(tools[5].content, 'a b c', 'a short result is never touched');
@@ -57,7 +59,9 @@ test('the mark only moves forward, so the prompt is stable between clears', () =
   assert.equal(prefix(sent(s)), first, 'byte-identical up to the readings: the provider cache survives');
   memory.append(s.id, { role: 'assistant', content: '', tool_calls: [{ id: 'n', type: 'function', function: { name: 'read_file', arguments: '{}' } }] });
   memory.append(s.id, { role: 'tool', tool_call_id: 'n', name: 'read_file', content: 'y'.repeat(3000) });
-  assert.equal(clear.clearOld(s.id), 1, 'one more result past the newest three');
+  assert.equal(clear.clearOld(s.id), 0, 'a result the model has not read yet is never cleared');
+  memory.append(s.id, { role: 'assistant', content: '', tool_calls: [{ id: 'm', type: 'function', function: { name: 'list_dir', arguments: '{}' } }] });
+  assert.equal(clear.clearOld(s.id), 1, 'once read, it is one more result past the newest three');
   assert.ok(memory.getSession(s.id).clearedThrough > 0);
 });
 
@@ -69,7 +73,7 @@ test('three or fewer large results clear nothing, and a session from before this
 });
 
 test('the agent is told in its limits that this happens and how to get a result back', () => {
-  assert.match(budget.block(providers.defaultParams()), /tool results: .*over 1200 characters except your newest 3 are cleared.*run the tool again/);
+  assert.match(budget.block(providers.defaultParams()), /tool results: .*over 1200 characters except your newest 3 are cleared.*Nothing is lost.*read_file that path/);
 });
 
 test('end to end: a turn over compactTokens with nothing earlier to fold clears its own older results', async () => {

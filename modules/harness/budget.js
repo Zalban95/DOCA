@@ -230,6 +230,7 @@ function record(l, { usage, promptEstimate = 0, completionEstimate = 0, ms = 0 }
   l.completionTokens += completion;
   l.totalTokens       = l.promptTokens + l.completionTokens;
   l.lastPrompt        = prompt;
+  l.lastEstimate      = promptEstimate;   // beside lastPrompt: how far the estimate is off (turn/step-ceiling.js)
   l.peakPrompt        = Math.max(l.peakPrompt, prompt);
   if (Number(ms) > 0) l.ms += Number(ms);
 
@@ -336,9 +337,7 @@ function block(p) {
       + `${p.summarizeAfter} messages or ${compactTokensFor(p) || '(unset)'} tokens of prompt `
       + `(harness.config.doca.historyTurns, .summarizeAfter, .compactTokens)`,
     `memory entries in this prompt: up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`,
-    `tool results: under that same pressure, when there are no earlier turns to fold, results over `
-      + `${require('./turn/clear-results').MIN_CHARS} characters except your newest ${require('./turn/clear-results').KEEP} `
-      + 'are cleared from what you are sent (the user keeps them); run the tool again if you need one back',
+    ...require('./turn/step-ceiling').lines(p),
     `rate limits (HTTP 429): waited out ${require('./turn/rate-limit').limits(p).tries} times, up to `
       + `${require('./turn/rate-limit').limits(p).cap / 1000}s each (harness.config.doca.rateLimitRetries, .rateLimitMaxWaitMs)`,
   );

@@ -111,6 +111,17 @@ const HARNESS_PARAMS = [
         + 'whichever is reached first wins. With a 1000000 window, 40000 fires at 4% — set this to 0 to let '
         + 'the percentage decide, or raise it. The turn in progress is never summarised, only earlier ones.' },
 
+  { key: 'stepTokens', label: 'Most per step', unit: 'tokens', attrs: 'min="0" step="1000"',
+    hint: 'The most one step may send, whatever the window. Every step sends the whole conversation again, so a long '
+        + 'job grows its bill on every step. Past this, older tool results are left out of what is sent again — the '
+        + 'agent is told which file holds each, and reads it back when it needs it — then earlier turns are '
+        + 'summarised. Nothing the agent receives the first time is cut, and nothing is lost. 0 turns it off.' },
+
+  { key: 'resultChars', label: 'Tool results sent again', unit: 'characters', attrs: 'min="0" step="1000"',
+    hint: 'A command\'s or tool\'s output goes to the agent whole when it arrives; on later steps only its beginning '
+        + 'and end, this many characters, with the path of a file holding all of it. A file the agent read keeps '
+        + 'at least 16000. 0 sends every result over 16000 characters as a beginning and an end on every step, as before.' },
+
   { key: 'compactAt', label: 'Summarise at share', unit: '% of window', attrs: 'min="0" max="99" step="5"',
     hint: 'The same summarising, as a share of the context window above — whichever of this and the size '
         + 'above is reached first. Every step re-sends the whole prompt, so a high share of a large window '

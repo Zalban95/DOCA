@@ -262,6 +262,8 @@ async function harnessConfigSave(id) {
         memoryLimit:    parseInt(val('memoryLimit'), 10) || 0,
         contextWindow:  parseInt(val('contextWindow'), 10) || 0,
         compactTokens:  parseInt(val('compactTokens'), 10) || 0,
+        stepTokens:     parseInt(val('stepTokens'), 10) || 0,
+        resultChars:    parseInt(val('resultChars'), 10) || 0,
         firstTokenTimeoutMs: parseInt(val('firstTokenTimeoutMs'), 10) || 0,
         failoverAfterMs: parseInt(val('failoverAfterMs'), 10) || 0,
         rateLimitRetries:   parseInt(val('rateLimitRetries'), 10) || 0,
