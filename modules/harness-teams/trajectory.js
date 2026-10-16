@@ -61,7 +61,7 @@ async function relayEnv(c, row, why = null) {
   const relay = require('../relay');
   if (!relay.enabled() || !relay.forComputers()) throw bad(`${row.label} uses this hub's own model through the model relay, which is ${relay.enabled() ? 'not open to agents\' computers' : 'off'}: `
     + 'its owner switches it on in Field → API keys → Model relay. Then try the task again (team keep_going).', 409);
-  if (!relay.offered().length) throw bad(`${row.label} uses this hub's own model through the model relay, and the relay offers none: choose DOCA's model (Controls → DOCA ⚙) or list models in Field → API keys → Model relay.`, 409);
+  if (!relay.offered().length) throw bad(`${row.label} uses this hub's own model through the model relay, and the relay offers none: choose ${require('../branding').name('product')}'s model (Controls → ${require('../branding').name('product')} ⚙) or list models in Field → API keys → Model relay.`, 409);
   const computers = require('../computers'), rc = require('../relay/computer');
   let rec = computers.get(c.id);
   // Switched on as part of the decision to run it — the person's yes (ask) or its switch (free); said with the computer's name.

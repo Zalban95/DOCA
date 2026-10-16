@@ -260,3 +260,17 @@ test('its kept trajectory is scrubbed: the relay token, a kept key, and anything
   } finally { require('../modules/service-keys').remove('traj-test'); }
   assert.match(fs.readFileSync(path.join(__dirname, '../modules/harness-teams/worker.js'), 'utf8'), /trajectory\.keep\(/, 'the worker keeps it through the scrub');
 });
+
+test('what it says carries the product\'s own name, never a fixed one', async () => {
+  const u = require('../modules/utils'), p = u.loadPrefs();
+  u.savePrefs({ ...p, branding: { product: 'Acme' } });
+  try {
+    assert.match(row().note, /run by Acme only/);
+    assert.match(row().team.when, /needs Acme's tools/);
+    assert.match(require('../modules/harness/one-shot').whyNot(row()), /so Acme runs it only/);
+    assert.doesNotMatch(fs.readFileSync(path.join(__dirname, '../modules/harness-teams/trajectory.js'), 'utf8'), /choose DOCA's model/, 'the relay\'s refusal names the product by branding');
+    for (const s of [row().note, row().team.when, require('../modules/harness/one-shot').whyNot(row())]) assert.doesNotMatch(s, /DOCA/);
+    const src = fs.readFileSync(path.join(__dirname, '../modules/harness/turn/clear-results.js'), 'utf8');
+    assert.doesNotMatch(src, /`\[DOCA:/, 'the left-out stub reads like the cleared one, with no name in it');
+  } finally { u.savePrefs(p); }
+});

@@ -45,17 +45,18 @@ async function openDotsStack(action) {
 
 /* Each outside harness's switch on a team (prefs teams.outside.use, harness-teams/harnesses.js mode; asked 2026-10-16).
    Moving one to "On its own" asks for the password (auth/guarded.js); the panel's fetch asks and sends again. */
-const HARNESS_TEAM_USE = [
-  ['never', 'Never', 'Not offered and not run: teams use DOCA\'s own agents.'],
+// A function, not a list: the product's name (BRAND, from /api/branding) arrives after this file is read.
+const harnessTeamUse = () => [
+  ['never', 'Never', `Not offered and not run: teams use ${(typeof BRAND !== 'undefined' && BRAND?.product) || 'DOCA'}'s own agents.`],
   ['ask', 'Ask me first', 'Used when you name it, or say yes when the Orchestrator offers it.'],
   ['free', 'On its own', 'The Orchestrator starts it itself when a task fits — in agents\' computers only — and tells you it did.'],
 ];
 
 function harnessTeamUseHtml(h) {
   if (!h.teamUse) return '';
-  const id = escHtml(h.id), hint = (HARNESS_TEAM_USE.find(x => x[0] === h.teamUse) || [])[2] || '';
+  const id = escHtml(h.id), hint = (harnessTeamUse().find(x => x[0] === h.teamUse) || [])[2] || '';
   return `<label>On a team${infoBtn('Whether a team may use it, in an agents\' computer of its own: Never; Ask me first — when you name it or say yes to the Orchestrator\'s offer; On its own — the Orchestrator starts it when a task fits, and says so. On its own asks for your password.')}</label>
-    <div><select class="input" id="sh-team-${id}" onchange="harnessTeamUseSave(${jsArg(h.id)}, this.value)">${HARNESS_TEAM_USE.map(([v, w]) => `<option value="${v}"${v === h.teamUse ? ' selected' : ''}>${w}</option>`).join('')}</select>
+    <div><select class="input" id="sh-team-${id}" onchange="harnessTeamUseSave(${jsArg(h.id)}, this.value)">${harnessTeamUse().map(([v, w]) => `<option value="${v}"${v === h.teamUse ? ' selected' : ''}>${w}</option>`).join('')}</select>
       <div class="desc" id="sh-team-hint-${id}" style="font-size:11px;color:var(--muted);margin-top:3px">${escHtml(hint)}</div></div>`;
 }
 
@@ -63,7 +64,7 @@ async function harnessTeamUseSave(id, value) {
   const hint = document.getElementById(`sh-team-hint-${id}`);
   try {
     await apiFetch('/api/prefs', { method: 'POST', body: { teams: { outside: { use: { [id]: value } } } } });
-    if (hint) hint.textContent = (HARNESS_TEAM_USE.find(x => x[0] === value) || [])[2] || '';
+    if (hint) hint.textContent = (harnessTeamUse().find(x => x[0] === value) || [])[2] || '';
   } catch (e) { if (hint) hint.textContent = e.message; otherHarnessesLoad(); }
 }
 

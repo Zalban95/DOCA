@@ -105,17 +105,17 @@ const KNOWN = [
     // an agents' computer, as a team worker — never on the hub (one-shot.js refuses it; a person may still start it in
     // the Terminal, where it asks before each command).
     id: 'mini', label: 'mini-swe-agent', vendor: 'SWE-agent', kind: 'cli', cmd: 'mini', sandbox: true,
-    note: 'A small bash-only coding agent: one task in a repository, a test to pass — run by DOCA only in an agents\' computer',
+    get note() { return `A small bash-only coding agent: one task in a repository, a test to pass — run by ${require('../branding').name('product')} only in an agents' computer`; },
     // A worker in an agents' computer (harness-teams/): installed there with uv, its model DOCA's own through the model
     // relay (OPENAI_BASE_URL / OPENAI_API_KEY, litellm's `openai/<model>`; "default" is the relay's first), never a key.
     team: { args: ['-y', '--exit-immediately', '-l', '0', '{output}', '{model}', '-t', '{task}'], model: ['-m', 'openai/{model}'], defaultModel: 'default',
       output: ['-o', '{output}'], events: 'mini', uv: 'mini-swe-agent', relay: true, optIn: true,
       env: { MSWEA_CONFIGURED: 'true', MSWEA_COST_TRACKING: 'ignore_errors', MSWEA_SILENT_STARTUP: '1' },
       // When it fits — what the Orchestrator's routing table says (harness/coordinator.js), asked 2026-10-16.
-      when: 'a self-contained coding task in a git project with a command that shows it works (fix an issue, make a failing test pass, a small refactor), '
+      get when() { return 'a self-contained coding task in a git project with a command that shows it works (fix an issue, make a failing test pass, a small refactor), '
         + 'when several tries at once would help (count), the work should run on a smaller or local model, or a record of every command is wanted. '
-        + 'Not for work that needs DOCA\'s tools (devices, approvals, MCP, a browser, the person\'s files), long or several-repository work, or anything outside a computer: '
-        + 'it runs every command without asking' },
+        + `Not for work that needs ${require('../branding').name('product')}'s tools (devices, approvals, MCP, a browser, the person's files), long or several-repository work, or anything outside a computer: `
+        + 'it runs every command without asking'; } },
     installCmd: 'uv tool install mini-swe-agent',
     url: 'https://mini-swe-agent.com',
     configPathHint: '~/.config/mini-swe-agent/.env',
