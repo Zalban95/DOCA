@@ -36,6 +36,7 @@ function brief(team, t) {
   const others = team.tasks.filter(x => x.id !== t.id).map(x => `${x.id} "${x.title}" (${x.agent})`).join('; ');
   return [`## Your team\nYou are task ${t.id} of team "${team.title}" (${team.id}).${team.goal ? ` The team's goal: ${team.goal}` : ''}`,
     t.contract?.done ? `Your task is done when ${t.contract.done}${t.contract.check ? ' — the hub checks it when you finish' : ''}.` : '',
+    require('./tries').brief(t),
     others && !require('./outside').isOutside(t.agent) ? `Your teammates: ${others}. If you find something they need (a path, a decision, a pitfall), post it with team_note — short, and only what helps them.` : others ? `Your teammates: ${others}.` : '',
   ].filter(Boolean).join('\n');
 }
@@ -43,7 +44,7 @@ function brief(team, t) {
 /** Send one task to its specialist (or a work chat), with what the tasks before it delivered, where it works (place.js). */
 async function dispatch(team, t) {
   const missions = require('../agents/missions');
-  const deps = (t.after || []).map(id => team.tasks.find(x => x.id === id)).filter(Boolean);
+  const deps = (t.after || []).map(id => require('./tries').taskFor(team, id)).filter(Boolean);   // a task with tries: the one kept
   const delivered = deps.filter(d => d.missionId).map(d => missions.get(d.missionId)).filter(Boolean);
   const chats = deps.filter(d => d.sessionId).map(d => require('../harness/memory').getSession(d.sessionId)).filter(Boolean)
     .map(s => `### From the work chat "${s.title}"\n${String(s.brief || s.summary || '').slice(0, 4000)}`);
@@ -59,6 +60,7 @@ async function dispatch(team, t) {
       return;
     }
     const { fields, place } = await require('./place').forTask(team, t);
+    if (t.trial && !place?.worktree) { t.error = `a try works in a worktree of its own, and none could be made${place?.why ? `: ${place.why}` : ''}`; return; }
     if (place) t.place = place;
     const where = place ? `\n\n## Where you work\n${place.worktree ? `In the project's git worktree ${place.worktree.path}, on the branch ${place.worktree.branch} — your own, so teammates working at the same time do not touch your files. Commit your work there; merging it back is the person's call.`
       : `In the project's folder ${place.root}, shared with your teammates.${place.why ? ` (${place.why})` : ''}`}` : '';
@@ -85,6 +87,7 @@ function failed(team, t, v) {
   const key = keyOf(t);
   if (t.failedFor === key) return;
   t.failedFor = key;
+  if (t.trial) { t.gaveUp = true; return; }   // a try is not tried again on its own: its siblings are the retry (tries.js)
   if (!team.loop?.on || (team.loop.rounds || 0) >= maxRounds(team)) { t.gaveUp = true; return; }
   team.loop.rounds = (team.loop.rounds || 0) + 1;
   const m = t.missionId ? require('../agents/missions').get(t.missionId) : null;
@@ -93,6 +96,13 @@ function failed(team, t, v) {
     + `${m?.result ? `\nWhat it reported:\n${String(m.result).slice(0, 2000)}` : ''}\nDo not repeat what failed; finish the task.`;
   for (const f of ['missionId', 'sessionId', 'verdict', 'error', 'gaveUp']) delete t[f];
   require('./announce').line(team, `${t.id} "${t.title}": trying again (round ${team.loop.rounds} of ${maxRounds(team)}) — ${v.why || 'it failed'}`);
+}
+
+/** End one task's work now (a try past its wait): its mission at its next step, an outside CLI in its computer. */
+async function stopTask(t) {
+  if (require('./outside').isOutside(t.agent) && t.missionId) return require('../harness-teams').stopMission(t.missionId);
+  const sid = t.missionId ? require('../agents/missions').get(t.missionId)?.sessionId : t.sessionId;
+  if (sid) require('../harness/agent').cancel(sid);
 }
 
 /** One pass: check, retry, dispatch, decide the team's state, then say what changed. */
@@ -104,10 +114,12 @@ async function step(id) {
     for (const v of views(team)) {
       const t = team.tasks.find(x => x.id === v.id);
       if (v.state === 'checking' && !t.verdict) {
-        t.verdict = { ...(await require('../harness/plan-contracts').verify(t.contract, { cwd: cwdOf(team, t) })), at: new Date().toISOString() };
+        const sessionId = t.missionId ? require('../agents/missions').get(t.missionId)?.sessionId : t.sessionId;   // its test, as it ran it
+        t.verdict = { ...(await require('./tries-score').verifyAll(t, { cwd: cwdOf(team, t), sessionId })), at: new Date().toISOString() };
       }
     }
     for (const v of views(team)) if (v.state === 'failed') failed(team, team.tasks.find(x => x.id === v.id), v);
+    await require('./tries').judgeReady(team, views(team), { stopTask });   // tries all ended, or their wait is over: the best kept
     for (const v of views(team)) if (v.state === 'queued') await dispatch(team, team.tasks.find(x => x.id === v.id));
   }
   const now = views(team);

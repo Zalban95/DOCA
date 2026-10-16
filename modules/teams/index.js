@@ -20,11 +20,15 @@ const bad = (m, status = 400) => Object.assign(new Error(m), { status });
 const MAX_TASKS = 12, NOTE_MAX = 400, NOTES_KEEP = 60, NOTES_PER_TRY = 8;
 
 /** Check what the leader asked for, and shape it into tasks. Throws a sentence that says what to fix. */
-function shape({ title, goal, tasks, context } = {}, { workChats = false } = {}) {   // workChats: its leader may make work chats (harness/org-depth.js)
+function shape({ title, goal, tasks, context } = {}, { workChats = false, project = false } = {}) {   // workChats: its leader may make work chats (harness/org-depth.js)
   if (!String(title || '').trim()) throw bad('A team needs a title.');
   if (!Array.isArray(tasks) || !tasks.length) throw bad('A team needs at least one task.');
+  const both = tasks.find(t => Number(t?.count) > 1 && Number(t?.tries) > 1);
+  if (both) throw bad(`Task ${both.id || ''}: count makes several workers share a plan; tries makes several attempts at one task and keeps the best. Use one.`.replace('  ', ' '));
   tasks = require('./outside').expand(tasks);   // count: several alike (an outside harness's "5 on Opus")
   if (tasks.length > MAX_TASKS) throw bad(`A team has at most ${MAX_TASKS} tasks; split the work into two teams, or give one task more.`);
+  tasks = require('./tries').expand(tasks, { project });   // tries: several attempts at one task, the best kept (tries.js)
+  if (tasks.length > MAX_TASKS * 2) throw bad(`A team runs at most ${MAX_TASKS * 2} tasks and tries together; ask for fewer tries.`);
   const registry = require('../agents/registry');
   const out = tasks.map((t, i) => {
     const id = String(t?.id || `t${i + 1}`).trim().slice(0, 20);
@@ -39,32 +43,42 @@ function shape({ title, goal, tasks, context } = {}, { workChats = false } = {})
     }
     const text = String(t?.task || '').trim();
     if (!text) throw bad(`Task ${id} needs its errand in "task", written for somebody who was not in this conversation.`);
-    const { contract } = require('../harness/plan-contracts').split({ title: String(t.title || text.slice(0, 60)), done: t.done, check: t.check });
+    const pc = require('../harness/plan-contracts');
+    const { contract } = pc.split({ title: String(t.title || text.slice(0, 60)), done: t.done, check: t.check });
+    if (t.checks != null && (!Array.isArray(t.checks) || t.checks.length > 8)) throw bad(`Task ${id}: checks is a list of up to 8 checks.`);
+    const checks = (t.checks || []).map(c => pc.split({ title: 'check', check: c }).contract.check);   // more checks, every one held (tries-score.js)
+    const test = t.test != null ? String(t.test).trim().slice(0, 300) : '';
     return { id, title: String(t.title || text).replace(/\s+/g, ' ').trim().slice(0, 80), agent, task: text.slice(0, 8000),
       after: [...new Set((Array.isArray(t.after) ? t.after : []).map(String))], contract, ...(extra.model ? { model: extra.model } : {}),
+      ...(checks.length ? { checks } : {}), ...(test ? { test } : {}), ...(t.trial ? { trial: t.trial } : {}),
       ...(typeof t.worktree === 'boolean' ? { worktree: t.worktree } : {}) };   // its own worktree, or the shared folder (place.js)
   });
-  const ids = new Set(out.map(t => t.id));
-  if (ids.size !== out.length) throw bad('Two tasks have the same id.');
+  const taskIds = new Set(out.map(t => t.id));
+  if (taskIds.size !== out.length) throw bad('Two tasks have the same id.');
+  // A task with tries is named by its own id: `after: ["t1"]` waits for the try that is kept (tries.js).
+  const groupOf = new Map();
+  for (const t of out) if (t.trial) groupOf.set(t.trial.of, [...(groupOf.get(t.trial.of) || []), t.id]);
+  const ids = new Set([...taskIds, ...groupOf.keys()]);
   // `after` names a task by its id; a title, or a word only one title holds, means that task too (the 2026-10-14 demo: a
   // model wrote after: ["text"] four times for the task titled "Improve the page's text", and ran out of steps).
   const low = v => String(v).trim().toLowerCase();
   const idOf = a => {
     if (ids.has(a)) return a;
-    const exact = out.filter(x => low(x.title) === low(a));
+    const exact = out.filter(x => !x.trial && low(x.title) === low(a));
     if (exact.length === 1) return exact[0].id;
-    const within = out.filter(x => low(a) && low(x.title).includes(low(a)));
+    const within = out.filter(x => !x.trial && low(a) && low(x.title).includes(low(a)));
     return within.length === 1 ? within[0].id : null;
   };
   const named = out.map(x => `${x.id} "${x.title}"`).join(', ');
   for (const t of out) t.after = [...new Set(t.after.map(a => idOf(a) || a))];
   for (const t of out) for (const a of t.after) {
     if (!ids.has(a)) throw bad(`Task ${t.id} comes after "${a}", which is not a task of this team. Name one by its id: ${named}.`);
-    if (a === t.id) throw bad(`Task ${t.id} cannot come after itself.`);
+    if (a === t.id || a === t.trial?.of) throw bad(`Task ${t.id} cannot come after itself.`);
   }
   // No cycles: every task must be reachable by finishing the ones before it.
   const done = new Set();
-  for (let changed = true; changed;) { changed = false; for (const t of out) if (!done.has(t.id) && t.after.every(a => done.has(a))) { done.add(t.id); changed = true; } }
+  const met = a => (groupOf.has(a) ? groupOf.get(a).every(x => done.has(x)) : done.has(a));
+  for (let changed = true; changed;) { changed = false; for (const t of out) if (!done.has(t.id) && t.after.every(met)) { done.add(t.id); changed = true; } }
   if (done.size !== out.length) throw bad(`These tasks wait on each other in a circle: ${out.filter(t => !done.has(t.id)).map(t => t.id).join(', ')}.`);
   return { title: String(title).trim().slice(0, 120), goal: String(goal || '').trim().slice(0, 1000), context: String(context || '').slice(0, 20000), tasks: out };
 }
@@ -74,9 +88,14 @@ async function create(args, { by, keepGoing = false, maxRounds = null, asked = f
   const org = require('../harness/organization');
   const no = org.mayCreate(by, 'team');   // the depth rule (harness/org-depth.js): level 3 makes no team
   if (no) throw bad(no, 403);
-  const shaped = shape(args, { workChats: !org.mayCreate(by, 'work') });
   // The project it works on (place.js): named, else the one its leading conversation works in.
   const project = require('./place').resolve(args.project, by);
+  const shaped = shape(args, { workChats: !org.mayCreate(by, 'work'), project: !!project });
+  if (shaped.tasks.some(t => t.trial)) {   // tries each work in a worktree (or a computer) of their own, so a git project
+    if (!project) throw bad('Tries each work in a git worktree of their own: name the project they work on (project: <name>).');
+    const root = require('./place').rootOf({ projectId: project.id, by }) || project.root;
+    if (!require('fs').existsSync(require('path').join(root, '.git'))) throw bad(`Tries each work in a git worktree of their own, and the project ${project.name} is not a git repository.`);
+  }
   const started = require('./outside').gate(shaped.tasks, { asked, person, project });   // 'asked', 'free' (its switch) or null
   if (shaped.tasks.some(t => t.agent !== 'work' && !require('./outside').isOutside(t.agent)) && !require('../agents/registry').enabled())
     throw require('../agents/off')('Specialist agents are switched off (agents.enabled). Ask the person to turn them on.');

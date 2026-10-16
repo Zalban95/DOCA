@@ -36,6 +36,7 @@ function fromJob(s) {
 function task(t, { look, byId = new Map() } = {}) {
   const base = { id: t.id, title: t.title, agent: t.agent, after: t.after || [], missionId: t.missionId || null,
     sessionId: t.sessionId || null, contract: t.contract || null, tries: (t.tries || []).length,
+    ...(t.trial ? { trial: t.trial } : {}),   // one of several tries at a task (tries.js)
     ...(t.place ? { place: { root: t.place.root, branch: t.place.worktree?.branch || null, shared: !!t.place.shared } } : {}) };   // where it works (place.js)
   if (t.stoppedAt) return { ...base, state: 'stopped', percent: 0, why: t.stoppedWhy || 'stopped by a person' };
   if (!t.missionId && !t.sessionId) {
@@ -77,20 +78,34 @@ function task(t, { look, byId = new Map() } = {}) {
 function tasks(team, look) {
   const byId = new Map();
   const out = [];
+  const tries = require('./tries');
+  const groups = tries.groups(team);   // a task with tries: read as one task once each try is decided
+  const known = id => groups[id] || (team.tasks || []).some(x => x.id === id);
   // Tasks come in any order; a dependency is read once it has been decided, a cycle reads as waiting.
   const pending = [...(team.tasks || [])];
   for (let guard = 0; pending.length && guard < 1000; guard++) {
-    const i = pending.findIndex(t => (t.after || []).every(id => byId.has(id) || !(team.tasks || []).some(x => x.id === id)));
+    const i = pending.findIndex(t => (t.after || []).every(id => byId.has(id) || !known(id)));
     const t = pending.splice(i < 0 ? 0 : i, 1)[0];
     const v = task(t, { look, byId });
     byId.set(t.id, v);
+    const of = t.trial?.of;
+    if (of && team.trials?.[of]?.judgedAt) v.chosen = team.trials[of].winner === t.id;   // kept, or set aside with its score
+    if (of && groups[of].every(x => byId.has(x.id))) byId.set(of, tries.groupView(team, of, groups[of].map(x => byId.get(x.id))));
   }
   for (const t of team.tasks || []) out.push(byId.get(t.id));
   return out;
 }
 
+/** The tasks as the team counts them: each task without tries, and each group of tries as one (tries.js). */
+function units(team, views) {
+  const tries = require('./tries');
+  const groups = tries.groups(team);
+  return [...views.filter(v => !v.trial), ...Object.entries(groups).map(([of, ts]) => tries.groupView(team, of, ts.map(t => views.find(v => v.id === t.id)).filter(Boolean)))];
+}
+
 /** done / total and the percentage, every task counting the same; and the team's own state. */
 function summary(team, views) {
+  views = units(team, views);
   const total = views.length, done = views.filter(v => v.state === 'done').length;
   const percent = total ? Math.round(100 * done / total) : 0;
   let state = 'running';
@@ -105,9 +120,11 @@ function say(v, title = id => id) {
   if (v.state === 'running' || v.state === 'paused') return `${v.state}${v.budget ? `, step ${v.step} of ${v.budget}` : ''}`;
   if (v.state === 'waiting') return `waiting on ${v.waitingOn.map(title).join(', ')}${v.blockedBy ? ` (${v.blockedBy.map(title).join(', ')} did not finish)` : ''}`;
   if (v.state === 'checking') return 'checking its contract';
+  if (v.group && v.state === 'done') return `done — ${v.why}`;
+  if (v.trial && v.chosen != null && v.state === 'done') return `${v.state}${v.chosen ? ' — kept' : ' — set aside'}`;
   if (v.state === 'done') return v.contract?.check ? 'done — its contract holds' : v.contract ? 'done — on its specialist\'s word (no check)' : 'done';
   if (v.state === 'failed' || v.state === 'stopped') return `${v.state}${v.why ? ` — ${v.why}` : ''}`;
   return v.state;
 }
 
-module.exports = { STATES, LIVE, task, tasks, summary, say, fromJob };
+module.exports = { STATES, LIVE, task, tasks, units, summary, say, fromJob };
