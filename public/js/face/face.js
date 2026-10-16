@@ -56,6 +56,7 @@ function faceMount(canvas, specIn = {}) {
   const cur = { ...states.idle, colorRGB: null };
   let grainTile = null;
   let shapeOn = null, shapeMix = 0;   // {pts, rgb, until}: a silhouette the dots gather into for a moment
+  let alertOn = null;   // {rgb, until}: an important change (important.js) — the points' colour only, for a moment
 
   // Dots: a role (left eye, right eye, mouth, field), a seat in the face and a wandering point in the noise.
   const rnd = _faceRand(7);
@@ -141,7 +142,8 @@ function faceMount(canvas, specIn = {}) {
     form?.frame(t, { spin: cur.spin, breath: cur.breath, scale: cur.scale, level: target.mouth || target.pulse ? level : 0, ax: w / 2 / unit, ay: h / 2 / unit, rise });
     if (shapeOn && now > shapeOn.until) shapeOn = null;
     shapeMix += ((shapeOn ? 1 : 0) - shapeMix) * (reduced ? 1 : 0.05);
-    const want = shapeOn ? shapeOn.rgb : hex(spec.palette[target.color] || spec.palette.accent);
+    if (alertOn && now > alertOn.until) alertOn = null;
+    const want = shapeOn ? shapeOn.rgb : alertOn ? alertOn.rgb : hex(spec.palette[target.color] || spec.palette.accent);
     cur.colorRGB = cur.colorRGB ? cur.colorRGB.map((v, i) => v + (want[i] - v) * 0.06) : want;
     // A blink every few seconds when idle; error flickers; listening pulses with the level.
     let eyeOpen = cur.eye;
@@ -247,8 +249,19 @@ function faceMount(canvas, specIn = {}) {
   raf = requestAnimationFrame(frame);
   /** Gather into `pts` ([x, y] in face units, about -1…1) in `color` for `ms`, then flow back. */
   const shape = (pts, color, ms = 1800) => { if (pts?.length) shapeOn = { pts, rgb: hex(color || spec.palette.accent), until: performance.now() + ms }; };
-  return { set, shape, rise: v => { riseTo = Math.max(0, Math.min(1, Number(v) || 0)); }, level: v => { level = Math.max(0, Math.min(1, Number(v) || 0)); }, resize, stop: () => { stopped = true; cancelAnimationFrame(raf); ro?.disconnect(); }, spec, get state() { return state; } };
+  /** Turn the points `color` for `ms`, then back: their colour only — shapes and motion go on as they were. */
+  const alert = (color, ms = 4000) => { alertOn = { rgb: hex(color || spec.palette.error), until: performance.now() + ms }; };
+  const api = { set, shape, alert, get alerting() { return !!alertOn && performance.now() < alertOn.until; },
+    rise: v => { riseTo = Math.max(0, Math.min(1, Number(v) || 0)); }, level: v => { level = Math.max(0, Math.min(1, Number(v) || 0)); }, resize,
+    stop: () => { stopped = true; cancelAnimationFrame(raf); ro?.disconnect(); FACES.delete(api); }, spec, get state() { return state; } };
+  FACES.add(api);
+  return api;
 }
+
+/** Every face drawn on this page now (the corner, assistant mode, Ambient's galaxy, the Focused view's points). */
+const FACES = new Set();   // const at top level of a classic script: used inside faceMount only after it is called
+/** An important change: every face on this page red for a moment (important.js). */
+function faceAlertAll(color, ms) { for (const f of FACES) try { f.alert(color, ms); } catch { /* one face never stops another */ } return FACES.size; }
 
 /** The hive's state for this viewer, from /api/face/stream; calls back with {state, detail}. Returns a closer. */
 function faceFeed(onState) {

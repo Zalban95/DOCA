@@ -23,16 +23,18 @@ const day = (t = new Date()) => t.toISOString().slice(0, 10);
  * `what`: what it did, a phrase; `why`: the reason it did it now; `person`: on whose behalf, when someone's.
  * A machine's act (machines/acts.js) also says which machine (`machine` {kind, id, name}), the act (start, stop…),
  * where it was asked from (`via`: a screen's or a device's name, or a conversation) and whether it worked (`ok`), so a
- * machine row can say who started it (machines/origin.js).
+ * machine row can say who started it (machines/origin.js). An important change (important/: a password or notice
+ * switch flipped, an account, a level or a grant) is `important: true` with its `lines`, each "what: old → new".
  */
-function note({ from, what, why = '', person = null, level = 'info', sessionId = null, machine = null, act = null, via = null, ok = null } = {}) {
+function note({ from, what, why = '', person = null, level = 'info', sessionId = null, machine = null, act = null, via = null, ok = null, important = false, lines = null } = {}) {
   try {
     const row = { at: new Date().toISOString(), from: String(from || 'hub').slice(0, 40), what: String(what || '').slice(0, 300),
       why: String(why || '').slice(0, 300), level: ['info', 'warn', 'error'].includes(level) ? level : 'info',
       ...(person?.id ? { person: { id: person.id, name: person.name || person.email || person.id } } : {}),
       ...(sessionId ? { sessionId } : {}),
       ...(machine?.kind && machine.id ? { machine: { kind: String(machine.kind), id: String(machine.id), ...(machine.name ? { name: String(machine.name).slice(0, 120) } : {}) } } : {}),
-      ...(act ? { act: String(act).slice(0, 30) } : {}), ...(via ? { via: String(via).slice(0, 120) } : {}), ...(ok === null ? {} : { ok: !!ok }) };
+      ...(act ? { act: String(act).slice(0, 30) } : {}), ...(via ? { via: String(via).slice(0, 120) } : {}), ...(ok === null ? {} : { ok: !!ok }),
+      ...(important ? { important: true, ...(Array.isArray(lines) ? { lines: lines.slice(0, 40).map(l => String(l).slice(0, 300)) } : {}) } : {}) };
     require('./store').appendJsonl(path.join(dir(), `${day()}.jsonl`), row);
     require('./live').changed('activity', row.from, row.what);
     return row;

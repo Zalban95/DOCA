@@ -137,7 +137,7 @@ function serve(ws, { ask, sessionId, onEnd = () => {}, engine = 'realtime', pers
     tell({ type: 'report', text: String(title || '').slice(0, 200) });
     model.say(model.literal ? text : `Tell the person briefly, this just came back${title ? ` (${title})` : ''}: ${text}`);
   };
-  const unregister = require('./calls').open(sessionId, { person, deviceId, notice });
+  const unregister = require('./calls').open(sessionId, { person, deviceId, notice, frame: f => { if (!ended) { log.notice(f.stage, f.text); tell(f); } } });
   const asks = require('./call-asks').attach({ sessionId, model, log, person });   // an approval is said here, and a yes or no answers it
   const onTurnEvent = e => {
     if (e.type !== 'handoff' || e.from !== sessionId) return;

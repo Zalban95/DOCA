@@ -128,7 +128,7 @@ function pairedRows(rows) {
  * results arrive.
  */
 function toApiMessages(allRows, { sessionId, provider, resendChars, capChars } = {}) {
-  const rows = pairedRows(allRows);
+  const rows = pairedRows((allRows || []).filter(r => r.role !== 'note'));   // DOCA's own notes (important/) are the person's, never the model's
   // Results after the last assistant row are this step's own: the model has not seen them yet.
   const freshFrom = rows.map(r => r.role).lastIndexOf('assistant') + 1;
 

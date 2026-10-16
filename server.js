@@ -59,7 +59,7 @@ app.use('/api/v1', require('./modules/license/gate').readOnly, apiV1.router);   
 
 app.use(express.json({ limit: '50mb' }));
 // Everything below needs a signed-in person with the right for it; unknown routes are refused.
-app.use(require('./modules/auth/gate').gate);
+app.use(require('./modules/auth/gate').gate, require('./modules/important').middleware);   // important changes said and logged (important/)
 require('./modules/auth/routes').mount(app);
 app.use(require('./modules/hosted').page, express.static(path.join(__dirname, 'public')));   // a hosted hive's page says so (hosted.js)
 app.use(require('./modules/machines/acts').middleware, require('./modules/license/gate').readOnly);   // who acted on a machine (machines/acts.js); a lapsed licence (license/)
