@@ -100,19 +100,38 @@ The harness gives its agent eight rules for working on any repository (charter r
   below** their own (`levels.within` one way and not the other: never an equal, a higher level, the owner or themselves),
   never beyond what `allot.allowsModel` gives that person or level (nor, for a leader without host, beyond what the
   leader holds and may give). An admin's assignment is a slot of its own (store `people-models-assigned`, with `by` and
-  `at`); the owner's stay the policy in prefs and, through the same route, record who set them. **The owner's wins**,
-  rule by rule from the most specific: the owner's for the person, an admin's for the person, the owner's for the
-  level, an admin's for the level, the owner's for everyone (`assignedFor`, which says `setBy` and `by`); an admin's
-  counts whether or not the owner's `assign` switch is on. `GET /api/people-models` lists only whom the asker may assign
-  (each with the owner's, an admin's and what counts, by name); `POST /api/people-models/assign {personId|levelId,
-  model}` asks for the password (guarded row `peopleModels`). `peopleModels` in `/api/prefs` is now written by the
-  owner alone (`config.js`, 403 for anyone else). `test/people-models-admins.test.js`.
+  `at`); the owner's stay the policy in prefs and, through the same route, record who set them. **The first rule that
+  is set decides** (`index.js ruleFor`), in this order: the owner's for the person, an admin's for the person, the
+  owner's for the level, an admin's for the level, the owner's for everyone — so the owner's wins where both set the
+  same kind of rule. A rule is a model, or **"nothing assigned"** (`none`, set on purpose: the broader rules after it no
+  longer reach that person, who runs on their own choice or the owner's models as the policy says), or absent — **"not
+  set"**, which passes to the next rule. An admin's counts whether or not the owner's `assign` switch is on, and there is
+  deliberately no switch to turn admins' assignments off (the owner: an admin who does not want to assign does not).
+  `GET /api/people-models` lists only whom the asker may assign, each with the owner's, an admin's, what decides now
+  and `options` (the models named anywhere here — the harness order, escalation, mastermind/worker, assistant mode's,
+  levels' lists, current assignments — kept when allotted to that target: `candidates.js`, no provider asked);
+  `POST /api/people-models/assign {personId|levelId, model}` or `{changes: [...]}` (all or nothing: each checked by a
+  dry run first) asks for the password (guarded row `peopleModels`). The Users card is one picker per row (Not set,
+  Nothing assigned, the allotted models, Other model…) and one Save — the owner's switches and every changed row, the
+  password asked once (the unlock window covers both requests). `peopleModels` in `/api/prefs` is now written by the
+  owner alone (`config.js`, 403 for anyone else). **The agent**: `people_models {show | propose}` (kit panel, in
+  `registry.NEVER`; `toolbox/people-models.js`, `people-models/propose.js`) — `show` says the policy, the rule order,
+  who may assign what and whom its person may assign (with their allotted models); `propose` resolves people by name
+  or e-mail, levels by id or name, `everyone_below`, and models as provider/model, "nothing" or "not set", checks every
+  change as the turn's person, and files a settings proposal of `kind: 'people-models'` in that conversation
+  (`settings.proposeOther`): the card's Accept is guarded (`guarded.proposal` → `peopleModels`, the password),
+  decided by whoever may assign (`routes.js mayDecide`), and applied as the person who accepts (`assign.setMany`). It
+  is never applied from a turn — no `asked`, not in Unattended. "What you have" names how many people and levels the
+  person may assign; settings_read's "Where and how" finds it (`settings-find/places.js`).
+  `test/people-models-admins.test.js`, `test/people-models-agent.test.js`.
 - **Other people's work, in the header** (`modules/oversight`, `public/js/oversight.js`; the owner's decision of
   2026-10-16): devices stay their person's own (3.101.0), and a host gets an icon beside the clock — apart from their own
   notices and questions — listing the missions and work chats of others they may open (`session-access.mayUse`, a
-  conversation marked as another person's; never their own, never nobody's): started, finished, failed, waiting (a
-  mission asking, a proposed plan), stopped, paused; newest first, an unread count against what they last read (store
-  `oversight`, per person), each opening its conversation in the Harness console. Read from `missions.list` and
+  conversation marked as another person's — the owner's included for an admin; never their own, never nobody's):
+  started, finished, failed, waiting (a mission asking, a proposed plan), stopped, paused; an unread count against what
+  they last read (store `oversight`, per person); **a group per person** (`groupsOf`, the owner's answer of 2026-10-16),
+  headed like the header search's sections, the person with the newest unread first and newest first within, unread
+  items marked; each opening its conversation in the Harness console. Read from `missions.list` and
   `workview.payloadOf`, worded by fixed templates — no model, no agent posts, no device push, no `/api/v1` route; the
   page reads it again on the live feed's `missions` and conversation started/ended. Opt-in per person (the list's
   "Follow" and Settings → General), on by default for the owner only. `GET /api/oversight`, `POST …/seen`,
