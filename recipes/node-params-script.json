@@ -1,0 +1,14 @@
+{
+  "id": "node-params-script",
+  "title": "Run a project's Node script with its parameters (a build stage)",
+  "description": "A stage of a parametric project's build (project.params.json): runs one of the project's own Node scripts in the project folder as node <script> <params file> <out folder> <resolved spec or ->. The script reads its values from the parameters file (JSON) and writes what it makes under the out folder, mirroring the project's layout (out/parts/a.stl becomes parts/a.stl once every check of the build holds); build/derived.json there gives later stages ${derived.name}.",
+  "params": [
+    { "name": "script", "description": "The script, relative to the project folder." },
+    { "name": "params", "description": "The parameters file (the build passes it)." },
+    { "name": "out", "description": "Where to write (the build passes build/.next)." },
+    { "name": "spec", "description": "The stage's template, resolved (the build passes it; - when the stage has none).", "default": "-" }
+  ],
+  "steps": [
+    { "tool": "shell", "args": { "command": "node {script} {params} {out} {spec}" } }
+  ]
+}

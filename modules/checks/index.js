@@ -8,6 +8,8 @@
  *   { pdf, pages?, contains?, noOverlap? }                    checks/pdf.js
  *   { mesh, maxSize?: [x, y, z], watertight?, minParts? }     checks/mesh.js
  *   { image, notBlank?, contains?, width?, height? }          checks/image.js
+ *   { built: "project.params.json" }                         checks/built.js: deliverables built from the current values
+ *   { literals: "<spec>" }                                   checks/literals.js: a parameter's value typed in again
  * Each answers { ok, why }: what failed and where (the second, the page and the place on it, the edge count), and what it
  * could not verify — a program that is missing is named, never passed over in silence. A requirement the contract asked
  * for that could not be verified does not hold: it fails, saying what to install (checks/verdict.js, the one rule). Every reader runs a program the
@@ -18,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 
-const KINDS = { video: './video', pdf: './pdf', mesh: './mesh', image: './image' };
+const KINDS = { video: './video', pdf: './pdf', mesh: './mesh', image: './image', built: './built', literals: './literals' };
 const kind = c => Object.keys(KINDS).find(k => c && typeof c[k] === 'string' && c[k].trim()) || null;
 const reader = k => require(KINDS[k]);
 const badDefault = m => Object.assign(new Error(m), { status: 400 });

@@ -8,7 +8,7 @@
  */
 const { resolvePath, cwd } = require('./common');
 
-const KINDS = ['video', 'pdf', 'mesh', 'image'];
+const KINDS = ['video', 'pdf', 'mesh', 'image', 'built', 'literals'];
 
 module.exports = [
   {
@@ -16,7 +16,9 @@ module.exports = [
     description: 'Check a piece of work as a person would look at it, before you say it is done — a video, a PDF drawing, a 3D model or a picture. '
       + 'video: length, size and frame rate, no blank stretch (a title card must carry readable text), no text drawn twice or over other text; '
       + 'pdf: page count, words that must be on it, no text over text, no line through a word, nothing off the sheet; '
-      + 'mesh (STL, OBJ, GLB, STEP): size against maxSize, closed (watertight), how many parts; image: not blank, words on it. '
+      + 'mesh (STL, OBJ, GLB, STEP): size against maxSize, closed (watertight), how many parts; image: not blank, words on it; '
+      + 'built (path: project.params.json): the deliverables were built by the hub from the values in the file now; '
+      + 'literals (path: a spec or template): no parameter\'s value typed into it instead of ${name}. '
       + 'It says what failed and where (the second, the page and millimetres, the edge count), and what it could not verify. '
       + 'Put the same check in the plan step\'s contract (check: {video: "<path>", duration: 20}) so the step can only be marked done when it holds.',
     parameters: {

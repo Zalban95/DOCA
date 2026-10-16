@@ -128,11 +128,11 @@ const TABLE = [
   R(ANY, '/api/(files|fm-favorites|configs|config-favorites|keys|logs|setup|snapshots|stack|action)(/.*)?', 'host'),
   // A person's own projects and those shared with them (owner, 2026-10-16; projects/access.js narrows each to its project:
   // another person's answers 404, see-only refuses work): listing, making one in their own folder, opening it, its chats,
-  // who has it. Its files, git, commands, checkpoints and worktrees stay the machine's, below.
+  // its parameters and build, who has it. Its files, git, commands, checkpoints and worktrees stay the machine's, below.
   R(ANY, '/api/projects', 'chat'),
   R(GET, '/api/projects/prj_[0-9a-f]+', 'chat'),
   R('DELETE', '/api/projects/prj_[0-9a-f]+', 'chat'),
-  R(ANY, '/api/projects/prj_[0-9a-f]+/(chat|chats|sharing|owner)', 'chat'),
+  R(ANY, '/api/projects/prj_[0-9a-f]+/(chat|chats|sharing|owner|params|params/(build|check))', 'chat'),
   R(ANY, '/api/projects(/.*)?', 'host'),
   R(ANY, '/api/computers(/.*)?', 'host'),
   R(ANY, '/api/search/(settings|try)', 'host'),                // the web search provider and its key (search/routes.js)

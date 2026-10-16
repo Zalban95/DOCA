@@ -34,6 +34,8 @@ const TOOLS = {
   write_file: [{ tier: 'reversible', way: WAY.backup, touches: true }],
   replace_in_files: [{ when: { apply: true }, tier: 'reversible', way: WAY.none, touches: true }, { tier: 'read' }],
   git: reads(['status', 'log', 'diff', 'show', 'branches'], { tier: 'reversible', way: 'git keeps the commits; a project checkpoint covers the files', touches: true }),
+  // A project's parameters (params/): reading is a read (owner, 2026-10-16); a set or a build changes the project's files.
+  project_params: reads(['show', 'status'], { tier: 'reversible', way: WAY.project, touches: true }),
   project: reads(['info', 'list', 'checkpoints', 'changes', 'worktree_status', 'open'],
     { when: { action: ['run', 'restore', 'worktree_remove'] }, tier: 'reversible', way: WAY.project, touches: true }).concat([{ tier: 'reversible', way: WAY.project }]),
   shell_job: reads(['status', 'output', 'list'], { tier: 'reversible', way: WAY.hub }),

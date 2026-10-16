@@ -17,9 +17,11 @@ test.before(() => H.start());
 test.after(() => H.stop());
 
 const as = (who, method, p, body) => H.api(null, method, p, body, { Cookie: who.cookie, 'X-Doca-Password': who.password });
+const PARAMS = { format: 1, params: { w: { type: 'number', default: 10, min: 1, max: 99 } } };
 
 test('a member sees only their own and what is shared with them; sharing is recorded with who and when', async () => {
   const root = fs.mkdtempSync(path.join(H.tmp, 'shared-'));
+  fs.writeFileSync(path.join(root, 'project.params.json'), JSON.stringify(PARAMS));
   const made = await H.api(null, 'POST', '/api/projects', { root });
   const id = made.body.project.id;
   assert.equal(made.body.project.owner.id, H.owner.user.id, 'its maker owns it');
@@ -31,7 +33,7 @@ test('a member sees only their own and what is shared with them; sharing is reco
   assert.equal(r.status, 200);
   assert.deepEqual(r.body.projects.map(p => p.id), []);
   assert.equal((await as(member, 'GET', `/api/projects/${id}`)).status, 404);
-  assert.equal((await as(member, 'GET', `/api/projects/${id}/chats`)).status, 404);
+  assert.equal((await as(member, 'GET', `/api/projects/${id}/params`)).status, 404);
   assert.equal((await as(member, 'GET', `/api/projects/${old.id}`)).status, 404, 'a project with no owner is the hub\'s');
   assert.ok((await H.api(null, 'GET', '/api/projects')).body.projects.some(p => p.id === old.id), 'a host sees it');
 
@@ -39,13 +41,17 @@ test('a member sees only their own and what is shared with them; sharing is reco
   assert.equal(r.status, 200, JSON.stringify(r.body));
   r = await as(member, 'GET', '/api/projects');
   assert.deepEqual(r.body.projects.map(p => [p.id, p.yours]), [[id, 'see']]);
-  assert.equal((await as(member, 'GET', `/api/projects/${id}/chats`)).status, 200);
-  r = await as(member, 'POST', `/api/projects/${id}/chat`);
+  assert.equal((await as(member, 'GET', `/api/projects/${id}/params`)).status, 200);
+  r = await as(member, 'POST', `/api/projects/${id}/params`, { values: { w: 20 } });
   assert.equal(r.status, 403, 'see is not work');
   assert.equal((await as(member, 'POST', `/api/projects/${id}/sharing`, { personId: H.owner.user.id, right: 'work' })).status, 403, 'only its owner or a host shares it');
   assert.equal((await as(member, 'GET', `/api/projects/${id}/git/status`)).status, 403, 'its git stays the machine\'s');
 
   await H.api(null, 'POST', `/api/projects/${id}/sharing`, { personId: member.user.id, right: 'work' });
+  r = await as(member, 'POST', `/api/projects/${id}/params`, { values: { w: 20 } });
+  assert.equal(r.status, 200, JSON.stringify(r.body));
+  assert.deepEqual(r.body.changes, [{ name: 'w', from: 10, to: 20 }]);
+
   const chat = await as(member, 'POST', `/api/projects/${id}/chat`);
   assert.equal(chat.status, 200);
   assert.equal(require('../modules/harness/session-access').ownerOf(chat.body.sessionId), member.user.id, 'their chat is theirs');
@@ -64,7 +70,7 @@ test('a member sees only their own and what is shared with them; sharing is reco
   const tools = require('../modules/harness/tools');
   const ctx = { sessionId: chat.body.sessionId, user: { ...member.user, role: 'member', orgId: member.orgId } };
   assert.equal(await tools.call('project', { action: 'list' }, [], ctx), 'No projects yet.');
-  assert.match(await tools.call('project', { action: 'info', id }, [], ctx), /No project/);
+  assert.match(await tools.call('project_params', { action: 'show', id }, [], ctx), /No project/);
 });
 
 test('a member makes projects only in a folder of their own; a host changes an owner', async () => {

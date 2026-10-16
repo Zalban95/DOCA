@@ -41,6 +41,7 @@ function mount(app) {
   app.get('/api/projects/:id/sharing', h(req => access.view(who(req), req.params.id)));
   app.post('/api/projects/:id/sharing', h(req => { access.share(who(req), req.params.id, req.body || {}); return access.view(who(req), req.params.id); }));
   app.post('/api/projects/:id/owner', h(req => { access.setOwner(who(req), req.params.id, req.body?.personId); return access.view(who(req), req.params.id); }));
+  require('../params/routes').mount(app, { h, P, who });   // the project's parameters, its mask and its build (params/)
 
   app.post('/api/projects/:id/search', h(req => require('./search').search(P(req).root, req.body || {})));
   app.post('/api/projects/:id/replace', h(async req => {
