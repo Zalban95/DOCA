@@ -52,7 +52,7 @@ async function now(sessionId, person = null) {
   const p = require('../../auth/allot').narrowModel(require('./choice').apply(require('./params').params(), sessionId), person);
   const ep = require('../providers').endpoint(p.provider);
   const before = session.summarizedThrough || 0;
-  await require('./summary').foldSummary({ session, p, ep, force: true });
+  await require('./summary').foldSummary({ session, p, ep, force: true, person });
   const after = memory.getSession(sessionId).summarizedThrough || 0;
   return { folded: after - before, text: after > before
     ? `Compacted: ${after - before} earlier messages are now the summary this chat keeps; the last exchange stays as written.`

@@ -28,8 +28,12 @@
  * A role's model is held to the same rules as the turn's: only when allotted to the person (auth/allot.js), only when
  * priced under a money budget (spending.priced), and the harness's order — its model, then its fallback chain, already
  * narrowed — follows it as the fallback chain, so a mastermind that stops answering hops to the harness's model.
- * Its context window is the one declared for it in that order, else none (the per-step ceiling, turn/step-ceiling.js,
- * does not depend on it). Each step's `step` event, trace span (`doca.role`) and usage row (kind `step:<role>`) say
+ * Its context window is found as the harness's is (windowOf: `harness.models.<role>Window`, the window declared for it
+ * in that order, a local server's measurement, what its server reports), and the per-step ceiling and a fresh tool
+ * result are held to a share of it (turn/step-ceiling.js) — a small worker never gets a request sized for a large
+ * mastermind. Folds (the rolling summary) are the worker's when one is set (forFold).
+ * A work chat's final answer stays with whichever role's step finishes it — no extra mastermind call (owner, 2026-10-16).
+ * Not wired yet: a tie between best-of-n's tries broken by the mastermind — `tries.onTie` is not on main. Each step's `step` event, trace span (`doca.role`) and usage row (kind `step:<role>`) say
  * which role it ran as.
  */
 const ROLES = ['mastermind', 'worker'];
@@ -81,6 +85,28 @@ function roleOf({ profile, session, client, step, rows = [] }) {
 }
 
 const same = (a, b) => a && b && a.provider === b.provider && a.model === b.model;
+const num = v => (Number.isFinite(Number(v)) && Number(v) > 0 ? Math.floor(Number(v)) : 0);
+
+/**
+ * A role model's window, found the way the harness's is: its own declared setting first, then the window declared for it
+ * in the harness's order, then (provider-pace.apply, below) a local server's kept measurement, then what its server
+ * reported (context-window.js, cached). 0 when nobody has said — the old rule.
+ */
+function windowOf(role, order, at, p) {
+  const declared = num(settingOf(`harness.models.${role}Window`));
+  if (declared) return { contextWindow: declared, _windowSetting: `harness.models.${role}Window` };
+  if (at >= 0 && num(order[at].contextWindow))
+    return { contextWindow: order[at].contextWindow, _windowSetting: at > 0 ? `harness.config.doca.fallbackChain[${at - 1}].contextWindow` : p._windowSetting };
+  return { contextWindow: 0, _windowSetting: `harness.models.${role}Window` };
+}
+const settingOf = key => { try { return require('../../settings-schema').value(key); } catch { return 0; } };
+
+/** What its server reported, when nothing was declared and no measurement was kept (cached; never waited on here). */
+function reported(next) {
+  if (num(next.contextWindow)) return next;
+  const w = require('../context-window').known(next.provider, next.model);
+  return w?.tokens ? { ...next, contextWindow: w.tokens, _windowSetting: `${next._windowSetting} (0: ${w.source})` } : next;
+}
 
 /**
  * The step's parameters for `role`: the turn's own `p` when the role has no model, or its model is not allotted or not
@@ -94,22 +120,43 @@ function paramsFor(role, p, { person, sessionId } = {}) {
   const order = require('./choice').order(p);
   const at = order.findIndex(e => same(e, target));
   let next = {
-    ...p, provider: target.provider, model: target.model, contextWindow: at >= 0 ? order[at].contextWindow : 0,
-    _windowSetting: at > 0 ? `harness.config.doca.fallbackChain[${at - 1}].contextWindow` : `none declared for harness.models.${role}`,
+    ...p, provider: target.provider, model: target.model, ...windowOf(role, order, at, p),
     fallbackChain: order.filter(e => !same(e, target)), _role: role,
   };
   try { next = require('../../spending').priced({ person, sessionId }, next); }
   catch { return { ...p, _role: role, _roleSkipped: 'no price under a money budget' }; }
   try { next = require('../provider-pace').apply(next); } catch { /* a pace is a refinement */ }
-  return next;
+  return reported(next);
+}
+
+/** Ask a role model's server for its window when nothing is known yet, waiting at most `ms` (the answer is cached). */
+async function warm(role, ms = 1500) {
+  const t = modelFor(role);
+  if (!t || num(settingOf(`harness.models.${role}Window`)) || require('../context-window').known(t.provider, t.model)) return;
+  const asked = require('../context-window').discover(t.provider, t.model).catch(() => null);
+  await Promise.race([asked, new Promise(r => { const h = setTimeout(r, ms); h.unref?.(); })]);
 }
 
 /** The step's model: its parameters, its endpoint and its role (null when the turn is not routed). `rows` may be a function. */
-function step({ p, ep, profile, session, client, step: n, rows }) {
+async function step({ p, ep, profile, session, client, step: n, rows }) {
   const role = routed({ profile, session, client }) ? roleOf({ profile, session, client, step: n, rows: typeof rows === 'function' ? rows() : rows }) : null;
   if (!role) return { p, ep, role: null };
+  await warm(role);
   const sp = paramsFor(role, p, { person: client?.user, sessionId: session?.id });
   return { p: sp, ep: sp.provider === p.provider ? ep : require('../providers').endpoint(sp.provider), role };
+}
+
+/**
+ * The model a fold (the rolling summary) is asked of: the worker when one is set and may be used for this person, else
+ * the turn's own (owner's decision 2026-10-16: housekeeping goes to the worker). A person's choice of model for the chat
+ * does not change it — a summary is not an answer.
+ */
+function forFold({ p, ep, person, sessionId }) {
+  const target = modelFor('worker');
+  if (!target || same(target, p)) return { p, ep };
+  const sp = paramsFor('worker', p, { person, sessionId });
+  if (sp._roleSkipped || !same(sp, target)) return { p, ep };
+  try { return { p: sp, ep: require('../providers').endpoint(sp.provider) }; } catch { return { p, ep }; }
 }
 
 /** One line for `# Your limits`-style readers and the features index: what is set. */
@@ -120,4 +167,4 @@ function describe() {
   return `mastermind ${n(m)} (plans, routes, reviews); worker ${n(w)} (carries out steps)`;
 }
 
-module.exports = { ROLES, PLANNING, parse, modelFor, routed, roleOf, paramsFor, step, describe };
+module.exports = { ROLES, PLANNING, parse, modelFor, routed, roleOf, paramsFor, windowOf, warm, step, forFold, describe };

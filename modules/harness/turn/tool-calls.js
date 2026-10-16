@@ -15,7 +15,8 @@ const failures = require('./failures');
 /**
  * @param {{ reply: object, schemas: object[], stepDisabled: string[], session: object, signal: AbortSignal,
  *           client?: object, profile?: object, isMission: boolean, step: number,
- *           say: (evt: object) => void, announced: Set<string> }} ctx
+ *           say: (evt: object) => void, announced: Set<string>, stepModel?: string }} ctx — `stepModel`: the model
+ *           that made these calls, set when the turn has two (turn/model-route.js; release-asks.js reads it)
  */
 /**
  * A person's own turn (CONSTITUTION S1: their request is the decision): a person on the turn, writing themselves — not
@@ -52,7 +53,7 @@ function askerOf(read, { client, isMission, profile }) {
   return own || null;
 }
 
-async function runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read = [] }) {
+async function runToolCalls({ reply, schemas, stepDisabled, session, signal, client, profile, isMission, step, say, announced, read = [], stepModel = null }) {
   const asker = askerOf(read, { client, isMission, profile });
   for (const tc of reply.tool_calls) {
     const name = require('../tools').ALIASES[tc.function?.name] || tc.function?.name || '(unnamed)';   // an old name runs as its new one
@@ -88,7 +89,7 @@ async function runToolCalls({ reply, schemas, stepDisabled, session, signal, cli
     const permit = args._raw === undefined ? require('../../auth/permits').tool({ person: client?.user, profile, missionId, sessionId: session.id, name, args }) : { allowed: true };
     if (!permit.allowed && refused === null) refused = `Refused: ${permit.why}. An admin, or someone holding delegate, can grant it in Settings → Users`
       + `${isMission ? '; the agent that dispatched this mission can grant it for the mission with permission_grant' : ''}.`;
-    const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask, risk, person: client?.user }) : null;
+    const gate = args._raw === undefined && refused === null ? approval.gate(name, args, { sessionId: session.id, signal, mission: isMission, forceAsk: permit.ask, risk, person: client?.user, stepModel }) : null;
     if (gate) {
       // What the card shows (approval-explain.js): the agent's words, what the call does, the exact request. Beside the
       // gate's fields, never in place of one a decision reads.

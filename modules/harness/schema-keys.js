@@ -22,4 +22,10 @@ module.exports = {
     hint: 'provider/model that plans, routes, re-plans and reviews: every step of the Orchestrator, and in a work chat or a chat the first step, the step after a plan changes or a step is marked done (the review and the final answer), and the step after a call fails. Empty: the harness\'s model. A person\'s choice of model in a chat wins; only a model allotted to the person is used.' },
   'models.worker': { type: 'string', default: '', propose: false,
     hint: 'provider/model that carries out the steps: in a work chat or a chat every step that follows tool results, and every step of a specialist whose definition names no model. Empty: the harness\'s model.' },
+  // Each role's window (turn/model-route.js): declared here first, else the one declared for it in the harness's order,
+  // else what its server reported. A small worker then gets requests sized for it, not for the harness's model.
+  'models.mastermindWindow': { type: 'integer', min: 0, max: 10000000, default: 0, propose: false,
+    hint: 'Context window of the mastermind model, in tokens. 0: found — the window declared for it in the fallback chain, else what its server reports.' },
+  'models.workerWindow': { type: 'integer', min: 0, max: 10000000, default: 0, propose: false,
+    hint: 'Context window of the worker model, in tokens. 0: found — the window declared for it in the fallback chain, else what its server reports. A small local worker needs it known: its tool results and per-step ceiling are sized to it.' },
 };

@@ -170,7 +170,7 @@ module.exports = [
     settings: ['harness.config.doca.stepTokens', 'harness.config.doca.resultChars'], words: 'tokens per step ceiling cost context clear tool results trim lean spill' },
   { id: 'mastermind-worker', licence: 'core', name: 'Mastermind and worker models', page: 'controls',
     use: 'A stronger model plans, routes, re-plans and reviews; a quicker one carries out the steps — decided per step by what the step is, never by a model. Both empty: the harness\'s model for everything.',
-    settings: ['harness.models.mastermind', 'harness.models.worker'], words: 'mastermind worker planner executor two models cheap strong judgement cost role' },
+    settings: ['harness.models.mastermind', 'harness.models.worker', 'harness.models.mastermindWindow', 'harness.models.workerWindow'], words: 'mastermind worker planner executor two models cheap strong judgement cost role' },
   { id: 'fallback-chain', licence: 'core', name: 'Fallback models and escalation', page: 'controls', settings: ['harness.config.doca.fallbackChain', 'harness.config.doca.escalateTo'], since: '2.119.0',
     use: 'Another model when one fails, and one try on a stronger model for a stuck job.',
     words: 'failover stronger model stuck retry' },
