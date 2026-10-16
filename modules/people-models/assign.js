@@ -21,6 +21,7 @@
 const store = require('../store');
 
 const DOC = 'people-models-assigned';
+const NONE = 'none';   // "nothing assigned", on purpose (index.js ruleFor); empty or absent is "not set"
 const bad = (msg, status = 400) => Object.assign(new Error(msg), { status });
 const load = () => { const d = store.readJson(DOC, {}) || {}; return { people: d.people || {}, levels: d.levels || {}, owner: d.owner || { people: {}, levels: {} } }; };
 const levels = () => require('../auth/levels');
@@ -73,16 +74,17 @@ function allotted(actor, forWhom, e) {
 }
 
 /**
- * Assign (or with an empty model, clear) a model for a person or a level. The owner's goes into the policy (prefs),
+ * Assign a model for a person or a level: `provider/model`, "none" (nothing assigned — the broader rules no longer reach
+ * them), or empty (not set — the next rule decides). `dry` checks everything and writes nothing. The owner's goes into the policy (prefs),
  * an admin's into their slot here; both record who and when. Returns what is now set for that target.
  */
-function set(actor, { personId, levelId, model } = {}) {
+function set(actor, { personId, levelId, model } = {}, { dry = false } = {}) {
   if (!actor?.id) throw bad('Sign in first.', 401);
   if (!isAdmin(actor)) throw bad('Assigning models is an admin\'s: someone holding users, or a team leader allowed to give models.', 403);
   if (!!personId === !!levelId) throw bad('Name one person (personId) or one level (levelId).');
-  const raw = String(model ?? '').trim();
-  const e = raw ? require('../harness/turn/model-route').parse(raw) : null;
-  if (raw && !e) throw bad(`"${raw}" is not provider/model.`);
+  const raw = String(model ?? '').trim(), none = raw === NONE;
+  const e = raw && !none ? require('../harness/turn/model-route').parse(raw) : null;
+  if (raw && !none && !e) throw bad(`"${raw}" is not provider/model, "${NONE}" (nothing assigned) or empty (not set).`);
   const s = require('../auth/store');
   let forWhom;
   if (personId) {
@@ -96,7 +98,8 @@ function set(actor, { personId, levelId, model } = {}) {
   }
   if (e) allotted(actor, forWhom, e);
   const where = personId ? 'people' : 'levels', key = personId || levelId;
-  const rec = raw ? { model: `${e.provider}/${e.model}`, by: actor.id, at: new Date().toISOString() } : null;
+  const rec = raw ? { model: none ? NONE : `${e.provider}/${e.model}`, by: actor.id, at: new Date().toISOString() } : null;
+  if (dry) return { [personId ? 'personId' : 'levelId']: key, name: forWhom.name, to: rec?.model || null };
   const d = load();
   if (isOwner(actor)) {
     const utils = require('../utils'), prefs = utils.loadPrefs();
@@ -125,4 +128,15 @@ function ownerBy(where, key, model, d = load()) {
   return r && r.model === model ? r : null;
 }
 
-module.exports = { DOC, load, isAdmin, leadsModels, below, mayPerson, mayLevel, set, adminFor, ownerBy };
+/**
+ * Several at once, all or nothing: every change is checked first (a dry run of each), then each is written — one Save,
+ * one password (the route is guarded), and a refusal names which change and why without having written the others.
+ */
+function setMany(actor, changes) {
+  const list = Array.isArray(changes) ? changes : [];
+  if (!list.length || list.length > 100) throw bad('Send 1 to 100 changes, each {personId | levelId, model}.');
+  list.forEach((c, i) => { try { set(actor, c, { dry: true }); } catch (e) { throw Object.assign(e, { message: `Change ${i + 1}: ${e.message}` }); } });
+  return list.map(c => set(actor, c));
+}
+
+module.exports = { NONE, setMany, DOC, load, isAdmin, leadsModels, below, mayPerson, mayLevel, set, adminFor, ownerBy };

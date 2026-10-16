@@ -28,20 +28,38 @@ const subject = person => !!person?.id && person.role !== 'owner';
 /** `provider/model` → {provider, model}, or null (turn/model-route.js parse). */
 const parse = v => require('../harness/turn/model-route').parse(v);
 
+/** "Nothing assigned", said on purpose: distinct from "not set" (absent). */
+const NONE = 'none';
+
 /**
- * The model assigned to this person, as {provider, model, from, setBy, by}, or null. The owner's and an admin's
- * (assign.js) by rule from the most specific, the owner's first at each: the owner's for the person, an admin's for the
- * person, the owner's for their level, an admin's for their level, the owner's for everyone. The owner's count while
- * the owner assigns (`assign`); an admin's always — the owner lets admins assign by giving them their level.
+ * The first rule set for this person, as {provider, model, from, setBy, by} — or {none: true, from, setBy, by} when
+ * that rule says "nothing assigned" — or null when no rule is set. The owner's decisions of 2026-10-16:
+ *
+ *   1. the owner's for the person      2. an admin's for the person      3. the owner's for their level
+ *   4. an admin's for their level      5. the owner's for everyone but the owner
+ *
+ * The first rule that is SET decides — a model, or "nothing assigned" — and the rules after it never reach the person:
+ * so the owner's wins where both set the same kind of rule, and "nothing assigned" for a person or a level shuts out
+ * every broader assignment below it in this list. "Not set" (absent) passes to the next rule. With nothing assigned the
+ * person runs as the policy says without one: their own choice where allowed, else the owner's models (`same`), else
+ * none. The owner's rules count while the owner assigns (`assign`); an admin's always — an admin who does not want to
+ * assign simply does not (no switch turns admins' assignments off: the owner's answer of 2026-10-16).
  */
-function assignedFor(person, pol = policy()) {
+function ruleFor(person, pol = policy()) {
   if (!subject(person)) return null;
   const as = require('./assign'), d = as.load(), admin = as.adminFor(person, d);
-  const owner = (where, key, raw) => (pol.assign && parse(raw) ? { ...parse(raw), from: where === 'people' ? 'person' : where === 'levels' ? 'level' : 'everyone', setBy: 'owner', by: as.ownerBy(where, key, raw, d)?.by || null } : null);
-  const theirs = from => (admin?.from === from && parse(admin.model) ? { ...parse(admin.model), from, setBy: 'admin', by: admin.by, at: admin.at } : null);
+  const read = (raw, rest) => (raw === NONE ? { none: true, ...rest } : parse(raw) ? { ...parse(raw), ...rest } : null);
+  const owner = (where, key, raw) => (pol.assign ? read(raw, { from: where === 'people' ? 'person' : where === 'levels' ? 'level' : 'everyone', setBy: 'owner', by: as.ownerBy(where, key, raw, d)?.by || null }) : null);
+  const theirs = from => (admin?.from === from ? read(admin.model, { from, setBy: 'admin', by: admin.by, at: admin.at }) : null);
   return owner('people', person.id, pol.people?.[person.id]) || theirs('person')
     || owner('levels', person.role, pol.levels?.[person.role]) || theirs('level')
     || owner('all', null, pol.all) || null;
+}
+
+/** The model assigned to this person (ruleFor's, unless it says "nothing assigned"), or null. */
+function assignedFor(person, pol = policy()) {
+  const r = ruleFor(person, pol);
+  return r && !r.none ? r : null;
 }
 
 /** May this person choose a conversation's model? */
@@ -103,4 +121,4 @@ function effective(person) {
   return { provider: used.provider || null, model: used.model || null, why, mayChoose: mayChoose(person, pol) };
 }
 
-module.exports = { policy, subject, assignedFor, mayChoose, choiceCounts, apply, routes, effective, ownerOf };
+module.exports = { NONE, policy, subject, ruleFor, assignedFor, mayChoose, choiceCounts, apply, routes, effective, ownerOf };
