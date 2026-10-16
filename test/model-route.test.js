@@ -137,3 +137,15 @@ test('a role\'s model is used only when allotted; the harness\'s order follows i
     assert.equal(owner.model, 'big', 'an admin is not narrowed');
   } finally { setRoles('', ''); }
 });
+
+test('a specialist\'s prompt stays shorter than the Orchestrator\'s, and its mission rules are short and binding', () => {
+  const agent = require('../modules/harness/agent');
+  const registry = require('../modules/agents/registry');
+  const full = agent.preview({ message: 'hello', profile: require('../modules/harness/organization').profileFor({ kind: 'orchestrator' }) });
+  for (const def of registry.list().filter(d => !d.broken)) {
+    const narrow = agent.preview({ message: 'hello', profile: { id: def.id, label: def.label, systemPrompt: def.role, tools: def.tools, kits: def.kits, memory: def.memory, environment: def.environment } });
+    assert.ok(narrow.length < full.length, `${def.id}: ${narrow.length} < ${full.length}`);
+    assert.ok(def.role.length <= 1400, `${def.id}'s role is short (${def.role.length} characters)`);
+    assert.match(narrow, /# Your errand/);
+  }
+});

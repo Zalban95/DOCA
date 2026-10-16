@@ -18,10 +18,10 @@ const memory = require('./memory');
 
 const short = (v, n) => { const t = String(v || '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t; };
 
-const LEAD_REPORTS = '[panel] Helpers or a team you started reported back. Read each report. Where one asks for a specialist '
-  + 'or for something only you may start, decide: dispatch it (agent_dispatch) and, when it is back, send the helper what it '
-  + 'needs with work_chats send. Do not redo a helper\'s work yourself. Tell the person what came of it in a few lines — '
-  + 'a team that failed included, with why — and ask what only they can decide.';
+const LEAD_REPORTS = '[panel] Helpers or a team you started reported back. For each report that asks for a specialist or '
+  + 'for something only you may start: dispatch it (agent_dispatch) and, when it is back, send the helper what it needs '
+  + '(work_chats send). Never redo a helper\'s work yourself. Then tell the person in a few lines what came of it — a team '
+  + 'that failed included, with why — and ask only what they alone can decide.';
 const LEAD_RESULTS = '[panel] The specialists you sent have finished; their results are in your context. Pass on what a '
   + 'helper of yours asked for with work_chats send, and tell the person only what needs them.';
 
