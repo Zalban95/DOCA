@@ -109,7 +109,8 @@ const SCHEMA = {
     // Only each outside harness's switch is proposable — on the person's own words ("it can decide on its own from now on"): moving one to
     // "free" is applied only on the Accept, with the password (auth/guarded.js), so an agent never widens it alone (asked 2026-10-16).
     propose: p('Outside harnesses on a team', 'Per outside harness (claude, codex, dsh, gemini, mini): "never", "ask" (offered; used on the person\'s yes) or "free" (the Orchestrator starts it itself when a task fits) — "free" is applied only with the person\'s password', { prefix: 'teams.outside.use' }),
-    keys: require('./teams/schema-keys') },   people: { is: 'travels', home: 'hive', note: 'the hive chat between people (people/): how long its messages are kept — the admin\'s', keys: { retainDays: { type: 'integer', min: 0, max: 36500, default: 0, propose: false, hint: 'Days a hive-chat message is kept; older ones are removed once a day. 0 keeps them until someone deletes them.' } } },
+    keys: require('./teams/schema-keys') },   // declared beside the teams' code
+  people:           { is: 'travels', home: 'hive', note: 'the hive chat between people (people/): how long its messages are kept — the admin\'s', keys: { retainDays: { type: 'integer', min: 0, max: 36500, default: 0, propose: false, hint: 'Days a hive-chat message is kept; older ones are removed once a day. 0 keeps them until someone deletes them.' } } },
   // Housekeeping, not a guard: proposable like computers.idleStopMinutes (agents/tidy.js). 0 turns a rule off.
   missions:         { is: 'travels', home: 'hive', note: 'when finished specialists\' missions are put away in the Archive by themselves',
     propose: p('Finished missions', 'When finished missions are put away in the Archive by themselves'),
