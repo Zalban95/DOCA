@@ -138,6 +138,7 @@ async function settingsApplyOnLoad() {
 /* ── Sidebar sections + system stats toggles ─────────── */
 
 const SIDEBAR_SECTIONS = [
+  { id: 'work',       label: 'Work in progress' },   // each job's plan, done of its steps (work-progress.js)
   { id: 'containers', label: 'Machines' },   // the id predates computers and VMs in it; people's saved choices use it
   { id: 'gpu',        label: 'GPU' },
   { id: 'system',     label: 'System' },

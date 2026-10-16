@@ -52,9 +52,10 @@ function pjTabsRender() {
   strip.innerHTML = PJC.open.map(id => {
     const c = byId.get(id) || { title: 'Chat' }, t = PJC.tabs.get(id);
     const working = t?.busy || c.running || c.state === 'running';
-    return `<div class="pj-tab-chat ${id === PJC.active ? 'active' : ''} ${c.sub ? 'sub' : ''}" role="tab" aria-selected="${id === PJC.active}"
+    const p = c.progress, pct = p ? Math.max(0, Math.min(100, p.percent)) : 0;   // how far its plan is (plan-progress.js)
+    return `<div class="pj-tab-chat ${id === PJC.active ? 'active' : ''} ${c.sub ? 'sub' : ''}${p ? ' has-progress' : ''}" role="tab" aria-selected="${id === PJC.active}"
         data-id="${escHtml(id)}" title="${escHtml(`${c.title || ''}${c.mode && c.mode !== 'agent' ? ` · ${c.mode}` : ''}${c.waiting ? ` · ${c.waiting} queued` : ''}`)}">
-      ${working ? '<span class="pj-tab-dot" aria-label="working"></span>' : ''}${c.sub ? '↳ ' : ''}${c.worktree ? `<span title="Its own git worktree, branch ${escHtml(c.worktree)}">⑂ </span>` : ''}<span class="pj-tab-name">${escHtml(c.title || 'Chat')}</span>
+      ${working ? '<span class="pj-tab-dot" aria-label="working"></span>' : ''}${c.sub ? '↳ ' : ''}${c.worktree ? `<span title="Its own git worktree, branch ${escHtml(c.worktree)}">⑂ </span>` : ''}<span class="pj-tab-name">${escHtml(c.title || 'Chat')}</span>${p ? `<span class="wp-tab">${pct}%</span><span class="wp-tab-line${p.failing ? ' failing' : ''}" style="width:${pct}%"></span>` : ''}
       <button class="pj-tab-x" title="Close the tab (the conversation stays)" data-close="${escHtml(id)}">✕</button></div>`;
   }).join('') + `<button class="btn btn-xs" onclick="pjTabNew()" title="A new conversation in this project">＋</button>
     <button class="btn btn-xs" onclick="pjPageNew()" title="A new page: a markdown document in this project, with a chat about it beside it">＋📄</button>
@@ -65,7 +66,18 @@ function pjTabsRender() {
     el.onclick = e => { if (!e.target.dataset.close) pjChatActivate(el.dataset.id).then(_pjTabsSave); };
     el.ondblclick = () => pjTabRename(el.dataset.id);
   });
+  _pjTabProgress(byId.get(PJC.active));
   strip.querySelectorAll('[data-close]').forEach(b => { b.onclick = e => { e.stopPropagation(); pjTabClose(b.dataset.close); }; });
+}
+
+/** Under the tabs: how far the open chat's plan is, and its running step — the same bar as the Workstream's. */
+function _pjTabProgress(c) {
+  const strip = document.getElementById('pj-chat-tabs');
+  if (!strip || typeof workProgressBarHtml !== 'function') return;
+  let box = document.getElementById('pj-chat-progress');
+  if (!box) { box = Object.assign(document.createElement('div'), { id: 'pj-chat-progress', className: 'pj-chat-progress' }); strip.after(box); }
+  box.hidden = !c?.progress;
+  box.innerHTML = c?.progress ? `${workProgressBarHtml(c.progress)}${workProgressNoteHtml(c.progress)}` : '';
 }
 
 /** A chat about one page (projects/pages.js): `abs` is the file's path; the server keeps it relative to the project. */

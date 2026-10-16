@@ -1,0 +1,36 @@
+{
+  "type": "agent.mission",
+  "class": "durable",
+  "payload": {
+    "missionId": "s_fixture",
+    "agentId": "work",
+    "label": "Tablet mount",
+    "kind": "work",
+    "task": "Tablet mount",
+    "state": "running",
+    "startedAt": "2026-10-06T18:30:00.000Z",
+    "plan": [
+      {
+        "title": "Model it",
+        "state": "done"
+      },
+      {
+        "title": "Export the print",
+        "state": "done"
+      },
+      {
+        "title": "Drawings",
+        "state": "running"
+      },
+      {
+        "title": "Promo video",
+        "state": "queued"
+      }
+    ],
+    "progress": {
+      "done": 2,
+      "total": 4,
+      "percent": 50
+    }
+  }
+}

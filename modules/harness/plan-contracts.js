@@ -11,6 +11,9 @@
  *                                          text or an element, and (noErrors) its console stayed clean — page-check.js
  *   { absent: "<path>" }                   the file or folder is gone (a clean-up)
  *   { free: <port> }                       nothing listens on that port on this machine (a server stopped)
+ *   { video | pdf | mesh | image: "<path>", … }   the piece of work itself, looked at as a person would: a video's length,
+ *                                          size, no blank card, no doubled or overlapping text; a drawing's pages, words,
+ *                                          no text over text or off the sheet; a print's size and closed mesh — checks/
  * A check never runs a command: a test the agent runs itself and reports (the turn's own approvals), so a contract
  * can never be a way around them. Steps stay strings (every reader of a plan keeps working); `plan.contracts[i]`
  * belongs to `plan.steps[i]`, or is null.
@@ -33,19 +36,22 @@ function split(step) {
 
 function normalizeCheck(c) {
   if (typeof c !== 'object') throw bad('A check is {file}, {file, contains} or {url}.');
+  if (require('../checks').kind(c)) return require('../checks').normalize(c, bad);   // a video, a PDF, a mesh, a picture
   if (c.file) return { file: String(c.file).slice(0, 500), ...(c.contains ? { contains: String(c.contains).slice(0, 300) } : {}) };
   const owned = u => { if (!require('./toolbox/http').owned(String(u))) throw bad('A check reaches only the owner\'s own addresses (this machine, the LAN, the tailnet).'); return String(u).slice(0, 500); };
   if (c.url) return { url: owned(c.url) };
   if (c.page) return { page: owned(c.page), ...(c.contains ? { contains: String(c.contains).slice(0, 300) } : {}), ...(c.selector ? { selector: String(c.selector).slice(0, 200) } : {}), ...(c.noErrors ? { noErrors: true } : {}) };
   if (c.absent) return { absent: String(c.absent).slice(0, 500) };
   if (c.free !== undefined) { const port = Number(c.free); if (!Number.isInteger(port) || port < 1 || port > 65535) throw bad('free is a port number.'); return { free: port }; }
-  throw bad('A check is {file}, {file, contains}, {url}, {page, contains, selector, noErrors}, {absent} or {free: port}; a test you run yourself and report.');
+  throw bad('A check is {file}, {file, contains}, {url}, {page, contains, selector, noErrors}, {absent}, {free: port}, or one of the work itself — '
+    + '{video, duration?, width?, height?, fps?}, {pdf, pages?, contains?}, {mesh, maxSize?, watertight?}, {image, contains?}; a test you run yourself and report.');
 }
 
 /** Whether a contract's check holds now: { ok, why }. A contract without a check holds on the agent's word. */
 async function verify(contract, { cwd } = {}) {
   const c = contract?.check;
   if (!c) return { ok: true, why: 'no check — on the agent\'s word' };
+  if (require('../checks').kind(c)) return require('../checks').run(c, { cwd });
   if (c.file) {
     const p = path.resolve(cwd || process.cwd(), c.file.replace(/^~(?=$|[\\/])/, require('os').homedir()));
     if (!fs.existsSync(p)) return { ok: false, why: `${c.file} is not there` };
