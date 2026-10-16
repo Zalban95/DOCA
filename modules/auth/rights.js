@@ -141,6 +141,7 @@ const TABLE = [
   R(ANY, '/api/screen/reload', 'read'),                        // reload one's own open pages; every page of the hive is a host's, checked there (screens/showing.js)
   R(GET, '/api/spending', 'read'),                              // what was spent: your own; everyone's for an admin (spending/routes.js)
   R(ANY, '/api/spending(/.*)?', 'chat'),                        // your own budget and permissions within your level; others' are `users`, checked there
+  R(ANY, '/api/people-models(/.*)?', 'read'),                   // models for people: an admin's (users, or a team leader for models), checked there (people-models/)
   R(ANY, '/api/sharing(/.*)?', 'host'),                        // the owner's answer and the owner's click (sharing.js)
   R(ANY, '/api/guided(/.*)?', 'host'),                         // setting up the machine: what it bears, what to install, which keys (guided/)
   R(ANY, '/api/packs(/.*)?', 'host'),                          // packs carry MCP commands, tool lists and memory (packs/routes.js)

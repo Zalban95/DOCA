@@ -45,7 +45,11 @@ function handleGetPrefs(req, res) {
 /** POST /api/prefs — merged leaf by leaf; null deletes; `?replace=1` replaces whole top-level keys (prefs-merge.js). */
 function handlePostPrefs(req, res) {
   try {
-    savePrefs(require('./prefs-merge').merged(loadPrefs(), req.body, { replace: req.query?.replace === '1' }));
+    const before = loadPrefs(), next = require('./prefs-merge').merged(before, req.body, { replace: req.query?.replace === '1' });
+    // Which models people run on is the owner's policy; an admin assigns below them through /api/people-models (2026-10-16).
+    if (req.auth?.role && req.auth.role !== 'owner' && JSON.stringify(before.peopleModels ?? null) !== JSON.stringify(next.peopleModels ?? null))
+      return res.status(403).json({ error: 'Which models people run on is the owner\'s. An admin assigns models to the people below them in Settings → Users → Models for people.' });
+    savePrefs(next);
     res.json({ ok: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 }

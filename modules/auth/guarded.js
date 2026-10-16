@@ -184,6 +184,8 @@ const ROUTES = [
   [['POST'], /^\/api\/packs\/(import|library\/[^/]+\/import)$/, 'packIn'],
   // Spending (S12): budgets, permissions and their acceptance; declining a proposal never asks — saying no is free.
   [W, /^\/api\/spending\/(?!permissions\/[^/]+\/decline$).+$/, 'spending'],
+  // Models for people (people-models/assign.js): an owner's or an admin's assignment, typed like the policy itself.
+  [['POST'], /^\/api\/people-models\/assign$/, 'peopleModels'],
   // Secrets for devices (TODO P1.3): keeping or forgetting one — a person's own or the hub's — is the person's, typed.
   [W, /^\/api\/connectors\/sealed\/(all|mine(\/[^/]+)?|[^/]+)$/, 'sealed'],
   // Trusting a server's own certificate by name (cert-pins.js): what it would let speak as that server.

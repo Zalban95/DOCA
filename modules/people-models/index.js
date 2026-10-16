@@ -7,6 +7,7 @@
  *   same     people use the owner's models — the harness's model and fallbacks (on by default: today's behaviour)
  *   choose   people choose their own model for a conversation (the chat's picker; turn/choice.js) — admins always may
  *   assign   the owner assigns a model per person, per level, or to everyone but the owner; the most specific wins
+ *            (admins assign to the people below them too, a slot of their own under the owner's: assign.js)
  *
  * For one turn: a person's own choice where allowed, else their assigned model, else the owner's when `same` is on,
  * else the turn is refused with what to do. The owner (role `owner`) is never a subject. An assigned model answers every
@@ -27,18 +28,25 @@ const subject = person => !!person?.id && person.role !== 'owner';
 /** `provider/model` → {provider, model}, or null (turn/model-route.js parse). */
 const parse = v => require('../harness/turn/model-route').parse(v);
 
-/** The model assigned to this person, as {provider, model, from}, or null. */
+/**
+ * The model assigned to this person, as {provider, model, from, setBy, by}, or null. The owner's and an admin's
+ * (assign.js) by rule from the most specific, the owner's first at each: the owner's for the person, an admin's for the
+ * person, the owner's for their level, an admin's for their level, the owner's for everyone. The owner's count while
+ * the owner assigns (`assign`); an admin's always — the owner lets admins assign by giving them their level.
+ */
 function assignedFor(person, pol = policy()) {
-  if (!subject(person) || !pol.assign) return null;
-  for (const [from, raw] of [['person', pol.people?.[person.id]], ['level', pol.levels?.[person.role]], ['everyone', pol.all]]) {
-    const m = parse(raw);
-    if (m) return { ...m, from };
-  }
-  return null;
+  if (!subject(person)) return null;
+  const as = require('./assign'), d = as.load(), admin = as.adminFor(person, d);
+  const owner = (where, key, raw) => (pol.assign && parse(raw) ? { ...parse(raw), from: where === 'people' ? 'person' : where === 'levels' ? 'level' : 'everyone', setBy: 'owner', by: as.ownerBy(where, key, raw, d)?.by || null } : null);
+  const theirs = from => (admin?.from === from && parse(admin.model) ? { ...parse(admin.model), from, setBy: 'admin', by: admin.by, at: admin.at } : null);
+  return owner('people', person.id, pol.people?.[person.id]) || theirs('person')
+    || owner('levels', person.role, pol.levels?.[person.role]) || theirs('level')
+    || owner('all', null, pol.all) || null;
 }
 
 /** May this person choose a conversation's model? */
-const mayChoose = (person, pol = policy()) => !subject(person) || host(person) || pol.choose;
+// An admin (assign.js: users, or a team leader for models) always may — the owner's decision of 2026-10-16.
+const mayChoose = (person, pol = policy()) => !subject(person) || host(person) || require('./assign').isAdmin(person) || pol.choose;
 
 /** The person a conversation is for (its mark up its parents; harness/own-main.js), with their role. */
 function ownerOf(sessionId) {
