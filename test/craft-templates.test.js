@@ -235,7 +235,8 @@ test('promo.js start outside a background job refuses, printing the exact call; 
     assert.match(r.stderr, /recipe \{"action":"run","id":"product-video","values":\{"spec":/);
     assert.ok(!fs.existsSync(path.join(dir, 'v.mp4.status.json')), 'nothing was started');
     // The hub's jobs say so to what they run, so the recipe and shell {background: true} are let through.
-    const job = require('../modules/harness/jobs').start(`"${process.execPath}" -e "process.stdout.write(process.env.DOCA_JOB || 'none')"`, { cwd: dir });
+    fs.writeFileSync(path.join(dir, 'env.js'), "process.stdout.write(process.env.DOCA_JOB || 'none')");
+    const job = require('../modules/harness/jobs').start('node env.js', { cwd: dir });   // bash or PowerShell alike
     const until = Date.now() + 10000;
     let seen = '';
     while (Date.now() < until && !(seen = require('../modules/harness/jobs').output(job.id))) await H.sleep(100);

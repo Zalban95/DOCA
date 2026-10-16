@@ -242,6 +242,6 @@ test('a lean-context marker is never written into a file: write_file and replace
   assert.equal(marks.carries(fs.readFileSync(require.resolve('../modules/harness/turn/clear-results'), 'utf8')), false);
   assert.equal(marks.carries(fs.readFileSync(require.resolve('../modules/harness/turn/messages'), 'utf8')), false);
   // The marker is short, says it is not content, and names where the file's text is.
-  assert.ok(copied[0].length < 200);
+  assert.ok(copied[0].length - target.length < 160, 'short: little beyond the path it names');
   assert.match(copied[0], /^⟦not content: 4321 characters .* on disk at .*promo-spec\.json; read_file it, never copy this marker⟧$/);
 });
