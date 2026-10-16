@@ -56,7 +56,7 @@ function read(text, seen = 0) {
  * (as the computer tool's `relay` action does), so its programs use the hub's models. Refused, with where to switch
  * it on, while the owner's relay is off or closed to computers — never a provider key instead.
  */
-async function relayEnv(c, row) {
+async function relayEnv(c, row, why = null) {
   if (!row.team?.relay) return {};
   const relay = require('../relay');
   if (!relay.enabled() || !relay.forComputers()) throw bad(`${row.label} uses this hub's own model through the model relay, which is ${relay.enabled() ? 'not open to agents\' computers' : 'off'}: `
@@ -64,7 +64,8 @@ async function relayEnv(c, row) {
   if (!relay.offered().length) throw bad(`${row.label} uses this hub's own model through the model relay, and the relay offers none: choose DOCA's model (Controls → DOCA ⚙) or list models in Field → API keys → Model relay.`, 409);
   const computers = require('../computers'), rc = require('../relay/computer');
   let rec = computers.get(c.id);
-  if (!rec?.relayOn || !rec.relayToken) { await rc.set(c.id, true); rec = computers.get(c.id); }
+  // Switched on as part of the decision to run it — the person's yes (ask) or its switch (free); said with the computer's name.
+  if (!rec?.relayOn || !rec.relayToken) { await rc.set(c.id, true, why || `${row.label} works in it on this hub's model`); rec = computers.get(c.id); }
   const v = rc.vars(rec);
   return { ...v, OPENAI_API_BASE: v.OPENAI_BASE_URL };   // litellm reads either name
 }

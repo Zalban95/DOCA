@@ -94,7 +94,7 @@ async function removeFile(c) {
  * so `relayEnv` goes: the file is where a program finds the live one.
  * → { on, file, env, note }
  */
-async function set(id, on) {
+async function set(id, on, why = null) {   // why: a caller's reason for the activity line (harness-teams/trajectory.js)
   const computers = require('../computers');
   const c = computers.need(String(id || ''));
   const rotate = !on || !c.relayOn || !c.relayToken;
@@ -104,7 +104,7 @@ async function set(id, on) {
   let file = null;
   if (on) { await require('./index').sync(); file = await writeFile(now).catch(() => null); }
   else await removeFile(now);
-  require('../activity').note({ from: 'relay', what: `the model relay ${on ? 'on' : 'off'} for ${c.name}`, why: on ? 'its programs may use the hub\'s models' : 'switched off',
+  require('../activity').note({ from: 'relay', what: `the model relay ${on ? 'on' : 'off'} for ${c.name}`, why: why || (on ? 'its programs may use the hub\'s models' : 'switched off'),
     machine: { kind: 'computer', id: c.id, name: c.name }, act: on ? 'relay-on' : 'relay-off', ok: true });
   return { name: c.name, id: c.id, file, ...status(now) };
 }

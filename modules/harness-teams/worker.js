@@ -108,7 +108,8 @@ async function run(w) {
     const { bin, installed } = await box.install(c, row);
     if (installed) require('../activity').note({ from: 'harness-teams', what: `installed ${row.label} in ${c.name}`, why: 'its first team worker', machine: { kind: 'computer', id: c.id, name: c.name } });
     key = harnesses.keyFor(row);
-    relay = await trajectory.relayEnv(c, row);   // DOCA's own model through the relay (team.relay), or {}
+    const by = require('../teams/store').get(w.teamId)?.outsideBy;
+    relay = await trajectory.relayEnv(c, row, `${row.label} on task ${w.task} works on this hub's model — ${by === 'free' ? 'its switch is "On its own"' : 'the person said yes to running it'}`);   // DOCA's own model through the relay (team.relay), or {}
     if (!key && !row.team.relay && (await box.signedIn(c, row, bin)) === false) return index().needsSignIn(w.id, c, row);
     tick(w, PLAN[1], 'done'); tick(w, PLAN[2], 'running');
     const { dir, base } = await box.putProject(c, { root: project.root, worker: w.id, branch: w.branch, from: w.from, author: `${row.label} (DOCA team)` });
