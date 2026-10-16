@@ -135,3 +135,25 @@ body:has(.pj-chat.open) .chat-fab { display: none; }
 .pj-tab-menu-row:hover { background: var(--dim); }
 .pj-tab-menu-open { font-size: 10px; color: var(--muted); }
 .pj-chat-bar { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+
+/* Projects → Parameters (projects/params.js) and Who has it (projects/sharing.js) */
+.pjp-title { font-weight: 600; margin: 4px 0 8px; }
+.pjp-group { margin-bottom: 10px; }
+.pjp-field { margin-bottom: 8px; }
+.pjp-box { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; }
+.pjp-box .input { max-width: 100%; }
+.pjp-unit { color: var(--muted); font-size: 12px; }
+.pjp-errors { color: var(--red); font-size: 12px; margin-bottom: 8px; }
+.pjp-actions { gap: 8px; flex-wrap: wrap; margin: 6px 0 10px; }
+.pjp-run { display: flex; align-items: center; gap: 6px; font-size: 12px; margin-bottom: 6px; }
+.pjp-proof { font-size: 12px; margin-bottom: 6px; }
+.pjp-proof.ok { color: var(--green); }
+.pjp-proof.no, .pjp-stage.no b { color: var(--accent); }
+.pjp-stage { font-size: 12px; padding: 4px 0; border-top: 1px solid var(--border); }
+.pjp-derived { margin-top: 8px; }
+.pjs .pjs-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.pjs .pjs-row > span { flex: 1; }
+.pjs .pjs-add { display: flex; gap: 8px; align-items: flex-start; flex-wrap: wrap; margin: 4px 0 10px; }
+.pjs .pjs-people { flex: 1; min-width: 180px; }
+.pjs .pjs-list { margin: 8px 0 12px; }
+.pjs .modal-actions { align-items: center; }

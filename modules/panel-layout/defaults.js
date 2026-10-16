@@ -11,7 +11,7 @@ const PAGES = ['controls', 'people', 'meetings', 'home', 'ambient', 'admin', 'lo
   'models', 'docker', 'vms', 'vnc', 'nearby', 'map', 'mcp', 'connectors', 'apikeys', 'settings'];
 
 /** Pages that are the machine itself: a person without host never has them, in a group or inside a view. */
-const HOST_PAGES = ['admin', 'logs', 'files', 'projects', 'terminal', 'computers', 'vnc', 'nearby', 'map'];
+const HOST_PAGES = ['admin', 'logs', 'files', 'terminal', 'computers', 'vnc', 'nearby', 'map'];
 
 const GROUPS = [
   { id: 'controls', label: 'Controls', icon: '▶', tabs: ['controls', 'people', 'meetings', 'home', 'ambient'] },

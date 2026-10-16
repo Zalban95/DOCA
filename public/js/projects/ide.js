@@ -10,7 +10,9 @@
 
    Files under public/js/projects/: ide.js (this: the frame, the project, the views),
    editor.js, preview.js, md-doc.js, search.js, git.js, run.js, env.js, lsp.js,
-   checkpoints.js, chat.js, teams.js (Teams here) (the file tree is in ide.js itself).
+   checkpoints.js, chat.js, teams.js (Teams here), params.js (Parameters), sharing.js
+   (who has it) (the file tree is in ide.js itself). A person without host sees their own
+   projects and those shared with them: the Parameters and the chat, never the files.
    ═══════════════════════════════════════════════════════ */
 
 const PJ = {
@@ -25,17 +27,23 @@ const PJ_VIEWS = [
   { id: 'git',    icon: '⎇', label: 'Source control' },
   { id: 'run',    icon: '▶', label: 'Build & test' },
   { id: 'checkpoints', icon: '↶', label: 'Checkpoints' },
+  { id: 'params', icon: '⚙', label: 'Parameters', person: true },
 ];
+/** The machine's views (files, git, commands) are a host's; anyone else gets the ones marked `person`. */
+const _pjHost = () => (PJ.project ? PJ.project.yours === 'host' : !(typeof _settingsNoHost !== 'undefined' && _settingsNoHost));
+const _pjViews = () => PJ_VIEWS.filter(v => v.person || _pjHost());
 
 function _pjFrame() {
   const page = document.getElementById('tab-projects');
   if (!page || page.dataset.built) return page;
   page.dataset.built = '1';
   page.innerHTML = `
-    <div class="pj-top info-row">
+    <div class="pj-top info-row${_pjHost() ? '' : ' pj-person'}">
       <select class="input pj-picker" id="pj-picker" onchange="pjOpen(this.value)" title="Project" aria-label="Project"></select>${infoBtn('The project on screen. A project is a folder on this machine; choosing another opens it here with its own files, history and conversations.')}
-      <button class="btn btn-sm" onclick="pjNew()" title="Open a folder as a project">+ Open folder</button>
-      <button class="btn btn-sm" onclick="PJ.project && archiveSet('project', PJ.project.project.id, true)" title="Put this project away (its folder is untouched); back from Agents → Archive">🗄</button>
+      <button class="btn btn-sm pj-host-only" onclick="pjNew()" title="Open a folder as a project">+ Open folder</button>
+      <button class="btn btn-sm pj-person-only" onclick="pjNewOwn()" title="A new project in a folder of your own">+ New project</button>
+      <button class="btn btn-sm pj-host-only" onclick="PJ.project && archiveSet('project', PJ.project.project.id, true)" title="Put this project away (its folder is untouched); back from Agents → Archive">🗄</button>
+      <button class="btn btn-sm" onclick="pjShareOpen()" title="Who has this project: its owner, who may see it or work on it, and who set what">👥</button>
       <span class="pj-meta" id="pj-meta"></span>
       <span class="pj-spacer"></span>
       <button class="btn btn-sm" id="pj-chat-toggle" onclick="pjChatToggle()" title="The project's conversation">⬡ Chat</button>
@@ -56,7 +64,7 @@ function _pjFrame() {
       <aside class="pj-chat" id="pj-chat"></aside>
     </div>
     <div class="pj-none" id="pj-none" style="display:none">${emptyStateHtml({ title: 'No projects yet',
-      text: `A project is a folder: ${BRAND?.product || 'the hub'} reads what it is, how it builds and tests, and its git history.`, action: { label: 'Open a folder', onclick: 'pjNew()' } })}</div>`;
+      text: `A project is a folder: ${BRAND?.product || 'the hub'} reads what it is, how it builds and tests, and its git history.`, action: _pjHost() ? { label: 'Open a folder', onclick: 'pjNew()' } : { label: 'New project', onclick: 'pjNewOwn()' } })}</div>`;
   return page;
 }
 
@@ -66,10 +74,11 @@ async function projectsInit() {
   let list = [];
   try { list = (await apiFetch('/api/projects')).projects || []; } catch (e) { setStatus(document.getElementById('pj-status'), `✗ ${e.message}`, 'err'); }
   const picker = document.getElementById('pj-picker');
-  picker.innerHTML = list.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name)}</option>`).join('');
+  picker.innerHTML = list.map(p => `<option value="${escHtml(p.id)}">${escHtml(p.name)}${p.yours === 'see' ? ' (shared to see)' : p.yours === 'work' ? ' (shared)' : ''}</option>`).join('');
   document.getElementById('pj-body').style.display = list.length ? '' : 'none';
   document.getElementById('pj-none').style.display = list.length ? 'none' : '';
   document.querySelector('#tab-projects .pj-top')?.classList.toggle('pj-top-none', !list.length);   // no picker until a project exists (des 10)
+  _pjActivity();
   if (!list.length) return;
   const want = PJ.project?.project.id && list.some(p => p.id === PJ.project.project.id) ? PJ.project.project.id : list[0].id;
   picker.value = want;
@@ -89,8 +98,9 @@ async function pjOpen(id) {
   clearTimeout(PJR.timer);
   pjEditorReset();
   _pjMeta();
-  pjView(PJ.view);
-  pjTeamsLoad(); pjTeamBranchesLoad();   // Teams here and their branches (projects/teams.js, team-branches.js)
+  _pjActivity();
+  pjView(_pjViews().some(v => v.id === PJ.view) ? PJ.view : _pjViews()[0].id);
+  if (_pjHost()) { pjTeamsLoad(); pjTeamBranchesLoad(); }   // Teams here and their branches (projects/teams.js, team-branches.js)
   if (document.getElementById('pj-chat').classList.contains('open')) pjChatLoad();
 }
 
@@ -121,7 +131,30 @@ function pjView(id, tapped = false) {
   const side = document.getElementById('pj-side-body');
   side.innerHTML = '';
   if (!PJ.project) return;
-  ({ files: pjTreeRender, search: pjSearchRender, git: pjGitRender, run: pjRunRender, checkpoints: pjCheckpointsRender })[id]?.(side);
+  ({ files: pjTreeRender, search: pjSearchRender, git: pjGitRender, run: pjRunRender, checkpoints: pjCheckpointsRender, params: pjParamsRender })[id]?.(side);
+}
+
+/** Which views this person has here, and the header's buttons: a host's or a person's. */
+function _pjActivity() {
+  const host = _pjHost();
+  const show = (el, on) => { el.style.display = on ? '' : 'none'; };   // a .btn's display wins over [hidden]
+  document.querySelectorAll('#pj-activity .pj-act').forEach(b => show(b, _pjViews().some(v => v.id === b.dataset.view)));
+  document.querySelectorAll('#tab-projects .pj-host-only, #pj-teams, #pj-team-branches').forEach(b => show(b, host));
+  document.querySelectorAll('#tab-projects .pj-person-only').forEach(b => show(b, !host));
+}
+
+/** + New project (a person without host): named, made in a folder of their own (projects/store.js ownFolder). */
+function pjNewOwn() {
+  appPrompt('Name the new project', async name => {
+    if (!name?.trim()) return;
+    try {
+      const { project } = await apiFetch('/api/projects', { method: 'POST', body: { name: name.trim() } });
+      PJ.project = null;
+      await projectsInit();
+      document.getElementById('pj-picker').value = project.id;
+      await pjOpen(project.id);
+    } catch (e) { appAlert(e.message); }
+  });
 }
 
 /** + Open folder: chosen from a tree (fp.js), the path still typeable below it; a project put away comes back. */

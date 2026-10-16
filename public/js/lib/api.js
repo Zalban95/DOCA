@@ -175,7 +175,7 @@ async function apiFetch(url, opts = {}) {
   try { data = JSON.parse(text); }
   catch (e) { throw new Error(`Bad JSON from ${url}: ${e.message}`); }
   if (!res.ok) {
-    const err = Object.assign(new Error(data.error || res.statusText), { status: res.status, code: data.code || null, needs: data.needs || null });
+    const err = Object.assign(new Error(data.error || res.statusText), { status: res.status, code: data.code || null, needs: data.needs || null, data });   // data: what the refusal carries (a changed build's diff, the values now)
     // A switch that is off is asked about here, for every page (lib/switch-ask.js): switched on, the same request goes
     // again and the caller never sees the refusal; declined, the error is marked asked and not alerted a second time.
     if (err.code === 'switch_off' && err.needs && !opts.noAsk && typeof switchAskWait === 'function') {
