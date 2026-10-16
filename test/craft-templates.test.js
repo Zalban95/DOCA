@@ -215,6 +215,34 @@ test('a promo render runs as the job that started it, and stopping the job stops
   } finally { try { jobs.stop(job.id); } catch { /* ended */ } fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+// Round 1 of the test of 2026-10-16: start run in the foreground (shell without background: true) waited 100 s on a
+// render of minutes and timed out. Outside a background job it now refuses at once with the exact call to make.
+test('promo.js start outside a background job refuses, printing the exact call; as a job it starts', async () => {
+  const { spawnSync } = require('node:child_process');
+  const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'promo-fg-'));
+  try {
+    fs.writeFileSync(path.join(dir, 'a.stl'), 'solid a\nendsolid a\n');
+    const spec = path.join(dir, 'spec.json');
+    fs.writeFileSync(spec, JSON.stringify({ out: 'v.mp4', duration: 6, parts: [{ path: 'a.stl', name: 'Part A' }] }));
+    const script = path.join(ROOT, 'skills/product-video/scripts/promo.js');
+    const { DOCA_JOB, ...env } = process.env;
+    const r = spawnSync(process.execPath, [script, 'start', spec], { env, encoding: 'utf8', timeout: 20000 });
+    assert.equal(r.status, 3, 'refused, at once');
+    assert.match(r.stderr, /Not started: a render takes minutes, so it runs only as a background job/);
+    const shellCall = r.stderr.match(/^ {2}shell (\{.*\})$/m);
+    assert.ok(shellCall, 'the exact shell call is printed');
+    assert.deepEqual(JSON.parse(shellCall[1]), { command: `node ${JSON.stringify(script)} start ${JSON.stringify(spec)}`, background: true });
+    assert.match(r.stderr, /recipe \{"action":"run","id":"product-video","values":\{"spec":/);
+    assert.ok(!fs.existsSync(path.join(dir, 'v.mp4.status.json')), 'nothing was started');
+    // The hub's jobs say so to what they run, so the recipe and shell {background: true} are let through.
+    const job = require('../modules/harness/jobs').start(`"${process.execPath}" -e "process.stdout.write(process.env.DOCA_JOB || 'none')"`, { cwd: dir });
+    const until = Date.now() + 10000;
+    let seen = '';
+    while (Date.now() < until && !(seen = require('../modules/harness/jobs').output(job.id))) await H.sleep(100);
+    assert.equal(seen, job.id, 'a background job carries DOCA_JOB');
+  } finally { fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
 test('the product-video recipe starts the render as a background job', () => {
   const r = require('../modules/recipes/store').get('product-video');
   assert.equal(r.steps[0].tool, 'shell');
