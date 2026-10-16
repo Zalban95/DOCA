@@ -1,6 +1,6 @@
 ---
 name: product-video
-description: Make a polished product promo video from 3D parts (STL, OBJ, PLY, GLB) — studio lighting, a turntable shot, the parts coming together one by one with their names, title and end cards, crossfades, an exact duration — rendered by Blender in the background so it survives the turn. Use when the person asks for a promo, a product video, a turntable, an assembly or exploded animation, or a showcase of something they designed.
+description: Make a polished product promo video from 3D parts (STL, OBJ, PLY, GLB) — studio lighting, a turntable shot, the parts coming together one by one with their names, title and end cards, crossfades, an exact duration — rendered by Blender as a background job so it survives the turn. Use when the person asks for a promo, a product video, a turntable, an assembly or exploded animation, or a showcase of something they designed.
 triggers: [promo video, product video, turntable, exploded view, assembly animation, showcase video, render video, video promozionale]
 recipes: [product-video]
 ---
@@ -24,10 +24,13 @@ explainer, data that moves — are the video-from-code skill.)
 
 1. Write the spec beside the parts (paths are relative to the spec file).
 2. Check the plan: `node <this skill's folder>/scripts/promo.js plan <spec>` — the shots and when each part moves.
-3. Start it: `recipe {action: "run", id: "product-video", values: {spec: "<the spec file>"}}` (or `promo.js start <spec>`
-   with `shell`). It returns at once with the marker file; the render runs on its own, so the turn can end.
-4. Wait: `node <…>/promo.js wait <spec> --timeout 1500` (exit 0 done, 1 failed, 2 still running — then call it again)
-   or `promo.js status <spec>`. At 1080p with EEVEE expect a few minutes on a GPU.
+3. Start it: `recipe {action: "run", id: "product-video", values: {spec: "<the spec file>"}}` — or `shell` with
+   `background: true` and `node <…>/promo.js start <spec>`. Either way it is a background job: it returns at once with
+   the job id, keeps going after the turn ends, and `shell_job` sees it (status, output, stop). Never start the
+   render any other way — a render no job holds runs unseen and nobody can stop it.
+4. Wait: `node <…>/promo.js wait <spec> --timeout 1500` (exit 0 done, 1 failed, 2 still running — then call it again),
+   `promo.js status <spec>`, or `shell_job status`. At 1080p with EEVEE expect a few minutes on a GPU. To stop it,
+   `shell_job stop` with its id: Blender goes with it and the marker says it was stopped.
 5. Look at it before you hand it over: take a frame every 2 s (`ffmpeg -ss <t> -i <video> -frames:v 1 <png>`) and look
    at them; then `show_media` the video. A wrong colour or a caption that says the wrong thing is a spec change and
    a run again — shots already rendered with the same scene are kept, so changing only words re-cuts in seconds.

@@ -179,3 +179,46 @@ test('a request for drawings or a promo finds its skill', () => {
   assert.equal(top('a 20 second promo video of the parts'), 'product-video');
   assert.equal(top('design a printable bracket for M3 screws'), 'printable-part');
 });
+
+// The render is a background job of the hub's (harness/jobs.js), never a process of its own that detaches: shell_job
+// lists it, its pid is the render's, and shell_job stop ends it, Blender with it, and the marker says it was stopped
+// (CONSTITUTION §1, V11). A stand-in Blender that only sleeps; POSIX, since it is a shell script.
+test('a promo render runs as the job that started it, and stopping the job stops the render', { skip: process.platform === 'win32' && 'a stand-in Blender script needs a POSIX shell' }, async () => {
+  const jobs = require('../modules/harness/jobs');
+  const dir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'promo-job-'));
+  const sleeper = path.join(dir, 'blender');
+  const pidFile = path.join(dir, 'blender.pid');
+  fs.writeFileSync(sleeper, `#!/bin/sh\necho $$ > ${JSON.stringify(pidFile)}\nexec sleep 60\n`);
+  fs.chmodSync(sleeper, 0o755);
+  fs.writeFileSync(path.join(dir, 'a.stl'), 'solid a\nendsolid a\n');
+  const font = path.join(dir, 'f.ttf'); fs.writeFileSync(font, '');
+  const spec = path.join(dir, 'spec.json');
+  fs.writeFileSync(spec, JSON.stringify({ out: 'v.mp4', duration: 6, font_bold: font, font_regular: font, parts: [{ path: 'a.stl', name: 'Part A' }] }));
+  const script = path.join(ROOT, 'skills/product-video/scripts/promo.js');
+  const job = jobs.start(`"${process.execPath}" "${script}" start "${spec}" --blender "${sleeper}" --ffmpeg "${sleeper}"`, { cwd: dir });
+  const alive = pid => { try { process.kill(pid, 0); return true; } catch { return false; } };
+  try {
+    const until = Date.now() + 10000;
+    while (!fs.existsSync(pidFile) && Date.now() < until) await H.sleep(100);
+    assert.ok(fs.existsSync(pidFile), 'the stand-in Blender started');
+    const status = JSON.parse(fs.readFileSync(path.join(dir, 'v.mp4.status.json'), 'utf8'));
+    assert.equal(status.state, 'running');
+    assert.equal(jobs.get(job.id).state, 'running', 'still running as the job: start did not hand it to a detached process and return');
+    const blenderPid = Number(fs.readFileSync(pidFile, 'utf8'));
+    jobs.stop(job.id);
+    const gone = Date.now() + 10000;
+    while ((alive(blenderPid) || !fs.existsSync(path.join(dir, 'v.mp4.done.json'))) && Date.now() < gone) await H.sleep(100);
+    assert.ok(!alive(blenderPid), 'Blender went with the job');
+    const marker = JSON.parse(fs.readFileSync(path.join(dir, 'v.mp4.done.json'), 'utf8'));
+    assert.equal(marker.ok, false);
+    assert.match(marker.error, /stopped/);
+  } finally { try { jobs.stop(job.id); } catch { /* ended */ } fs.rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('the product-video recipe starts the render as a background job', () => {
+  const r = require('../modules/recipes/store').get('product-video');
+  assert.equal(r.steps[0].tool, 'shell');
+  assert.equal(r.steps[0].args.background, true);
+  assert.match(r.steps[0].check.contains, /Started background job/);
+  assert.doesNotMatch(fs.readFileSync(path.join(ROOT, 'skills/product-video/scripts/promo.js'), 'utf8'), /detached: true/);
+});
