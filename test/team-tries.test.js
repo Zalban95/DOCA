@@ -203,6 +203,8 @@ test('budgets apply to each try: a person over their budget gets no try started'
   // What they have spent today already: one plain mission.
   const m = missions().dispatch({ agentId: 'coder', task: 'Spend. T0:', by });
   await until(() => missions().get(m.id).state !== 'running', 15000, 'the first mission');
+  // The member works in the project only once it is shared with them to work on (projects/access.js).
+  await H.api(null, 'POST', `/api/projects/${project.id}/sharing`, { personId: member.user.id, right: 'work' });
   const set = await H.api(null, 'POST', '/api/spending/budget', { personId: member.user.id, budget: { tokensPerDay: 10 } });
   assert.equal(set.status, 200, JSON.stringify(set.body));
   const made = await teams().create({ title: 'Over budget', project: 'Shop', tasks: [

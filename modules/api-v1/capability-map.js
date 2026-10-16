@@ -25,6 +25,8 @@ const PERSON = [
   { id: 'talk', does: 'talk to the agent', panel: ['POST /api/harness/chat', 'POST /api/chat'], v1: ['POST /harness/messages'] },
   { id: 'project-talk', does: 'talk in a project\'s chat', panel: ['POST /api/projects/:id/chat'], v1: ['POST /harness/messages'],
     note: 'a project\'s chat is a conversation; a device names it by its id' },
+  { id: 'project-share', does: 'make a project of my own, remove it, share it to see or work on, or change its owner', panel: ['POST /api/projects', 'DELETE /api/projects/:id', 'POST /api/projects/:id/sharing', 'POST /api/projects/:id/owner'],
+    gap: 26, why: 'a device lists its person\'s projects and changes their values (GET /projects); making one and deciding who has it are the panel\'s until a route is asked for' },
   { id: 'conversation-new', does: 'start a conversation', panel: ['POST /api/harness/sessions', 'POST /api/chat/clear'], v1: ['POST /harness/sessions'],
     note: 'the floating chat\'s Clear starts its conversation afresh' },
   { id: 'conversation-open', does: 'switch to a conversation', panel: ['POST /api/harness/sessions/:id/activate'], v1: ['POST /harness/sessions/{id}/activate'] },

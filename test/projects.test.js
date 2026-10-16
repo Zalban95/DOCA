@@ -172,11 +172,13 @@ test('a work chat bound to a project works in it; its specialists too; its promp
   assert.match(prompt, /# Project: Bound app/);
 });
 
-test('the routes are the host\'s', async () => {
+test('a project\'s files and commands are the host\'s; a member sees only their own projects (project-access.test.js)', async () => {
   const member = await H.signIn('member');
-  assert.equal((await H.api(null, 'GET', '/api/projects', undefined, { Cookie: member.cookie })).status, 403);
+  const listed = await H.api(null, 'GET', '/api/projects', undefined, { Cookie: member.cookie });
+  assert.equal(listed.status, 200);
   const root = mk(dir('routes'), { 'x.txt': 'needle\n' });
   const p = (await H.api(null, 'POST', '/api/projects', { root })).body.project;
+  assert.equal((await H.api(null, 'POST', `/api/projects/${p.id}/search`, { query: 'needle' }, { Cookie: member.cookie })).status, 403);
   const d = await H.api(null, 'GET', `/api/projects/${p.id}`);
   assert.equal(d.status, 200);
   assert.equal(d.body.git, null, 'not a repository: said, not an error');

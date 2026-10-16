@@ -170,14 +170,18 @@ module.exports = [
       const missing = require('./common').needs('project', a, { open: ['root'], run: ['command'], changes: ['checkpoint'], restore: ['checkpoint'] });
       if (missing) return missing;
       const projects = require('../../projects/store');
+      // The person the turn is for sees their own projects and those shared with them (projects/access.js): reading
+      // needs see, anything that runs or changes something needs work.
+      const access = require('../../projects/access'), person = access.personOfCtx(ctx);
+      const READS = ['info', 'checkpoints', 'changes', 'worktree_status'];
       const pick = () => {
-        const p = a.id ? projects.need(a.id) : projects.forSession(ctx.sessionId);
+        const p = a.id ? access.need(person, a.id) : projects.forSession(ctx.sessionId);
         if (!p) throw new Error('This conversation is not in a project: give an id, or bind it first.');
-        return p;
+        return access.need(person, p.id, { work: !READS.includes(a.action) });
       };
       switch (a.action) {
-        case 'list': return projects.list().map(p => `${p.id} — ${p.name} — ${p.root}`).join('\n') || 'No projects yet.';
-        case 'open': { const p = projects.create({ root: resolvePath(a.root, ctx), name: a.name }); return `Project ${p.id}: ${p.name} at ${p.root}.`; }
+        case 'list': return access.visible(person, projects.list()).map(p => `${p.id} — ${p.name} — ${p.root}${(r => (r === 'see' ? ' (shared to see)' : r === 'work' ? ' (shared to work on)' : ''))(access.rightOn(person, p))}`).join('\n') || 'No projects yet.';
+        case 'open': { const p = projects.create({ root: resolvePath(a.root, ctx), name: a.name }, person); return `Project ${p.id}: ${p.name} at ${p.root}.`; }
         case 'bind': {
           if (!ctx.sessionId) throw new Error('No conversation to bind.');
           const p = projects.bind(pick().id, ctx.sessionId);
@@ -196,6 +200,7 @@ module.exports = [
         }
         case 'worktree': {   // this conversation in its own git worktree (projects/worktrees.js)
           if (!ctx.sessionId) throw new Error('No conversation.');
+          pick();
           const w = await require('../../projects/worktrees').create(ctx.sessionId, { branch: a.name });
           return `This conversation now works in its own worktree: ${w.path}, branch ${w.branch} (from ${w.base.slice(0, 8)}). Your tools start there; the main folder is left to the others. Commit here; merging back is the person's call.`;
         }
@@ -204,6 +209,7 @@ module.exports = [
           return st ? (st.gone ? `The worktree ${st.path} is gone.` : `Worktree ${st.path}, branch ${st.branch}: ${st.commits} commit(s) since it started, ${st.uncommitted} uncommitted change(s).`) : 'This conversation works in the main folder.';
         }
         case 'worktree_remove': {
+          pick();
           const r = await require('../../projects/worktrees').remove(ctx.sessionId, { force: a.force === true });
           return `Removed ${r.removed}. Branch ${r.branch} stays with its ${r.commits} commit(s).`;
         }
