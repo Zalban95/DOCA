@@ -82,4 +82,27 @@ async function remove(sessionId, { force = false } = {}) {
   return { removed: st.path, branch: st.branch, commits: st.commits || 0 };
 }
 
-module.exports = { add, create, status, remove };
+/**
+ * Merge `branches` into the worktree at `dir`, one after another (`git merge --no-ff`): a team's task that comes after
+ * several tasks, each on its own branch, starts with all their work (teams/place.js). A branch that conflicts is left
+ * out — its merge undone, nothing forced — and named with its files, so the task merges it by hand. A repository with
+ * no committer of its own commits the merge under the product's name.
+ */
+async function mergeInto(dir, branches) {
+  const out = { merged: [], conflicts: [] };
+  const who = await git(dir, ['config', 'user.email']).then(v => !!v, () => false) ? []
+    : ['-c', `user.name=${require('../branding').name('product')}`, '-c', 'user.email=team@localhost'];
+  for (const b of branches) {
+    try {
+      await git(dir, [...who, 'merge', '--no-ff', '--no-edit', '-m', `Merge ${b}: the work this task comes after`, b]);
+      out.merged.push(b);
+    } catch {
+      const files = (await git(dir, ['diff', '--name-only', '--diff-filter=U']).catch(() => '')).split('\n').filter(Boolean);
+      await git(dir, ['merge', '--abort']).catch(() => {});
+      out.conflicts.push({ branch: b, files });
+    }
+  }
+  return out;
+}
+
+module.exports = { add, create, status, remove, mergeInto };

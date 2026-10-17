@@ -97,7 +97,8 @@ test('a team\'s board as a page: last words, verdicts, the document and the proj
   assert.equal(d.project.name, 'Shop');
   assert.equal(d.project.git.branch, 'main');
   assert.equal(d.project.main[0].subject, 'the first commit');
-  assert.deepEqual(d.project.branches.map(b => b.branch).sort(), ['team/checkout/api', 'team/checkout/ui']);
+  // The review after both works where their work is: a worktree made from their branches (team-craft.test.js).
+  assert.deepEqual(d.project.branches.map(b => b.branch).sort(), ['team/checkout/api', 'team/checkout/look', 'team/checkout/ui']);
   assert.ok(d.project.branches.every(b => b.commits.length >= 1), 'each task\'s branch with its newest commits');
   assert.deepEqual(d.project.openSteps.map(s => [s.chat, s.n, s.step, s.state]), [['Shop planning', 2, 'Write the docs', 'queued']]);
   assert.match(d.says.look, /^done/);

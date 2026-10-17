@@ -118,8 +118,10 @@ test('a team on a project: writers in worktrees of their own, a reader in the pr
   assert.ok(fs.existsSync(path.join(api.place.root, 'api.txt')), 'the API landed in its worktree');
   assert.ok(!fs.existsSync(path.join(repo, 'api.txt')) && !fs.existsSync(path.join(repo, 'ui.txt')), 'the project folder is untouched by them');
   const join = end.tasks.find(t => t.id === 'join');
-  assert.equal(join.place.branch, null, 'nothing writes beside it: it shares the folder');
-  assert.ok(fs.existsSync(path.join(repo, 'join.txt')));
+  // After two worktree tasks it works where their work is: a worktree of its own made from both branches (team-craft).
+  assert.equal(join.place.branch, 'team/checkout/join', 'after worktree tasks it gets a worktree made from their branches');
+  assert.ok(fs.existsSync(path.join(join.place.root, 'join.txt')) && !fs.existsSync(path.join(repo, 'join.txt')));
+  assert.match(errands.find(e => e.startsWith('Join them')), /starts with the work of the tasks before yours: team\/checkout\/api, team\/checkout\/ui, merged\./);
   assert.match(end.tasks.find(t => t.id === 'api').why, /api.txt is there/, 'its contract was read in its own worktree');
 
   const page = path.join(repo, 'team-checkout.md');
