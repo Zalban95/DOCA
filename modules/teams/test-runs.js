@@ -28,8 +28,11 @@ const WRITES = new Set(['write_file', 'replace_in_files', 'edit_file']);
 
 const unquote = s => s.replace(/^(["'])(.*)\1$/, '$2');
 
-/** The command with what only places it taken off; null when it moves into a folder other than `root`. */
-function core(command, root = null) {
+/**
+ * The command with what only places it taken off; null when it moves into a folder other than `root`. `keepEnv`: the
+ * test itself sets something (`GAME_PLAN=full npm test`), so a run without that setting is not a run of it.
+ */
+function core(command, root = null, keepEnv = false) {
   let c = norm(command);
   for (let prev; prev !== c;) {
     prev = c;
@@ -40,15 +43,16 @@ function core(command, root = null) {
       if (path.resolve(to) !== path.resolve(root)) return null;
       c = c.slice(cd[0].length);
     }
-    c = c.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|[^\s;&|]*)\s+)+/, '')
-      .replace(/^timeout\s+(?:-\S+\s+)*\d+[smhd]?\s+/, '');
+    if (!keepEnv) c = c.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=(?:"[^"]*"|'[^']*'|[^\s;&|]*)\s+)+/, '');
+    c = c.replace(/^timeout\s+(?:-\S+\s+)*\d+[smhd]?\s+/, '');
   }
   return c;
 }
 
 /** 'exact' when `command` runs exactly the test (redirections aside), 'piped' through one filter, else null. */
 function shape(command, test, root = null) {
-  const want = core(test), cmd = core(command, root);
+  const keepEnv = /^[A-Za-z_][A-Za-z0-9_]*=/.test(norm(test));
+  const want = norm(test), cmd = core(command, root, keepEnv);
   if (!want || !cmd || !cmd.startsWith(want)) return null;
   const rest = cmd.slice(want.length);
   if (rest && !/^\s/.test(rest) && !/^[&\d]?>/.test(rest)) return null;   // `npm tests`

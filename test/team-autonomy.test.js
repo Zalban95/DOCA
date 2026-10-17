@@ -24,6 +24,8 @@ test('a test run counts however it was honestly run: cd into its own folder, set
   assert.equal(shape('cd /w/other && npm test', 'npm test', '/w/game'), null, 'another folder says nothing about this one');
   assert.equal(shape('cd /w/game && npm test', 'npm test'), null, 'a cd with no folder to compare is not trusted');
   assert.equal(shape('npm test 2>&1 | tail -80', 'npm test'), 'piped');
+  assert.equal(shape('npm test', 'GAME_PLAN=full npm test'), null, 'a test that sets something is not run without it');
+  assert.equal(shape('cd /w/game && GAME_PLAN=full npm test', 'GAME_PLAN=full npm test', '/w/game'), 'exact');
   for (const c of ['npm test || true', 'npm test | sort | tail', 'npm test && rm -rf x', 'npm test -- --grep x', 'npm test &', 'npm tests'])
     assert.equal(shape(c, 'npm test'), null, c);
   const piped = out => verdict('npm test', [{ command: 'npm test 2>&1 | tail -40', code: 0, output: out }]);
