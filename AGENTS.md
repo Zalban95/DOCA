@@ -378,6 +378,21 @@ The harness gives its agent eight rules for working on any repository (charter r
   it off): a failed task is dispatched again with why the last try failed, one round each, up to `teams.maxRounds`
   (3, not proposable) or the team's own `max_rounds`; then the team ends failed. **Stop** cancels every running task
   at its next step, sets a work chat's job stopped, and the waiting tasks never start.
+- **How a team is organised for a good result on a cheaper model** (2026-10-17, after a game team shipped three bare
+  levels; `test/team-craft.test.js`): **`team add`** puts more tasks on a board its leader runs — the fixes a review
+  found — `after` any task there; an ended team runs again, a stopped one refuses (`teams/index.js add`, the board holds
+  36). **A check that already holds before any work is refused** (`provesNothing`: a task with no test and no tries whose
+  checks are all files already there), saying how to give a real one. **A task after several worktree tasks starts from
+  all their branches** (`place.js`: the first is its base, the others `git merge --no-ff` into its worktree by
+  `projects/worktrees.mergeInto`; a conflicting branch is left out, its merge undone, and the errand names it with its
+  files) — and a reader after worktree tasks gets a worktree too, since only it holds their work. A work chat that
+  `project` opens a folder works in it from then on (the Orchestrator stays the front desk). The method is the shipped
+  skill `lead-a-team` (contract first, one owner per file, contracts that fail until real, integrate, review, fixes on
+  the board); for games `make-a-browser-game` adds a tested starter (`scripts/new-game.js`: the page centred, touch pads
+  in space of their own, menus, saving, sound and pictures in code, `window.__game`, a level solver and a real-browser
+  test at three sizes) and a plan file (`docs/plan.json`, `scripts/plan.js` stand-ins) that `npm test` lists as todo and
+  `npm run test:full` fails on until real (`test/game-starter.test.js`). `ponytail` says lean code, never a poorer
+  product than asked.
 - **Where it shows**: the missions bar (a team row with a thin bar, opened into its tasks; its missions under it, not
   twice), Harness → Teams (`public/js/harness-console/teams.js`, `css/teams.css`) and Agents → Teams (below), Workstream
   lines of kind `team`, the leader's readings and an unread report when it ends, the live feed's `teams` topic (by the
