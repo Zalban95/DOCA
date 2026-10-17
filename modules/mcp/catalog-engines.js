@@ -35,7 +35,7 @@ const ROWS = [
   { id: 'unity', label: 'Unity — Unity\'s own MCP server (Unity 6, Unity AI)',
     about: 'Unity\'s server, through the relay its AI Assistant package installs: scenes and GameObjects, components, C# scripts, '
       + 'the console, build settings. Needs Unity 6 or later, the project connected to Unity Cloud and a Unity AI subscription or '
-      + 'trial; Unity asks you to accept the first connection (Project Settings → AI → Unity MCP). Without the subscription, '
+      + 'trial; Unity asks you to accept the first connection (Unity's Project Settings: AI, then Unity MCP). Without the subscription, '
       + 'use "MCP for Unity" beside it.',
     get command() { return unityRelay(); }, args: ['--mcp'], needs: [],
     present: () => fs.existsSync(unityRelay()), missingWhat: 'Unity\'s relay (Unity 6 with the AI Assistant package)', checked: '2026-10-17' },
