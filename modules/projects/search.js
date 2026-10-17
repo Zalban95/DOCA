@@ -184,7 +184,7 @@ function replaceInFiles(root, { replacement = '', dryRun = false, refuse, ...giv
     const diffs = [];
     for (let i = 0; i < Math.min(lines.length, newLines.length) && diffs.length < 50; i++)
       if (lines[i] !== newLines[i]) diffs.push({ line: i + 1, before: lines[i].slice(0, 300), after: newLines[i].slice(0, 300) });
-    changes.push({ file: r, replacements: n, lines: diffs });
+    changes.push({ file: r, abs, replacements: n, lines: diffs });
     count += n;
     if (!dryRun) fs.writeFileSync(abs, after);
   }

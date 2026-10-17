@@ -406,7 +406,8 @@ The harness gives its agent eight rules for working on any repository (charter r
   and `skill get` brings one in after `skill-scan.js` (words aimed at the agent, exfiltration, piped installers,
   encoded blobs, invisible characters) and `secret-scan.js` read every file (`harness/skill-get.js`); **the learning
   loop** (`harness/learn-loop.js`, `skillSuggest.learn`, on) reads a work chat's job that ended done after real work
-  once in the background and keeps a skill from it (NONE when routine), with a notice.
+  once in the background and keeps a skill from it (NONE when routine), with a notice. **A file that does not parse
+  says so at once** (`toolbox/syntax.js`: write_file and replace_in_files check JSON, JavaScript, Python, shell).
 - **Where it shows**: the missions bar (a team row with a thin bar, opened into its tasks; its missions under it, not
   twice), Harness → Teams (`public/js/harness-console/teams.js`, `css/teams.css`) and Agents → Teams (below), Workstream
   lines of kind `team`, the leader's readings and an unread report when it ends, the live feed's `teams` topic (by the

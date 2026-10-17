@@ -41,9 +41,13 @@ function refusal(s, what) {
   return null;
 }
 
-/** Where what `s` makes goes: under the Orchestrator's default for the Orchestrator, else under `s`, one level down. */
+/**
+ * Where what `s` makes goes: under that Orchestrator itself (level 2), else under `s`, one level down (level 3). An
+ * Orchestrator's work chat used to go under the hub's main conversation whoever made it (2026-10-17: a second person's
+ * Orchestrator handed its game to the owner's, whose chat and phone would have heard its reports).
+ */
 function under(s) {
-  return level(s) === 1 ? {} : { parentId: s.id, fields: { level: 3 } };
+  return level(s) === 1 ? { parentId: s.id } : { parentId: s.id, fields: { level: 3 } };
 }
 
 module.exports = { level, refusal, under };
