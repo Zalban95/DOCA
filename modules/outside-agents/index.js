@@ -67,11 +67,15 @@ async function say(step, via) {
   else if (step.project) step.cwd = await geminiCwd(step.project);
   else if (via === 'otel') step.cwd = require('./otel/life').cwdOf(step.agent);
   if (_sessions.size > 500) _sessions.delete(_sessions.keys().next().value);
+  // Its own list of what is left (a todo list, a plan): kept as its progress, not said as a line (sessions.js).
+  if (step.kind === 'plan' || step.kind === 'task') { require('./sessions').note(step); return null; }
   if (dedupe.again(step, via)) { counts.twice++; return null; }
   counts[via]++;
   for (const f of step.kind === 'edit' ? step.files || [] : []) _edits.set(path.resolve(step.cwd || '/', f), { at: Date.now(), step });
   if (_edits.size > 1000) for (const [f, e] of _edits) if (Date.now() - e.at > T.recentMs) _edits.delete(f);
-  const who = words.who(step, await whereOf(step.cwd)), text = words.what(step);
+  const text = words.what(step);
+  require('./sessions').note(step, text);   // its tally: edits, commands, commits, where it works (sessions.js)
+  const who = require('./sessions').whoOf(step) || words.who(step, await whereOf(step.cwd));
   const extra = { agent: { id: step.agent, session: String(step.session || '').slice(0, 8), via } };
   require('../workstream').outside(who, text, extra);
   _ring.push({ ts: new Date().toISOString(), level: step.failed ? 'warn' : 'info', text: `${who}: ${text}`, agent: step.agent, via });
@@ -150,7 +154,9 @@ function editedBy(file) {
   const e = _edits.get(path.resolve(file));
   if (!e || Date.now() - e.at > T.recentMs) return null;
   const s = e.step;
-  return { agent: s.agent, label: s.label, session: String(s.session || '').slice(0, 8), text: `${s.label}${s.sub ? ' (subagent)' : ''} session ${String(s.session || '').slice(0, 8)} edited it` };
+  // Named as the Workstream names the session (its own title, where it works: sessions.js), else by its id.
+  const name = require('./sessions').whoOf(s) || `${s.label}${s.sub ? ' (subagent)' : ''} session ${String(s.session || '').slice(0, 8)}`;
+  return { agent: s.agent, label: s.label, session: String(s.session || '').slice(0, 8), name, text: `${name} edited it` };
 }
 
 /** Steps arriving over OpenTelemetry (otel/receiver.js), said like the records' own. */

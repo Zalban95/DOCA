@@ -184,7 +184,8 @@ test('on: records tailed while the Workstream is held, said as lines, and an edi
   for (const l of lines) assert.doesNotMatch(`${l.who} ${l.text}`, SECRET);
   const who = await require('../modules/workstream/who').of(path.join(HOME, 'src', 'parser.js'), HOME);
   assert.equal(who.by, 'outside');
-  assert.match(who.text, /Claude Code session 5f0c2a1e edited it/);
+  assert.match(who.text, /Claude Code( · [^·]+)* edited it/, who.text);   // named as its lines are (sessions.js): its title and repository
+  assert.ok(who.short, 'a short name for the file\'s chip');
   // Chronicle reads the same lines, a host's.
   const ch = await H.api(null, 'GET', '/api/chronicle?source=outside');
   assert.equal(ch.status, 200);
@@ -210,7 +211,7 @@ test('the receiver: loopback only, open while an agent runs, closed a minute aft
   const otelLines = () => require('../modules/workstream').snapshot().activity.filter(a => a.agent?.via === 'otel');
   for (let i = 0; i < 100 && otelLines().length < 4; i++) await H.sleep(100);   // said after the answer: naming the folder can take a while
   const lines = otelLines();
-  assert.ok(lines.some(l => l.who === 'Claude Code · stadia' && /npm test/.test(l.text)), 'its folder from the running process');
+  assert.ok(lines.some(l => /^Claude Code( · [^·]+)? · stadia$/.test(l.who) && /npm test/.test(l.text)), 'its folder from the running process (with its title, when its record gave one): ' + lines.map(l => l.who).join(' / '));
   assert.ok(lines.some(l => /asked claude-x/.test(l.text)));
   assert.equal((await post(port, '/v1/logs', 'x', { 'Content-Type': 'application/x-protobuf' })).status, 415);
   assert.equal((await post(port, '/v1/nope', {})).status, 404);
