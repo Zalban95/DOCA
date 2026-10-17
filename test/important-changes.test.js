@@ -118,3 +118,14 @@ test('a device call of the person hears it as a notice frame, stage important; a
   end1(); end2();
   assert.deepEqual(got, [['d1', { type: 'notice', stage: 'important', text: '⚠ Changed: Approval mode: auto → manual' }]]);
 });
+
+test('a restart called off or a version that does not exist changed nothing, so nothing is said (audit 2026-10-17)', async () => {
+  const before = important().length;
+  const off = await H.api(null, 'POST', '/api/restart', { cancel: true });
+  assert.equal(off.status, 200, JSON.stringify(off.body));
+  const bad = await H.api(null, 'POST', '/api/versions/use', { version: 'v0.0.0-none' });
+  assert.equal(bad.status, 200);
+  assert.ok(String(bad.body).includes('"ok":false'), 'the switch said it failed');
+  await settle();
+  assert.equal(important().length, before, 'no "Changed" line for either');
+});

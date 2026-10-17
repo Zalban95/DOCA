@@ -23,7 +23,7 @@ const words = require('./words');
 const people = require('./people');
 
 const CHANGES = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
-const EAGER = new Set(['restart', 'version']);   // the hub may be gone before the answer: said when the guard passed
+const EAGER = new Set(['restart', 'version']);   // the hub may be gone after the answer: said as it answers (eager)
 const SETTING_ROUTES = /^\/api\/(prefs|harness\/proposals\/[^/]+\/apply)$/;   // nothing changed, nothing said
 const MAX_LINES = 6;
 
@@ -99,7 +99,7 @@ function middleware(req, res, next) {
   let via = 'the panel';
   try { via = require('../machines/acts').viaOf(req); } catch { /* no registry */ }
   const ctx = { sw, person, via, how: howOf(req), sessionId: proposalSession(req), orgId: req.auth.orgId || null };
-  if (EAGER.has(sw.key)) { try { record({ ...ctx, lines: [words.routeLine(sw, req)] }); } catch { /* never in the way */ } return next(); }
+  if (EAGER.has(sw.key)) return eager(req, res, next, ctx);
   const b = {};
   try { b.prefs = clone(require('../utils').loadPrefs()); } catch { b.prefs = {}; }
   try { b.people = people.before(req); } catch { b.people = null; }
@@ -111,6 +111,22 @@ function middleware(req, res, next) {
     try { record({ ...ctx, lines: linesOf(req, sw, b, answer) }); } catch (e) { console.warn(`[important] not recorded: ${e.message}`); }
   });
   next();
+}
+
+/**
+ * A restart or a version switch, said the moment the handler says it happens — the restart's answer, the switch's
+ * `done` frame — both written before the process leaves, so it is said even when the hub is gone at once. Not before:
+ * a refused restart, a cancelled one or a version that does not exist changed nothing (audit 2026-10-17: they were
+ * recorded as soon as the guard passed).
+ */
+function eager(req, res, next, ctx) {
+  let said = false;
+  const say = () => { if (said) return; said = true; try { record({ ...ctx, lines: [words.routeLine(ctx.sw, req)] }); } catch { /* never in the way */ } };
+  const json = res.json.bind(res);
+  res.json = body => { if (res.statusCode < 400 && body?.ok !== false && !req.body?.cancel) say(); return json(body); };
+  const write = res.write.bind(res);
+  res.write = (chunk, ...rest) => { if (/"done":true,"ok":true/.test(String(chunk))) say(); return write(chunk, ...rest); };
+  return next();
 }
 
 module.exports = { middleware, record, linesOf, MAX_LINES };
