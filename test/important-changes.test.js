@@ -83,6 +83,7 @@ test('a secret-shaped value under a guarded path is said changed, never shown', 
   assert.ok(!JSON.stringify(require('../modules/harness/memory').messages(main)).includes('sekret-value-9f3'), 'not in the transcript');
   const words = require('../modules/important/words');
   assert.equal(words.line({ path: 'sharing.apiKey', from: 'a', to: 'b' }), 'Sharing with the project apiKey: changed (a secret, not shown)');
+  assert.equal(words.line({ path: 'tracing.retainDays', from: undefined, to: 31 }), 'Traces kept — days a turn\'s trace is kept: 30 (the default) → 31', 'a leaf by its hint, not set by its default');
   assert.equal(words.show({ token: 'x', on: true }), '{"token":"••••••••","on":true}');
 });
 
