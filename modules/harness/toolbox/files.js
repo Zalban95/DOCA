@@ -68,6 +68,8 @@ module.exports = [
       const where = dir ? resolvePath(dir, ctx) : cwd(ctx);
       const code = require('../../edition-mode').shellRefusal(command, where);   // a production hive's code (edition-mode.js)
       if (code) return `Error: ${code}`;
+      const kill = require('../kill-guard').refusal(command);   // never by a name pattern (kill-guard.js)
+      if (kill) return `Error: ${kill}`;
       if (background) {
         const j = require('../jobs').start(command, { cwd: where, sessionId: ctx.sessionId || null, keep: keep === true });
         return `Started background job ${j.id} (pid ${j.pid}). It keeps running after this call and across a restart of the hub`
