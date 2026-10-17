@@ -14,6 +14,7 @@ async function workstreamTab(shown) {
     if (typeof workProgressLoad === 'function') workProgressLoad();   // how far each job is, under the bar (work-progress.js)
     if (!WS.off && typeof liveOn === 'function') WS.off = liveOn('workstream', _wsChange);
     if (typeof workstreamAgentsLoad === 'function') workstreamAgentsLoad();   // the bar's "Other agents" switch (workstream-agents.js)
+    if (typeof workstreamWorkers === 'function') workstreamWorkers(true);   // who is working now, and how far (workstream-workers.js)
     await _wsHold(true);
     if (!WS.loaded) {
       WS.loaded = true;
@@ -26,6 +27,7 @@ async function workstreamTab(shown) {
     }
   } else {
     if (WS.holding) _wsHold(false);
+    if (typeof workstreamWorkers === 'function') workstreamWorkers(false);
     if (typeof PD !== 'undefined' && PD.open) processesDrawer(false);   // the Processes drawer goes with the page (processes.js)
   }
 }
@@ -57,6 +59,7 @@ function _wsFrame() {
   page.innerHTML = `<div class="ws-bar"><span class="ws-title">Workstream</span><span class="ws-status" id="ws-status"></span>
       <button class="btn btn-xs" id="ws-follow" onclick="workstreamFollow()" title="Follow the work: the file being edited comes to the front">⟳ following</button>
       <button class="btn btn-xs" onclick="soloOpen('workstream')" title="In a window of its own">⧉</button>${typeof processesButtonHtml === 'function' ? processesButtonHtml() : ''}${typeof workstreamAgentsButtonHtml === 'function' ? workstreamAgentsButtonHtml() : ''}</div>
+    <div class="ws-workers" id="ws-workers" hidden></div>
     <div class="ws-progress" id="ws-progress" hidden></div>
     <div class="ws-folders" id="ws-folders" hidden></div>
     <div class="ws-chips" id="ws-chips"></div>
@@ -101,7 +104,7 @@ function _wsDraw() {
   const chips = document.getElementById('ws-chips'), stage = document.getElementById('ws-stage');
   if (!chips || !stage) return;
   chips.innerHTML = WS.files.map(f => `<button class="ws-chip ${f.path === WS.current ? 'active' : ''}${f.by?.by === 'outside' ? ' outside' : ''}" title="${escHtml(f.path)}${f.by ? ` — ${escHtml(f.by.text)}` : ''}" onclick="workstreamShow(${jsArg(f.path)})">
-    ${escHtml(_wsName(f.path))} ${_wsCount(f)}</button>`).join('');
+    ${escHtml(_wsName(f.path))} ${_wsCount(f)}${f.by ? `<span class="ws-chip-who">${escHtml(f.by.short || (f.by.by === 'outside' ? 'outside' : f.by.text))}</span>` : ''}</button>`).join('');   // who is editing it, under its name (2026-10-17: a tooltip a phone never shows)
   const f = WS.files.find(x => x.path === WS.current);
   if (!f) return;
   const rel = f.root ? f.path.slice(f.root.length + 1) : f.path;

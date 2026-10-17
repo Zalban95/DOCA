@@ -131,3 +131,18 @@
 .wsa-setup { margin: 6px 0; }
 .wsa-setup > div { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; }
 .wsa-pre { margin: 4px 0 0; padding: 8px 10px; background: var(--bg); border: 1px solid var(--border2); border-radius: 6px; font-size: 11px; white-space: pre-wrap; word-break: break-all; }
+
+/* Who is editing a file, under its name (workstream.js), and who is working now (workstream-workers.js). */
+.ws-chip { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.ws-chip-who { font-size: 9.5px; color: var(--muted); max-width: 22em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ws-workers { padding: 6px 12px 2px; display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.wsw-title { grid-column: 1 / -1; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.wsw-row { border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; min-width: 0; background: var(--card, transparent); }
+.wsw-row.outside { border-style: dashed; }
+.wsw-head { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.wsw-name { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wsw-role { font-size: 10px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wsw-bar { display: flex; align-items: center; gap: 6px; margin-top: 4px; }
+.wsw-from { font-size: 10px; color: var(--muted); }
+.wsw-act { font-size: 10.5px; color: var(--muted); margin-top: 3px; }
+.wsw-now { font-size: 10.5px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--font-mono, monospace); }

@@ -82,7 +82,7 @@ async function processOf(file, root, { fresh = false } = {}) {
 /** Who wrote `file`: { by: 'doca'|'outside', text, sessionId?, process? }. */
 async function of(file, root) {
   const sid = agentOf(file);
-  if (sid) return { by: 'doca', text: `${P()} agent · ${title(sid)}`, sessionId: sid };
+  if (sid) return { by: 'doca', text: `${P()} agent · ${title(sid)}`, short: title(sid), sessionId: sid };
   // The attachments folder is written by the hub itself (show_media, a tool's picture, an upload) — never outside it
   // (2026-10-11: a render show_media kept read "outside DOCA"). The conversation is the one that just called a tool.
   if (insideAttachments(file)) {
@@ -94,10 +94,10 @@ async function of(file, root) {
   const oa = require('../outside-agents');
   await oa.fresh().catch(() => {});
   const step = oa.editedBy(file);
-  if (step) return { by: 'outside', text: `outside ${P()} · ${step.text}`, agent: step };
+  if (step) return { by: 'outside', text: `outside ${P()} · ${step.text}`, short: step.name, agent: step };
   // A process that just started (a session opened a moment ago) is not in a reading seconds old: read again once.
   const proc = await processOf(file, root).catch(() => null) || await processOf(file, root, { fresh: true }).catch(() => null);
-  if (proc) return { by: 'outside', text: `outside ${P()} · ${proc.program} (pid ${proc.pid}) works here`, process: proc };
+  if (proc) return { by: 'outside', text: `outside ${P()} · ${proc.program} (pid ${proc.pid}) works here`, short: `${proc.program} · pid ${proc.pid}`, process: proc };
   return { by: 'outside', text: `outside ${P()}` };
 }
 

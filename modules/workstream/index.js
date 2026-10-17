@@ -133,4 +133,7 @@ const snapshot = () => ({ sentinel: sentinel.status(), files: _files.slice(-40),
 /** How much the activity holds now (log-keep.js usage). */
 const size = () => ({ lines: _activity.length, bytes: Buffer.byteLength(JSON.stringify(_activity)) });
 
-module.exports = { start, hold, holds, holding, machine, outside, team, snapshot, onEvent, command, fileChanged, size };
+/** A conversation's last activity line (workers.js): what it did last, in the Workstream's words, or null. */
+function lastFor(sessionId) { for (let i = _activity.length - 1; i >= 0; i--) if (_activity[i].sessionId === sessionId) return _activity[i]; return null; }
+
+module.exports = { start, hold, holds, holding, machine, outside, team, snapshot, onEvent, command, fileChanged, size, lastFor };

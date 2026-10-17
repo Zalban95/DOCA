@@ -50,6 +50,7 @@ function parse(line, meta = {}) {
   const name = String(p.name || 'tool').slice(0, 80);
   let args = {};
   if (p.type === 'function_call') { try { args = JSON.parse(p.arguments || '{}') || {}; } catch { args = {}; } }
+  if (name === 'update_plan' && Array.isArray(args.plan)) return [{ ...step, tool: name, kind: 'plan', todos: args.plan.map(s => String(s?.status || '')) }];   // its own plan (sessions.js)
   if (name === 'apply_patch') {
     const list = patchFiles(p.type === 'custom_tool_call' ? p.input : args.input || args.patch);
     return [{ ...step, tool: name, kind: list.length ? 'edit' : 'tool', ...(list.length ? { files: list } : {}) }];
