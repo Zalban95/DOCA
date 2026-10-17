@@ -24,7 +24,7 @@ async function post(ep, body, signal, p) {
   const contract = contracts.forProvider(ep.id, body.model);
   // "Each model's own maximum" (budget.REPLY_MAX asked) goes up to a learned maximum above it: DeepSeek's flash takes 393216.
   if (contracts.outputOf(body) === budget.REPLY_MAX && contract.maxOutput > budget.REPLY_MAX) body = contracts.setOutput(body, contract.maxOutput);
-  body = contracts.shape(body, contract);
+  body = require('./prompt-cache').apply(contracts.shape(body, contract), ep);   // + cache breakpoints for Anthropic's models (experiment promptCache)
   const headers = { 'Content-Type': 'application/json' };
   if (ep.apiKey) headers.Authorization = `Bearer ${ep.apiKey}`;
 

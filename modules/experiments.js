@@ -28,6 +28,7 @@ const EXPERIMENTS = [
   { id: 'library', label: 'Library: the files on this machine, searched by meaning', doc: 'library.md', todo: 'H10.20', since: '2.336.0', measure: 'script' },
   { id: 'alwaysFree', label: 'Always free: the main chat answers at once, the work happens behind', doc: 'always-free.md', todo: 'H10.21', since: '3.37.0', measure: 'script' },
   { id: 'claimCheck', label: 'Catch an answer that claims what the turn never did', doc: 'claim-check.md', todo: 'B7c', since: '2.264.0', measure: 'manual' },
+  { id: 'promptCache', label: 'Cache breakpoints for models that cache only when asked (Anthropic\'s)', doc: 'prompt-cache.md', since: '3.110.0', measure: 'manual' },
 ];
 const STALE_DAYS = 60;
 
