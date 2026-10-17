@@ -50,6 +50,14 @@ test('a second admin and a member each get an Orchestrator of their own; the own
   assert.equal(access.defaultFor(personOf(member)), m);
 });
 
+test('a work chat an Orchestrator makes with work_chats goes under that Orchestrator, never the hub\'s', async () => {
+  const mine = own.of(personOf(admin)), hub = memory.mainSession().id;
+  const made = await org.tool({ action: 'create', title: 'Build the game' }, { sessionId: mine });
+  assert.equal(made.parentId, mine, 'the admin\'s own (2026-10-17: it went under the owner\'s)');
+  assert.equal(access.ownerOf(made.id), admin.user.id);
+  assert.equal((await org.tool({ action: 'create', title: 'Owner\'s errand' }, { sessionId: hub })).parentId, hub, 'the owner\'s stays under the owner\'s');
+});
+
 test('a device with no conversation named goes to its person\'s Orchestrator (api-v1 defaultSession)', () => {
   const harness = require('../modules/api-v1/harness');
   assert.equal(harness.defaultSession(deviceOf(admin, 'Admin phone')).id, own.of(personOf(admin)));
