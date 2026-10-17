@@ -45,7 +45,7 @@ function showMedia(p, caption, ctx = {}) {
   // already an attachment: shown as it is, not copied a second time (each one was stored twice).
   const kept = path.dirname(require('../../utils').realOf(abs)) === require('../../utils').realOf(attachments.dir()) && attachments.get(path.basename(abs));
   const rec = kept && String(kept.from || '').startsWith('mcp:') ? kept
-    : attachments.save(fs.readFileSync(abs), path.basename(abs), { from: 'agent', mime });
+    : attachments.save(require('../../regular-file').read(abs), path.basename(abs), { from: 'agent', mime });
   const media = { name: rec.name, mime, kind, bytes, ...(caption ? { caption: String(caption).slice(0, 200) } : {}) };
   if (typeof ctx.show === 'function') ctx.show(media);
   return `Shown in the chat: ${rec.name} (${attachments.humanBytes(bytes)}, ${kind}). The user has it now; `

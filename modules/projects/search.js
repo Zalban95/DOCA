@@ -91,7 +91,7 @@ function searchText(root, opts) {
   let filesWith = 0, truncated = false;
   for (const abs of files(root, opts)) {
     let buf;
-    try { if (fs.statSync(abs).size > MAX_FILE) continue; buf = fs.readFileSync(abs); } catch { continue; }
+    try { const st = fs.statSync(abs); if (!st.isFile() || st.size > MAX_FILE) continue; buf = fs.readFileSync(abs); } catch { continue; }
     if (!isText(buf)) continue;
     const lines = buf.toString('utf8').split('\n');
     let hit = false;
@@ -171,7 +171,7 @@ function replaceInFiles(root, { replacement = '', dryRun = false, refuse, ...giv
     const r = rel(root, abs);
     if (refuse && refuse(abs)) continue;   // the agent's calls skip what governs it (harness/control-plane.js)
     let buf;
-    try { if (fs.statSync(abs).size > MAX_FILE) continue; buf = fs.readFileSync(abs); } catch { continue; }
+    try { const st = fs.statSync(abs); if (!st.isFile() || st.size > MAX_FILE) continue; buf = fs.readFileSync(abs); } catch { continue; }
     if (!isText(buf)) continue;
     const before = buf.toString('utf8');
     re.lastIndex = 0;

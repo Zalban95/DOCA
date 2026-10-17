@@ -134,6 +134,7 @@ module.exports = [
       const abs = resolvePath(p, ctx);
       const st  = fs.statSync(abs);
       if (st.isDirectory()) throw new Error(`${abs} is a directory — use list_dir`);
+      require('../../regular-file').stat(abs);   // a pipe, socket or device: refused in words, never waited on
       // A file holding secrets beside settings reads with them masked (harness/secret-view.js).
       return slice(require('../secret-view').view(abs, fs.readFileSync(abs, 'utf8')), offset, maxLength) + landed(p, abs);
     },
