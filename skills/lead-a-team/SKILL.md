@@ -24,9 +24,9 @@ difference.
    file does.
 4. **The parts come together by themselves.** A task after several starts from all their branches merged (the hub
    merges them and names any conflict). End the first wave with an **integrate** task after every part: it fixes the
-   seams only and runs the whole test. Then a **review** task (a tester) after it, which plays or uses the result,
-   reads the plan, and reports a numbered list of what is wrong or missing with the files that own each. It fixes
-   nothing.
+   seams only and runs the whole test. Then a **review** task after it — a specialist that can read the project and
+   run its tests, told to change nothing — which uses the result as a person would, reads the plan, and reports a
+   numbered list of what is wrong or missing with the files that own each.
 5. **The fixes go on the same board.** Read the review and `team` add one task per owner's files, after review, then
    a last task that runs the whole test. Merge the last task's branch into the project (`team` merge) and hand over.
 

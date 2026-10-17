@@ -68,9 +68,10 @@ features); commit on your branch with a message that says why.
 the seams only — a name one task used and another spelled differently, a spawn with no entity — runs the full test,
 and looks at every picture in `test/shots/`.
 
-**review** is a tester: it follows `test-a-game` — plays every level through `window.__game`, looks at the pictures,
-reads the plan and the design — and reports defects and missing features as a numbered list, each with its owner's
-files. It fixes nothing.
+**review** goes to the coder (it reads the project's files and runs its tests; the tester works in a computer of its
+own, away from the project), told to change nothing: it follows `test-a-game` — runs `npm test` and looks at every
+picture in `test/shots/`, plays each level through `window.__game`, reads the plan and the design — and reports
+defects and missing features as a numbered list, each with its owner's files.
 
 ## 4. Fix what the review found, on the same board
 
