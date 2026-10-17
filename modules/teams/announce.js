@@ -3,8 +3,8 @@
 /**
  * Saying what a team's board did — mechanically, in fixed words filled with the board's data (AGENTS.md, "Visibility is
  * mechanical"): the live feed's `teams` topic for open pages, `agent.team` for the person's devices (PROTOCOL §11.4),
- * a Workstream line per change of a task's state, the team document written again, and one report to the leader when
- * the team ends. No model and no agent writes any of it.
+ * a Workstream line per change of a task's state, the team document written again, and a report to the leader when a
+ * task gives up and when the team ends. No model and no agent writes any of it.
  */
 const board = require('./board');
 
@@ -56,15 +56,29 @@ function changed(team, views, { changed = [], ended = false, title = id => id, f
       + `${require('./tries').reports(team).map(r => ` ${r}.`).join('')}`
       + `${team.doc?.name ? ` Its document: ${team.doc.project || team.doc.name}.` : ''}`;
     line(team, text);
-    // To the leader itself (organization.report sends upward, to the leader's own leaders): an unread report, read in its next step.
-    try {
-      const note = { id: require('crypto').randomUUID(), from: team.id, type: 'team', outcome: team.state, text: text.slice(0, 4000), by: 'panel', at: new Date().toISOString() };
-      require('../harness/memory').updateSessions([team.by], row => ({ reports: [...(row.reports || []), note] }));
-      // An idle leader is woken for it (2026-10-14 demo: a project's chat said its team was "up and running" after both
-      // tasks had failed, and never spoke again) — or, when it is working, its turn's end delivers it (supervisor.js).
-      setImmediate(() => { try { require('../harness/supervisor').deliver(team.by); } catch (e) { console.warn(`[teams] ${team.id} leader: ${e.message}`); } });
-    } catch { /* the leader is gone */ }
+    report(team, text, team.state);
+  } else {
+    // A task that gave up — no automatic try left — is told to the leader at once, not when the whole team ends
+    // (2026-10-17: five members gave up while the rest worked on for half an hour, and their leader heard nothing):
+    // it can add a task that fixes it, or turn keep going on again for a fresh round, while the others carry on.
+    for (const v of changed.filter(x => x.state === 'failed' && team.tasks.find(t => t.id === x.id)?.gaveUp)) {
+      const waiting = views.filter(w => (w.after || []).includes(v.id)).map(w => w.id);
+      report(team, `Team "${team.title}": task ${v.id} "${v.title}" gave up — ${board.say(v, title)}. The other tasks carry on`
+        + `${waiting.length ? `; ${waiting.join(', ')} wait${waiting.length === 1 ? 's' : ''} on it` : ''}. Decide now: team add a task that fixes it `
+        + '(it may come after this one and start from its branch), or team keep_going for a fresh round of tries.', 'task-failed');
+    }
   }
+}
+
+/** To the leader itself (organization.report sends upward, to the leader's own leaders): an unread report, read in its next step. */
+function report(team, text, outcome) {
+  try {
+    const note = { id: require('crypto').randomUUID(), from: team.id, type: 'team', outcome, text: text.slice(0, 4000), by: 'panel', at: new Date().toISOString() };
+    require('../harness/memory').updateSessions([team.by], row => ({ reports: [...(row.reports || []), note] }));
+    // An idle leader is woken for it (2026-10-14 demo: a project's chat said its team was "up and running" after both
+    // tasks had failed, and never spoke again) — or, when it is working, its turn's end delivers it (supervisor.js).
+    setImmediate(() => { try { require('../harness/supervisor').deliver(team.by); } catch (e) { console.warn(`[teams] ${team.id} leader: ${e.message}`); } });
+  } catch { /* the leader is gone */ }
 }
 
 module.exports = { payload, devices, line, changed };

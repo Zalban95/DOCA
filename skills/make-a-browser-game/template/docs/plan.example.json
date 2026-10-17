@@ -1,5 +1,5 @@
 {
-  "about": "Copy this to docs/plan.json and make it the game's plan: every world, enemy, item, boss, sound, tune, picture and story beat. Then run node scripts/plan.js. npm test lists what is still missing (todo); npm run test:full fails until all of it is real.",
+  "about": "Copy this to docs/plan.json and make it the game's plan: every world, enemy, item, boss, sound, tune, picture and story beat. Then run node scripts/plan.js. npm test lists what is still missing (todo); npm run test:part -- enemies fails until that part is real; npm run test:full fails until all of it is.",
   "worlds": [
     { "folder": "world1", "name": "Green Hills", "levels": 3, "tiles": "w1", "sky": "sky", "music": "world1", "new": "slimes, first gaps" },
     { "folder": "world2", "name": "Crystal Caves", "levels": 3, "tiles": "w2", "sky": "sky-w2", "music": "world2", "new": "bats, moving platforms" },

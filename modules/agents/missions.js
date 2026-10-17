@@ -324,13 +324,7 @@ function run(row, def, message, base = { steps: 0, tokens: 0 }) {
       }));
       require('../harness/supervisor').afterTurn(row.sessionId, {});   // decided again now it is recorded: an airlock's screening outlived the turn's end (audit 2026-10-04)
     })
-    .catch(e => {
-      announce(patch(id, {
-        state: e?.name === 'AbortError' ? 'cancelled' : 'failed',
-        endedAt: new Date().toISOString(),
-        error: String(e?.message || e).slice(0, 600),
-      }));
-    });
+    .catch(e => require('./outage').ended(id, def, e, { get, patch, announce, run }));   // no model answered: paused and carried on
 }
 
 /* ── A restart ────────────────────────────────────────── */
@@ -351,7 +345,7 @@ function run(row, def, message, base = { steps: 0, tokens: 0 }) {
  */
 function recover() {
   const rows = loadIndex();
-  const stuck = rows.filter(m => m.state === 'running');
+  const stuck = rows.filter(m => m.state === 'running' || (m.state === 'paused' && m.pausedFor === 'outage'));   // agents/outage.js
   if (!stuck.length) return [];
   const at = new Date().toISOString();
   for (const m of stuck) Object.assign(m, { state: 'paused', pausedAt: at });
@@ -461,7 +455,8 @@ function block({ sessionId, completed = notices(sessionId) } = {}) {
 
   const out = ['# Missions'];
   for (const m of rows) {
-    if (m.state === 'paused') {
+    if (m.state === 'paused' && m.pausedFor === 'outage') out.push(`- ${m.id} (${m.label}): waiting for a model to answer again at step ${m.steps} — it carries on by itself`);
+    else if (m.state === 'paused') {
       out.push(`- ${m.id} (${m.label}): PAUSED by a restart at step ${m.steps}, ${m.tokens} tokens spent — "${m.task.slice(0, 80)}"`);
     } else if (m.state === 'running') {
       out.push(`- ${m.id} (${m.label}): running, step ${m.steps} — "${m.task.slice(0, 80)}"`);
@@ -473,7 +468,7 @@ function block({ sessionId, completed = notices(sessionId) } = {}) {
   // ponytail: "don't ask twice" is per conversation and trusts the model; a
   // second device writing first in another conversation gets asked too. Record
   // an askedAt when that turns out to nag.
-  if (rows.some(m => m.state === 'paused'))
+  if (rows.some(m => m.state === 'paused' && m.pausedFor !== 'outage'))
     out.push('A PAUSED mission was cut off by a restart and could not carry on by itself, so it is waiting on the user. Before anything else in '
       + 'your reply, tell them in one line what it was doing and how far it got, and ask one short question: '
       + 'continue it? Then call agent_resume with their answer. Never resume without a yes, and if you have '

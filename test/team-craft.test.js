@@ -150,3 +150,21 @@ test('a work chat that opens a project works in it; the Orchestrator does not', 
   const folder2 = fs.mkdtempSync(path.join(H.tmp, 'game2-'));
   assert.doesNotMatch(await tools.call('project', { action: 'open', root: folder2, name: 'Orbit' }, [], { sessionId: main }), /now works in it/);
 });
+
+test('a code task in a project with a test command, given no test, gets the project\'s own', async () => {
+  const projects = require('../modules/projects/store');
+  fs.writeFileSync(path.join(repo, 'package.json'), JSON.stringify({ name: 'g', scripts: { test: 'node --test' } }));
+  g(repo, 'add', '.'); g(repo, 'commit', '-qm', 'a test script');
+  if (!projects.list().some(x => x.name === 'Merge game')) projects.create({ root: repo, name: 'Merge game' });
+  require('../modules/agents/registry').save({ id: 'writer', label: 'Writer', role: 'You write code.', kits: ['files'], maxSteps: 4 });
+  const lead = memory().createSession('lead5').id;
+  const made = await teams().create({ title: 'Tested', project: 'Merge game', tasks: [
+    { id: 'code', agent: 'writer', task: 'Write it.' }, { id: 'look', agent: 'reader', task: 'Read it.' },
+    { id: 'own', agent: 'writer', task: 'Write more.', test: 'node --test test/x.test.js' }] }, { by: lead });
+  const t = id => teams().get(made.id).tasks.find(x => x.id === id);
+  assert.equal(t('code').test, 'npm test', 'a writer with no test gets the project\'s');
+  assert.equal(t('look').test, undefined, 'a reader is not given one');
+  assert.equal(t('own').test, 'node --test test/x.test.js', 'a test the leader gave is kept');
+  assert.deepEqual(teams().get(made.id).testsGiven, { test: 'npm test', tasks: ['code'] });
+  await teams().stop(made.id);
+});

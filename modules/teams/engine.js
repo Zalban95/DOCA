@@ -92,7 +92,7 @@ function failed(team, t, v) {
   if (t.trial) { t.gaveUp = true; return; }   // a try is not tried again on its own: its siblings are the retry (tries.js)
   // Its own contract unproven, not failed: sent back once to run its test, whether or not the team keeps going.
   if (t.verdict?.untested && !t.testAsked) return again(team, t, v, `## Run your test\nYour task is done when \`${t.test}\` passes, and the hub reads `
-    + `your own run of it: ${t.verdict.test.why}. Run exactly \`${t.test}\` as your last step, in the folder you work in, fix what fails, then finish.`, true);
+    + `your own run of it: ${t.verdict.test.why}. Run \`${t.test}\` as your last step, in the folder you work in — in the shell, or with the project tool's run — fix what fails, then finish.`, true);
   if (!team.loop?.on || (team.loop.rounds || 0) >= maxRounds(team)) { t.gaveUp = true; return; }
   team.loop.rounds = (team.loop.rounds || 0) + 1;
   again(team, t, v, `## Try ${(t.tries || []).length + 2}\nThe previous try at this task did not finish: ${v.why || 'it failed'}.`);
