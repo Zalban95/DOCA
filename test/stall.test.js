@@ -30,9 +30,24 @@ test('what counts as the work moving, and what does not', () => {
   assert.equal(stall.since([...busy(4), { role: 'user', content: 'try the other way', from: { name: 'Delegated by Orchestrator' } }, ...busy(2, 9)]).steps, 2, 'a leader\'s or a person\'s word starts the count again');
   assert.equal(stall.since([...busy(4), { role: 'user', content: '[panel] Carry on', from: { name: 'Panel' } }, ...busy(2, 9)]).steps, 6, 'the panel\'s automatic wake does not');
   const noted = stall.since([...busy(4), { role: 'user', from: { name: 'DOCA', formFactor: 'hub' }, stall: true, content: '[DOCA] …' }, ...busy(1, 9)]);
-  assert.deepEqual(noted, { steps: 5, noted: true }, 'DOCA\'s own note does not, and is remembered');
+  assert.deepEqual(noted, { steps: 5, noted: true, from: 0 }, 'DOCA\'s own note does not, and is remembered');
   assert.equal(stall.limits({ stallSteps: 0 }), null, '0 switches it off');
   assert.deepEqual(stall.limits({ stallSteps: 40 }), { note: 40, report: 50 });
+});
+
+test('the same files read over and over since the work last moved: one note from DOCA, early, naming them', () => {
+  const rereads = require('../modules/harness/turn/rereads');
+  const read = (id, p) => [call(id, 'read_file', { path: p }), result(id, 'text')];
+  const shown = (id, c) => [call(id, 'shell', { command: c }), result(id, 'exit 0 text')];
+  const rows = [...read('r1', 'src/scenes/Menu.js'), ...shown('s1', "cd /w && cat src/scenes/Menu.js && sed -n '1,40p' src/hook.js"),
+    ...read('r2', './src/scenes/Menu.js'), ...shown('s2', 'head -50 /tmp/review.txt; tail -n 20 /tmp/review.txt'), ...read('r3', 'src/hook.js')];
+  assert.equal(rereads.note(rows, { name: 'DOCA' }), null, 'three repeats: not yet');
+  assert.equal(rereads.note([...rows, ...read('r4', 'src/scenes/Menu.js')], { name: 'DOCA' }), null, 'still five');
+  const more = [...rows, ...read('r4', 'src/scenes/Menu.js'), ...read('r6', '/tmp/review.txt')];
+  const n = rereads.note(more, { name: 'DOCA' });
+  assert.match(n.content, /read these again since the work last moved: src\/scenes\/Menu\.js \(4×\), \/tmp\/review\.txt \(3×\), src\/hook\.js \(2×\)/);
+  assert.equal(rereads.note([...more, n, ...read('r5', 'src/hook.js')], { name: 'DOCA' }), null, 'once per stretch');
+  assert.equal(rereads.reads([...shown('g', "grep -n x src/a.js")]).length, 0, 'a search is not a read');
 });
 
 let server;
