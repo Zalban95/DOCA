@@ -127,7 +127,7 @@ test('pdf: pages, words, and a layout with nothing over anything or off the shee
 
 // ── Videos and pictures, drawn by ffmpeg ───────────────────────────────────────────────────────────────────────────
 const FONT = ['/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf', '/System/Library/Fonts/Helvetica.ttc', 'C:/Windows/Fonts/arialbd.ttf'].find(f => fs.existsSync(f));
-const text = (t, x, y, size = 44) => `drawtext=${FONT ? `fontfile='${FONT.replace(/:/g, '\\:')}':` : ''}text='${t}':fontsize=${size}:fontcolor=white:x=${x}:y=${y}`;
+const text = (t, x, y, size = 44, color = 'white') => `drawtext=${FONT ? `fontfile='${FONT.replace(/:/g, '\\:')}':` : ''}text='${t}':fontsize=${size}:fontcolor=${color}:x=${x}:y=${y}`;
 function draw(file, filters, seconds, colour = '0x1c2228') {
   execFileSync(bin.find('ffmpeg'), ['-v', 'error', '-y', '-f', 'lavfi', '-i', `color=c=${colour}:s=640x360:d=${seconds}:r=10`, '-vf', filters, '-pix_fmt', 'yuv420p', file]);
 }
@@ -139,6 +139,10 @@ try {
     draw(at('doubled.mp4'), `${text('PRINT TWO PARTS', 30, 70)},${text('PRINT TWO PARTS', 110, 190)}`, 2.5);
     execFileSync(bin.find('ffmpeg'), ['-v', 'error', '-y', '-i', at('card.mp4'), '-i', at('doubled.mp4'), '-filter_complex', '[0:v][1:v]concat=n=2:v=1[v]', '-map', '[v]', at('bad.mp4')]);
     execFileSync(bin.find('ffmpeg'), ['-v', 'error', '-y', '-i', at('good.mp4'), '-frames:v', '1', at('good.png')]);
+    // A word drawn over a caption, and the same caption fading (a quarter strength): only the first is text over text.
+    const sized = (file, filters) => execFileSync(bin.find('ffmpeg'), ['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=0x1c2228:s=1280x720:d=2:r=10', '-vf', filters, '-pix_fmt', 'yuv420p', file]);
+    sized(at('over.mp4'), `${text('FRONT FRAME four screws clamp the edges', 60, 300, 40)},${text('ZQXWV', 455, 304, 40)}`);
+    sized(at('fade.mp4'), text('FRONT FRAME four screws clamp the edges', 60, 300, 40, 'white@0.25'));
     execFileSync(bin.find('ffmpeg'), ['-v', 'error', '-y', '-i', at('card.mp4'), '-frames:v', '1', at('blank.png')]);
     DRAWN = true;
   }
@@ -155,6 +159,14 @@ test('video: its facts, a blank card, doubled text — said with the second and 
   assert.match(r.why, /0\.0 s–2\.5 s shows almost nothing \(contrast \d/);
   if (bin.find('tesseract')) assert.match(r.why, /the words "PRINT TWO" appear twice — at \(\d+,\d+\) and again \d+ px right, \d+ px down/);
   else assert.match(r.why, /not verified: its text — tesseract is not on this machine/);
+});
+
+test('video: text over text is said; a caption fading out is not mistaken for it', { skip: (!DRAWN || !bin.find('tesseract')) && 'ffmpeg with drawtext, or tesseract, is not installed here' }, async () => {
+  const over = await checks.run({ video: at('over.mp4'), frames: 2 });
+  assert.equal(over.ok, false, over.why);
+  assert.match(over.why, /text is drawn over other text at \(\d+,\d+\) px/);
+  const fade = await checks.run({ video: at('fade.mp4'), frames: 2 });
+  assert.equal(fade.ok, true, fade.why);
 });
 
 test('image: blank or not, and the words on it', { skip: !DRAWN && 'ffmpeg with drawtext is not installed here' }, async () => {
