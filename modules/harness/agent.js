@@ -268,10 +268,11 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // about. Measured around the call and nothing else: the tool that runs
     // after it belongs to the machine, not to the model's speed.
     const startedAt = Date.now();
+    const apart = require('./turn/step-apart')(say, tones);   // this step's words start a paragraph of their own
     // A reply that was all thinking is asked once more with room to answer (turn/think-retry.js).
     const reply = await require('./turn/role-fallback').call({ r, p, ep, led, say, step, signal }, (sp, sep, fix) => require('./turn/think-retry').withRoom(body => complete({
       ep: sep, signal, p: sp, meta: { kind: r.role ? `step:${r.role}` : 'step', sessionId: session.id, agent: profile?.id, person: client?.user }, body,
-      onText: t => { const shown = tones ? tones.push(t) : t; text += shown; say({ type: 'text', text: shown, ...(tones ? { spoken: t } : {}) }); },
+      onText: t => { text += apart(text); const shown = tones ? tones.push(t) : t; text += shown; say({ type: 'text', text: shown, ...(tones ? { spoken: t } : {}) }); },
       onThinking: t => say({ type: 'thinking', text: t }),
       // Silence is a state worth drawing: without it the console shows the session line and then nothing,
       // which reads as a broken panel rather than a provider that has not started answering.
