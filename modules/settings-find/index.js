@@ -131,7 +131,6 @@ function find(q, { host = true, limit = 6 } = {}) {
 
 const where = r => [r.page && require('../features/pages').label(r.page), r.control].filter(Boolean).join(' → ') || 'the panel';
 
-const hiveToo = path => require('../harness/settings').SETTABLE.some(s => path === s.prefix || (!s.exact && path.startsWith(`${s.prefix}.`)));
 
 /** The one way to change it, said to the agent. */
 function howText(r) {
@@ -139,8 +138,9 @@ function howText(r) {
   const ask = `settings_propose {changes: [{path: "${path}", value: ${to}}], asked: true}`;
   switch (r.how) {
     case 'propose': return `${ask} — applied at once when the person asked for exactly this (a checkpoint keeps the old value). Or they change it in ${where(r)}.`;
-    case 'screen': return `${ask.replace('{changes', '{screen: "this", changes')} — for the screen they asked from; each screen keeps its own.${
-      hiveToo(path) ? ' With no screen behind the turn, leave screen out: that changes the default every screen starts from.' : ''} Or they change it in ${where(r)}.`;
+    // "this" always works: with no screen behind the turn it is the person's own layer, or the hive's (toolbox/settings.js)
+    // — the conditional said here sent every model to doca_clients to find out which (basics set, 2026-10-17).
+    case 'screen': return `${ask.replace('{changes', '{screen: "this", changes')} — for the screen they asked from (each screen keeps its own; with none behind this turn, every device of theirs). Or they change it in ${where(r)}.`;
     case 'guarded': return `settings_propose {changes: [{path: "${path}", value: ${to}}]} makes it a proposal they accept (the panel asks them first); or they switch it themselves in ${where(r)}.`;
     case 'password': return `Theirs to switch, at the panel — you cannot change it. Tell them where: ${where(r)}.`;
     case 'tool': return `${r.tool}. Or they change it in ${where(r)}.`;
