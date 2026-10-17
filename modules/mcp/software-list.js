@@ -19,6 +19,8 @@ const JOBS = [
   ['pdf', 'Work with PDFs'], ['motion', 'Motion graphics and effects'], ['layout', 'Page layout'], ['documents', 'Write documents'],
   ['audio', 'Record and edit audio'], ['slides', 'Make presentations'], ['cad', 'CAD and drafting'], ['sheets', 'Spreadsheets'],
   ['3d', '3D modelling and animation'],
+  // Not only games (the owner, 2026-10-17): configurators, walkthroughs, simulations, digital twins, VR and AR, previs.
+  ['realtime', 'Real-time 3D and interactive'],
 ];
 
 const O = (name, jobs, marks, site, find = {}, extra = {}) => ({ name, jobs, marks, site, find, ...extra });
@@ -51,7 +53,10 @@ const OPTIONS = [
   O('Natron', ['motion'], ['open source', 'free'], 'https://natrongithub.github.io/', { bin: ['natron', 'Natron'], mac: ['Natron'], win: ['Natron'] }),
   O('Adobe After Effects', ['motion'], ['paid', 'popular'], 'https://www.adobe.com/products/aftereffects.html', { mac: ['Adobe After Effects'], win: ['Adobe\\Adobe After Effects'] }),
   O('Remotion', ['motion', 'video'], ['free', 'paid'], 'https://www.remotion.dev/'),   // a library, not an app: per project (skills/video-from-code); companies of 4+ pay
-  O('Blender', ['motion', '3d'], ['open source', 'free', 'popular'], 'https://www.blender.org/download/', { bin: ['blender'], mac: ['Blender'], win: ['Blender Foundation'] }),
+  O('Blender', ['motion', '3d'], ['open source', 'free', 'popular'], 'https://www.blender.org/download/', { bin: ['blender'], mac: ['Blender'], win: ['Blender Foundation'] }, { mcp: 'blender' }),
+  O('Unity', ['realtime', '3d'], ['free', 'paid', 'popular'], 'https://unity.com/download', { bin: ['unityhub', 'unity-hub'], mac: ['Unity Hub', 'Unity'], win: ['Unity Hub', 'Unity'] }, { mcp: 'mcp-for-unity' }),
+  O('Unreal Engine', ['realtime', '3d'], ['free', 'paid', 'popular'], 'https://www.unrealengine.com/download', { bin: ['UnrealEditor'], mac: ['Epic Games', 'Unreal Engine'], win: ['Epic Games'] }, { mcp: 'unreal' }),
+  O('Godot', ['realtime'], ['open source', 'free', 'popular'], 'https://godotengine.org/download/', { bin: ['godot', 'godot4'], mac: ['Godot'], win: ['Godot'] }),
   O('Scribus', ['layout'], ['open source', 'free'], 'https://www.scribus.net/downloads/', { bin: ['scribus'], mac: ['Scribus'], win: ['Scribus'] }),
   O('Adobe InDesign', ['layout'], ['paid', 'popular'], 'https://www.adobe.com/products/indesign.html', { mac: ['Adobe InDesign'], win: ['Adobe\\Adobe InDesign'] }),
   O('LibreOffice', ['documents', 'slides', 'sheets'], ['open source', 'free', 'popular'], LO, lo),
