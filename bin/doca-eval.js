@@ -14,6 +14,7 @@
  * `--flag riskTiers` once with that experiment off and once on (`--flag riskTiers=on` only on), developer mode on in the
  * sandbox only; together,
  * every model × off/on. Each run is saved as usual; a table of passes, tokens and steps per run is printed last.
+ * `--set path=value` (repeatable) changes a setting in the sandbox's copy only, to compare variants of the harness.
  * The judge checks of every run are graded by one model — `--judge provider/model`, else the hub's configured model.
  *
  * `--follow [seconds]` (with --orchestrator): each case waits — 600 s at most, or the seconds given — for the work chats
@@ -41,6 +42,13 @@ const say = (o, line) => console.log(json ? JSON.stringify(o) : line);
 const opt = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
 const models = (opt('--models') || '').split(',').map(x => x.trim()).filter(Boolean);
 const [flag, only] = String(opt('--flag') || '').split('=');   // --flag riskTiers, or riskTiers=on / =off for one run
+// --set path=value (repeatable): a setting in the sandbox's copy only, to compare variants (2026-10-17). JSON when it parses.
+const sets = args.flatMap((a, i) => (a === '--set' && args[i + 1] ? [args[i + 1]] : [])).map(s => {
+  const at = s.indexOf('=');
+  const raw = s.slice(at + 1);
+  let value; try { value = JSON.parse(raw); } catch { value = raw; }
+  return { path: s.slice(0, at), value, raw: s };
+}).filter(s => s.path);
 const follow = args.includes('--follow') ? (/^\d+$/.test(opt('--follow') || '') ? Number(opt('--follow')) : true) : false;
 
 /** Point the sandbox's harness at one model (`provider/model`) and the flag on or off; returns its label. */
@@ -57,8 +65,14 @@ function configure(model, on) {
     prefs.harness = { ...(prefs.harness || {}), config: { ...(prefs.harness?.config || {}), doca } };
   }
   if (flag) { prefs.developer = { ...(prefs.developer || {}), mode: true }; prefs.experiments = { ...(prefs.experiments || {}), [flag]: on }; }
+  for (const { path, value } of sets) {
+    const keys = path.split('.'); let o = prefs;
+    for (const k of keys.slice(0, -1)) o = (o[k] && typeof o[k] === 'object') ? o[k] : (o[k] = {});
+    o[keys.at(-1)] = value;
+    if (path.startsWith('experiments.')) prefs.developer = { ...(prefs.developer || {}), mode: true };
+  }
   savePrefs(prefs);
-  return `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}${process.env.DOCA_EVAL_JUDGE ? ` · judged by ${process.env.DOCA_EVAL_JUDGE}` : ''}`;
+  return `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}${sets.map(s => ` · ${s.raw}`).join('')}${process.env.DOCA_EVAL_JUDGE ? ` · judged by ${process.env.DOCA_EVAL_JUDGE}` : ''}`;
 }
 
 /**
@@ -79,9 +93,9 @@ async function compare() {
   }
   const rows = [];
   for (const { model, on } of combos) {
-    const label = `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}`;
+    const label = `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}${sets.map(s => ` · ${s.raw}`).join('')}`;
     say({ run: label }, `\n== ${label}`);
-    const argv = [__filename, id, '--json', ...(args.includes('--orchestrator') ? ['--orchestrator'] : []), ...(follow ? ['--follow', ...(follow === true ? [] : [String(follow)])] : []), ...(model ? ['--models', model] : []), ...(opt('--judge') ? ['--judge', opt('--judge')] : []), ...(flag ? ['--flag', `${flag}=${on ? 'on' : 'off'}`] : [])];
+    const argv = [__filename, id, '--json', ...(args.includes('--orchestrator') ? ['--orchestrator'] : []), ...(follow ? ['--follow', ...(follow === true ? [] : [String(follow)])] : []), ...(model ? ['--models', model] : []), ...(opt('--judge') ? ['--judge', opt('--judge')] : []), ...sets.flatMap(s => ['--set', s.raw]), ...(flag ? ['--flag', `${flag}=${on ? 'on' : 'off'}`] : [])];
     const child = require('child_process').spawn(process.execPath, argv, { env: ENV_BEFORE, stdio: ['ignore', 'pipe', 'inherit'] });
     let buf = '', row = null;
     child.stdout.on('data', d => {
@@ -141,4 +155,4 @@ const once = async () => {
 // wait) let the event loop run empty, and node exited 0 in the middle of a case with nothing saved — the panel never
 // sees it because its server keeps the loop busy (found 2026-10-07: the routing set always ended during case 8).
 const keepAlive = setInterval(() => {}, 1 << 30);
-(models.length || flag ? compare() : once()).finally(() => clearInterval(keepAlive)).then(code => { cleanup(); process.exit(code); }, e => { say({ error: e.message }, `eval: ${e.message}`); cleanup(); process.exit(1); });
+(models.length || flag || sets.length ? compare() : once()).finally(() => clearInterval(keepAlive)).then(code => { cleanup(); process.exit(code); }, e => { say({ error: e.message }, `eval: ${e.message}`); cleanup(); process.exit(1); });

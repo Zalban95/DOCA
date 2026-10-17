@@ -148,6 +148,19 @@ test('comparing: --flag runs the set with the experiment off and on, and prints 
   assert.equal(code, 0, err.slice(-2000));
 });
 
+test('comparing: --set changes a setting in the sandbox\'s copy only, and the run says which (2026-10-17)', async () => {
+  const before = require('../modules/utils').loadPrefs().harness?.config?.doca?.maxSteps;
+  const child = require('node:child_process').spawn(process.execPath, [require('node:path').join(__dirname, '..', 'bin', 'doca-eval.js'), 'tiny', '--set', 'harness.config.doca.maxSteps=3', '--json'], { env: process.env });
+  let out = '', err = '';
+  child.stdout.on('data', d => { out += d; }); child.stderr.on('data', d => { err += d; });
+  const code = await new Promise(r => child.on('close', r));
+  const cmp = out.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean).find(l => l.compare)?.compare;
+  assert.ok(cmp, out + err);
+  assert.deepEqual(cmp.map(x => x.label), ['configured model · harness.config.doca.maxSteps=3']);
+  assert.equal(code, 0, err.slice(-2000));
+  assert.equal(require('../modules/utils').loadPrefs().harness?.config?.doca?.maxSteps, before, 'the real settings untouched');
+});
+
 test('anyTool passes when one of several right tools was called', async () => {
   const { one } = require('../modules/evals/check');
   assert.equal((await one({ anyTool: ['skill', 'work_chats'] }, 'q', { tools: ['work_chats'] })).pass, true);
