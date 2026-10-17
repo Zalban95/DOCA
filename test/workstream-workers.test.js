@@ -39,6 +39,8 @@ test('outside sessions read apart by title and repository, with their own progre
   assert.equal(sa.where, 'StatENS', 'the folder its command moved into names the repository');
   assert.deepEqual([sa.activity.edits, sa.activity.commands, sa.activity.commits], [1, 2, 1]);
   assert.equal(sa.progress, null, 'no list of its own: only what it did');
+  sessions.note(steps[0], `$ cd ${repo} && python3 check.py`);
+  assert.equal(sessions.list().find(w => w.name.includes('GitHub repositories audit')).now, '$ python3 check.py', 'the cd the row already names is left out');
   assert.deepEqual([sb.progress.done, sb.progress.total, sb.progress.percent, sb.progress.from], [2, 4, 50, 'its todo list']);
   assert.match(sessions.whoOf(steps[1]), /^Claude Code · GitHub repositories audit · StatENS$/, 'how its lines and edits are named');
 });

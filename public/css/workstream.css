@@ -134,6 +134,7 @@
 
 /* Who is editing a file, under its name (workstream.js), and who is working now (workstream-workers.js). */
 .ws-chip { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 1px; }
+.ws-chip-top { display: inline-flex; align-items: baseline; gap: 4px; white-space: nowrap; }
 .ws-chip-who { font-size: 9.5px; color: var(--muted); max-width: 22em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ws-workers { padding: 6px 12px 2px; display: grid; gap: 6px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .wsw-title { grid-column: 1 / -1; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }

@@ -104,7 +104,7 @@ function _wsDraw() {
   const chips = document.getElementById('ws-chips'), stage = document.getElementById('ws-stage');
   if (!chips || !stage) return;
   chips.innerHTML = WS.files.map(f => `<button class="ws-chip ${f.path === WS.current ? 'active' : ''}${f.by?.by === 'outside' ? ' outside' : ''}" title="${escHtml(f.path)}${f.by ? ` — ${escHtml(f.by.text)}` : ''}" onclick="workstreamShow(${jsArg(f.path)})">
-    ${escHtml(_wsName(f.path))} ${_wsCount(f)}${f.by ? `<span class="ws-chip-who">${escHtml(f.by.short || (f.by.by === 'outside' ? 'outside' : f.by.text))}</span>` : ''}</button>`).join('');   // who is editing it, under its name (2026-10-17: a tooltip a phone never shows)
+    <span class="ws-chip-top">${escHtml(_wsName(f.path))} ${_wsCount(f)}</span>${f.by ? `<span class="ws-chip-who">${escHtml(f.by.short || (f.by.by === 'outside' ? 'outside' : f.by.text))}</span>` : ''}</button>`).join('');   // who is editing it, under its name (2026-10-17: a tooltip a phone never shows)
   const f = WS.files.find(x => x.path === WS.current);
   if (!f) return;
   const rel = f.root ? f.path.slice(f.root.length + 1) : f.path;
