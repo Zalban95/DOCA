@@ -61,6 +61,7 @@ function report(file) {
     return;
   }
   if (st.isDirectory()) { if (process.platform === 'linux') walk([file]); return; }
+  if (!st.isFile()) return;   // a pipe, socket or device: a synchronous read would wait forever, and with it the hub (regular-file.js)
   if (keysFile(file)) return;   // the keys files: never shown, not even that they changed
   if (st.size > MAX_BYTES) return _emit({ path: file, big: true, size: st.size });
   let text;
@@ -146,8 +147,8 @@ async function snapshot(list, budget = { files: SNAP_FILES, bytes: SNAP_BYTES })
       if (e.isDirectory()) { if (!SKIP.has(e.name)) queue.push(p); continue; }
       if (!e.isFile() || skipped(p) || _seen.has(p)) continue;
       try {
-        const st = fs.statSync(p);
-        if (st.size > SNAP_FILE) continue;
+        const st = fs.statSync(p);   // the Dirent said file; a stat follows a symlink to whatever it is (regular-file.js)
+        if (!st.isFile() || st.size > SNAP_FILE) continue;
         const text = fs.readFileSync(p, 'utf8');
         if (text.includes('\u0000')) continue;
         // A secrets-holding file's copy is kept masked, as it is shown; a keys file is never kept (report() skips it too).

@@ -111,6 +111,7 @@ function handleRead(req, res) {
   try {
     const s = fs.statSync(filePath);
     if (s.isDirectory()) return res.status(400).json({ error: 'Is a directory' });
+    if (!s.isFile()) return res.status(400).json({ error: 'Not a regular file (a pipe, socket or device): reading it would wait forever.' });
     const MAX_READ = 100 * 1024 * 1024; // 100 MB
     if (s.size > MAX_READ) return res.status(413).json({ error: `File too large (${(s.size / 1e6).toFixed(1)} MB — limit is 100 MB)` });
     const buf = fs.readFileSync(filePath);

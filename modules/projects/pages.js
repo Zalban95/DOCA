@@ -43,7 +43,7 @@ function block(sessionId) {
   const p = require('./store').forSession(sessionId);
   if (!p) return '';
   let text;
-  try { text = fs.readFileSync(check(p, s.page).abs, 'utf8'); } catch { return `# This conversation is about a page\n${s.page} — it is not there any more (moved or deleted); ask before recreating it.`; }
+  try { text = require('../regular-file').read(check(p, s.page).abs, 'utf8'); } catch { return `# This conversation is about a page\n${s.page} — it is not there any more (moved or deleted); ask before recreating it.`; }
   const cut = text.length > MAX_INLINE;
   return ['# This conversation is about a page',
     `${s.page} in this project. "It", "the page" and "this" mean this document unless the person says otherwise. Change it by editing that file, `

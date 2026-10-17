@@ -52,7 +52,7 @@ async function send({ url, method, body, headers, key, form, files, save_as }, c
           if (require('../secret-view').kindOf(abs)) return { error: `Error: ${ref} holds secrets beside settings and is never uploaded.` };
           const st = require('fs').statSync(abs);
           if (st.size > 50 * 1024 * 1024) return { error: `Error: ${ref} is over 50 MB.` };
-          fd.append(k, new Blob([require('fs').readFileSync(abs)], { type: require('../../attachments').mimeFor(abs) }), require('path').basename(abs));
+          fd.append(k, new Blob([require('../../regular-file').read(abs)], { type: require('../../attachments').mimeFor(abs) }), require('path').basename(abs));
         }
         payload = fd;
         delete h['Content-Type'];   // the form sets its own boundary
