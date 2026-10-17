@@ -135,7 +135,14 @@ module.exports = [
       // beside the transcript it came from. `propose()` always took a
       // sessionId; nothing passed one, so every proposal was anonymous and
       // several open conversations made the pending list ambiguous.
-      const p = settings.propose({ changes, reason, sessionId: ctx.sessionId, screen: screen === 'this' ? ctx.screen || 'this' : screen || null, person: ctx.user });
+      // "this" with no screen behind the turn (a channel, a call, an evaluation) is the person's own layer — theirs on every
+      // device — or, with nobody on the turn, the default every screen starts from: refusing it cost every model two steps
+      // and a doca_clients call to find that out (basics set, 2026-10-17).
+      const unscreened = screen === 'this' && !ctx.screen;
+      let p;
+      try { p = settings.propose({ changes, reason, sessionId: ctx.sessionId, screen: screen === 'this' ? ctx.screen || (ctx.user?.id ? `person:${ctx.user.id}` : null) : screen || null, person: ctx.user }); }
+      catch (e) { if (unscreened && !ctx.user?.id) return 'Error: this turn came from no screen and no person, and that setting is each screen\'s own: name a screen from doca_clients.'; throw e; }
+      const where = !unscreened ? '' : p.screen ? ' (no screen behind this turn: for every device of theirs)' : ' (no screen behind this turn: the default every screen starts from)';
       // The person asked for exactly this, on their own turn (CONSTITUTION S1, 2026-10-07): their request is the decision.
       // Within their level only (permits); the save keeps a checkpoint (checkpoints.js), so the way back is one click.
       // An important or safety switch is never applied from a turn: its Accept asks the person — a notice, or the password (auth/guarded.js; S14).
@@ -145,7 +152,7 @@ module.exports = [
       if (own) {
         settings.apply(p.id, { person: ctx.user });
         audit(ctx, 'asked by the person: settings applied', p.id);
-        return `Applied, as they asked:\n${p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`).join('\n')}\n`
+        return `Applied, as they asked${where}:\n${p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`).join('\n')}\n`
           + 'The settings before it are kept as a checkpoint (Settings → System → Checkpoints restores them). Say what changed in one line.';
       }
       // Unattended mode (approval.js): the owner chose not to be asked.
@@ -155,7 +162,7 @@ module.exports = [
         return `Applied at once — unattended mode is on, so nobody was asked:\n${p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`).join('\n')}`;
       }
       const lines = p.changes.map(c => `  ${c.path}: ${JSON.stringify(c.from)} → ${JSON.stringify(c.to)}`);
-      return `Proposed (${p.id}) — waiting for the user to accept or decline${guarded ? ` (${guarded.what} is changed only on their Accept, ${guarded.password ? 'with their password' : 'after a notice saying why it matters'})` : ''}:\n${lines.join('\n')}\n`
+      return `Proposed (${p.id})${where} — waiting for the user to accept or decline${guarded ? ` (${guarded.what} is changed only on their Accept, ${guarded.password ? 'with their password' : 'after a notice saying why it matters'})` : ''}:\n${lines.join('\n')}\n`
         + 'Tell them what you proposed and why, then stop.';
     },
   },
