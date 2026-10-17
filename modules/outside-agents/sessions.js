@@ -75,7 +75,8 @@ function note(step, text = '') {
     for (const f of step.files || []) { const abs = path.resolve(t.dir || t.cwd || '/', f); t.files.add(abs); t.dir = path.dirname(abs); }
     if (t.files.size > 200) t.files = new Set([...t.files].slice(-200));
   }
-  if (text) t.now = String(text).slice(0, 200);
+  // Its last step; a leading `cd <folder> &&` left out — the row names the repository already, and on a phone it hid the command.
+  if (text) t.now = String(text).replace(/^\$ cd ("[^"]+"|'[^']+'|\S+)\s*(&&|;)\s*/, '$ ').slice(0, 200);
   return t;
 }
 
