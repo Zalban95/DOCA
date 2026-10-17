@@ -30,10 +30,23 @@ function switchAskWait(err) {
   // answered once (2026-10-15: a phone on the Wi-Fi had to close the same message again and again).
   const key = n.setting || n.what;
   if (_switchAskOpen.has(key)) return _switchAskOpen.get(key);
+  // The local-network notice is said once on this browser for this address (asked 2026-10-17: it came back on every
+  // page); after OK, what it refuses is refused quietly — each page draws its own refusal.
+  const lan = n.setting === 'network.lanAdmin' && !n.mayChange;
+  if (lan && _switchLanSeen()) return Promise.resolve(false);
   const asked = _switchAskDraw(err, n);
   _switchAskOpen.set(key, asked);
-  asked.finally(() => _switchAskOpen.delete(key));
+  asked.finally(() => { _switchAskOpen.delete(key); if (lan) _switchLanSeen(true); });
   return asked;
+}
+
+let _switchLanOk = false;
+/** Whether the local-network notice was said on this browser for this address; `mark` records that it was. */
+function _switchLanSeen(mark = false) {
+  const k = `doca.lanNotice.${location.host}`;
+  if (mark) { _switchLanOk = true; try { localStorage.setItem(k, new Date().toISOString()); } catch { /* private window: this page only */ } }
+  if (_switchLanOk) return true;
+  try { return !!localStorage.getItem(k); } catch { return false; }
 }
 
 /** This device is on the local network, where the machine is not managed: said plainly, with the way that works. */
