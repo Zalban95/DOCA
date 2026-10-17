@@ -65,6 +65,12 @@ function forget(provider) {
   store.writeJson(DOC, doc);
 }
 
+/** The body with its reply cap set to `n`, in whichever token field it uses. */
+function setOutput(body, n) {
+  const field = body.max_completion_tokens != null ? 'max_completion_tokens' : 'max_tokens';
+  return { ...body, [field]: n };
+}
+
 /** The request body reshaped to the contract: the token field renamed and held to the model's maximum, usage frames left out. */
 function shape(body, c) {
   let out = capOutput(body, c.maxOutput);
@@ -146,4 +152,4 @@ function outputOf(body) { return Number(body?.max_tokens ?? body?.max_completion
 
 function all() { return learned().providers; }
 
-module.exports = { forProvider, learn, forget, shape, capOutput, maxOutputFrom, affordableFrom, roomFrom, outputOf, all, FIELDS };
+module.exports = { forProvider, learn, forget, shape, capOutput, setOutput, maxOutputFrom, affordableFrom, roomFrom, outputOf, all, FIELDS };

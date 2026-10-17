@@ -21,7 +21,10 @@ async function post(ep, body, signal, p) {
   // Sent in the shape this provider is known to accept (harness/contracts.js), so a
   // quirk one retry proved is not paid for again on every call.
   const contracts = require('../contracts');
-  body = contracts.shape(body, contracts.forProvider(ep.id, body.model));
+  const contract = contracts.forProvider(ep.id, body.model);
+  // "Each model's own maximum" (budget.REPLY_MAX asked) goes up to a learned maximum above it: DeepSeek's flash takes 393216.
+  if (contracts.outputOf(body) === budget.REPLY_MAX && contract.maxOutput > budget.REPLY_MAX) body = contracts.setOutput(body, contract.maxOutput);
+  body = contracts.shape(body, contract);
   const headers = { 'Content-Type': 'application/json' };
   if (ep.apiKey) headers.Authorization = `Bearer ${ep.apiKey}`;
 

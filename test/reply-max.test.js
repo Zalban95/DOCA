@@ -33,7 +33,7 @@ before(async () => {
 after(async () => { server.closeAllConnections(); await new Promise(r => server.close(r)); await H.stop(); });
 
 const turn = async (model, extra = {}) => {
-  require('../modules/harness/catalog').saveConfig('doca', { provider: 'capstub2', model, maxSteps: 2, fallbackChain: [], contextWindow: 0, ...extra });
+  require('../modules/harness/catalog').saveConfig('doca', { provider: 'capstub2', model, maxSteps: 2, fallbackChain: [], contextWindow: 0, maxTokens: 0, ...extra });
   seen = [];
   const memory = require('../modules/harness/memory');
   return require('../modules/harness/agent').turn({ message: 'hello', sessionId: memory.createSession(model, { activate: false }).id });
@@ -59,3 +59,14 @@ test('a context-length refusal is asked again with the room the window has left;
   await turn('small-window', { maxTokens: 1000 });
   assert.deepEqual(caps(), [1000], 'an owner\'s cap is sent as it is');
 });
+
+test('each model\'s own maximum goes up to a learned maximum above the starting ask', async () => {
+  const contracts = require('../modules/harness/contracts'), budget = require('../modules/harness/budget');
+  contracts.learn('capstub2', 'big-out', { maxOutput: 393216 }, { perModel: true });
+  await turn('big-out');
+  assert.deepEqual(caps(), [393216], 'asked its own maximum, not the starting 262144');
+  await turn('big-out', { maxTokens: 4000 });
+  assert.deepEqual(caps(), [4000], 'an owner\'s cap is never raised');
+  assert.equal(budget.REPLY_MAX, 262144);
+});
+
