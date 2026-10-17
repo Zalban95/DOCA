@@ -58,7 +58,7 @@ function roles() {
     { id: 'guards', label: 'Screening outside text', scout: true, tasks: ['text-classification'], current: guards, setting: 'guards', where: 'Settings → Harness → Guards' },
     { id: 'system-one', label: 'Bounded decisions (System 1: a request\'s size, a call\'s route, a page\'s next element)', scout: true, tasks: ['text-classification', 'zero-shot-classification'], current: systemOne(val), setting: 'systemOne.provider', where: 'Field → Models → Decision models (experiment systemOne)', feature: 'system-one' },
     { id: 'wakeword', label: 'Hearing the wake word', tasks: [], current: wake || null, setting: 'wakeword', where: 'Field → Models → Wake words', feature: 'wake-model' },
-    { id: 'images', label: 'Making images', scout: true, tasks: ['text-to-image'], current: null, setting: null, where: 'Field → Models → Inference Services (ComfyUI, Stable Diffusion)' },
+    { id: 'images', label: 'Making images', scout: true, tasks: ['text-to-image'], current: null, setting: null, where: 'Field → Models → Inference Services (ComfyUI, suggested; Stable Diffusion WebUI, the older one) — skills/make-images' },
     { id: 'new', label: 'Anything new (a capability DOCA does not have)', scout: true, tasks: ['any'], current: null, setting: null, where: 'a new function: a TODO item' },
   ].filter(r => !r.feature || licensed(r.feature));
 }
