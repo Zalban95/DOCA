@@ -1,6 +1,6 @@
 ---
 name: make-a-browser-game
-description: Make a browser game that plays on a phone and a desk — alone or with a team — from a tested starter (Phaser 3, no build step) whose page, controls, menus, saving, sound, pictures and browser test already work, and a plan file that lists every world, enemy, item, sound and story beat so the game's own test says what is still missing. Use for any 2D game request, a platformer, an arcade or adventure game, a game jam, or when a game came out poor, off-centre, or with controls over the view.
+description: Make a browser game that plays on a phone and a desk — alone or with a team — from a tested starter (Phaser 3, plain files) whose page, controls, menus, saving, sound, pictures and browser test already work, and a plan file that lists every world, enemy, item, sound and story beat so the game's own test says what is still missing. Use for any 2D game request, a platformer, an arcade or adventure game, a game jam, or when a game came out poor, off-centre, or with controls over the view.
 triggers: [browser game, make a game, build a game, platformer, phaser, game with a team, rich game, arcade game, 2d game, game jam, crea un gioco, fai un gioco, videogioco, gioco per telefono]
 ---
 

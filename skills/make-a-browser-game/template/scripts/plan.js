@@ -59,7 +59,7 @@ for (const family of ['enemies', 'items', 'bosses']) {
   for (const e of plan[family] || []) {
     if (!NAME.test(e.name)) throw new Error(`${family}: "${e.name}" — names are lowercase letters, digits and -`);
     const file = path.join(dir, `${e.name}.js`);
-    if (!fs.existsSync(file)) { fs.writeFileSync(file, STUB[family](e.name, e.does)); made.push(path.relative(ROOT, file)); }
+    if (!fs.existsSync(file)) { fs.writeFileSync(file, STUB[family](e.name, e.does)); made.push(path.relative(ROOT, file).split(path.sep).join('/')); }
   }
   const names = fs.readdirSync(dir).filter(f => f.endsWith('.js') && f !== 'index.js').map(f => f.slice(0, -3)).sort();
   fs.writeFileSync(path.join(dir, 'index.js'), `// The ${family}, by the name a level's spawns use — made by scripts/plan.js from the files here; run it again after adding one.\n`

@@ -90,7 +90,7 @@ test('a task after several worktree tasks starts from all their branches merged,
   const clash = await place.forTask(team, team.tasks[5]);
   assert.deepEqual(clash.place.conflicts.map(x => [x.branch, x.files]), [['team/x/clash2', ['README.md']]]);
   assert.deepEqual(clash.place.from, ['team/x/clash']);
-  assert.equal(fs.readFileSync(path.join(clash.place.worktree.path, 'README.md'), 'utf8'), '# Another title\n', 'the first branch is the base; nothing forced');
+  assert.equal(fs.readFileSync(path.join(clash.place.worktree.path, 'README.md'), 'utf8').replace(/\r\n/g, '\n'), '# Another title\n', 'the first branch is the base; nothing forced');   // Windows checks out CRLF
   assert.equal(g(clash.place.worktree.path, 'status', '--porcelain'), '', 'the failed merge was undone');
 
   // The errand says where it starts and what is left to merge by hand.
