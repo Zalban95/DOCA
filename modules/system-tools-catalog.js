@@ -8,6 +8,16 @@
  * link instead of a button. Nothing here is installed by itself: a person presses Install and sees the command run.
  */
 const os = require('os');
+const GODOT_LINUX = 'if command -v flatpak >/dev/null; then flatpak install -y --user flathub org.godotengine.Godot; exit $?; fi; '
+  + 'set -e; case "$(uname -m)" in x86_64) a=x86_64;; aarch64|arm64) a=arm64;; *) echo "No Godot build for $(uname -m) here: https://godotengine.org/download/"; exit 1;; esac; '
+  + 'v=$(curl -fsSL https://api.github.com/repos/godotengine/godot/releases/latest | grep -o \'"tag_name": *"[^"]*"\' | head -1 | sed \'s/.*"\\([^"]*\\)"$/\\1/\'); '
+  + '[ -n "$v" ] || { echo "Could not read the latest Godot release from GitHub"; exit 1; }; '
+  + 'f="Godot_v${v}_linux.${a}.zip"; t=$(mktemp -d); u="https://github.com/godotengine/godot/releases/download/$v"; '
+  + 'curl -fsSL -o "$t/$f" "$u/$f"; curl -fsSL -o "$t/SHA512-SUMS.txt" "$u/SHA512-SUMS.txt"; '
+  + '(cd "$t" && grep " $f\\$" SHA512-SUMS.txt | sha512sum -c -) || { echo "The download does not match Godot\'s published SHA-512: not installed"; rm -rf "$t"; exit 1; }; '
+  + 'd="$HOME/.local/opt/godot-$v"; mkdir -p "$d" "$HOME/.local/bin"; (cd "$d" && unzip -oq "$t/$f"); rm -rf "$t"; '
+  + 'ln -sf "$d/Godot_v${v}_linux.${a}" "$HOME/.local/bin/godot"; "$HOME/.local/bin/godot" --version';
+
 const path = require('path');
 
 const HOME = os.homedir();
@@ -249,7 +259,9 @@ const SYSTEM_TOOLS = [
     detect: { any: [{ bin: 'godot', args: ['--version'] }, { bin: 'godot4', args: ['--version'] }, { file: '/Applications/Godot.app' }] },
     note: 'An open-source engine (MIT) for 2D and 3D: interactive tools and visualisations as much as games.',
     repo: 'https://godotengine.org/download/', repoLabel: 'godotengine.org',
-    install: { linux: 'command -v flatpak >/dev/null || { echo "Flatpak is needed for Godot here, or take it from https://godotengine.org/download/"; exit 1; }; flatpak install -y --user flathub org.godotengine.Godot', darwin: brew('godot', true), win32: winget('GodotEngine.GodotEngine') } },
+    // Flatpak where there is one; otherwise Godot's own release for this processor from its GitHub, checked against the
+    // release's SHA512-SUMS.txt and unpacked into ~/.local/opt (no root), with ~/.local/bin/godot pointing at it.
+    install: { linux: GODOT_LINUX, darwin: brew('godot', true), win32: winget('GodotEngine.GodotEngine') } },
 
   // ── For building DOCA's own apps (DocaMobile, DocaWear, DocaDesk) ──
   { id: 'jdk', label: 'Java (JDK 17+)', category: 'clients', for: 'DocaMobile, DocaWear',
