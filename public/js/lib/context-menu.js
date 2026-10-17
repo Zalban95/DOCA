@@ -144,7 +144,7 @@ function fileMenuItems(o) {
     a.href = `${api}/download/${encodeURIComponent(name)}?path=${encodeURIComponent(abs)}`;
     document.body.appendChild(a); a.click(); a.remove();
   };
-  const copyPath = () => (navigator.clipboard?.writeText(abs) || Promise.reject()).then(() => typeof toast === 'function' && toast('Path copied')).catch(() => appAlert(abs));
+  const copyPath = () => (navigator.clipboard?.writeText(abs) || Promise.reject()).then(() => typeof undoToast === 'function' && undoToast('Path copied', null, { ms: 2500 })).catch(() => appAlert(abs));
   return [
     o.open && { icon: isDir ? '→' : '✏', label: 'Open', fn: () => o.open(abs) },
     media && typeof mediaViewerOpen === 'function' && { icon: '👁', label: 'Preview', fn: () => mediaViewerOpen({ src: raw, kind: media, name, download: `${api}/download/${encodeURIComponent(name)}?path=${encodeURIComponent(abs)}` }) },
