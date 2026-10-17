@@ -14,6 +14,7 @@
  * `--flag riskTiers` once with that experiment off and once on (`--flag riskTiers=on` only on), developer mode on in the
  * sandbox only; together,
  * every model × off/on. Each run is saved as usual; a table of passes, tokens and steps per run is printed last.
+ * The judge checks of every run are graded by one model — `--judge provider/model`, else the hub's configured model.
  *
  * `--follow [seconds]` (with --orchestrator): each case waits — 600 s at most, or the seconds given — for the work chats
  * it handed work to, and counts their tools, steps and tokens with its own; it records when the first word came
@@ -47,13 +48,17 @@ function configure(model, on) {
   const { loadPrefs, savePrefs } = require('../modules/utils');
   const prefs = loadPrefs();
   if (model) {
+    // One judge for every model compared (audit 2026-10-17: each run was graded by the model under test, and Opus as its
+    // own judge returned nothing on "rm -rf /"): --judge, else the model this hub is configured with, before the override.
+    const was = prefs.harness?.config?.doca;
+    if (!process.env.DOCA_EVAL_JUDGE) process.env.DOCA_EVAL_JUDGE = opt('--judge') || (was?.provider && was?.model ? `${was.provider}/${was.model}` : '');
     const [provider, ...rest] = model.split('/');
     const doca = { ...(prefs.harness?.config?.doca || {}), provider, model: rest.join('/') };
     prefs.harness = { ...(prefs.harness || {}), config: { ...(prefs.harness?.config || {}), doca } };
   }
   if (flag) { prefs.developer = { ...(prefs.developer || {}), mode: true }; prefs.experiments = { ...(prefs.experiments || {}), [flag]: on }; }
   savePrefs(prefs);
-  return `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}`;
+  return `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}${process.env.DOCA_EVAL_JUDGE ? ` · judged by ${process.env.DOCA_EVAL_JUDGE}` : ''}`;
 }
 
 /**
@@ -76,7 +81,7 @@ async function compare() {
   for (const { model, on } of combos) {
     const label = `${model || 'configured model'}${flag ? ` · ${flag} ${on ? 'on' : 'off'}` : ''}`;
     say({ run: label }, `\n== ${label}`);
-    const argv = [__filename, id, '--json', ...(args.includes('--orchestrator') ? ['--orchestrator'] : []), ...(follow ? ['--follow', ...(follow === true ? [] : [String(follow)])] : []), ...(model ? ['--models', model] : []), ...(flag ? ['--flag', `${flag}=${on ? 'on' : 'off'}`] : [])];
+    const argv = [__filename, id, '--json', ...(args.includes('--orchestrator') ? ['--orchestrator'] : []), ...(follow ? ['--follow', ...(follow === true ? [] : [String(follow)])] : []), ...(model ? ['--models', model] : []), ...(opt('--judge') ? ['--judge', opt('--judge')] : []), ...(flag ? ['--flag', `${flag}=${on ? 'on' : 'off'}`] : [])];
     const child = require('child_process').spawn(process.execPath, argv, { env: ENV_BEFORE, stdio: ['ignore', 'pipe', 'inherit'] });
     let buf = '', row = null;
     child.stdout.on('data', d => {

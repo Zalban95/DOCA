@@ -373,7 +373,8 @@ async function ask({ system, user, temperature = 0.1, signal, provider, model, p
   const text = (reply.content || '').trim();
   if (!text) {
     throw Object.assign(new Error(`${reply.provider || p.provider} / ${p.model} returned no answer`
-      + (reply.reasoning ? `: it thought, then stopped before writing one${cap ? ` — its reply is capped at ${cap} tokens by "Longest reply" in the harness settings` : ''}.` : '.')),
+      + (reply.reasoning ? `: it thought, then stopped before writing one${cap ? ` — its reply is capped at ${cap} tokens by "Longest reply" in the harness settings` : ''}.` : '.')
+      + (reply.finish && !['stop', 'length'].includes(reply.finish) ? ` The provider ended it with "${reply.finish}" (a refusal or a filter of its own, not DOCA's).` : '')),
     { status: 502 });
   }
   return text;

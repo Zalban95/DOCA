@@ -17,12 +17,15 @@
  * With --follow the tool checks read the front's tools and its work chats' together (`allTools`).
  *
  * The judge is the harness's own `ask` (no tools, no memory, no charter): it reads the question, the rubric and the
- * answer, and its first word is PASS or FAIL. It is the only check that spends tokens.
+ * answer, and its first word is PASS or FAIL. It is the only check that spends tokens. Comparing models, one judge grades
+ * them all (DOCA_EVAL_JUDGE: --judge, else the hub's configured model), never the model under test.
  */
 const named = (tools, name) => tools.some(t => t === name || (name.endsWith('__') && t.startsWith(name)));
 
 async function judge(rubric, prompt, outcome) {
-  const reply = await require('../harness/agent').ask({
+  // A comparison's one judge (bin/doca-eval.js sets it): `provider/model`, never the model under test.
+  const [jp, ...jm] = String(process.env.DOCA_EVAL_JUDGE || '').split('/');
+  const reply = await require('../harness/agent').ask({ ...(jp && jm.length ? { provider: jp, model: jm.join('/') } : {}),
     system: 'You grade an AI assistant\'s answer against a rubric. Reply with PASS or FAIL as the first word, then one short sentence saying why. Judge only what the rubric asks.',
     user: `Question:\n${prompt}\n\nRubric:\n${rubric}\n\nAnswer:\n${String(outcome.text || '').slice(0, 6000)}`,
   });

@@ -182,3 +182,15 @@ test('a check says what happened, whether it passed or failed', async () => {
   assert.equal(await line({ maxSteps: 3 }), 'fail: 4 steps, more than 3');
   assert.equal(await line({ maxTokens: 1000 }), 'pass: 900 tokens ≤ 1000');
 });
+
+test('comparing models, one judge grades them all — never the model under test (audit 2026-10-17)', async () => {
+  const agent = require('../modules/harness/agent'), real = agent.ask, asked = [];
+  agent.ask = async o => { asked.push(o); return 'PASS fine'; };
+  process.env.DOCA_EVAL_JUDGE = 'judgeprov/judge-model';
+  try {
+    const r = await require('../modules/evals/check').one({ judge: 'any' }, 'q', { text: 'a' });
+    assert.equal(r.pass, true);
+    assert.equal(asked[0].provider, 'judgeprov');
+    assert.equal(asked[0].model, 'judge-model');
+  } finally { agent.ask = real; delete process.env.DOCA_EVAL_JUDGE; }
+});
