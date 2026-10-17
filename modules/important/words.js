@@ -31,11 +31,20 @@ const LABELS = [
   ['peopleModels', 'Which models people run on'],
 ];
 
+/** The schema's own words for a leaf (settings-schema.js): its hint's first sentence, and its default. */
+function leafOf(path) {
+  try { return require('../settings-schema').leaf(path); } catch { return null; }
+}
+const hintOf = leaf => (leaf?.hint ? String(leaf.hint).split(/(?<=\.)\s/)[0].replace(/\.$/, '') : '');
+
 function labelOf(path) {
   const hit = LABELS.find(([p]) => path === p || path.startsWith(`${p}.`));
   if (!hit) return path;
   const rest = path.slice(hit[0].length + 1);
-  return rest ? `${hit[1]} ${rest}` : hit[1];
+  if (!rest) return hit[1];
+  // A leaf no label names: said by its hint ("Traces kept — days a turn's trace is kept"), never by its raw key.
+  const hint = hintOf(leafOf(path));
+  return hint && hint.length <= 80 ? `${hit[1]} — ${hint.charAt(0).toLowerCase()}${hint.slice(1)}` : `${hit[1]} ${rest}`;
 }
 
 const clip = (s, n = 60) => (s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -71,7 +80,10 @@ function leaves(path, from, to, out = []) {
 function line({ path, from, to }) {
   const key = path.split('.').pop();
   if (mask('x', key) === MASK) return `${labelOf(path)}: changed (a secret, not shown)`;
-  return `${labelOf(path)}: ${show(from, key)} → ${show(to, key)}`;
+  const dflt = leafOf(path)?.default;   // "not set" is the default in effect: said as that value
+  const was = (from === undefined || from === null) && dflt !== undefined && dflt !== '' && dflt !== null ? `${show(dflt, key)} (the default)` : show(from, key);
+  const now = (to === undefined || to === null) && dflt !== undefined && dflt !== '' && dflt !== null ? `${show(dflt, key)} (the default)` : show(to, key);
+  return `${labelOf(path)}: ${was} → ${now}`;
 }
 
 /** The changes under the guarded settings paths between two copies of the prefs. */

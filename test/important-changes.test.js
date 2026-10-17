@@ -83,6 +83,7 @@ test('a secret-shaped value under a guarded path is said changed, never shown', 
   assert.ok(!JSON.stringify(require('../modules/harness/memory').messages(main)).includes('sekret-value-9f3'), 'not in the transcript');
   const words = require('../modules/important/words');
   assert.equal(words.line({ path: 'sharing.apiKey', from: 'a', to: 'b' }), 'Sharing with the project apiKey: changed (a secret, not shown)');
+  assert.equal(words.line({ path: 'tracing.retainDays', from: undefined, to: 31 }), 'Traces kept — days a turn\'s trace is kept: 30 (the default) → 31', 'a leaf by its hint, not set by its default');
   assert.equal(words.show({ token: 'x', on: true }), '{"token":"••••••••","on":true}');
 });
 
@@ -117,4 +118,15 @@ test('a device call of the person hears it as a notice frame, stage important; a
   assert.equal(calls.important('p1', '⚠ Changed: Approval mode: auto → manual'), 1);
   end1(); end2();
   assert.deepEqual(got, [['d1', { type: 'notice', stage: 'important', text: '⚠ Changed: Approval mode: auto → manual' }]]);
+});
+
+test('a restart called off or a version that does not exist changed nothing, so nothing is said (audit 2026-10-17)', async () => {
+  const before = important().length;
+  const off = await H.api(null, 'POST', '/api/restart', { cancel: true });
+  assert.equal(off.status, 200, JSON.stringify(off.body));
+  const bad = await H.api(null, 'POST', '/api/versions/use', { version: 'v0.0.0-none' });
+  assert.equal(bad.status, 200);
+  assert.ok(String(bad.body).includes('"ok":false'), 'the switch said it failed');
+  await settle();
+  assert.equal(important().length, before, 'no "Changed" line for either');
 });

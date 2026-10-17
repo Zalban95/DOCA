@@ -78,13 +78,11 @@ async function links(req, { qr = true } = {}) {
   const out = [], seen = new Set();
   const add = (host, label) => { const url = `${proto}://${host.includes(':') && !host.startsWith('[') ? `[${host}]` : host}:${port}/`; if (!seen.has(url)) { seen.add(url); out.push({ url, label }); } };
   const m = listen.mode(require('./utils').loadPrefs());
-  for (const [, addrs] of Object.entries(os.networkInterfaces())) {
-    for (const a of addrs || []) {
-      if (a.internal || a.family !== 'IPv4') continue;
-      if (listen.isTailnet(a.address) && m !== 'local') add(a.address, 'Tailscale');
-      else if (listen.isPrivate(a.address) && (m === 'lan' || m === 'all')) add(a.address, 'local network');
-    }
-  }
+  // The tailnet's before the local network's, whatever order the interfaces come in (eno1 and wlan before tailscale0):
+  // a device takes the first that answers, and over the local network the machine's admin is refused (2026-10-17).
+  const v4 = Object.values(os.networkInterfaces()).flat().filter(a => a && !a.internal && a.family === 'IPv4');
+  if (m !== 'local') for (const a of v4) if (listen.isTailnet(a.address)) add(a.address, 'Tailscale');
+  if (m === 'lan' || m === 'all') for (const a of v4) if (!listen.isTailnet(a.address) && listen.isPrivate(a.address)) add(a.address, 'local network');
   const dns = await tailnetName();
   if (dns && m !== 'local') out.unshift({ url: `${proto}://${dns}:${port}/`, label: 'Tailscale name' });
   const here = String(req.headers.host || '').replace(/:\d+$/, '');

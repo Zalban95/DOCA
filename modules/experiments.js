@@ -73,7 +73,7 @@ function set(id, value) {
  */
 function need(id, what) {
   if (on(id)) return;
-  if (!developer()) throw devOff();   // the first switch missing first: one question and one password each
+  if (!developer()) throw devOff();   // the first switch missing first: one question and one notice each
   const e = EXPERIMENTS.find(x => x.id === id);
   throw require('./switch-off').off(`${what} is an experiment that is off (Settings → Developer).`, {
     what, route: `/api/experiments/${id}`, body: { on: true }, setting: `experiments.${id}`, page: 'settings/experiments',

@@ -63,3 +63,21 @@ test('from the local network, managing the machine is refused as a question with
     assert.match(r.body.error, /use Tailscale or the machine itself/);
   } finally { network.limited = was; }
 });
+
+test('the hub\'s addresses: the tailnet\'s before the local network\'s, whatever the interfaces\' order (2026-10-17)', async () => {
+  const os = require('node:os'), u = require('../modules/utils');
+  const real = os.networkInterfaces, prefs = u.loadPrefs();
+  os.networkInterfaces = () => ({
+    eno1: [{ address: '192.168.1.20', family: 'IPv4', internal: false }],
+    wlan0: [{ address: '192.168.1.21', family: 'IPv4', internal: false }],
+    tailscale0: [{ address: '100.101.102.103', family: 'IPv4', internal: false }],
+  });
+  u.savePrefs({ ...prefs, network: { ...(prefs.network || {}), listen: 'lan' } });
+  try {
+    const { links } = await require('../modules/network').links({ headers: { host: 'localhost:4242' }, socket: {} }, { qr: false });
+    const urls = links.map(l => l.url);
+    const at = host => urls.findIndex(x => x.includes(host));
+    assert.ok(at('100.101.102.103') >= 0 && at('192.168.1.20') >= 0, urls.join(' '));
+    assert.ok(at('100.101.102.103') < at('192.168.1.20') && at('100.101.102.103') < at('192.168.1.21'), urls.join(' '));
+  } finally { os.networkInterfaces = real; u.savePrefs(prefs); }
+});

@@ -115,6 +115,11 @@ function _applyHiddenTabs(list) {
 }
 
 let _settingsNoHost = false;
+let _authRights = null;   // the signed-in person's rights here, as /api/auth/me says them (null until it answered)
+/** Whether the signed-in person holds `right` from where they are: what pages ask to leave a host's part out (the hub
+ *  still refuses whatever this lets through). Called behind a typeof guard since 2.205 and defined nowhere until
+ *  2026-10-17, so every such check passed for everyone. */
+function authHasRight(right) { return !_authRights || _authRights.includes(right); }
 /** The hidden tabs again, after the nav was drawn anew (a layout change): Settings → General's, the layout's, the machine's. */
 function settingsHiddenApply() { _applyHiddenTabs(_settingsNoHost ? [...new Set([..._settingsHidden, ...HOST_TABS])] : _settingsHidden); }
 
@@ -126,6 +131,7 @@ async function settingsApplyOnLoad() {
     // Without host, the tabs that are the machine are left out instead of drawn as refusals (live test 2026-10-04).
     const me = await apiFetch('/api/auth/me').catch(() => null);
     const noHost = !!me?.rights && !me.rights.includes('host');
+    _authRights = Array.isArray(me?.rights) ? me.rights : null;
     document.body.classList.toggle('no-host', noHost);
     _settingsNoHost = noHost;
     settingsHiddenApply();

@@ -51,8 +51,13 @@ test('only the keys a screen may be proposed, and never someone else\'s screen o
   assert.match(await propose([{ path: 'call.silenceMs', value: 'long' }], 'this'), /is a number, not a string/);
   const memberPerson = { ...member.user, role: 'member' };
   assert.match(await propose([{ path: 'ambient.place', value: 'Rome' }], phone.device.id, memberPerson), /someone else's/);
+  // "this" with no screen behind the turn: the person's own layer, or with nobody on the turn the hive's (2026-10-17).
   assert.match(await tools.call('settings_propose', { reason: 'r', screen: 'this', changes: [{ path: 'call.silenceMs', value: 900 }] }, [], { user: owner() }),
-    /did not come from a screen; name one/);
+    /Proposed \(\w+\) \(no screen behind this turn: for every device of theirs\)/);
+  assert.match(await tools.call('settings_propose', { reason: 'r', screen: 'this', changes: [{ path: 'theme', value: 'daylight' }] }, [], {}),
+    /Proposed \(\w+\) \(no screen behind this turn: the default every screen starts from\)/);
+  assert.match(await tools.call('settings_propose', { reason: 'r', screen: 'this', changes: [{ path: 'call.silenceMs', value: 900 }] }, [], {}),
+    /no screen and no person, and that setting is each screen's own/);
 });
 
 test('a hive proposal is unchanged: it writes the prefs file', async () => {

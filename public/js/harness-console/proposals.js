@@ -120,7 +120,7 @@ async function hcProposalApply(id) {
     await _hcLoadProposals();
     // Paths and stats are drawn from prefs elsewhere in the panel; the pages
     // that show them read on open, so only this one needs telling.
-    if (typeof settingsLoad === 'function' && currentTab === 'settings') settingsLoad();
+    if (typeof settingsInit === 'function' && currentTab === 'settings') settingsInit();
   } catch (e) { setStatus(st, `✗ ${e.message}`, 'err'); }
 }
 

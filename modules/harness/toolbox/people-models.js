@@ -41,7 +41,7 @@ module.exports = [
     }, required: ['action'] },
     run: ({ action, changes, reason }, ctx = {}) => {
       const person = ctx.user?.id ? ctx.user : null;
-      if (action === 'show') return show(person);
+      if (!action || action === 'show') return show(person);   // called bare, it looks: that is what a model means by it
       if (action !== 'propose') return 'Error: action is show or propose.';
       try {
         const p = require('../../people-models/propose').propose(person, { changes, reason }, { sessionId: ctx.sessionId });

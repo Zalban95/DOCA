@@ -73,5 +73,5 @@ function _wsaCardDraw() {
 async function outsideAgentsCopy(i) {
   const s = WSA.data?.setup?.[i];
   if (!s) return;
-  try { await navigator.clipboard.writeText(s.text); if (typeof toast === 'function') toast('Copied'); } catch { appAlert(s.text); }
+  try { await navigator.clipboard.writeText(s.text); if (typeof undoToast === 'function') undoToast('Copied', null, { ms: 2500 }); } catch { appAlert(s.text); }
 }

@@ -62,7 +62,7 @@ module.exports = [
     use: 'Agent, Plan, Ask or Debug per conversation: Plan and Ask refuse work by code until a plan is approved.',
     words: 'plan mode ask mode debug mode read only + plan planning chat' },
   { id: 'approvals', licence: 'core', name: 'Approvals (auto, manual, unattended)', page: ['harness', 'settings/harness'], settings: ['harness.approval.mode', 'harness.approval.manualAsks', 'harness.approval.missionAskSec', 'harness.approval.missionAskTimeout'],
-    use: 'Whether each tool call that does something is asked first — the person\'s switch, with their password: Auto / Manual above the conversation, Approvals beside it.',
+    use: 'Whether each tool call that does something is asked first — the person\'s switch (a short notice first; Unattended asks the password): Auto / Manual above the conversation, Approvals beside it.',
     routes: ['/api/harness/approval*'], words: 'allow deny always allowlist approve popup mission machine confirmation' },
   { id: 'inbox', licence: 'core', name: 'Messages to a busy conversation', page: 'harness', since: '2.148.0',
     use: 'A message to a working conversation is never refused: the running turn reads it before its next step.',

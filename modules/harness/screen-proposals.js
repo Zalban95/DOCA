@@ -24,9 +24,9 @@ function target(id, person = null) {
     if (settings.panel !== undefined) settings.panel = require('../panel-layout/layout').merge([prefs.panel, own.panel]);
     return { id, name: 'every device of theirs', layer: 'person', userId, settings };
   }
-  if (id === 'this') throw bad('This turn did not come from a screen; name one from doca_clients.', 404);   // "this" with no screen behind it
+  if (id === 'this') throw bad('This turn did not come from a screen: leave screen out to change the default every screen starts from, or name a screen from doca_clients.', 404);   // "this" with no screen behind it
   const d = id && require('../api-v1/devices').get(id);
-  if (!d || d.revokedAt) throw bad(id ? `No screen ${id} — name one from doca_clients, or leave screen out for the hive's settings.` : 'This turn did not come from a screen; name one.', 404);
+  if (!d || d.revokedAt) throw bad(id ? `No screen ${id} — name one from doca_clients, or leave screen out for the hive's settings.` : 'This turn did not come from a screen: leave screen out to change the default every screen starts from, or name one.', 404);
   if (person?.id && d.userId && d.userId !== person.id && !require('./session-access').isHost(person)) throw bad('That screen is someone else\'s.', 403);
   return { id: d.id, name: d.name || d.id, settings: require('../screens').effective(d.id, d.userId).settings };
 }

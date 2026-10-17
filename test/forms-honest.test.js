@@ -108,13 +108,15 @@ test('Set-up: "Only show what it would do" answers, with nothing to do and with 
 });
 
 test('Packs: a library pack\'s "Bring in…" preview has a way out', { skip: B.skip }, async () => {
-  const skill = require('fs').readdirSync(require('path').join(__dirname, '..', 'skills'))[0];
+  // A small skill by name: the folder's first entry differs by file system (macOS lists in its own order), and a big
+  // one (scripts, templates) made the preview slower than the wait on a busy runner (2026-10-17).
+  const skill = 'plan-well';
   const kept = await H.api(null, 'POST', '/api/packs/library', { name: 'a-test-pack', skills: [skill] });
   assert.equal(kept.status, 200, JSON.stringify(kept.body));
   await go('settings', 'packs');
   assert.ok(await B.until(`!!document.querySelector('button[onclick*="packsPlan(null"]')`), 'the library lists it');
   assert.ok(await B.clickOn('button[onclick*="packsPlan(null"]'));
-  assert.ok(await B.until("/Bring in the ticked ones/.test(document.getElementById('pack-plan').textContent)"), 'the preview opens');
+  assert.ok(await B.until("/Bring in the ticked ones/.test(document.getElementById('pack-plan').textContent)", 30000), `the preview opens: ${await B.evaluate("document.getElementById('pack-plan').textContent.trim().slice(0, 300)")}`);
   assert.ok(await B.clickOn('#pack-plan button[onclick="packsPlanClose()"]'), 'it has a Cancel');
   assert.ok(await B.until("document.getElementById('pack-plan').textContent.trim() === ''"), 'Cancel closes it');
   assert.equal(await B.evaluate('_packLib'), null, 'and lets the pack go');

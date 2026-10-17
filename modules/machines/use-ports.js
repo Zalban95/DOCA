@@ -57,6 +57,26 @@ function screensSpeaking(port) {
 
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
+const CALL = { quick: 'Live call voice (the face, a watch\'s call)', deep: 'Deep call voice (the chat\'s 🎙)', ambient: 'voice for Ambient\'s assistant' };
+
+/**
+ * The hive's own voices at this port, from its `voice` setting: the one every screen starts with, and each kind of
+ * call's (call-voices.js) — audit 2026-10-17: the expressive voice was the Live call's and "what uses it" did not say.
+ */
+function hiveVoices(port) {
+  const out = [];
+  try {
+    const engines = require('../tts-engines'), calls = require('../call-voices'), hive = require('../utils').loadPrefs().voice || {};
+    if (hive.engine && portOf(engines.forVoice(hive).ttsUrl) === port) out.push({ kind: 'screen', text: 'the voice every screen starts with' });
+    for (const k of calls.KINDS) {
+      if (!hive[k]) continue;   // a kind with no slot of its own speaks as another (Ambient as the Live call): said once
+      const v = calls.pick(k, { mine: hive });
+      if (v.from === 'hive' && portOf(v.engine?.ttsUrl) === port) out.push({ kind: k, text: `the hive's ${CALL[k]}` });
+    }
+  } catch { /* no voices */ }
+  return out;
+}
+
 /**
  * Why stopping whatever listens on `port` here would be felt: [{ kind, text }], `name` is how to call it. The kind says
  * whether it is set up to use it (`model`, `voice`, `stt`, `screens`) or using it now (`working`, `inflight`, `served`)
@@ -76,6 +96,7 @@ function needs(port, name) {
   if (portOf(vs.ttsUrl) === port) out.push(`${name} is the hive's voice${screens ? `; ${plural(screens, 'screen')} ${screens === 1 ? 'uses' : 'use'} it` : ''}`, 'voice');
   else if (screens) out.push(`${plural(screens, 'screen')} ${screens === 1 ? 'speaks' : 'speak'} with it`, 'screens');
   if (portOf(vs.sttUrl) === port) out.push(`${name} is the hive's speech-to-text: calls and voice messages are heard through it`, 'stt');
+  for (const t of hiveVoices(port)) if (portOf(vs.ttsUrl) !== port || t.kind !== 'screen') out.push(`${name} is ${t.text}`, 'voice');
   const flying = require('../harness/inflight').list().filter(r => portOf(r.url) === port).length;
   if (flying) out.push(`${plural(flying, 'model request')} from DOCA ${flying === 1 ? 'is' : 'are'} in flight to it now`, 'inflight');
   try {

@@ -270,6 +270,7 @@
 .hc-to[style*="none"] + .info-btn { display: none; }   /* a hidden "to" or computer picker hides its ⓘ too */
 .hc-input-row.info-row > .info-pop { order: -1; }       /* above the composer, not under it */
 .hc-input-row.info-row > .hc-input { min-width: 0; }  /* the ⓘ row wraps only for an open explanation */
+@media (max-width: 600px) { .hc-input-row { flex-wrap: wrap; } .hc-caret { display: none; } .hc-to { max-width: none; flex: 1 1 auto; } .hc-input-row > .hc-input { order: 5; flex: 1 1 calc(100% - 80px); } .hc-input-row > #hc-send, .hc-input-row > #hc-stop { order: 6; } }   /* a phone: the box a line of its own, Send beside it */
 
 /* The Orchestrator is directly selectable here; keep its FAB off Send. */
 body.harness-tab .chat-fab { display: none; }

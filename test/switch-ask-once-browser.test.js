@@ -32,3 +32,12 @@ test('one question for many requests; the local network said plainly; nothing as
   const warming = await B.evaluate(`(() => { _flowWarming = true; const p = switchAskWait(${JSON.stringify(lan)}); const n = document.querySelectorAll('.switch-ask').length; _flowWarming = false; return p.then(v => ({ n, v })); })()`);
   assert.deepEqual(warming, { n: 0, v: false }, 'warming asks nothing');
 });
+
+test('after OK, the local-network notice is not said again on this browser, even after a reload (2026-10-17)', { skip: B.skip }, async () => {
+  const again = await B.evaluate(`(() => { const p = switchAskWait(${JSON.stringify(lan)}); const n = document.querySelectorAll('.switch-ask').length; return p.then(v => ({ n, v })); })()`);
+  assert.deepEqual(again, { n: 0, v: false }, 'said once already in the test above: quietly refused');
+  const kept = await B.evaluate(`(() => { _switchLanOk = false; const p = switchAskWait(${JSON.stringify(lan)}); const n = document.querySelectorAll('.switch-ask').length; return p.then(v => ({ n, v })); })()`);
+  assert.deepEqual(kept, { n: 0, v: false }, 'remembered by the browser, not only by the page');
+  const other = await B.evaluate(`(() => { const e = { code: 'switch_off', message: 'x', needs: { what: 'Specialists', setting: 'agents.enabled', route: '/api/harness/agents/enable', mayChange: true } }; const p = switchAskWait(e); const n = document.querySelectorAll('.switch-ask').length; document.querySelector('.switch-ask [data-act="no"]')?.click(); return p.then(() => n); })()`);
+  assert.equal(other, 1, 'another switch is still asked');
+});
