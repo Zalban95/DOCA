@@ -25,7 +25,7 @@ const errands = [];
 
 /**
  * The script, per try (the brief says "You are try K of N"): in the task, `T<K>:<what>` — WRITE=<text> writes out.txt,
- * TEST=<code> writes t.js exiting with it and runs `node t.js`, FAIL answers 500, HANG never answers, TOK=<n> bills n.
+ * TEST=<code> writes t.js exiting with it and runs `node t.js`, FAIL answers 400 (a refusal: a model server's 5xx is an outage, which pauses — agents/outage.js), HANG never answers, TOK=<n> bills n.
  */
 before(async () => {
   await H.start();
@@ -47,7 +47,7 @@ before(async () => {
       const what = k ? new RegExp(`T${k}:(\\S+)`).exec(errand)?.[1] || '' : '';
       const tok = Number(/TOK=(\d+)/.exec(what)?.[1] || 100);
       const did = msgs.flatMap(m => m.tool_calls || []).map(c => c.function.name);
-      if (/^FAIL/.test(what)) { res.writeHead(500); return res.end('{"error":"broken"}'); }
+      if (/^FAIL/.test(what)) { res.writeHead(400); return res.end('{"error":"broken"}'); }
       if (/^HANG/.test(what)) { hung.add(res); return; }
       const write = /WRITE=([^,]+)/.exec(what)?.[1];
       if (write && !did.includes('write_file')) return sse(res, call(`w${++n}`, 'write_file', { path: 'out.txt', content: write }), tok);

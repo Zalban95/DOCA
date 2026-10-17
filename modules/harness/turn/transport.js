@@ -179,7 +179,7 @@ function firstTokenGuard({ p, signal, onWaiting, ep }) {
 function unavailable(e) {
   const st = Number(e?.status);
   if ([502, 503, 504, 529].includes(st)) return true;
-  return st >= 500 && /overload|high demand|busy|capacity|temporarily unavailable/i.test(String(e?.message || ''));
+  return st >= 500 && /overload|high demand|busy|capacity|temporarily unavailable|failed to load|loading model/i.test(String(e?.message || ''));   // a local server whose model will not load says so with a 500
 }
 
 async function complete({ ep, body, signal, onText, onThinking, onWaiting, p, meta = { kind: 'ask' }, onHop, onSkip, onRetry, onStart }) {
