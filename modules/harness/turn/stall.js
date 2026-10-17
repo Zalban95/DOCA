@@ -49,7 +49,7 @@ function moved(name, a, result, root, state) {
   if (HANDED[name]) return HANDED[name](a);
   if (WRITES.has(name)) {
     const files = [a.path, ...(Array.isArray(a.paths) ? a.paths : [])].filter(Boolean).map(String);
-    return root.length > 0 && files.some(f => root.some(r => { const abs = path.resolve(r, f); return abs === r || abs.startsWith(r + path.sep); }));
+    return root.length > 0 && files.some(f => root.some(r => { const R = path.resolve(r), abs = path.resolve(R, f); return abs === R || abs.startsWith(R + path.sep); }));
   }
   if (name === 'shell') return GIT.test(String(a.command || '')) && /^exit 0\b/.test(String(result).trim());
   return false;
