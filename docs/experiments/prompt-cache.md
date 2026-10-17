@@ -33,6 +33,8 @@ cached share of the prompt (`tokensCached / tokensIn`) and the provider's cost f
 |---|---|---|---|---|---|---|
 | 2026-10-17 | openrouter/anthropic/claude-haiku-5.5 | off | basics 9/9 | 521647 | 0 (0%) | every step re-read at full price |
 | 2026-10-17 | openrouter/anthropic/claude-haiku-5.5 | on | basics 9/9 | 492685 | 251950 (51%) | same answers; each case is a fresh sandbox, so its first step writes and one-step cases never read back — a long turn reads back on every step |
+| 2026-10-17 | openrouter/anthropic/claude-haiku-5.5 | on (3.110.0) | task A (tablet mount), 36 steps | 1.90M | 39% | the second mark sat on the per-step readings, which change every step: only tools and system read back; 30 min, $0.15 |
+| 2026-10-17 | openrouter/anthropic/claude-haiku-5.5 | on (3.110.2) | task A, 36 steps | 2.09M | 81% | mark on the newest message before the readings; 20 min; every file delivered |
 
 ## Cost
 

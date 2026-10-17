@@ -15,6 +15,7 @@
  * text part. Nothing else in the body changes, and a model that does not need it is sent the body as it was.
  */
 const MARK = { type: 'ephemeral' };
+const READINGS = /^\[panel readings, not from the user\]/;   // step-request.js: the per-step readings, last and never the same
 
 /** Whether this provider and model cache only at marked breakpoints (Anthropic's models, wherever they are served). */
 function needs(ep, model) {
@@ -35,8 +36,11 @@ function apply(body, ep, { on = require('../../experiments').on('promptCache') }
   const msgs = body.messages.slice();
   const sys = msgs.findIndex(m => m.role === 'system');
   if (sys >= 0) msgs[sys] = { ...msgs[sys], content: marked(msgs[sys].content) };
-  const last = msgs.length - 1;   // the person's message, or a tool's result mid-turn: either way the newest prefix
-  if (last !== sys) msgs[last] = { ...msgs[last], content: marked(msgs[last].content) };
+  // The newest message that stays: the per-step readings go last (step-request.js) and change every step, so a mark on
+  // them was a prefix the next step never had — the Haiku task-A run read 39% from cache, the tools and system alone.
+  let last = msgs.length - 1;
+  while (last > sys && READINGS.test(String(typeof msgs[last].content === 'string' ? msgs[last].content : msgs[last].content?.[0]?.text || ''))) last--;
+  if (last > sys) msgs[last] = { ...msgs[last], content: marked(msgs[last].content) };
   return { ...body, messages: msgs };
 }
 
