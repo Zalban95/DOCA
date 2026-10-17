@@ -22,9 +22,10 @@ function serve(handler) {
 
 test.before(async () => {
   stub = await serve((req, res) => {
-    if (req.url !== '/api/v1/key') { res.writeHead(404); return res.end(); }
+    if (req.url !== '/api/v1/key' && req.url !== '/api/v1/credits') { res.writeHead(404); return res.end(); }
     if (req.headers.authorization !== 'Bearer sk-or-good-key-123456') { res.writeHead(401); return res.end('{}'); }
     res.writeHead(200, { 'Content-Type': 'application/json' });
+    if (req.url === '/api/v1/credits') return res.end(JSON.stringify({ data: { total_credits: 10, total_usage: 9.21 } }));
     res.end(JSON.stringify({ data: { label: 'sk-or-…', usage: 3.25, limit: 10, limit_remaining: 6.75, is_free_tier: false } }));
   });
   deepStub = await serve((req, res) => {
@@ -101,12 +102,13 @@ test('the providers\' own figures: asked with the key at their own origin only, 
   const b = r.body.balances;
   assert.equal(b.openrouter.ok, true, JSON.stringify(b.openrouter));
   assert.deepEqual([b.openrouter.figure.used, b.openrouter.figure.limit, b.openrouter.figure.remaining], [3.25, 10, 6.75]);
+  assert.equal(b.openrouter.figure.credit, 0.79, 'the account\'s own credit beside the key\'s limit (2026-10-17)');
   assert.equal(b.deepseek.figure.balance, 110);
   assert.equal(b.deepseek.figure.currency, 'CNY');
   assert.ok(!b['or-elsewhere'], 'a provider at another address has no dialect: DOCA\'s count alone');
   const text = JSON.stringify(r.body);
   assert.ok(!text.includes('sk-or-good') && !text.includes('sk-deep-secret'), 'no key reaches the browser');
-  assert.deepEqual(seen.map(s => s.auth).sort(), ['Bearer sk-deep-secret-7890abcd', 'Bearer sk-or-good-key-123456']);
+  assert.deepEqual(seen.map(s => s.auth).sort(), ['Bearer sk-deep-secret-7890abcd', 'Bearer sk-or-good-key-123456', 'Bearer sk-or-good-key-123456']);
 
   seen.length = 0;
   await H.api(null, 'GET', '/api/keys/balances');

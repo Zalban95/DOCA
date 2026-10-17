@@ -37,8 +37,10 @@ function _kuBalanceHtml(b) {
   const n = v => (v === null || v === undefined ? null : `${Number(v).toFixed(2)} ${cur}`);
   const parts = [];
   if (f.used !== undefined && f.used !== null) parts.push(`used ${n(f.used)}`);
-  if (f.limit !== undefined) parts.push(f.limit === null ? 'no limit on this key' : `limit ${n(f.limit)}`);
-  if (f.remaining !== undefined && f.remaining !== null) parts.push(`${n(f.remaining)} left`);
+  if (f.limit !== undefined) parts.push(f.limit === null ? 'no limit on this key' : `this key's limit ${n(f.limit)}`);
+  if (f.remaining !== undefined && f.remaining !== null) parts.push(`${n(f.remaining)} left on the key`);
+  // What the account holds is what a request is refused for, whatever the key's limit says (2026-10-17).
+  if (f.credit !== undefined && f.credit !== null) parts.push(`<b>account credit ${n(f.credit)} left</b>`);
   if (f.balance !== undefined && f.balance !== null) parts.push(`balance ${n(f.balance)}`);
   for (const o of f.others || []) if (o.balance !== null) parts.push(`balance ${o.balance.toFixed(2)} ${escHtml(o.currency)}`);
   if (f.note) parts.push(escHtml(f.note));

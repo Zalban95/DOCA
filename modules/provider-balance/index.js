@@ -47,6 +47,15 @@ async function of(id, { fetchImpl = fetch, timeoutMs = 8000, fresh = false, now 
       redirect: 'error', signal: AbortSignal.timeout(timeoutMs) });
     if (!r.ok) value = { ...base, ok: false, error: r.status === 401 || r.status === 403 ? `it refused the key (HTTP ${r.status})` : `it answered HTTP ${r.status}` };
     else value = { ...base, ok: true, figure: d.read(await r.json()) };
+    // A second figure of the provider's (OpenRouter's account credit beside the key's limit): merged when it answers,
+    // left out when it does not — the first one stands either way.
+    if (value.ok && d.also) {
+      try {
+        const a = await fetchImpl(d.origin() + d.also.path, { headers: { Authorization: `Bearer ${ep.apiKey}`, Accept: 'application/json' },
+          redirect: 'error', signal: AbortSignal.timeout(timeoutMs) });
+        if (a.ok) Object.assign(value.figure, d.also.read(await a.json()));
+      } catch { /* the key's figure alone */ }
+    }
   } catch (e) { value = { ...base, ok: false, error: why(e, timeoutMs) }; }
   cache.set(id, { at: now, value });
   return value;
