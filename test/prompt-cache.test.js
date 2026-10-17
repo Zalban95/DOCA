@@ -26,3 +26,12 @@ test('an Anthropic model gets two breakpoints; any other model, or the flag off,
   const parts = pc.apply({ model: 'anthropic/x', messages: [{ role: 'system', content: [{ type: 'text', text: 'a' }, { type: 'text', text: 'b' }] }] }, or, { on: true });
   assert.deepEqual(parts.messages[0].content[1], { type: 'text', text: 'b', cache_control: { type: 'ephemeral' } }, 'parts: the last text part carries it');
 });
+
+test('the newest stable message carries the mark, never the per-step readings after it', async () => {
+  const pc = require('../modules/harness/turn/prompt-cache');
+  const b = { model: 'anthropic/claude-haiku-5.5', messages: [{ role: 'system', content: 's' }, { role: 'user', content: 'build it' }, { role: 'tool', tool_call_id: 'a', content: 'done' }, { role: 'user', content: '[panel readings, not from the user]\nclock 11:02' }] };
+  const out = pc.apply(b, { baseUrl: 'https://openrouter.ai/api/v1' }, { on: true });
+  assert.deepEqual(out.messages[2].content, [{ type: 'text', text: 'done', cache_control: { type: 'ephemeral' } }], 'the tool result before the readings');
+  assert.equal(typeof out.messages[3].content, 'string', 'the readings untouched');
+});
+
