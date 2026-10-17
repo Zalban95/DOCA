@@ -64,7 +64,8 @@ test('still all thinking: once only, and the notice names the setting', async ()
 test('the default reply cap leaves a thinking model room, and a small window still checks against the old room', () => {
   const providers = require('../modules/harness/providers');
   const budget = require('../modules/harness/budget');
-  assert.ok(providers.defaultParams().maxTokens >= 8192);
+  // The default is each model's own maximum (0, since 2026-10-17): far more than a thinking model's room.
+  assert.ok(budget.replyCap(providers.defaultParams()) >= 8192);
   const body = { messages: [{ role: 'user', content: 'x'.repeat(4000 * 4) }], max_tokens: 8192 };   // ~4000 tokens
   const rung = { provider: 'p', model: 'm', contextWindow: 8192, windowSetting: 'w' };
   assert.equal(budget.preflight(body, rung), null, 'sent: 4000 left for the reply is more than the old 2048');

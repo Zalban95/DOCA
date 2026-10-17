@@ -124,7 +124,7 @@ function defaultParams() {
     topP:           1,
     // A thinking model spends much of its reply on reasoning: 2048 left nothing to answer with (deep test B, C2).
     // Raised, never lowered for cost; a reply that is still all thinking is asked once more (turn/think-retry.js).
-    maxTokens:      8192,
+    maxTokens:      0,   // each model's own maximum, adapting (budget.replyCap); a number is a fixed cap
     systemPrompt:   DEFAULT_SYSTEM_PROMPT,
     maxSteps:       8,      // tool-call rounds per turn before we stop
     // Steps of real work the Orchestrator does in its own turn before the job moves to a work chat

@@ -158,6 +158,16 @@ const MIGRATIONS = [
   { id: '3.42-panel-mode-existing', note: 'admins\' screens that existed before the Focused view keep the whole panel (Extended); members start in Focused, one tap switches', steps: [{
     describe: 'panelMode = extended on every existing screen of someone holding host',
     run() { return require('./screens/panel-mode').markExisting() > 0; } }] },
+  // 3.109: "Longest reply" 0 is each model's own maximum, adapting, and the default (the owner, 2026-10-17). A stored 8192
+  // — the default until now — is lifted so it follows; a cap an owner chose stays theirs.
+  { id: '3.109-reply-cap-adapts', note: 'the longest reply is each model\'s own maximum unless its owner set a cap', steps: [{
+    describe: 'harness.config.doca.maxTokens = 8192 (the former default) removed',
+    run(p) {
+      const c = p.harness?.config?.doca;
+      if (!c || c.maxTokens !== 8192) return false;
+      delete c.maxTokens;
+      return true;
+    } }] },
 ];
 
 const appliedIn = p => new Set(Array.isArray(p?.migrations?.applied) ? p.migrations.applied : []);

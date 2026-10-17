@@ -46,7 +46,9 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t doca-hive:ci .
+      # Node from AWS's public mirror first, Docker Hub when that one refuses (both have anonymous quotas: Docker Hub hit
+      # 429 on 2026-10-09, AWS's "Data limit exceeded" twice on 2026-10-17) — one registry's quota never holds a release.
+      - run: docker build -t doca-hive:ci . || docker build --build-arg NODE_IMAGE=node:22-slim -t doca-hive:ci .
       - name: a hive from it
         env: { DOCA_HIVE_IMAGE: 'doca-hive:ci', DOCA_HIVE_BACKUPS: '${{ runner.temp }}/hive-backups' }
         run: |
