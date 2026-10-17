@@ -33,6 +33,15 @@ async function post(ep, body, signal, p) {
   body = require('./effort').dress(body);   // a `no_think` request says so in its prompt (turn/effort.js)
   let r = await send(body);
 
+  // A credit refusal for the reply cap (OpenRouter checks the whole possible reply up front: 128000 tokens of Opus refused
+  // with ninety dollars left, 2026-10-17): once more with the cap it says can be paid, never learned — credit moves.
+  if (r.status === 402) {
+    const detail = await r.text();
+    const afford = contracts.affordableFrom(detail);
+    if (afford && afford >= 1024 && afford < contracts.outputOf(body)) r = await send(contracts.capOutput(body, Math.floor(afford * 0.95)));
+    else throw Object.assign(new Error(budget.explain({ status: r.status, detail, ep, p })), { status: r.status, retryAfterMs: rateLimit.retryAfterMs(r.headers) });
+  }
+
   // Two blind retries, both cheaper than asking every user to know which
   // dialect their endpoint speaks. A 500 is looked at only for a thinking
   // effort, which a local server hands to the model's chat template.

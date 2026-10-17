@@ -114,9 +114,19 @@ function maxOutputFrom(detail) {
   return null;
 }
 
+/**
+ * The most reply tokens a credit refusal says can be paid for, or null — OpenRouter's 402: "This request requires more
+ * credits, or fewer max_tokens. You requested up to 128000 tokens, but can only afford 9070." Never learned: credit moves.
+ */
+function affordableFrom(detail) {
+  const m = String(detail || '').slice(0, 4000).match(/can only afford (\d+)/i);
+  const n = m && Number(m[1]);
+  return n > 0 && n < 1e8 ? n : null;
+}
+
 /** The reply cap a body asks for (either token field), or 0. */
 function outputOf(body) { return Number(body?.max_tokens ?? body?.max_completion_tokens) || 0; }
 
 function all() { return learned().providers; }
 
-module.exports = { forProvider, learn, forget, shape, capOutput, maxOutputFrom, outputOf, all, FIELDS };
+module.exports = { forProvider, learn, forget, shape, capOutput, maxOutputFrom, affordableFrom, outputOf, all, FIELDS };

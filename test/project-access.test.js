@@ -82,6 +82,14 @@ test('a member makes projects only in a folder of their own; a host changes an o
   assert.ok(own.root.startsWith(projects.ownFolder(member.user)), own.root);
   r = await as(member, 'POST', '/api/projects', { root: H.tmp });
   assert.equal(r.status, 403);
+  // A symlinked folder inside theirs is where it points (audit 2026-10-17): not a way out of their own folder.
+  if (process.platform !== 'win32') {
+    const link = path.join(projects.ownFolder(member.user), 'way-out');
+    fs.symlinkSync(H.tmp, link, 'dir');
+    r = await as(member, 'POST', '/api/projects', { root: link });
+    assert.equal(r.status, 403, JSON.stringify(r.body));
+    fs.unlinkSync(link);
+  }
   assert.equal((await as(member, 'DELETE', `/api/projects/${own.id}`)).status, 200, 'its owner may remove the record (the folder stays)');
   assert.ok(fs.existsSync(own.root));
 

@@ -51,18 +51,24 @@ function limits(p) {
  * already made): `null` (not ours — rethrow), `{ waitMs }` (wait and retry), or
  * `{ giveUp: true, waitMs }` (the provider asked for longer than we wait).
  */
+// OpenRouter's 402 when credit is held by requests still in flight ("Retry after in-flight requests complete"): it passes
+// as they finish, so it is waited out like a rate limit — an empty balance (QUOTA's words) still is not (2026-10-17).
+const IN_FLIGHT = /in-flight|in flight/i;
+
 function plan(e, attempt, p) {
-  if (Number(e?.status) !== 429 || QUOTA.test(String(e?.message || ''))) return null;
+  const status = Number(e?.status), msg = String(e?.message || '');
+  if (!(status === 429 && !QUOTA.test(msg)) && !(status === 402 && IN_FLIGHT.test(msg))) return null;
   const { tries, cap } = limits(p);
   if (attempt >= tries) return null;
   const hinted = Number.isFinite(e?.retryAfterMs) ? e.retryAfterMs : null;
   if (hinted !== null && hinted > cap) return { giveUp: true, waitMs: hinted };
   const waitMs = hinted !== null ? hinted : Math.min(cap, BASE_MS * 2 ** attempt + Math.floor(Math.random() * 250));
-  return { waitMs, hinted: hinted !== null, attempt: attempt + 1, tries };
+  return { waitMs, hinted: hinted !== null, attempt: attempt + 1, tries, status };
 }
 
-function notice({ who, model, waitMs, attempt, tries, hinted }) {
-  return `${who}${model ? ` / ${model}` : ''} is rate-limiting this panel (HTTP 429). Waiting ${Math.ceil(waitMs / 1000)}s`
+function notice({ who, model, waitMs, attempt, tries, hinted, status = 429 }) {
+  const what = status === 402 ? 'holds this request until its requests in flight finish (HTTP 402: credit reserved for them)' : 'is rate-limiting this panel (HTTP 429)';
+  return `${who}${model ? ` / ${model}` : ''} ${what}. Waiting ${Math.ceil(waitMs / 1000)}s`
     + `${hinted ? ', as it asked,' : ''} and trying again (${attempt} of ${tries}). The limit is ${who}'s; how many times `
     + 'and how long this panel waits are harness.config.doca.rateLimitRetries and .rateLimitMaxWaitMs. '
     + 'A refused request is not charged, so this does not cost twice.';

@@ -160,3 +160,13 @@ test('Stop ends a running shell command and skips the step\'s remaining calls (a
   assert.match(out, /turn was stopped/);
   assert.match(await tools.call('shell', { command: 'echo hi' }, [], { signal: ctrl.signal }), /^Not run: the turn was stopped/);
 });
+
+test('OpenRouter\'s 402 for credit held by requests in flight is waited out; an empty balance is not (2026-10-17)', () => {
+  const rateLimit = require('../modules/harness/turn/rate-limit');
+  const busy = Object.assign(new Error('openrouter refused this call (HTTP 402). This request would exceed your available credits given your current in-flight requests. Retry after in-flight requests complete.'), { status: 402 });
+  const r = rateLimit.plan(busy, 0, {});
+  assert.ok(r && r.waitMs > 0 && r.status === 402);
+  assert.match(rateLimit.notice({ who: 'openrouter', model: 'm', ...r }), /holds this request until its requests in flight finish \(HTTP 402/);
+  const broke = Object.assign(new Error('openrouter refused this call (HTTP 402). Insufficient credits: payment required.'), { status: 402 });
+  assert.equal(rateLimit.plan(broke, 0, {}), null, 'no credit at all ends the turn as before');
+});

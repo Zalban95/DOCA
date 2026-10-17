@@ -93,6 +93,8 @@ test('a set runs as real turns; the result names tools, steps and what regressed
   assert.equal(sum.pass, true, JSON.stringify(sum.checks));
   assert.match(sum.checks[1].why, /^judge: it gives the number/);
   assert.deepEqual(mem.tools, ['memory_write']);
+  assert.equal(mem.calls[0].name, 'memory_write');
+  assert.ok(mem.calls[0].args.length && mem.calls[0].result.length, 'each call keeps a clipped line of its arguments and its result');
   assert.equal(mem.steps, 2);
   assert.ok(mem.tokens > 0);
   assert.deepEqual(r.regressed, ['ask']);
@@ -193,4 +195,13 @@ test('comparing models, one judge grades them all — never the model under test
     assert.equal(asked[0].provider, 'judgeprov');
     assert.equal(asked[0].model, 'judge-model');
   } finally { agent.ask = real; delete process.env.DOCA_EVAL_JUDGE; }
+});
+
+test('the judge reads what the turn did — its calls — as well as what it answered (audit 2026-10-17)', async () => {
+  const agent = require('../modules/harness/agent'), real = agent.ask, asked = [];
+  agent.ask = async o => { asked.push(o); return 'PASS read it'; };
+  try {
+    await require('../modules/evals/check').one({ judge: 'reads the skill' }, 'q', { text: 'Built.', calls: [{ name: 'skill', args: '{"action":"read","name":"android-app"}' }] });
+    assert.match(asked[0].user, /Tools it called, in order:\n1\. skill \{"action":"read","name":"android-app"\}/);
+  } finally { agent.ask = real; }
 });

@@ -13,6 +13,8 @@ const path = require('path');
 const HOME = os.homedir();
 
 /** A Linux package by its name in each family, installed with whichever manager this machine has. */
+const PF = process.env.ProgramFiles || 'C:\\Program Files';   // a Windows program's folder, for rows found by their files
+
 function pkg({ apt, dnf = apt, pacman = apt }) {
   return `if command -v apt-get >/dev/null 2>&1; then sudo apt-get update && sudo apt-get install -y ${apt}; `
     + `elif command -v dnf >/dev/null 2>&1; then sudo dnf install -y ${dnf}; `
@@ -222,6 +224,32 @@ const SYSTEM_TOOLS = [
     detect: { bin: 'virsh', args: ['--version'] }, note: 'KVM virtual machines in the VMs tab. VirtualBox, Hyper-V, UTM and Parallels are found on their own.',
     repo: 'https://libvirt.org', repoLabel: 'libvirt.org',
     install: { linux: pkg({ apt: 'libvirt-clients libvirt-daemon-system qemu-kvm', dnf: '@virtualization', pacman: 'libvirt qemu-full' }) }, needsSudo: true },
+
+  // ── 3D and real-time engines: the editors their MCP servers drive (mcp/catalog-engines.js; skills unity, unreal-engine).
+  // Found by their files, never by starting them: each is a desktop application.
+  { id: 'blender', label: 'Blender', category: 'optional', for: '3D modelling and renders (Blender\'s MCP server, product videos)',
+    detect: { any: [{ bin: 'blender', args: ['--version'] }, { file: '/Applications/Blender.app' }, { file: path.join(PF, 'Blender Foundation') }] },
+    note: 'Open-source 3D: modelling, materials, animation, rendering. The MCP tab connects it once its add-on runs in Blender.',
+    repo: 'https://www.blender.org/download/', repoLabel: 'blender.org',
+    install: { linux: pkg({ apt: 'blender' }), darwin: brew('blender', true), win32: winget('BlenderFoundation.Blender') }, needsSudo: true },
+  { id: 'unity-hub', label: 'Unity Hub', category: 'optional', for: 'Unity (its editors and projects; Unity\'s MCP servers)',
+    detect: { any: [{ file: '/opt/unityhub/unityhub' }, { file: '/Applications/Unity Hub.app' }, { file: path.join(PF, 'Unity Hub', 'Unity Hub.exe') }] },
+    note: 'Installs Unity\'s editors and opens projects: real-time 3D for configurators, walkthroughs, simulations, VR and AR as much as games. Free for personal use; Unity\'s plans for companies. Signing in is yours.',
+    repo: 'https://unity.com/download', repoLabel: 'unity.com',
+    install: { linux: 'command -v apt-get >/dev/null || { echo "Unity Hub\'s Linux packages are for Ubuntu and Debian: https://unity.com/download"; exit 1; }; '
+      + 'sudo install -d /etc/apt/keyrings && curl -fsSL https://hub.unity3d.com/linux/keys/public | sudo gpg --dearmor --yes -o /etc/apt/keyrings/unityhub.gpg && '
+      + 'printf "Types: deb\\nURIs: https://hub.unity3d.com/linux/repos/deb\\nSuites: stable\\nComponents: main\\nSigned-By: /etc/apt/keyrings/unityhub.gpg\\n" | sudo tee /etc/apt/sources.list.d/unityhub.sources >/dev/null && '
+      + 'sudo apt-get update && sudo apt-get install -y unityhub', darwin: brew('unity-hub', true), win32: winget('Unity.UnityHub') }, needsSudo: true },
+  { id: 'epic-launcher', label: 'Epic Games Launcher (Unreal Engine)', category: 'optional', for: 'Unreal Engine (its versions; Epic\'s Unreal MCP)',
+    detect: { any: [{ file: '/Applications/Epic Games Launcher.app' }, { file: path.join(PF, 'Epic Games') }, { file: path.join(process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)', 'Epic Games') }] },
+    note: 'Installs Unreal Engine versions on Windows and macOS: archviz, virtual production, simulation and digital twins as much as games. On Linux, Unreal comes from Epic\'s Linux download or its source (an Epic account linked to GitHub). Free until a product earns over Epic\'s threshold.',
+    repo: 'https://www.unrealengine.com/download', repoLabel: 'unrealengine.com',
+    install: { darwin: brew('epic-games', true), win32: winget('EpicGames.EpicGamesLauncher') } },
+  { id: 'godot', label: 'Godot', category: 'optional', for: 'open-source real-time 2D and 3D',
+    detect: { any: [{ bin: 'godot', args: ['--version'] }, { bin: 'godot4', args: ['--version'] }, { file: '/Applications/Godot.app' }] },
+    note: 'An open-source engine (MIT) for 2D and 3D: interactive tools and visualisations as much as games.',
+    repo: 'https://godotengine.org/download/', repoLabel: 'godotengine.org',
+    install: { linux: 'command -v flatpak >/dev/null || { echo "Flatpak is needed for Godot here, or take it from https://godotengine.org/download/"; exit 1; }; flatpak install -y --user flathub org.godotengine.Godot', darwin: brew('godot', true), win32: winget('GodotEngine.GodotEngine') } },
 
   // ── For building DOCA's own apps (DocaMobile, DocaWear, DocaDesk) ──
   { id: 'jdk', label: 'Java (JDK 17+)', category: 'clients', for: 'DocaMobile, DocaWear',

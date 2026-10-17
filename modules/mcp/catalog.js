@@ -55,6 +55,8 @@ const CATALOG = [
     transport: 'http', url: 'http://localhost:5678/mcp/your-workflow-path', headers: {}, key: 'n8n', needs: [] },
   // Suggested, never default: open-source creative apps, each its own server (catalog-craft.js).
   ...require('./catalog-craft').ROWS,
+  // Blender, Unity and Unreal — the maker's server and an open one beside it (catalog-engines.js).
+  ...require('./catalog-engines').ROWS,
 ];
 
 /** The first of a server's addresses that answers at all (any HTTP status), else its default. */
@@ -104,7 +106,7 @@ async function add(id) {
   const done = await module.exports.setup(c);   // through exports, so a test can stand in for the download
   if (!done.ok) throw Object.assign(new Error(`Setting up ${c.label} failed (${(c.setup || []).join(' ')}):\n${done.log.trim().split('\n').slice(-6).join('\n')}`), { status: 500 });
   if (c.transport === 'http') return require('./registry').upsert({ id: c.id, label: c.label, transport: 'http', url: await module.exports.nearest(c), headers: { ...c.headers }, ...(c.key ? { key: c.key } : {}), autostart: false });
-  return require('./registry').upsert({ id: c.id, label: c.label, transport: 'stdio', command: c.command, args: c.args, autostart: false });
+  return require('./registry').upsert({ id: c.id, label: c.label, transport: 'stdio', command: c.command, args: c.args, ...(c.env ? { env: { ...c.env } } : {}), autostart: false });
 }
 
 module.exports = { CATALOG, get, list, add, setup, nearest };

@@ -11,6 +11,7 @@ const INSTALL_SIZES = {
   'tool:llama-server': 'about 50–200 MB', 'tool:nvidia-ctk': 'about 10 MB', 'tool:uv': 'about 15 MB', 'tool:restic': 'about 25 MB', 'tool:ffmpeg': 'about 80 MB',
   'tool:poppler': 'about 15 MB', 'tool:ghostscript': 'about 40 MB',
   'tool:python3': 'about 30 MB', 'tool:pip': 'about 10 MB', 'tool:huggingface-cli': 'about 10 MB', 'tool:tesseract': 'about 30 MB',
+  'tool:blender': 'about 350 MB', 'tool:unity-hub': 'about 300 MB (each Unity editor it installs is 5–15 GB more)', 'tool:epic-launcher': 'about 200 MB (each Unreal Engine version it installs is 40–60 GB more)', 'tool:godot': 'about 150 MB',
   'tool:opencv': 'about 60 MB', 'tool:catt': 'about 10 MB', 'tool:libvirt': 'about 100 MB', 'tool:jdk': 'about 200 MB',
   'tool:jdk11': 'about 200 MB', 'tool:jdk21': 'about 200 MB', 'tool:android-sdk': 'about 1 GB', 'tool:android-emulator': 'about 2 GB',
   'tool:dotnet': 'about 250 MB',
