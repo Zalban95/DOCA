@@ -42,7 +42,7 @@ function _usersPeopleCard() {
     lvl.appendChild(sel);
     const status = Object.assign(document.createElement('td'), { textContent: p.suspended ? 'suspended' : p.status });
     const sess = Object.assign(document.createElement('td'), { textContent: !p.sessions ? 'not now' : `${p.sessions} session${p.sessions === 1 ? '' : 's'}` });   // a lone number read as nothing (b22)
-    const act = document.createElement('td');
+    const act = Object.assign(document.createElement('td'), { style: 'white-space:nowrap' });   // one line: stacked, five buttons made each row 140 px tall on a phone
     const b = (t, title, fn) => act.appendChild(Object.assign(document.createElement('button'), { className: 'btn btn-xs', textContent: t, title, onclick: fn }));
     b(p.suspended ? 'Restore' : 'Suspend', p.suspended ? 'Let them sign in again' : 'Sign them out and stop them signing in', () => _usersPatch(p.id, { suspended: !p.suspended }));
     b('Reset password', 'A new one-time password, shown once', () => appConfirm(`Give ${p.email} a new one-time password? Their sessions end.`, async () => {
