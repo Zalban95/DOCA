@@ -1275,6 +1275,20 @@ The harness gives its agent eight rules for working on any repository (charter r
 - A server that fails to start answers **200 with `ok: false`** and its stderr in `/api/mcp/:id/log`, because the panel wants to draw that, not catch it. Unknown *servers* are still 404.
 - **A click on the MCP page is seen at once** (`public/js/mcp-feedback.js`, since the self-test of 2026-10-08, where Accept and Connect looked the same whether a click landed or not): the pressed button goes busy ("Accepting…", "Connecting…") and cannot be pressed twice, and the row that changed is brought into view and lit once with its line saying what happened. An HTTP server that cannot be reached is said as which server, where, why and what to check (`mcp/reach-error.js`), Node's own "fetch failed" kept at the end.
 - **A catalogue of servers the panel knows how to add** (since 2.158.0, `mcp/catalog.js`; MCP tab → "From the catalogue"): Playwright (a headless browser driven by accessibility refs) and Chrome DevTools, each a fixed command with an optional one-time `setup` (Playwright's `install-browser`) run before it is added, off until started. The agent asks with `install_propose {kind: "mcp", id}` and never supplies a command — the same property the other install kinds keep. A test stands in for `catalog.setup` so no suite downloads a browser.
+- **Blender, Unity and Unreal are catalogue rows, the maker's server and an open one side by side** (since 3.108.0,
+  `mcp/catalog-engines.js`; asked 2026-10-17 — "amazing tools for many projects", not only games): `blender`
+  (blender-mcp), `unity` (Unity's relay `~/.unity/relay/relay_<os> --mcp`: Unity 6, Unity Cloud, a Unity AI subscription;
+  `present()` looks for the relay), `mcp-for-unity` (CoplayDev, MIT, Unity 2021.3–6, by uvx), `unreal` (Epic's Unreal MCP
+  inside the 5.8 editor, http, loopback only — added at `127.0.0.1:8010/mcp` because its default 8000 is the panel's own
+  speech-to-text) and `enginewire` (MIT, UE 5.0–5.8, by npx, `env` `UE_PROJECT_PATH` left for the person: `catalog.add`
+  now carries a row's `env`). uvx rows are pinned too (`name@x.y.z` or `--from name==x.y.z`; the pin test reads both).
+  A server runs where its editor runs: another machine's editor is reached through that machine's client hosting it.
+  The skills `unity` and `unreal-engine` say which server, the editor's side, the loop (read, one change, compile, save,
+  look) and the traps (assets moved only in the editor, never a `.uasset` edited as a file, builds from the command line).
+  System tools rows `blender`, `unity-hub` (apt repository on Linux), `epic-launcher` (Windows and macOS) and `godot` are
+  found by their files, never by starting a desktop app; Software for a job has "Real-time 3D and interactive" (Unity,
+  Unreal Engine, Godot), and a row whose program is missing offers its maker's page unless the catalogue can install it
+  (`installable`, the Craft suite) — its Connect passes the row's own transport, so Unreal's opens its address form.
 - **The Craft App Suite, suggested** (2026-10-12, `mcp/catalog-craft.js`, `skills/craft-apps`): twelve open-source creative
   apps (ArtCraft, Apache-2.0, github.com/storytold — PhotoCraft, VectorCraft, FilmCraft, LightCraft, PdfCraft,
   EffectCraft, DesignCraft, WordCraft, SoundCraft, DeckCraft, CADCraft, GridCraft), each a catalogue row `<app>-cli mcp`
