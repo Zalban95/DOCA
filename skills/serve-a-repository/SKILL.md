@@ -56,6 +56,10 @@ A server never exits, so it never runs as a plain call.
 - **Here:** `project` run with the command's name when the project lists it, otherwise `shell` with
   `background: true`. Follow it with `shell_job` output until it prints its address ("Local: http://localhost:5173",
   "Listening on :3000", "Running on http://127.0.0.1:8000").
+  Keep it on this machine only — 127.0.0.1, most frameworks' default: the preview (step 5) reaches the person's phone
+  from there. Never open a server here to every network (`0.0.0.0`, `--host`) so a phone or a computer can reach it:
+  that also puts it on the local network with no sign-in. An agents' computer that must test it gets its own copy
+  (`computer` put, or a clone inside it) and serves it on its page port, as below.
 - **In a computer:** the person reaches only its **page port, 8080**, and only when the server listens on
   **0.0.0.0** (a server on 127.0.0.1 inside the container answers nobody outside it). Set both with the framework's
   own flags or `PORT=8080` / `HOST=0.0.0.0` — Vite: `-- --host 0.0.0.0 --port 8080`; Next: `-- -H 0.0.0.0 -p 8080`;
