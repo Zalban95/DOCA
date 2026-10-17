@@ -36,10 +36,16 @@ function outcomeOf(sessionId, r, error, seen = {}) {
   const memory = require('../harness/memory');
   const rows = memory.messages(sessionId);
   const tools = rows.filter(x => x.role === 'assistant' && Array.isArray(x.tool_calls)).flatMap(x => x.tool_calls.map(c => c.function?.name)).filter(Boolean);
+  // Each call with a clipped line of its arguments and of its result (audit 2026-10-17: with names alone, why a model
+  // proposed the same setting twice could not be told). Results are a host's and hold answers already.
+  const clip = (v, n) => { const t = String(v ?? '').replace(/\s+/g, ' ').trim(); return t.length > n ? `${t.slice(0, n - 1)}…` : t; };
+  const results = new Map(rows.filter(x => x.role === 'tool').map(x => [x.tool_call_id || x.name, x.content]));
+  const calls = rows.filter(x => x.role === 'assistant' && Array.isArray(x.tool_calls)).flatMap(x => x.tool_calls)
+    .map(c => ({ name: c.function?.name, args: clip(c.function?.arguments, 160), result: clip(results.get(c.id || c.function?.name), 200) }));
   const run = r?.runId ? require('../harness/runs').get(r.runId) : null;
   // Work chats it handed work to — made during this case: a fresh Orchestrator inherits the last one's (memory.resetMain).
   const children = memory.listSessions().sessions.filter(x => x.parentId === sessionId && (!seen.since || x.createdAt >= seen.since)).length;
-  return { text: r?.text || '', tools, steps: r?.steps ?? run?.steps ?? null, tokens: r?.usage?.totalTokens ?? run?.tokens ?? null,
+  return { text: r?.text || '', tools, calls, steps: r?.steps ?? run?.steps ?? null, tokens: r?.usage?.totalTokens ?? run?.tokens ?? null,
     ...spent(r?.runId || run?.id), firstMs: seen.firstMs ?? null, children,
     ms: run?.endedAt ? new Date(run.endedAt) - new Date(run.startedAt) : null, state: error ? 'failed' : r?.ended || 'done', error: error?.message || null };
 }
