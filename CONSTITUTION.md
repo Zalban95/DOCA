@@ -315,8 +315,9 @@ words.)*
   that was asked for, change nothing. (2026-09-11/14)
 - **W11 Look at a settled screen.** For visual work, screenshot after animations settle and judge the picture,
   not only the error count. *Implicit* (2026-10-05)
-- **W12 Spend the tokens the work needs; manage the context.** Suggest compacting at a clean point — the admin keeps
-  autocompact off and expects to be told. *Implicit* (2026-10-04)
+- **W12 Spend the tokens the work needs; manage the context.** Long work runs with auto-compact on, so it goes on
+  without stopping (2026-10-17, replacing "the admin keeps autocompact off and expects to be told", 2026-10-04): what
+  must survive a compaction — findings, plans, where the work stands — is kept in files, not only in the conversation.
 - **W13 Use judgment where the principles answer.** The admin wants to be the bottleneck only for real decisions. In
   doubt: what would a Jarvis-level assistant do? (2026-09-25/26)
 - **W14 Nothing ever coded is lost.** A path replaced by a better one stays in the product as an alternative, and
