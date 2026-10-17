@@ -373,6 +373,7 @@ The harness gives its agent eight rules for working on any repository (charter r
   per task try. Teammates read the newest four in their per-step readings (`teams/readings.js`, never the cached
   prefix), each framed by `untrusted.frame()` as a teammate's words, not instructions. Not agent-to-agent messaging:
   nobody is woken. Neither tool is in `approval.FREE` (S11); `risk/rules.js` rates both work in the hive.
+- **A task that names a test is done when it passed** (2026-10-17: four tasks of a game team were "done" with `npm test` never run): a hub task whose test was never run, or was run before a later change, is not done (`engine.js`, verdict `untested`) — it goes back once to its specialist in the same place, with "## Run your test" saying exactly what is missing, whether or not the team keeps going (`testAsked`); a test that ran and failed is a failure as before, and an outside harness (no exit codes to read) and a try keep the old rule. The team tool asks for the project's test on every task that writes code, and a testing task of its own when the person asks for testing.
 - **Keep going** (the board's switch, `team keep_going`, or `/loop until-done` in the leading chat; `/loop stop` turns
   it off): a failed task is dispatched again with why the last try failed, one round each, up to `teams.maxRounds`
   (3, not proposable) or the team's own `max_rounds`; then the team ends failed. **Stop** cancels every running task

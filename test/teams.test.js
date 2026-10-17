@@ -40,6 +40,8 @@ before(async () => {
       if (note && !ids.includes('team_note')) return sse(res, call(`n${bodies.length}`, 'team_note', { text: `${note[1].replace(/_/g, ' ')}` }));
       const file = write?.[1] || (write2 && /## Try 2/.test(errand) ? write2[1] : null);
       if (file && !ids.includes('write_file')) return sse(res, call(`w${bodies.length}`, 'write_file', { path: file, content: 'made' }));
+      const runtest = /RUNTEST:(\S+)/.exec(errand);   // runs its test only when sent back to (## Run your test)
+      if (runtest && /## Run your test/.test(errand) && !ids.includes('shell')) return sse(res, call(`s${bodies.length}`, 'shell', { command: runtest[1] }));
       void done;
       return sse(res, { content: `Finished: ${errand.split('\n')[0].slice(0, 60)}` });
     });
@@ -50,6 +52,7 @@ before(async () => {
   const registry = require('../modules/agents/registry');
   registry.setEnabled(true);
   for (const id of ['builder', 'checker']) registry.save({ id, label: id === 'builder' ? 'Builder' : 'Checker', role: `You are the ${id}.`, kits: ['files'], maxSteps: 6 });
+  registry.save({ id: 'runner', label: 'Runner', role: 'You are the runner.', kits: ['files', 'shell'], maxSteps: 6 });
 });
 after(async () => { server.closeAllConnections(); await new Promise(r => server.close(r)); require('../modules/agents/registry').setEnabled(false); await H.stop(); });
 
@@ -236,4 +239,17 @@ test('a task may name the one before it by its title, or a word only one title h
   assert.throws(() => shape({ title: 'Page', tasks: [
     { id: 't1', agent: 'coder', title: 'One', task: 'a' }, { id: 't2', agent: 'coder', title: 'Two', task: 'b', after: ['nothing'] }] }),
   /Name one by its id: t1 "One", t2 "Two"/);
+});
+
+test('a task that names a test is not done until it ran it: sent back once to run it, then done', async () => {
+  const made = await teams().create({ title: 'Tested', goal: 'A file, proven by its test', tasks: [
+    { id: 'make', agent: 'runner', title: 'Make it', task: 'Make it. WRITE:team-tested.txt RUNTEST:true', test: 'true', done: 'its test passes', check: { file: 'team-tested.txt' } },
+  ] }, { by: lead() });
+  await until(() => (task(made.id, 'make').state === 'done' ? true : null), 20000, 'the task to be done after it ran its test');
+  const t = teams().get(made.id).tasks.find(x => x.id === 'make');
+  assert.equal(t.testAsked, true, 'it was sent back once');
+  assert.equal(t.tries.length, 1);
+  assert.match(t.tries[0].why, /`true` was never run/);
+  assert.match(task(made.id, 'make').why, /`true` passed/);
+  assert.ok(bodies.some(b => JSON.stringify(b.messages).includes('## Run your test')), 'the errand said what was missing');
 });
