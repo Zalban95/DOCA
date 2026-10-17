@@ -1,0 +1,23 @@
+{
+  "about": "Copy this to docs/plan.json and make it the game's plan: every world, enemy, item, boss, sound, tune, picture and story beat. Then run node scripts/plan.js. npm test lists what is still missing (todo); npm run test:full fails until all of it is real.",
+  "worlds": [
+    { "folder": "world1", "name": "Green Hills", "levels": 3, "tiles": "w1", "sky": "sky", "music": "world1", "new": "slimes, first gaps" },
+    { "folder": "world2", "name": "Crystal Caves", "levels": 3, "tiles": "w2", "sky": "sky-w2", "music": "world2", "new": "bats, moving platforms" },
+    { "folder": "world3", "name": "Sky Fortress", "levels": 3, "tiles": "w3", "sky": "sky-w3", "music": "world3", "new": "cannons, springs, the boss" }
+  ],
+  "enemies": [
+    { "name": "slime", "does": "walks, turns at walls and ledges; stomp it" },
+    { "name": "bat", "does": "flies in a wave; stomp it" }
+  ],
+  "items": [
+    { "name": "gem", "does": "500 points; three hidden in every level" },
+    { "name": "feather", "does": "double jump for the rest of the level" }
+  ],
+  "bosses": [
+    { "name": "golem", "does": "three hits; charges, then rests; guards the last exit" }
+  ],
+  "textures": ["player", "slime", "bat", "gem", "feather", "golem", "ground-w2", "sky-w2", "ground-w3", "sky-w3"],
+  "sounds": ["jump", "coin", "stomp", "hit", "powerup", "win", "lose"],
+  "tunes": ["menu", "world1", "world2", "world3", "boss"],
+  "story": ["intro", "world2", "world3", "ending"]
+}
