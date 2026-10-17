@@ -93,6 +93,8 @@ test('a set runs as real turns; the result names tools, steps and what regressed
   assert.equal(sum.pass, true, JSON.stringify(sum.checks));
   assert.match(sum.checks[1].why, /^judge: it gives the number/);
   assert.deepEqual(mem.tools, ['memory_write']);
+  assert.equal(mem.calls[0].name, 'memory_write');
+  assert.ok(mem.calls[0].args.length && mem.calls[0].result.length, 'each call keeps a clipped line of its arguments and its result');
   assert.equal(mem.steps, 2);
   assert.ok(mem.tokens > 0);
   assert.deepEqual(r.regressed, ['ask']);
