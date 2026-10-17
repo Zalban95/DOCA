@@ -19,10 +19,14 @@ const engine = require('./engine');
 const bad = (m, status = 400) => Object.assign(new Error(m), { status });
 const MAX_TASKS = 12, NOTE_MAX = 400, NOTES_KEEP = 60, NOTES_PER_TRY = 8;
 
-/** Check what the leader asked for, and shape it into tasks. Throws a sentence that says what to fix. */
-function shape({ title, goal, tasks, context } = {}, { workChats = false, project = false } = {}) {   // workChats: its leader may make work chats (harness/org-depth.js)
+/**
+ * Check what the leader asked for, and shape it into tasks. Throws a sentence that says what to fix. `known`: the tasks
+ * already on the board when more are added (add) — new ids must differ from theirs, and `after` may name them.
+ */
+function shape({ title, goal, tasks, context } = {}, { workChats = false, project = false, known = [] } = {}) {   // workChats: its leader may make work chats (harness/org-depth.js)
   if (!String(title || '').trim()) throw bad('A team needs a title.');
   if (!Array.isArray(tasks) || !tasks.length) throw bad('A team needs at least one task.');
+  tasks = tasks.map((t, i) => (t && typeof t === 'object' && t.id == null ? { ...t, id: `t${known.length + i + 1}` } : t));   // added ones go on from the board's
   const both = tasks.find(t => Number(t?.count) > 1 && Number(t?.tries) > 1);
   if (both) throw bad(`Task ${both.id || ''}: count makes several workers share a plan; tries makes several attempts at one task and keeps the best. Use one.`.replace('  ', ' '));
   tasks = require('./outside').expand(tasks);   // count: several alike (an outside harness's "5 on Opus")
@@ -30,8 +34,10 @@ function shape({ title, goal, tasks, context } = {}, { workChats = false, projec
   tasks = require('./tries').expand(tasks, { project });   // tries: several attempts at one task, the best kept (tries.js)
   if (tasks.length > MAX_TASKS * 2) throw bad(`A team runs at most ${MAX_TASKS * 2} tasks and tries together; ask for fewer tries.`);
   const registry = require('../agents/registry');
+  const knownIds = new Set(known.map(k => k.id));
   const out = tasks.map((t, i) => {
     const id = String(t?.id || `t${i + 1}`).trim().slice(0, 20);
+    if (knownIds.has(id)) throw bad(`Task ${id} is already on this team's board; give the new task another id.`);
     if (!/^[A-Za-z0-9_-]{1,20}$/.test(id)) throw bad(`Task ids are letters, digits, _ and - ("${id}").`);
     const agent = String(t?.agent || '').trim();
     let extra = {};
@@ -57,30 +63,49 @@ function shape({ title, goal, tasks, context } = {}, { workChats = false, projec
   if (taskIds.size !== out.length) throw bad('Two tasks have the same id.');
   // A task with tries is named by its own id: `after: ["t1"]` waits for the try that is kept (tries.js).
   const groupOf = new Map();
-  for (const t of out) if (t.trial) groupOf.set(t.trial.of, [...(groupOf.get(t.trial.of) || []), t.id]);
-  const ids = new Set([...taskIds, ...groupOf.keys()]);
+  for (const t of [...known, ...out]) if (t.trial) groupOf.set(t.trial.of, [...(groupOf.get(t.trial.of) || []), t.id]);
+  const ids = new Set([...taskIds, ...knownIds, ...groupOf.keys()]);
   // `after` names a task by its id; a title, or a word only one title holds, means that task too (the 2026-10-14 demo: a
   // model wrote after: ["text"] four times for the task titled "Improve the page's text", and ran out of steps).
   const low = v => String(v).trim().toLowerCase();
   const idOf = a => {
     if (ids.has(a)) return a;
-    const exact = out.filter(x => !x.trial && low(x.title) === low(a));
+    const all = [...known, ...out];
+    const exact = all.filter(x => !x.trial && low(x.title) === low(a));
     if (exact.length === 1) return exact[0].id;
-    const within = out.filter(x => !x.trial && low(a) && low(x.title).includes(low(a)));
+    const within = all.filter(x => !x.trial && low(a) && low(x.title).includes(low(a)));
     return within.length === 1 ? within[0].id : null;
   };
-  const named = out.map(x => `${x.id} "${x.title}"`).join(', ');
+  const named = [...known, ...out].filter(x => !x.trial).map(x => `${x.id} "${x.title}"`).join(', ');
   for (const t of out) t.after = [...new Set(t.after.map(a => idOf(a) || a))];
   for (const t of out) for (const a of t.after) {
     if (!ids.has(a)) throw bad(`Task ${t.id} comes after "${a}", which is not a task of this team. Name one by its id: ${named}.`);
     if (a === t.id || a === t.trial?.of) throw bad(`Task ${t.id} cannot come after itself.`);
   }
-  // No cycles: every task must be reachable by finishing the ones before it.
-  const done = new Set();
+  // No cycles: every task must be reachable by finishing the ones before it (those already on the board can be).
+  const done = new Set(knownIds);
   const met = a => (groupOf.has(a) ? groupOf.get(a).every(x => done.has(x)) : done.has(a));
   for (let changed = true; changed;) { changed = false; for (const t of out) if (!done.has(t.id) && t.after.every(met)) { done.add(t.id); changed = true; } }
-  if (done.size !== out.length) throw bad(`These tasks wait on each other in a circle: ${out.filter(t => !done.has(t.id)).map(t => t.id).join(', ')}.`);
+  if (done.size !== out.length + knownIds.size) throw bad(`These tasks wait on each other in a circle: ${out.filter(t => !done.has(t.id)).map(t => t.id).join(', ')}.`);
   return { title: String(title).trim().slice(0, 120), goal: String(goal || '').trim().slice(0, 1000), context: String(context || '').slice(0, 20000), tasks: out };
+}
+
+/**
+ * A contract that already holds before any work proves nothing (2026-10-17: a game's four tasks were "done" on checks
+ * like {file: "src/story.js", contains: "ending"} that the leader's own scaffold already met). A task with no test and
+ * no tries whose checks are all files, every one there already, is refused with how to give it a real one.
+ */
+async function provesNothing(tasks, cwd) {
+  if (!cwd) return;
+  const pc = require('../harness/plan-contracts');
+  for (const t of tasks) {
+    const checks = [t.contract?.check, ...(t.checks || [])].filter(Boolean);
+    if (t.test || t.trial || !checks.length || !checks.every(c => c.file && !require('../checks').kind(c))) continue;
+    const held = await Promise.all(checks.map(c => pc.verify({ check: c }, { cwd }).catch(() => ({ ok: false }))));
+    if (held.every(r => r.ok)) throw bad(`Task ${t.id}: its check already holds before any work (${held.map(r => r.why).join('; ')}), so it proves nothing. `
+      + 'Give it one that fails until the work is done — a test (test: "npm test", with a test that fails now), a file or words that do not exist yet, '
+      + 'a page that shows what the task makes ({page, selector}) — or leave the check out and say "done when" in words.');
+  }
 }
 
 /** Make a team led by conversation `by`, and start every task with nothing before it. */
@@ -96,6 +121,7 @@ async function create(args, { by, keepGoing = false, maxRounds = null, asked = f
     const root = require('./place').rootOf({ projectId: project.id, by }) || project.root;
     if (!require('fs').existsSync(require('path').join(root, '.git'))) throw bad(`Tries each work in a git worktree of their own, and the project ${project.name} is not a git repository.`);
   }
+  await provesNothing(shaped.tasks, project ? require('./place').rootOf({ projectId: project.id, by }) || project.root : null);
   const started = require('./outside').gate(shaped.tasks, { asked, person, project, by });   // 'asked', 'free' (its switch) or null
   if (shaped.tasks.some(t => t.agent !== 'work' && !require('./outside').isOutside(t.agent)) && !require('../agents/registry').enabled())
     throw require('../agents/off')('Specialist agents are switched off (agents.enabled). Ask the person to turn them on.');
@@ -108,6 +134,30 @@ async function create(args, { by, keepGoing = false, maxRounds = null, asked = f
   if (started === 'free') require('../activity').note({ from: 'teams', sessionId: by, what: `the Orchestrator started ${[...new Set(team.tasks.filter(t => require('./outside').isOutside(t.agent)).map(t => t.agent))].join(', ')} on its own for team "${team.title}"`,
     why: 'its switch is "On its own" (Settings → Harnesses → CLI harnesses → On a team)' });
   return engine.advance(team.id);
+}
+
+/**
+ * More tasks on a team's board — the fixes a review found, the next phase — led by the same conversation. A team that
+ * ended runs again; a stopped one does not (a person ended it). The new tasks may come after any task on the board.
+ */
+async function add(id, args = {}, { by, asked = false, person = null } = {}) {
+  const team = store.get(id);
+  if (!team) throw bad(`No team called "${id}".`, 404);
+  if (team.stoppedAt) throw bad('This team was stopped. Make a new one to carry on.', 409);
+  if (team.archivedAt) throw bad('This team is put away. Bring it back from the Archive first, or make a new one.', 409);
+  const org = require('../harness/organization');
+  const project = team.projectId ? require('../projects/store').get(team.projectId) : null;
+  const shaped = shape({ title: team.title, tasks: args.tasks }, { workChats: !org.mayCreate(by || team.by, 'work'), project: !!project, known: team.tasks });
+  if (team.tasks.length + shaped.tasks.length > MAX_TASKS * 3) throw bad(`A team's board holds at most ${MAX_TASKS * 3} tasks; make a new team for the next part.`);
+  await provesNothing(shaped.tasks, require('./place').rootOf(team));
+  require('./outside').gate(shaped.tasks, { asked, person, project, by: team.by });
+  await engine.serial(id, () => {
+    const now = store.get(id);
+    now.tasks.push(...shaped.tasks);
+    store.save(now);
+  });
+  require('./announce').line(team, `${shaped.tasks.length} more task${shaped.tasks.length === 1 ? '' : 's'}: ${shaped.tasks.map(t => `${t.id} ${t.agent}${t.after.length ? ` after ${t.after.join(', ')}` : ''}`).join('; ')}`);
+  return engine.advance(id);
 }
 
 /** The board as every reader draws it. */
@@ -240,5 +290,5 @@ function listen() {
   }
 }
 
-module.exports = { create, view, stop, keepGoing, archive, note, forMission, visible, ledBy, listen, get: store.get, list: store.list,
+module.exports = { create, add, view, stop, keepGoing, archive, note, forMission, visible, ledBy, listen, get: store.get, list: store.list,
   shape, advance: engine.advance, MAX_TASKS, NOTE_MAX };

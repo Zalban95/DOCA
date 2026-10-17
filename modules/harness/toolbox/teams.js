@@ -23,7 +23,8 @@ module.exports = [
     name: 'team',
     description: 'Run a team: several errands for specialists at once, some waiting on others, each with a contract — the hub '
       + 'dispatches each task when the tasks it comes after are done, checks its contract when it finishes, and keeps a '
-      + 'living document of the board. create makes one (title, goal, tasks); status reads one; stop ends every task; '
+      + 'living document of the board. create makes one (title, goal, tasks); add puts more tasks on a team you lead — the '
+      + 'fixes a review found, the next phase — and a team that ended runs again; status reads one; stop ends every task; '
       + 'keep_going on tries failed tasks again until every contract holds or its rounds run out; merge merges a task\'s branch into '
       + 'the project\'s current branch. The Orchestrator and any conversation it leads make teams — a project\'s chats too, for their project; '
       + 'a conversation a project\'s chat made (level 3) makes none. You do not dispatch a team\'s tasks yourself, and you are not blocked: carry on, and read status when you need it. '
@@ -33,19 +34,19 @@ module.exports = [
     parameters: {
       type: 'object',
       properties: {
-        action: { type: 'string', enum: ['create', 'status', 'stop', 'keep_going', 'merge', 'pick'] },
+        action: { type: 'string', enum: ['create', 'add', 'status', 'stop', 'keep_going', 'merge', 'pick'] },
         try: { type: 'integer', description: 'pick: which try of the task (task) to keep instead of the one the checks chose.' },
         asked: { type: 'boolean', description: 'create: true only when the person named the outside harness in their own words — "use Claude Code", "5 Claude on Opus", "with dsh" — or said yes, on this turn, to your offer that named it ("run it with mini-swe-agent?" — "yes"). Never on your own initiative.' },
         task: { type: 'string', description: 'merge: the task whose branch goes into the project\'s current branch (a try is <id>-try<N>). pick: the task tried several times.' },
-        team: { type: 'string', description: 'status, stop, keep_going: the team id (status without one lists your teams).' },
+        team: { type: 'string', description: 'add, status, stop, keep_going: the team id (status without one lists your teams).' },
         title: { type: 'string', description: 'create: a short name, e.g. "Landing page".' },
         goal: { type: 'string', description: 'create: what the whole team delivers, in a sentence.' },
         context: { type: 'string', description: 'create: what every task needs from this conversation; specialists see nothing else.' },
         project: { type: 'string', description: 'create: the project it works on, by id or name (default: the one this conversation works in). Every task works in it — a task that changes files while another does gets a git worktree of its own (branch team/<title>/<task>) — and the team\'s document is one of its pages.' },
         tasks: {
           type: 'array',
-          description: 'create: 1–12 tasks. Independent tasks run at once; a task with `after` waits until those are done '
-            + 'and starts with what they delivered (their results and the files they wrote). When the person asks for testing, '
+          description: 'create: 1–12 tasks; add: up to 12 more, whose after may name tasks already on the board. Independent tasks run at once; a task with `after` waits until those are done '
+            + 'and starts with what they delivered (their results, and in a project their branches merged into its own). When the person asks for testing, '
             + 'it is a task of its own (the tester), after the tasks it tests, its done saying how it is proven.',
           items: {
             type: 'object',
@@ -57,8 +58,8 @@ module.exports = [
               count: { type: 'integer', description: 'Several alike (1–8), e.g. 5 for "five Claude Code": made into tasks <id>-1 … <id>-N sharing the plan.' },
               task: { type: 'string', description: 'The errand in full, for somebody who was not in this conversation.' },
               after: { type: 'array', items: { type: 'string' }, description: 'Ids of the tasks it needs finished first.' },
-              done: { type: 'string', description: 'Its contract: "done when …", in a sentence.' },
-              check: { type: 'object', description: 'Optional check the hub runs when it finishes: {file}, {file, contains}, {url}, {page, contains}, {absent}, {free: port}, or the work itself: {video}, {pdf}, {mesh}, {image}.' },
+              done: { type: 'string', description: 'Its contract: "done when …", in a sentence — what a person would see, not that a file exists.' },
+              check: { type: 'object', description: 'Optional check the hub runs when it finishes: {file}, {file, contains}, {url}, {page, contains, selector, noErrors}, {absent}, {free: port}, or the work itself: {video}, {pdf}, {mesh}, {image}. It must fail until the work is done: a check your own scaffold already meets is refused.' },
               checks: { type: 'array', items: { type: 'object' }, description: 'More checks, every one must hold (up to 8).' },
               test: { type: 'string', description: 'For code: the project\'s test command, e.g. "npm test" — give it to every task that writes code in a project that has one. The specialist runs it itself as its last step; the hub reads that run\'s exit code (it never runs it), and a task that never ran it is sent back once to.' },
               tries: { type: 'integer', description: 'Several attempts at once (2–the setting teams.maxTries), each in a worktree of its own, the best kept by its checks and test alone — only when they can judge it and the worker is cheap; each try spends its own tokens. after naming this task waits for the kept try. Not with count; of the outside harnesses only harness:mini takes tries.' },
@@ -91,6 +92,11 @@ module.exports = [
           const tried = Object.entries(require('../../teams/tries').groups(team)).map(([of, ts]) => `${of} runs ${ts.length} tries at once — about ${ts.length}× the tokens of one, each under the same budgets; the best is kept by its checks.`);
           return `Team ${team.id} made — the hub runs it from here. ${said(v)}${tried.length ? `\n${tried.join('\n')} Say the multiple to the person.` : ''}\nTell the person what you set going; you are not waiting.${own}${manual ? `\nSay this to them too, in your words:${manual}` : ''}`;
         }
+        if (a.action === 'add') {
+          mine(a.team);
+          const team = await t.add(a.team, a, { by: ctx.sessionId, asked: a.asked === true && !!ctx.byPerson, person: ctx.user || null });
+          return `Added to ${team.id} — the hub runs the new tasks as the ones they come after are done. ${said(t.view(team))}\nYou are not waiting; carry on.`;
+        }
         if (a.action === 'status') {
           if (!a.team) {
             const rows = t.visible(null).filter(r => require('../organization').canManage(ctx.sessionId, r.by)).slice(0, 10);
@@ -108,7 +114,7 @@ module.exports = [
           return `Merged ${r.merged} into ${r.into}: ${r.head}.`;
         }
         if (a.action === 'pick') { mine(a.team); return await require('../../teams/tries').pick(a.team, String(a.task || ''), a.try, { by: 'the team\'s leader' }); }
-        return 'Error: action is create, status, stop, keep_going, merge or pick.';
+        return 'Error: action is create, add, status, stop, keep_going, merge or pick.';
       } catch (e) { return `Error: ${e.message}`; }
     },
   },
