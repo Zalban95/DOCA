@@ -49,17 +49,32 @@ function split(text) {
   const m = /^﻿?---\s*\r?\n([\s\S]*?)\r?\n---\s*(?:\r?\n|$)([\s\S]*)$/.exec(String(text || ''));
   if (!m) return { meta: {}, body: String(text || '').trim() };
   const meta = {};
-  let listKey = null;
+  let listKey = null, block = null;   // block: a `key: >` or `key: |` value being gathered from its indented lines
+  const close = () => {
+    if (!block) return;
+    const lines = block.lines.join('\n').replace(/\s+$/, '');
+    meta[block.key] = block.fold ? lines.split(/\n{2,}/).map(p => p.replace(/\s*\n\s*/g, ' ').trim()).join('\n') : lines;
+    block = null;
+  };
   for (const raw of m[1].split(/\r?\n/)) {
+    // YAML's block scalars (`description: >` then indented lines — how many published skills write a long description):
+    // folded (>) joins lines with spaces, literal (|) keeps them; the value ends at the first line not indented.
+    if (block) {
+      if (!raw.trim() || /^\s/.test(raw)) { block.lines.push(raw.replace(/^\s{1,}/, '')); continue; }
+      close();
+    }
     if (!raw.trim() || raw.trim().startsWith('#')) continue;
     const item = /^\s+-\s+(.*)$/.exec(raw) || /^-\s+(.*)$/.exec(raw);
     if (item && listKey) { meta[listKey].push(item[1].trim().replace(/^['"]|['"]$/g, '')); continue; }
     const kv = /^([A-Za-z][\w-]*)\s*:\s*(.*)$/.exec(raw);
     if (!kv) continue;
     listKey = null;
+    const scalar = /^([>|])[-+]?\d*\s*$/.exec(kv[2].trim());
+    if (scalar) { block = { key: kv[1], fold: scalar[1] === '>', lines: [] }; continue; }
     if (kv[2].trim() === '') { meta[kv[1]] = []; listKey = kv[1]; }
     else meta[kv[1]] = kv[2];
   }
+  close();
   return { meta, body: m[2].trim() };
 }
 

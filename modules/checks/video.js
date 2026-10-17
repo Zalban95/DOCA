@@ -61,6 +61,24 @@ async function frameAt(file, t, f) {
 
 const sec = t => `${Number(t).toFixed(1)} s`;
 
+/**
+ * Text over text stays: the same unreadable word is still there half a second before and after. A caption fading in or
+ * out reads poorly for a moment and clearly beside it (2026-10-17: a fading "clamps" read as "vlarnps" failed a good
+ * promo), so a word that reads cleanly at either moment, or whose line is gone, was a fade. A look that cannot be made
+ * keeps the finding — a problem is never dropped for want of a second look.
+ */
+async function lasting(file, f, t, g) {
+  for (const dt of [-0.5, 0.5]) {
+    const u = t + dt;
+    if (u < 0 || u > (f.duration || 0) - 0.05) continue;
+    let r;
+    try { r = await ocr.read(await frameAt(file, u, f)); } catch { continue; }
+    const near = ocr.garbled(r.best).some(h => Math.abs(h.y - g.y) < 40 && Math.abs(h.x - g.x) < 200);
+    if (!near) return false;
+  }
+  return true;
+}
+
 async function check(c, file) {
   const problems = [], unverified = [];
   let f;
@@ -89,7 +107,7 @@ async function check(c, file) {
       const d = ocr.doubled(r.passes);
       if (d) twice.push({ t, ...d });
       const g = ocr.garbled(r.best)[0];
-      if (g) over.push({ t, ...g });
+      if (g && await lasting(file, f, t, g)) over.push({ t, ...g });
     }
     const also = list => (list.length > 1 ? ` (also at ${list.slice(1, 6).map(x => sec(x.t)).join(', ')})` : '');
     if (twice[0]) { const d = twice[0];

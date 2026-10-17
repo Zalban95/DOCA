@@ -62,3 +62,15 @@ test('a specialist sees only the skills its definition names', () => {
   const none = agent.preview({ message: 'x', profile: { id: 'plain', label: 'Plain', systemPrompt: 'x', kits: ['shell'], environment: 'minimal' } });
   assert.doesNotMatch(none, /# Skills/);
 });
+
+test('a skill whose description is a YAML block (description: >) reads as the sentence it is', () => {
+  // Published collections write long descriptions folded over lines; before this, the description read as ">".
+  const { split } = require('../modules/agents/markdown');
+  const folded = split('---\nname: phaser-core\ndescription: >\n  Set up and debug a Phaser 4 game: the Game config,\n  the Scene lifecycle. Use when building one.\nlicense: Apache-2.0\n---\n# Phaser');
+  assert.equal(folded.meta.description, 'Set up and debug a Phaser 4 game: the Game config, the Scene lifecycle. Use when building one.');
+  assert.equal(folded.meta.license, 'Apache-2.0', 'the key after the block is read too');
+  const literal = split('---\nname: x\nnotes: |-\n  one\n  two\ntools:\n  - read_file\n---\nbody');
+  assert.equal(literal.meta.notes, 'one\ntwo');
+  assert.deepEqual(literal.meta.tools, ['read_file'], 'a list after the block still reads');
+  assert.equal(split('---\nname: y\ndescription: one line\n---\nB').meta.description, 'one line');
+});
