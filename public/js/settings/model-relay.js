@@ -44,7 +44,7 @@ async function modelRelaySave() {
    send text asks for the password (the panel's fetch asks and sends again). What each does is tagged with it. */
 function modelRelayDevices(list) {
   if (!list.length) return '<div class="desc" style="font-size:11px;margin:4px 0 8px">No paired device yet.</div>';
-  return `<div class="form-row" style="flex-direction:column;align-items:flex-start;gap:4px">${list.map(d => `<label style="display:flex;gap:8px;align-items:center">
+  return `<div style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin:4px 0 8px">${list.map(d => `<label style="display:flex;gap:8px;align-items:center">
     <input type="checkbox" class="switch"${d.on ? ' checked' : ''} onchange="modelRelayDevice(${jsArg(d.id)}, this.checked)"> ${escHtml(d.name)}
     <span class="desc" style="font-size:11px">${escHtml(d.formFactor)} · ${escHtml(d.why)}${d.asks ? ' — asks for the password' : ''}</span></label>`).join('')}</div>`;
 }
