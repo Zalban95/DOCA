@@ -5,6 +5,6 @@ export default class Boot extends Phaser.Scene {
   constructor() { super('Boot'); }
   create() {
     makeAll(this);
-    this.scene.start('Menu');
+    this.scene.start('Menu', { page: 'main' });
   }
 }

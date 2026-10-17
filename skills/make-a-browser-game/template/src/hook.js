@@ -19,7 +19,7 @@ export function hook(game) {
         score: game.registry.get('score'), lives: game.registry.get('lives'), coins: game.registry.get('coins') };
     },
     start(i = 0) { stopAll(); game.scene.start('Game', { level: i, newGame: true }); },
-    goto(key, data) { stopAll(); game.scene.start(key, data); },
+    goto(key, data = {}) { stopAll(); game.scene.start(key, data); },   // always with data: Phaser keeps a scene's last data otherwise
     win() { level()?.complete(); },
     lose() { level()?.gameOver(); },
     press,

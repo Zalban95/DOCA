@@ -14,7 +14,7 @@ export default class End extends Phaser.Scene {
     play(this.won ? 'win' : 'lose');
     this.tick = menu(this, [
       { label: 'Play again', pick: () => this.scene.start('Game', { level: 0, newGame: true }) },
-      { label: 'Menu', pick: () => this.scene.start('Menu') },
+      { label: 'Menu', pick: () => this.scene.start('Menu', { page: 'main' }) },
     ], { y: 300 });
   }
 

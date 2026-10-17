@@ -14,7 +14,7 @@ export default class Pause extends Phaser.Scene {
     this.tick = menu(this, [
       { label: 'Resume', pick: () => this.resume() },
       { label: 'Restart level', pick: () => { this.scene.stop(); game.scene.restart({ level: game.levelIndex }); } },
-      { label: 'Menu', pick: () => { music(null); game.scene.stop(); this.scene.start('Menu'); } },
+      { label: 'Menu', pick: () => { music(null); game.scene.stop(); this.scene.start('Menu', { page: 'main' }); } },
     ], { y: 240 });
   }
 
