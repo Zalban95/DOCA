@@ -101,3 +101,12 @@ test('an admin sees the owner\'s work too, grouped by person, the newest unread 
   assert.ok(g.indexOf(ownerGroup) > 0);
   assert.equal(new Set(g.map(x => x.personId)).size, g.length, 'one group per person');
 });
+
+test('the first look of someone following by default marks only the last day\'s work new (audit 2026-10-17)', () => {
+  const o = require('../modules/oversight');
+  const fresh = { id: `usr_first_${Date.now()}`, role: 'owner' };
+  assert.equal(o.settingsOf(fresh).seenAt, null, 'never read');
+  o.view(fresh);
+  const at = Date.parse(o.settingsOf(fresh).seenAt);
+  assert.ok(Math.abs(at - (Date.now() - 24 * 3600000)) < 60000, 'read up to a day ago: week-old work is not news');
+});

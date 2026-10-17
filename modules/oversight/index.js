@@ -94,9 +94,13 @@ function list(person, { limit = LIMIT } = {}) {
 }
 
 /** What the header icon reads: the switch, the list (when on), and how many are newer than what was read. */
+const FIRST_LOOK_MS = 24 * 3600000;
+
 function view(person) {
-  const s = settingsOf(person);
+  let s = settingsOf(person);
   if (!s.on) return { on: false, unread: 0, items: [], groups: [], seenAt: s.seenAt };
+  // On by default and never read (the owner): what finished days ago is not news — the first look marks the last day's.
+  if (!s.seenAt) s = markSeen(person, new Date(Date.now() - FIRST_LOOK_MS).toISOString());
   const items = list(person).map(i => ({ ...i, unread: !s.seenAt || String(i.at) > s.seenAt }));
   return { on: true, unread: items.filter(i => i.unread).length, items, groups: groupsOf(items), seenAt: s.seenAt };
 }
