@@ -218,3 +218,13 @@ test('the judge reads what the turn did — its calls — as well as what it ans
     assert.match(asked[0].user, /Tools it called, in order:\n1\. skill \{"action":"read","name":"android-app"\}/);
   } finally { agent.ask = real; }
 });
+
+test('the judge reads what the work chats reported and called, not only the hand-over (audit 2026-10-17)', async () => {
+  const agent = require('../modules/harness/agent'), real = agent.ask, asked = [];
+  agent.ask = async o => { asked.push(o); return 'PASS delivered'; };
+  try {
+    await require('../modules/evals/check').one({ judge: 'files delivered' }, 'q', { text: 'Handed to a work chat.', calls: [{ name: 'work_chats', args: '{}' }], childTools: ['write_file'], childText: 'Wrote parts/a.stl and video.mp4.' });
+    assert.match(asked[0].user, /write_file \(in a work chat\)/);
+    assert.match(asked[0].user, /reported when they finished[^]*Wrote parts\/a\.stl/);
+  } finally { agent.ask = real; }
+});
