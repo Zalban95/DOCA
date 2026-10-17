@@ -23,17 +23,22 @@ async function _skillUseSave(name, value) {
 
 /** The filter and the auto-accept switch, above the list. */
 async function skillUseHead(box) {
-  let auto = false;
-  try { auto = !!(await apiFetch('/api/prefs'))?.skillSuggest?.autoAccept; } catch { /* drawn off */ }
+  let auto = false, learn = true;
+  try { const sg = (await apiFetch('/api/prefs'))?.skillSuggest || {}; auto = !!sg.autoAccept; learn = sg.learn !== false; } catch { /* drawn as the defaults */ }
   const brand = typeof convBrand === 'function' ? convBrand() : 'The hub';
   box.innerHTML = `<div class="skill-use-row">
       <label>Show${infoBtn('Narrows the list below to the skills used one way: attached, when it fits, or off. Only filters what is shown.')} <select class="input" id="doca-skills-filter">
         <option value="">All</option><option value="attached">Attached</option><option value="fits">When it fits</option><option value="off">Off</option></select></label>
       <label class="switch-label">
-        <input type="checkbox" id="doca-skills-auto" ${auto ? 'checked' : ''}> Attach skills ${escHtml(brand)} suggests without asking${infoBtn('When a message names a skill by one of its trigger words, it is suggested. On: it is attached to that turn without asking you. Off (the default): you are asked. A project chat in Agent mode attaches them anyway; a chat\'s ⋯ may say otherwise. Saved as soon as it is changed.')}</label></div>`;
+        <input type="checkbox" id="doca-skills-auto" ${auto ? 'checked' : ''}> Attach skills ${escHtml(brand)} suggests without asking${infoBtn('When a message names a skill by one of its trigger words, it is suggested. On: it is attached to that turn without asking you. Off (the default): you are asked. A project chat in Agent mode attaches them anyway; a chat\'s ⋯ may say otherwise. Saved as soon as it is changed.')}</label>
+      <label class="switch-label">
+        <input type="checkbox" id="doca-skills-learn" ${learn ? 'checked' : ''}> Learn skills from finished work${infoBtn('When a work chat finishes a job after real work — many steps, setbacks it got past, or your correction — it is read once in the background, and what it learned is kept as a new skill. A notice names it; remove it below if it is wrong. On by default. Saved as soon as it is changed.')}</label></div>`;
   box.querySelector('#doca-skills-filter').onchange = () => docaSkillsLoad();
   box.querySelector('#doca-skills-auto').onchange = async e => {
     try { await apiFetch('/api/prefs', { method: 'POST', body: { skillSuggest: { autoAccept: e.target.checked } } }); } catch (err) { appAlert(err.message); }
+  };
+  box.querySelector('#doca-skills-learn').onchange = async e => {
+    try { await apiFetch('/api/prefs', { method: 'POST', body: { skillSuggest: { learn: e.target.checked } } }); } catch (err) { appAlert(err.message); }
   };
 }
 

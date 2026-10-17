@@ -384,7 +384,7 @@ async function tool(args, ctx) {
     }
     memory.updateSession(actor.id, { brief: short(args.message),
       ...(outcome !== 'report' ? { job: { ...(actor.job || {}), state: outcome, at: new Date().toISOString() } } : {}) });
-    return report(actor.id, outcome, args.message);
+    return require('./learn-loop').on(actor.id, outcome, report(actor.id, outcome, args.message));   // done after real work: learn a skill
   }
   if (!canManage(actor.id, id)) throw error('This conversation is outside your reporting line.', 403);
   if (args.action === 'send') {
