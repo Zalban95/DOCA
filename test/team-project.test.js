@@ -121,6 +121,9 @@ test('a team on a project: writers in worktrees of their own, a reader in the pr
   // After two worktree tasks it works where their work is: a worktree of its own made from both branches (team-craft).
   assert.equal(join.place.branch, 'team/checkout/join', 'after worktree tasks it gets a worktree made from their branches');
   assert.ok(fs.existsSync(path.join(join.place.root, 'join.txt')) && !fs.existsSync(path.join(repo, 'join.txt')));
+  // Neither writer committed; the team did at each one's end, so the join's worktree holds both.
+  assert.ok(fs.existsSync(path.join(join.place.root, 'api.txt')) && fs.existsSync(path.join(join.place.root, 'ui.txt')), 'both branches\' work reached the task after them');
+  assert.match(execFileSync('git', ['log', '-1', '--format=%s', 'team/checkout/api'], { cwd: repo, encoding: 'utf8' }), /api: what the task "The API" left uncommitted, committed by its team at its end/);
   assert.match(errands.find(e => e.startsWith('Join them')), /starts with the work of the tasks before yours: team\/checkout\/api, team\/checkout\/ui, merged\./);
   assert.match(end.tasks.find(t => t.id === 'api').why, /api.txt is there/, 'its contract was read in its own worktree');
 

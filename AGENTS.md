@@ -385,7 +385,9 @@ The harness gives its agent eight rules for working on any repository (charter r
   checks are all files already there), saying how to give a real one. **A task after several worktree tasks starts from
   all their branches** (`place.js`: the first is its base, the others `git merge --no-ff` into its worktree by
   `projects/worktrees.mergeInto`; a conflicting branch is left out, its merge undone, and the errand names it with its
-  files) — and a reader after worktree tasks gets a worktree too, since only it holds their work. A work chat that
+  files) — and a reader after worktree tasks gets a worktree too, since only it holds their work. **What a finished task
+  left uncommitted in its worktree is committed on its branch** before its contract is read (`worktrees.commitLeft`, a
+  board line), since the tasks after it start from the branch. A work chat that
   `project` opens a folder works in it from then on (the Orchestrator stays the front desk). The method is the shipped
   skill `lead-a-team` (contract first, one owner per file, contracts that fail until real, integrate, review, fixes on
   the board); for games `make-a-browser-game` adds a tested starter (`scripts/new-game.js`: the page centred, touch pads

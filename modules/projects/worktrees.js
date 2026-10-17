@@ -105,4 +105,19 @@ async function mergeInto(dir, branches) {
   return out;
 }
 
-module.exports = { add, create, status, remove, mergeInto };
+/**
+ * Commit what was left uncommitted in the worktree at `dir`, on its own branch: a team's task that finished without
+ * committing would otherwise hand nothing on — the tasks after it start from its branch, not its folder. Resolves the
+ * number of files committed (0 when it was clean). Ignored files stay ignored.
+ */
+async function commitLeft(dir, message) {
+  const left = (await git(dir, ['status', '--porcelain']).catch(() => '')).split('\n').filter(Boolean);
+  if (!left.length) return 0;
+  const who = await git(dir, ['config', 'user.email']).then(v => !!v, () => false) ? []
+    : ['-c', `user.name=${require('../branding').name('product')}`, '-c', 'user.email=team@localhost'];
+  await git(dir, ['add', '-A']);
+  await git(dir, [...who, 'commit', '-q', '-m', message]);
+  return left.length;
+}
+
+module.exports = { add, create, status, remove, mergeInto, commitLeft };
