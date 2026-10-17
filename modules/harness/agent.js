@@ -343,7 +343,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       // The ordinary way a turn ends, and the one the fallback field has to be
       // on: a turn that hopped and then answered lands here, not on the return
       // at the bottom of this function.
-      if (reporting) { const end = `\n\n${report.ending(profile, maxSteps, verdict)}`; say({ type: 'text', text: end }); memory.append(session.id, { role: 'assistant', content: end.trim() }); text += end; }
+      if (reporting) { const end = `\n\n${report.ending(profile, maxSteps, verdict)}`; say({ type: 'text', text: end }); memory.append(session.id, { role: 'assistant', content: end.trim() }); text += end; } else text ||= require('./turn/empty-answer').said(text, reply, { say, provider: reply.provider || sep.id, model: reply.model || sp.model });
       return {
         sessionId: session.id, text, steps: step, usage: spend, ...(reporting ? { limited: true } : {}),
         ...(fallbacks.length ? { fallbacks } : {}), ...(reply.finish === 'length' ? { truncated: true } : {}),
