@@ -193,7 +193,7 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
     // stripped and retried once in `post()`, so the ledger degrades to estimates
     // rather than the turn failing.
     stream_options: { include_usage: true },
-    ...(Number(p.maxTokens) > 0 ? { max_tokens: Number(p.maxTokens) } : {}),
+    max_tokens: budget.replyCap(p),   // 0: each model's own maximum, brought down by what is learned (budget.js)
   };
 
   let maxSteps = Math.max(1, Number(p.maxSteps) || 1);   // extended while the turn advances (turn/extend.js)

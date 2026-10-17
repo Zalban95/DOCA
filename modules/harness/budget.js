@@ -71,6 +71,16 @@ function estimateRequest(body) {
 // (deep test B, C2) a small declared window keeps the room it was checked against before (2048, the old default).
 const REPLY_FLOOR = 2048;
 
+/**
+ * "Longest reply" 0 is each model's own maximum (the owner, 2026-10-17: "set it to max and let it adapt; owners who
+ * want to limit it still can"): a request asks for REPLY_MAX, and what is learned brings it down per model — a
+ * refusal naming the maximum or the room left in the window, the provider's model list (contracts.js maxOutput), the
+ * declared window (fitReply), what a provider's credit can pay (transport.js). A number above 0 is a fixed cap.
+ */
+const REPLY_MAX = 262144;
+const replyCap = p => (Number(p?.maxTokens) > 0 ? Number(p.maxTokens) : REPLY_MAX);
+const replyCapWords = p => (Number(p?.maxTokens) > 0 ? `${p.maxTokens} tokens` : 'each model\'s own maximum');
+
 function preflight(body, { provider, model, contextWindow, windowSetting }) {
   const window = windowFor({ contextWindow });
   if (!window) return null;
@@ -332,7 +342,7 @@ function block(p) {
           + 'harness.config.doca.contextWindow.'));
 
   out.push(
-    `reply cap: ${Number(p.maxTokens) > 0 ? `${p.maxTokens} tokens` : 'none set'} (harness.config.doca.maxTokens)`,
+    `reply cap: ${replyCapWords(p)} (harness.config.doca.maxTokens)`,
     p._adaptive ? require('./turn/triage').limitsLine(p._adaptive) : `tool steps: ${p.maxSteps} per turn (harness.config.doca.maxSteps)`,
     `history kept verbatim: ${p.historyTurns} messages, older ones fold into the summary after `
       + `${p.summarizeAfter} messages or ${compactTokensFor(p) || '(unset)'} tokens of prompt `
@@ -381,5 +391,5 @@ const { explain, stalled } = require('./refusals');
 module.exports = {
   CHARS_PER_TOKEN,
   estimate, estimateMessages, estimateRequest, preflight, windowFor, compactTokensFor, shouldCompact, compactReason, compactionFor,
-  ledger, record, report, warning, block, live, explain, stalled, cachedOf, context, fitReply,
+  ledger, record, report, warning, block, live, explain, stalled, cachedOf, context, fitReply, replyCap, replyCapWords, REPLY_MAX,
 };

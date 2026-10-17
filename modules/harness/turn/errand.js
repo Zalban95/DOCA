@@ -23,7 +23,7 @@ const RULES = [
 function limits(p) {
   const steps = p._adaptive ? require('./triage').limitsLine(p._adaptive) : `tool steps: ${p.maxSteps} for this errand — the last is kept for your report`;
   return ['# Your limits', steps,
-    `reply cap: ${Number(p.maxTokens) > 0 ? `${p.maxTokens} tokens` : 'none set'} (harness.config.doca.maxTokens)`,
+    `reply cap: ${require('../budget').replyCapWords(p)} (harness.config.doca.maxTokens)`,
     ...require('./step-ceiling').lines(p),
     'When a limit stops you, name it in your report as written here; your leader decides whether to raise it.'].join('\n');
 }

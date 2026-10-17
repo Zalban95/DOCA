@@ -52,9 +52,14 @@ async function post(ep, body, signal, p) {
     const most = r.status === 400 ? contracts.maxOutputFrom(detail) : null;
     // A reply cap over the model's own maximum (round 1, 2026-10-16: 256000 asked of a model that takes 131072): once
     // with the cap it named, and kept per model, so the refusal is paid once and never fails a turn.
+    const room = r.status === 400 && !most ? contracts.roomFrom(detail, contracts.outputOf(body)) : null;
     if (most && most < contracts.outputOf(body)) {
       r = await send(contracts.capOutput(body, most));
       if (r.ok) contracts.learn(ep.id, body.model, { maxOutput: most }, { perModel: true });
+
+    // The cap over what the window has left after the prompt (contracts.roomFrom): once with that room, not learned.
+    } else if (room && room >= 256 && room < contracts.outputOf(body)) {
+      r = await send(contracts.capOutput(body, room));
 
     // Newer OpenAI models reject max_tokens and want max_completion_tokens.
     } else if (r.status === 400 && body.max_tokens && detail.includes('max_completion_tokens')) {
@@ -366,7 +371,7 @@ async function ask({ system, user, temperature = 0.1, signal, provider, model, p
   // entirely on thinking (2026-09-25). The cap is now the harness's own
   // "Longest reply", the same as a turn's; the ceiling below is only a backstop.
   const deadline = signal || AbortSignal.timeout(60 * 60e3);
-  const cap = Number(p.maxTokens) || 0;
+  const cap = budget.replyCap(p);
   const reply = await complete({
     p, ep: providers.endpoint(p.provider), signal: deadline,
     // The fallback chain applies here too: complete() only hops for a caller

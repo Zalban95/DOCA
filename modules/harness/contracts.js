@@ -124,9 +124,26 @@ function affordableFrom(detail) {
   return n > 0 && n < 1e8 ? n : null;
 }
 
+/**
+ * The reply room a context-length refusal leaves, or null: the window it names less the prompt it counted — vLLM and
+ * OpenAI: "This model's maximum context length is 32768 tokens. However, you requested 140000 tokens (8000 in the
+ * messages, 132000 in the completion)". With "each model's own maximum" a cap can overshoot a small window; the room is
+ * asked for once, never learned (it moves with the prompt).
+ */
+function roomFrom(detail, cap) {
+  const s = String(detail || '').slice(0, 4000);
+  const window = Number((s.match(/maximum context length is (\d+)/i) || [])[1]);
+  if (!(window > 0)) return null;
+  const inMessages = Number((s.match(/(\d+) (?:tokens )?in the messages/i) || [])[1]);
+  const requested = Number((s.match(/you requested (\d+) tokens/i) || [])[1]);
+  const prompt = inMessages > 0 ? inMessages : requested > 0 && cap > 0 ? requested - cap : 0;
+  const room = prompt > 0 ? window - prompt - 64 : 0;   // a little slack: the server counts its own template
+  return room > 0 ? room : null;
+}
+
 /** The reply cap a body asks for (either token field), or 0. */
 function outputOf(body) { return Number(body?.max_tokens ?? body?.max_completion_tokens) || 0; }
 
 function all() { return learned().providers; }
 
-module.exports = { forProvider, learn, forget, shape, capOutput, maxOutputFrom, affordableFrom, outputOf, all, FIELDS };
+module.exports = { forProvider, learn, forget, shape, capOutput, maxOutputFrom, affordableFrom, roomFrom, outputOf, all, FIELDS };

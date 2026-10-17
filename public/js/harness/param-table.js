@@ -39,8 +39,8 @@ const HARNESS_PARAMS = [
         + 'are skipped before sending. 0 means unknown and disables this check and the percentages below.' },
 
   { key: 'maxTokens', label: 'Longest reply', unit: 'tokens', attrs: 'min="0" step="128"',
-    hint: 'The most the model may write in one answer. 0 leaves it to the provider. This is a cap on the '
-        + 'reply only; this much room is reserved when checking whether a request fits the context window.' },
+    hint: 'The most the model may write in one answer. 0 (the default): each model\'s own maximum — DOCA learns each '
+        + 'model\'s limit and what a provider\'s credit can pay, and asks within it. A number is a fixed cap for every model.' },
 
   { key: 'firstTokenTimeoutMs', label: 'Give up waiting after', unit: 'ms', attrs: 'min="0" step="5000"',
     hint: 'How long to wait for the first word of a reply. This is not a limit on the answer — once the model '
