@@ -20,7 +20,7 @@ test.after(() => H.stop());
 
 test('the shipped skills load, each with a name and a description', () => {
   const shipped = skills.list().filter(s => s.source === 'shipped');
-  assert.deepEqual(shipped.map(s => s.name).sort(), ['android-app', 'calendar-and-mail', 'check-the-panel', 'check-until-done', 'craft-apps', 'debug-method', 'doca-dev-cycle', 'first-steps', 'freecad-modelling', 'guided-setup', 'hi3d', 'hosted-voice', 'mail-triage', 'make-a-specialist', 'morning-brief', 'n8n', 'on-my-phone', 'photos-and-files', 'plan-well', 'play-and-cast', 'ponytail', 'printable-part', 'product-video', 'proxmox', 'reach-another-machine', 'research-with-sources', 'serve-a-repository', 'service-wont-start', 'smart-home', 'talk-to-me', 'technical-drawing', 'truenas', 'unity', 'unreal-engine', 'uptime-kuma', 'video-from-code', 'what-is-my-machine-doing', 'write-a-skill', 'write-good-code']);
+  assert.deepEqual(shipped.map(s => s.name).sort(), ['android-app', 'calendar-and-mail', 'check-the-panel', 'check-until-done', 'craft-apps', 'debug-method', 'doca-dev-cycle', 'first-steps', 'freecad-modelling', 'guided-setup', 'hi3d', 'hosted-voice', 'mail-triage', 'make-a-specialist', 'make-images', 'morning-brief', 'n8n', 'on-my-phone', 'photos-and-files', 'plan-well', 'play-and-cast', 'ponytail', 'printable-part', 'product-video', 'proxmox', 'reach-another-machine', 'research-with-sources', 'serve-a-repository', 'service-wont-start', 'smart-home', 'talk-to-me', 'technical-drawing', 'truenas', 'unity', 'unreal-engine', 'uptime-kuma', 'video-from-code', 'what-is-my-machine-doing', 'write-a-skill', 'write-good-code']);
   for (const s of shipped) assert.ok(s.description.length > 20, `${s.name} says when to use it`);
 });
 
