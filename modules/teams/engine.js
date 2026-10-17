@@ -88,14 +88,23 @@ function failed(team, t, v) {
   if (t.failedFor === key) return;
   t.failedFor = key;
   if (t.trial) { t.gaveUp = true; return; }   // a try is not tried again on its own: its siblings are the retry (tries.js)
+  // Its own contract unproven, not failed: sent back once to run its test, whether or not the team keeps going.
+  if (t.verdict?.untested && !t.testAsked) return again(team, t, v, `## Run your test\nYour task is done when \`${t.test}\` passes, and the hub reads `
+    + `your own run of it: ${t.verdict.test.why}. Run exactly \`${t.test}\` as your last step, in the folder you work in, fix what fails, then finish.`, true);
   if (!team.loop?.on || (team.loop.rounds || 0) >= maxRounds(team)) { t.gaveUp = true; return; }
   team.loop.rounds = (team.loop.rounds || 0) + 1;
+  again(team, t, v, `## Try ${(t.tries || []).length + 2}\nThe previous try at this task did not finish: ${v.why || 'it failed'}.`);
+}
+
+/** Back to its specialist, in the same place, with why and what the last try reported. */
+function again(team, t, v, note, test = false) {
   const m = t.missionId ? require('../agents/missions').get(t.missionId) : null;
   (t.tries = t.tries || []).push({ missionId: t.missionId || null, sessionId: t.sessionId || null, why: v.why || null, at: new Date().toISOString() });
-  t.retryNote = `## Try ${t.tries.length + 1}\nThe previous try at this task did not finish: ${v.why || 'it failed'}.`
-    + `${m?.result ? `\nWhat it reported:\n${String(m.result).slice(0, 2000)}` : ''}\nDo not repeat what failed; finish the task.`;
-  for (const f of ['missionId', 'sessionId', 'verdict', 'error', 'gaveUp']) delete t[f];
-  require('./announce').line(team, `${t.id} "${t.title}": trying again (round ${team.loop.rounds} of ${maxRounds(team)}) — ${v.why || 'it failed'}`);
+  t.retryNote = `${note}${m?.result ? `\nWhat it reported:\n${String(m.result).slice(0, 2000)}` : ''}\nDo not repeat what failed; finish the task.`;
+  if (test) t.testAsked = true;
+  for (const f of ['missionId', 'sessionId', 'verdict', 'error', 'gaveUp', 'failedFor']) delete t[f];
+  require('./announce').line(team, test ? `${t.id} "${t.title}": sent back to run its test — ${t.test}`
+    : `${t.id} "${t.title}": trying again (round ${team.loop.rounds} of ${maxRounds(team)}) — ${v.why || 'it failed'}`);
 }
 
 /** End one task's work now (a try past its wait): its mission at its next step, an outside CLI in its computer. */
@@ -118,6 +127,10 @@ async function step(id) {
         const at = t.trial ? require('./tries').folder(t) : { cwd: cwdOf(team, t) };   // a try: in its own worktree, never the project's folder
         const score = require('./tries-score');
         t.verdict = { ...(at.cwd ? await score.verifyAll(t, { cwd: at.cwd, sessionId }) : score.notJudged(t, at.why)), at: new Date().toISOString() };
+        // A task that names a test is done when it passed — never run, or run before a later change, is not proof
+        // (2026-10-17: four tasks were "done" with `npm test` never run). An outside harness keeps no exit codes to read.
+        if (t.verdict.ok && t.verdict.test?.state === 'unknown' && !t.trial && !require('./outside').isOutside(t.agent))
+          t.verdict = { ...t.verdict, ok: false, why: `${t.verdict.test.why} — the task is done when it passes`, untested: true };
       }
     }
     for (const v of views(team)) if (v.state === 'failed') failed(team, team.tasks.find(x => x.id === v.id), v);

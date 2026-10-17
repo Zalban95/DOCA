@@ -1,7 +1,10 @@
 'use strict';
 
 /**
- * When DOCA itself stops, the services it started that are ticked stop with it (services.stopWithDoca, off by default).
+ * When DOCA itself stops, the services it started that are ticked stop with it (services.stopWithDoca, off by default),
+ * and so do the background jobs and service pages' programs it started (outlive.js), unless a job was started with
+ * `keep` — the owner's rule of 2026-10-17: what the panel started goes down with it unless someone asked for it to stay
+ * up; a restart or an update is not a stop.
  * "The panel goes off" means DOCA stopping — a SIGTERM or SIGINT from its launcher, systemd or a terminal — never a
  * browser tab closing. A restart or a version switch is not a stop: those exit by themselves (releases.restartSelf),
  * without a signal, and a version just switched to that the launcher stops while it is still being watched (the file
@@ -34,11 +37,24 @@ async function stopTicked({ reason = 'DOCA stopped' } = {}) {
   return stopped;
 }
 
+/** What the panel started on request, stopped when DOCA really stops: jobs not kept, service pages' programs. */
+function stopStarted(signal) {
+  const why = `DOCA stopped (${signal})`;
+  let jobs = [], pages = [];
+  try { jobs = require('../harness/jobs').stopUnkept(); } catch { /* none */ }
+  try { pages = require('../service-pages/run').stopAll(why); } catch { /* none */ }
+  if (jobs.length) try { require('../activity').note({ from: 'jobs', what: `stopped ${jobs.length} background job${jobs.length === 1 ? '' : 's'} (${jobs.join(', ')})`, why: `${why}; a job started with keep stays up` }); } catch { /* best effort */ }
+  return { jobs, pages };
+}
+
 /** DOCA is stopping on `signal`: what was used is saved, the ticked services stop (unless a switch is going back), then exit. */
 async function onSignal(signal, { exit = code => process.exit(code), pending = PENDING() } = {}) {
   try { require('./usage').save(); } catch { /* best effort */ }
   let stopped = [];
-  if (!switching(pending) && require('../settings-schema').value('services.stopWithDoca')) stopped = await stopTicked({ reason: `DOCA stopped (${signal})` }).catch(() => []);
+  if (!switching(pending)) {
+    stopStarted(signal);
+    if (require('../settings-schema').value('services.stopWithDoca')) stopped = await stopTicked({ reason: `DOCA stopped (${signal})` }).catch(() => []);
+  }
   exit(0);
   return stopped;
 }
@@ -51,4 +67,4 @@ function listen() {
   process.on('SIGINT', () => go('SIGINT'));
 }
 
-module.exports = { listen, onSignal, stopTicked, switching };
+module.exports = { listen, onSignal, stopTicked, stopStarted, switching };

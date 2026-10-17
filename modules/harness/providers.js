@@ -185,6 +185,10 @@ function defaultParams() {
     // autoWakesPerHour: every automatic turn anywhere, together — the cost guard.
     autoTurnsPerJob:  30,
     autoWakesPerHour: 30,
+    // Steps a conversation with an open plan may take without the work moving (a plan step changed, work handed on, a
+    // file written or committed in its project, a person's word) before DOCA says to take stock; a quarter more and it
+    // writes its report with no tools, and the job is reported blocked (turn/stall.js). 0 switches it off.
+    stallSteps: 40,
     // Tokens every model call may use together in 24 hours before new turns are
     // refused (turn/ceiling.js). 0 = no ceiling, so upgrading changes nothing.
     tokensPerDay: 0,

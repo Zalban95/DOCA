@@ -4,13 +4,14 @@
  * Starting a connected service's program, and starting it with DOCA (asked 2026-10-15: "a setting 'start at boot' to
  * toggle"). An admin gives the service how it starts — a command and its arguments (by argv, never a shell line), a
  * working folder and an optional settings file of KEY=value lines — the way an MCP server is given one; "Start with
- * DOCA" then starts it when DOCA starts, if it is not answering already. The program runs detached, in a session of
- * its own, so a restart or a version switch of DOCA does not take it down; its PID is kept in DATA_DIR/service-pages/
- * and Stop ends exactly that process (and its group), never one found by name. Output goes to a log file beside it.
+ * DOCA" then starts it when DOCA starts, if it is not answering already. The program runs outside DOCA's own process
+ * group (outlive.js: under systemd, a unit of the person's own), so a restart or a version switch of DOCA does not take
+ * it down; when DOCA really stops, it stops too (service-life/shutdown.js — the owner's rule of 2026-10-17: what the
+ * panel started goes down with it unless asked to stay up). Its PID is kept in DATA_DIR/service-pages/ and Stop ends
+ * exactly that process (and its group), never one found by name. Output goes to a log file beside it.
  */
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
 
 const dir = () => { const d = require('../store').dir('service-pages'); fs.mkdirSync(d, { recursive: true }); return d; };
 const pidFile = id => path.join(dir(), `${id}.pid`);
@@ -56,14 +57,10 @@ function start(s, why = 'an admin') {
   const was = running(s.id);
   if (was) return { started: false, pid: was, why: 'already running' };
   const env = { ...process.env, ...(s.run.envFile ? readEnvFile(s.run.envFile) : {}) };
-  const out = fs.openSync(logFile(s.id), 'a');
-  const child = spawn(s.run.command, s.run.args || [], { cwd: s.run.cwd || undefined, env, detached: true, stdio: ['ignore', out, out], windowsHide: true });
-  fs.closeSync(out);
-  child.on('error', () => { /* said by health: it does not answer */ });
-  child.unref();
-  fs.writeFileSync(pidFile(s.id), String(child.pid));
-  require('../activity').note({ from: 'services', what: `started ${s.name} (pid ${child.pid})`, why, machine: { kind: 'service-page', id: s.id, name: s.name }, act: 'start' });
-  return { started: true, pid: child.pid };
+  const { pid } = require('../outlive').start({ file: s.run.command, args: s.run.args || [], cwd: s.run.cwd || undefined, env, log: logFile(s.id), unit: `doca-service-${s.id}` });
+  if (pid) fs.writeFileSync(pidFile(s.id), String(pid));
+  require('../activity').note({ from: 'services', what: pid ? `started ${s.name} (pid ${pid})` : `started ${s.name}, and it ended at once (its log says why)`, why, machine: { kind: 'service-page', id: s.id, name: s.name }, act: 'start' });
+  return { started: !!pid, pid: pid || null };
 }
 
 function stop(s, why = 'an admin') {
@@ -73,6 +70,20 @@ function stop(s, why = 'an admin') {
   try { fs.unlinkSync(pidFile(s.id)); } catch { /* gone */ }
   require('../activity').note({ from: 'services', what: `stopped ${s.name} (pid ${pid})`, why, machine: { kind: 'service-page', id: s.id, name: s.name }, act: 'stop' });
   return { stopped: true, pid };
+}
+
+/** DOCA really stopping (service-life/shutdown.js): every program this hub started stops. Returns the services stopped. */
+function stopAll(why = 'DOCA stopped') {
+  const out = [];
+  let ids = [];
+  try { ids = fs.readdirSync(dir()).filter(f => f.endsWith('.pid')).map(f => f.slice(0, -4)); } catch { return out; }
+  for (const id of ids) {
+    if (!running(id)) continue;
+    let s = null;
+    try { s = require('./index').get(id); } catch { /* removed since */ }
+    try { stop(s || { id, name: id }, why); out.push(id); } catch { /* gone */ }
+  }
+  return out;
 }
 
 /** When DOCA starts: every service marked to start with it, unless it answers already (started some other way). */
@@ -89,4 +100,4 @@ async function boot() {
 
 const tail = (id, n = 40) => { try { return fs.readFileSync(logFile(id), 'utf8').split('\n').slice(-n).join('\n'); } catch { return ''; } };
 
-module.exports = { start, stop, running, boot, checkRun, readEnvFile, tail, logFile };
+module.exports = { start, stop, stopAll, running, boot, checkRun, readEnvFile, tail, logFile };

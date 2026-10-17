@@ -57,20 +57,23 @@ module.exports = [
           cwd:     { type: 'string', description: 'Optional working directory. Defaults to the agent workspace.' },
           timeoutSec: { type: 'integer', description: `Seconds to wait, up to ${shellLimitSec()}.` },
           background: { type: 'boolean', description: 'Run it as a background job and return its id at once.' },
+          keep: { type: 'boolean', description: 'With background: keep the job running when the hub itself stops — only when the person asked for it to stay up. A restart or an update of the hub never stops a job.' },
         },
         required: ['command'],
       };
     },
     danger: true,
-    run: async ({ command, cwd: dir, timeoutSec, background }, ctx = {}) => {
+    run: async ({ command, cwd: dir, timeoutSec, background, keep }, ctx = {}) => {
       if (!command) return 'Error: command is required';
       const where = dir ? resolvePath(dir, ctx) : cwd(ctx);
       const code = require('../../edition-mode').shellRefusal(command, where);   // a production hive's code (edition-mode.js)
       if (code) return `Error: ${code}`;
+      const kill = require('../kill-guard').refusal(command);   // never by a name pattern (kill-guard.js)
+      if (kill) return `Error: ${kill}`;
       if (background) {
-        const j = require('../jobs').start(command, { cwd: where, sessionId: ctx.sessionId || null });
-        return `Started background job ${j.id} (pid ${j.pid}). It keeps running after this call; `
-          + 'shell_job with action status or output tells you how it stands.';
+        const j = require('../jobs').start(command, { cwd: where, sessionId: ctx.sessionId || null, keep: keep === true });
+        return `Started background job ${j.id} (pid ${j.pid}). It keeps running after this call and across a restart of the hub`
+          + `${keep === true ? ', and when the hub stops' : ' (it stops when the hub stops)'}; shell_job with action status or output tells you how it stands.`;
       }
       const limit = shellLimitSec();
       const sec = Math.min(limit, Math.max(1, Number(timeoutSec) || limit));

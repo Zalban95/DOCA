@@ -106,7 +106,12 @@ module.exports = [
       switch (r.status) {
         case 'answered':  return `${reach.label(r.device)} answered: "${r.label}" (choice ${r.choiceId}).${only}`;
         case 'dismissed': return `${reach.label(r.device)} chose not to answer right now. Carry on without a decision, or do the part that does not need one.`;
-        case 'timeout':   return `Nobody answered within ${r.waitedSec}s, so the question was withdrawn — it is no longer on ${who}, and nothing is waiting on it. Decide without it, say what you need, or ask again later.${only}`;
+        // A decision that is the person's waits for them (the agent proposes, a person decides — 2026-10-17: an
+        // Orchestrator whose question timed out chose for the person, and a work chat went round in circles on it).
+        case 'timeout':   return `Nobody answered within ${r.waitedSec}s, so the question was withdrawn — it is no longer on ${who}. `
+          + 'If the decision is theirs (what to build or change, scope, cost, anything that cannot be undone), do not take it for them: '
+          + 'leave that part waiting — say in your answer what you need from them, or report it as a question to whoever leads you — '
+          + `and do only what does not depend on it. A small choice that is yours to make you may make, saying which and why.${only}`;
         default:          return `The question closed before it was answered (${r.reason}). It was asked of ${who}.`;
       }
     },

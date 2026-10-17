@@ -38,6 +38,7 @@ const CUT_OFF = '[panel] Your last reply was cut off: it reached the reply lengt
   + 'Carry on from where it stopped — shorter, or in parts.';
 
 const short = (v, n) => String(v || '').replace(/\s+/g, ' ').slice(0, n);
+const lastAnswer = id => { const rows = require('./memory').messages(id); for (let i = rows.length - 1; i >= 0; i--) if (rows[i].role === 'assistant' && rows[i].content) return rows[i].content; return ''; };
 
 /* ── Starting a turn ──────────────────────────────────── */
 
@@ -191,6 +192,17 @@ function decide(id, info = {}) {
     return deliver(s.parentId);
   }
 
+  // Many steps and nothing moving (turn/stall.js): another automatic turn would go round the same circle. One try on a
+  // stronger model, else blocked — its report goes to whoever leads it, who asks the person.
+  if (info.stalled) {
+    const why = `${info.stalled.steps} steps without the work moving (harness.config.doca.stallSteps)`;
+    const retry = escalate.tryEscalate(s, why, require('./agent').params());
+    if (retry) return wake(id, retry, { retry: () => decide(id) });
+    setJob(id, { ...job, state: 'blocked' });
+    org.report(id, 'blocked', `Blocked: ${why}.${escalate.note(s)} Its report: ${short(lastAnswer(id), 600) || '(none)'}`, 'panel');
+    return deliver(s.parentId);
+  }
+
   // The turn threw — no model, the day's ceiling, a refused key, a provider 4xx/5xx. Waking it again
   // repeats the same failure up to autoTurnsPerJob times in a second, pays for any steps it got through,
   // and spends the hourly budget every other job shares (audit 2026-10-04). It is blocked, and says why.
@@ -284,7 +296,9 @@ function deliver(orchestratorId) {
   const failed = latest.some(n => leaders.outcomeOf(n) === 'failed') ? 'Do not retry failed work or send it anything new: say what failed and ask whether to try again. ' : '';
   const how = wake(ceo.id, '[panel] Work reported back. Tell the person what matters, in a few lines. ' + failed
     + 'Where a decision is theirs, ask it with ask_device and give the choices — it reaches their phone, '
-    + `their watch and the panel at once.\n${latest.map(leaders.lineOf).join('\n')}`, { retry: () => deliver(ceo.id) });
+    + 'their watch and the panel at once. Ask the decision the report names, in its terms and with its options; '
+    + 'say nothing about the work that the report does not say or you have not seen yourself.'
+    + `\n${latest.map(leaders.lineOf).join('\n')}`, { retry: () => deliver(ceo.id) });
   if (how === 'woken') leaders.markWoken(ceo.id, rest);
   return how;
 }

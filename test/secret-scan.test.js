@@ -22,7 +22,7 @@ const b64url = o => Buffer.from(JSON.stringify(o)).toString('base64url');
 
 const FAKES = {
   google: () => `AI${'za'}${rnd(35)}`,
-  openai: () => `s${'k'}-proj-${rnd(40)}`,
+  openai: () => `s${'k'}-proj-${rnd(39)}7`,   // a digit always: the scanner reads a digit-less sk-… as a hyphenated word (1 in ~1000 random ones had none)
   github: () => `gh${'p'}_${rnd(36)}`,
   slack: () => `xo${'xb'}-${rnd(12, '0123456789')}-${rnd(24)}`,
   aws: () => `AK${'IA'}${rnd(16, UPPER)}`,

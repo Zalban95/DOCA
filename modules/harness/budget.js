@@ -348,6 +348,7 @@ function block(p) {
       + `${p.summarizeAfter} messages or ${compactTokensFor(p) || '(unset)'} tokens of prompt `
       + `(harness.config.doca.historyTurns, .summarizeAfter, .compactTokens)`,
     `memory entries in this prompt: up to ${p.memoryLimit} (harness.config.doca.memoryLimit)`,
+    ...(Number(p.stallSteps) > 0 ? [`steps without the work moving, with a plan open: ${p.stallSteps}, then you report where it stands (harness.config.doca.stallSteps)`] : []),
     ...require('./turn/step-ceiling').lines(p),
     `rate limits (HTTP 429): waited out ${require('./turn/rate-limit').limits(p).tries} times, up to `
       + `${require('./turn/rate-limit').limits(p).cap / 1000}s each (harness.config.doca.rateLimitRetries, .rateLimitMaxWaitMs)`,

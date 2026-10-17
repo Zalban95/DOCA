@@ -254,6 +254,8 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       const more = require('./turn/extend').atLimit({ v: verdict, step, budget: maxSteps, sessionId: session.id, from, signal, planOpenAtStart, say });
       if (more) { maxSteps = more; reporting = false; } else memory.append(session.id, report.row(profile, maxSteps, verdict));
     }
+    const stall = !reporting && require('./turn/stall').at({ session, rows: memory.messages(session.id), p, signal });   // many steps, nothing moving
+    if (stall) { memory.append(session.id, stall.row); if (stall.report) reporting = 'stall'; }
     // Held under the per-step ceiling: old results cleared, then earlier turns folded (turn/step-ceiling.js).
     const lean = await require('./turn/step-ceiling').fit({ p: sp, ep: sep, session, signal, say, step, led, schemas, summary, person: client?.user,
       build: sum => stepRequest({ p: sp, ep: sep, message, summary: sum, client, profile, projectBrief, schemas, disabled, session, led, toolNews, contextSkips }) });
@@ -340,12 +342,10 @@ async function runTurn({ message, sessionId, emit, signal, client, attachments: 
       memory.updateSession(session.id, {
         tokens: (memory.getSession(session.id)?.tokens || 0) + spend.totalTokens,
       });
-      // The ordinary way a turn ends, and the one the fallback field has to be
-      // on: a turn that hopped and then answered lands here, not on the return
-      // at the bottom of this function.
-      if (reporting) { const end = `\n\n${report.ending(profile, maxSteps, verdict)}`; say({ type: 'text', text: end }); memory.append(session.id, { role: 'assistant', content: end.trim() }); text += end; } else text ||= require('./turn/empty-answer').said(text, reply, { say, provider: reply.provider || sep.id, model: reply.model || sp.model });
+      // The ordinary way a turn ends, and the one the fallback field has to be on (a turn that hopped, then answered).
+      if (reporting) { const end = `\n\n${reporting === 'stall' ? require('./turn/stall').ending(require('./turn/stall').of(signal)?.steps) : report.ending(profile, maxSteps, verdict)}`; say({ type: 'text', text: end }); memory.append(session.id, { role: 'assistant', content: end.trim() }); text += end; } else text ||= require('./turn/empty-answer').said(text, reply, { say, provider: reply.provider || sep.id, model: reply.model || sp.model });
       return {
-        sessionId: session.id, text, steps: step, usage: spend, ...(reporting ? { limited: true } : {}),
+        sessionId: session.id, text, steps: step, usage: spend, ...(reporting === 'stall' ? { stalled: true } : reporting ? { limited: true } : {}),
         ...(fallbacks.length ? { fallbacks } : {}), ...(reply.finish === 'length' ? { truncated: true } : {}),
       };
     }
