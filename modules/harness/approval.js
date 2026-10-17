@@ -286,6 +286,7 @@ function askAnywhere(req, { sessionId, signal, client } = {}) {
         choices: require('./approval-answer').deviceChoices(req, client.user),
         timeoutSec: 240,
         signal: ctrl.signal,
+        personId: client.user?.id || null,
       });
       if (r.status !== 'answered') return null;          // dismissed, timed out, withdrawn
       if (['always', 'approve_all'].includes(r.choiceId)) return r.choiceId;

@@ -163,15 +163,26 @@ function answerOf(prompt, targets) {
    answer in the owner's own words — and whichever answers first is the answer;
    the devices are then told it closed, as when one of several devices answers. */
 
-const _open = new Map();   // promptId -> { id, question, note, choices, at }
+const _open = new Map();   // promptId -> { id, question, note, choices, at, personId }
 
-/** The questions waiting for an answer right now, for the dashboard. */
-function openQuestions() { return [..._open.values()]; }
+/**
+ * Whose a question is (2026-10-17: every person's agent questions were listed to anyone signed in, and answerable by
+ * anyone who chats): the person it was asked for sees and answers it; one asked for nobody (before accounts, a
+ * hub routine) is a host's; no person at all (tests, a call before accounts) is not narrowed.
+ */
+function mayAnswer(person, q) {
+  if (!person?.id) return true;
+  if (q.personId) return q.personId === person.id;
+  return require('./session-access').isHost(person);
+}
 
-/** Answer from the panel: a choice by id, or the owner's own words. */
-function answerAtPanel(promptId, { choiceId, text } = {}) {
+/** The questions waiting for an answer right now that this person may see, for the dashboard. */
+function openQuestions(person) { return [..._open.values()].filter(q => mayAnswer(person, q)).map(({ personId, answer, ...q }) => q); }
+
+/** Answer from the panel: a choice by id, or the owner's own words. Another person's question is as if absent. */
+function answerAtPanel(promptId, { choiceId, text } = {}, person = null) {
   const q = _open.get(promptId);
-  if (!q) throw Object.assign(new Error('That question is no longer waiting for an answer.'), { status: 409 });
+  if (!q || !mayAnswer(person, q)) throw Object.assign(new Error('That question is no longer waiting for an answer.'), { status: 409 });
   const choice = choiceId ? q.choices.find(c => c.id === choiceId) : null;
   const own = String(text || '').trim().slice(0, 1000);
   if (!choice && !own) throw Object.assign(new Error('Pick a choice or write an answer.'), { status: 400 });
@@ -230,7 +241,7 @@ async function ask({ to, question, choices, note, blocks, timeoutSec, signal, sv
   const deadline = Date.now() + waitSec * 1000;
   // `panel: false`: a question with a card of its own at the panel (a new device's approval) is not the dock's too.
   if (panel) _open.set(prompt.id, { id: prompt.id, question: text, note: note ? String(note).slice(0, 800) : '',
-    choices: built.filter(c => c.type === 'option').map(c => ({ id: c.id, label: c.label })), at: new Date().toISOString() });
+    choices: built.filter(c => c.type === 'option').map(c => ({ id: c.id, label: c.label })), at: new Date().toISOString(), personId: personId || null });
   try {
     for (;;) {
       const cur = (targets.length && prompts.get(prompt.id)) || prompt;
@@ -329,4 +340,4 @@ function tell({ to, title, text, imagePath, files, svg, urgent, personId, meetin
     imageBytes: list.reduce((n, f) => n + f.bytes, 0) };
 }
 
-module.exports = { openQuestions, answerAtPanel, ask, tell, resolveTargets, ownTargets, reachNote, label, AGENT_ID, ASK_DEFAULT_SEC, ASK_MAX_SEC };
+module.exports = { openQuestions, answerAtPanel, mayAnswer, ask, tell, resolveTargets, ownTargets, reachNote, label, AGENT_ID, ASK_DEFAULT_SEC, ASK_MAX_SEC };
