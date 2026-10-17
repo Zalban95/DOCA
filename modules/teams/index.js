@@ -204,7 +204,8 @@ async function keepGoing(id, on) {
   let again = [];
   await engine.serial(id, () => {
     const team = store.get(id);
-    team.loop = { ...(team.loop || {}), on: !!on };
+    // Turned on after its rounds ran out: a fresh allowance — asking again is the decision to spend more tries.
+    team.loop = { ...(team.loop || {}), on: !!on, ...(on && (team.loop?.rounds || 0) >= engine.maxRounds(team) ? { rounds: 0 } : {}) };
     // Turned on after a task already gave up: it is tried again now.
     if (on) for (const t of team.tasks) if (t.gaveUp && !t.trial) { delete t.gaveUp; delete t.failedFor; }
     again = on ? require('./tries').again(team) : [];   // tries none of which held: started once more, on this ask only
