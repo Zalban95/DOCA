@@ -90,7 +90,8 @@ module.exports = [
           const manual = require('../manual-note').note(ctx.sessionId);
           const own = team.outsideBy === 'free' ? `\nYou started ${[...new Set(team.tasks.filter(x => String(x.agent).startsWith('harness:')).map(x => x.agent))].join(', ')} on your own — its switch is "On its own": say so in one line, and why it fits.` : '';
           const tried = Object.entries(require('../../teams/tries').groups(team)).map(([of, ts]) => `${of} runs ${ts.length} tries at once — about ${ts.length}× the tokens of one, each under the same budgets; the best is kept by its checks.`);
-          return `Team ${team.id} made — the hub runs it from here. ${said(v)}${tried.length ? `\n${tried.join('\n')} Say the multiple to the person.` : ''}\nTell the person what you set going; you are not waiting.${own}${manual ? `\nSay this to them too, in your words:${manual}` : ''}`;
+          const tests = team.testsGiven ? `\n${team.testsGiven.tasks.join(', ')} had no test: each runs the project's own \`${team.testsGiven.test}\` as its last step, and is done when it passes.` : '';
+          return `Team ${team.id} made — the hub runs it from here. ${said(v)}${tests}${tried.length ? `\n${tried.join('\n')} Say the multiple to the person.` : ''}\nTell the person what you set going; you are not waiting.${own}${manual ? `\nSay this to them too, in your words:${manual}` : ''}`;
         }
         if (a.action === 'add') {
           mine(a.team);

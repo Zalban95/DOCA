@@ -90,24 +90,6 @@ function shape({ title, goal, tasks, context } = {}, { workChats = false, projec
   return { title: String(title).trim().slice(0, 120), goal: String(goal || '').trim().slice(0, 1000), context: String(context || '').slice(0, 20000), tasks: out };
 }
 
-/**
- * A contract that already holds before any work proves nothing (2026-10-17: a game's four tasks were "done" on checks
- * like {file: "src/story.js", contains: "ending"} that the leader's own scaffold already met). A task with no test and
- * no tries whose checks are all files, every one there already, is refused with how to give it a real one.
- */
-async function provesNothing(tasks, cwd) {
-  if (!cwd) return;
-  const pc = require('../harness/plan-contracts');
-  for (const t of tasks) {
-    const checks = [t.contract?.check, ...(t.checks || [])].filter(Boolean);
-    if (t.test || t.trial || !checks.length || !checks.every(c => c.file && !require('../checks').kind(c))) continue;
-    const held = await Promise.all(checks.map(c => pc.verify({ check: c }, { cwd }).catch(() => ({ ok: false }))));
-    if (held.every(r => r.ok)) throw bad(`Task ${t.id}: its check already holds before any work (${held.map(r => r.why).join('; ')}), so it proves nothing. `
-      + 'Give it one that fails until the work is done — a test (test: "npm test", with a test that fails now), a file or words that do not exist yet, '
-      + 'a page that shows what the task makes ({page, selector}) — or leave the check out and say "done when" in words.');
-  }
-}
-
 /** Make a team led by conversation `by`, and start every task with nothing before it. */
 async function create(args, { by, keepGoing = false, maxRounds = null, asked = false, person = null } = {}) {   // asked: the person named an outside harness (outside.js)
   const org = require('../harness/organization');
@@ -121,12 +103,14 @@ async function create(args, { by, keepGoing = false, maxRounds = null, asked = f
     const root = require('./place').rootOf({ projectId: project.id, by }) || project.root;
     if (!require('fs').existsSync(require('path').join(root, '.git'))) throw bad(`Tries each work in a git worktree of their own, and the project ${project.name} is not a git repository.`);
   }
-  await provesNothing(shaped.tasks, project ? require('./place').rootOf({ projectId: project.id, by }) || project.root : null);
+  const at = project ? require('./place').rootOf({ projectId: project.id, by }) || project.root : null;
+  const given = await require('./contracts').defaultTests(shaped.tasks, project, at);   // a code task the leader gave no test
+  await require('./contracts').provesNothing(shaped.tasks, at);
   const started = require('./outside').gate(shaped.tasks, { asked, person, project, by });   // 'asked', 'free' (its switch) or null
   if (shaped.tasks.some(t => t.agent !== 'work' && !require('./outside').isOutside(t.agent)) && !require('../agents/registry').enabled())
     throw require('../agents/off')('Specialist agents are switched off (agents.enabled). Ask the person to turn them on.');
   const rounds = maxRounds == null ? null : Math.max(0, Math.min(20, Math.floor(Number(maxRounds)) || 0));
-  const team = { id: store.newId(), ...shaped, by, projectId: project?.id || null, state: 'running', createdAt: new Date().toISOString(), endedAt: null,
+  const team = { id: store.newId(), ...shaped, by, projectId: project?.id || null, ...(given ? { testsGiven: given } : {}), state: 'running', createdAt: new Date().toISOString(), endedAt: null,
     loop: { on: !!keepGoing, rounds: 0, ...(rounds == null ? {} : { maxRounds: rounds }) }, notes: [], ...(started ? { outsideBy: started } : {}) };
   store.save(team);
   listen();
@@ -149,11 +133,13 @@ async function add(id, args = {}, { by, asked = false, person = null } = {}) {
   const project = team.projectId ? require('../projects/store').get(team.projectId) : null;
   const shaped = shape({ title: team.title, tasks: args.tasks }, { workChats: !org.mayCreate(by || team.by, 'work'), project: !!project, known: team.tasks });
   if (team.tasks.length + shaped.tasks.length > MAX_TASKS * 3) throw bad(`A team's board holds at most ${MAX_TASKS * 3} tasks; make a new team for the next part.`);
-  await provesNothing(shaped.tasks, require('./place').rootOf(team));
+  const given = await require('./contracts').defaultTests(shaped.tasks, project, require('./place').rootOf(team));
+  await require('./contracts').provesNothing(shaped.tasks, require('./place').rootOf(team));
   require('./outside').gate(shaped.tasks, { asked, person, project, by: team.by });
   await engine.serial(id, () => {
     const now = store.get(id);
     now.tasks.push(...shaped.tasks);
+    if (given) now.testsGiven = { test: given.test, tasks: [...(now.testsGiven?.tasks || []), ...given.tasks] };
     store.save(now);
   });
   require('./announce').line(team, `${shaped.tasks.length} more task${shaped.tasks.length === 1 ? '' : 's'}: ${shaped.tasks.map(t => `${t.id} ${t.agent}${t.after.length ? ` after ${t.after.join(', ')}` : ''}`).join('; ')}`);
