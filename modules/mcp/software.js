@@ -43,7 +43,8 @@ function stateOf(o, opts = {}) {
   const here = !o.web && installed(o, opts);
   if (o.mcp) {
     const added = !!require('./registry').get(o.mcp);
-    return added ? 'connected' : here ? 'connect' : 'install';
+    // Missing: the panel installs only what its catalogue can (the Craft suite); anything else, its maker's page.
+    return added ? 'connected' : here ? 'connect' : require('./catalog').get(o.mcp)?.installable ? 'install' : 'download';
   }
   if (o.account) {
     const acc = require('../connectors/vault').view(o.account);
@@ -61,7 +62,7 @@ function forJob(job, opts = {}) {
   const ls = opts.ls || lister();
   return OPTIONS.filter(o => (!job || o.jobs.includes(job)) && (!o.os || o.os === platform))
     .map(o => ({ name: o.name, jobs: o.jobs, marks: o.marks, site: o.site, state: stateOf(o, { ...opts, ls }),
-      ...(o.mcp ? { mcp: o.mcp } : {}), ...(o.account ? { account: o.account } : {}), ...(o.web ? { web: true } : {}) }))
+      ...(o.mcp ? { mcp: o.mcp, transport: require('./catalog').get(o.mcp)?.transport || 'stdio' } : {}), ...(o.account ? { account: o.account } : {}), ...(o.web ? { web: true } : {}) }))
     .sort((a, b) => RANK[a.state] - RANK[b.state] || a.name.localeCompare(b.name));
 }
 

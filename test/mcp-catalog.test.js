@@ -55,6 +55,12 @@ test('no catalogue row runs an unpinned package: a version and the day it was ch
       assert.match(pkg, /^(@[^/]+\/)?[^@]+@\d+\.\d+\.\d+$/, `${c.id}: ${pkg} is pinned to a version`);
       assert.match(c.checked || '', /^\d{4}-\d{2}-\d{2}$/, `${c.id} says the day its pin was checked`);
     }
+    if (c.command === 'uvx') {   // `name@x.y.z`, or `--from name==x.y.z` before the entry point
+      const from = c.args.indexOf('--from');
+      const pkg = from >= 0 ? c.args[from + 1] : c.args.find(w => !w.startsWith('-'));
+      assert.match(pkg, from >= 0 ? /^[\w.-]+==\d+\.\d+\.\d+$/ : /^[\w.-]+@\d+\.\d+\.\d+$/, `${c.id}: ${pkg} is pinned to a version`);
+      assert.match(c.checked || '', /^\d{4}-\d{2}-\d{2}$/, `${c.id} says the day its pin was checked`);
+    }
   }
 });
 
