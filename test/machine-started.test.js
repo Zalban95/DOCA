@@ -35,7 +35,8 @@ test('Docker\'s restart policy is named as who started a container, over an olde
   // Through origin.of: a service row (doca-<id>) and a container row read Docker's part when no line says.
   assert.equal(origin.of('service', 'qwentts', { up: true }).by, 'docker');
   assert.equal(origin.of('container', 'doca-qwentts', { up: true, name: 'doca-qwentts' }).outside, false);
-  assert.equal(origin.of('container', 'scratch', { up: true, name: 'scratch' }).text, 'started outside DOCA');
+  // origin.of reads this machine's own uptime (a CI runner booted minutes ago): the outside case is one with no policy.
+  assert.equal(origin.of('container', 'manual', { up: true, name: 'manual' }).text, 'started outside DOCA');
 
   // A person's start from before the container's current start is not this start; one after it still is.
   const activity = require('../modules/activity');
