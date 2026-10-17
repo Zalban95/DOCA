@@ -24,7 +24,7 @@ Both are catalogue rows; propose the one that fits with `install_propose` `{kind
 | id | what | needs |
 |---|---|---|
 | `mcp-for-unity` | open source (MIT), about fifty tools: scenes, GameObjects, components, C# scripts, assets, tests, profiling, builds | Unity 2021.3 to 6, uv; in Unity: Window → Package Manager → + → Add package from git URL `https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#v10.3.0` |
-| `unity` | Unity's own server, through the relay its AI Assistant package installs | Unity 6+, the project linked to Unity Cloud, a Unity AI subscription or trial; accept the first connection in Project Settings → AI → Unity MCP |
+| `unity` | Unity's own server, through the relay its AI Assistant package installs | Unity 6+, the project linked to Unity Cloud, a Unity AI subscription or trial; accept the first connection in Unity's Project Settings (AI, then Unity MCP) |
 
 No subscription: `mcp-for-unity`. The person already pays for Unity AI: `unity`. If one is connected, use it — do not
 add the second. Start a stopped one with `mcp_connect`.
