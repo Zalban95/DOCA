@@ -175,7 +175,7 @@ module.exports = [
       }
       fs.writeFileSync(abs, String(content ?? ''), 'utf8');
       return `Wrote ${Buffer.byteLength(String(content ?? ''))} bytes to ${abs}`
-        + (backup ? ` (previous version kept at ${backup})` : '');
+        + (backup ? ` (previous version kept at ${backup})` : '') + require('./syntax').check(abs);   // a syntax error said at once
     },
   },
   {

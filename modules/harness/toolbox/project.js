@@ -91,7 +91,8 @@ module.exports = [
       const r = require('../../projects/search').replaceInFiles(where(a.path, ctx),
         { ...a, dryRun: !a.apply, refuse: abs => require('../control-plane').which(abs) || require('../../edition-mode').inCode(abs) });
       const head = `${r.written ? 'Replaced' : 'Would replace'} ${r.replacements} occurrence(s) in ${r.files} file(s)`
-        + (r.written ? '.' : '. Nothing is written yet: call again with apply: true.');
+        + (r.written ? '.' : '. Nothing is written yet: call again with apply: true.')
+        + (r.written ? r.changes.slice(0, 20).map(c => { const said = c.abs ? require('./syntax').check(c.abs) : ''; return said ? said.replace('\n⚠', `\n⚠ ${c.file}:`) : ''; }).join('') : '');   // a syntax error said at once
       return clip([head, ...r.changes.flatMap(c => [`${c.file} (${c.replacements})`,
         ...c.lines.slice(0, 10).map(l => `  ${l.line}: - ${l.before.trim()}\n  ${l.line}: + ${l.after.trim()}`)])].join('\n'));
     },
