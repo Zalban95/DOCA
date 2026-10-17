@@ -18,12 +18,13 @@ const path = require('path');
 
 /** Where Unity's MCP relay is (unity.com/blog/unity-ai-mcp-how-to-get-started): installed by its AI Assistant package. */
 function unityRelay(platform = process.platform, home = os.homedir()) {
-  if (platform === 'win32') return path.join(home, '.unity', 'relay', 'relay_win.exe');
+  const p = platform === 'win32' ? path.win32 : path.posix;   // that OS's separators, wherever this runs
+  if (platform === 'win32') return p.join(home, '.unity', 'relay', 'relay_win.exe');
   if (platform === 'darwin') {
     const arch = process.arch === 'arm64' ? 'arm64' : 'x64';
-    return path.join(home, '.unity', 'relay', `relay_mac_${arch}.app`, 'Contents', 'MacOS', `relay_mac_${arch}`);
+    return p.join(home, '.unity', 'relay', `relay_mac_${arch}.app`, 'Contents', 'MacOS', `relay_mac_${arch}`);
   }
-  return path.join(home, '.unity', 'relay', 'relay_linux');
+  return p.join(home, '.unity', 'relay', 'relay_linux');
 }
 
 const ROWS = [
