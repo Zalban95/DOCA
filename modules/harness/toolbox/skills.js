@@ -75,7 +75,7 @@ module.exports = [
       },
       required: ['action'],
     },
-    run: async (a, ctx = {}) => {
+    run: (a, ctx = {}) => {   // synchronous but for find and get, which answer a promise (they reach the network)
       const skills = require('../skills');
       switch (a.action) {
         case 'find': return require('../skill-get').find(a.query);
