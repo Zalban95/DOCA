@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node scripts/serve.js",
     "test": "node --test --test-timeout=120000",
-    "test:full": "node scripts/full-test.js",
-    "plan": "node scripts/plan.js"
+    "test:full": "node scripts/run-full.js",
+    "plan": "node scripts/plan.js",
+    "test:part": "node scripts/run-part.js"
   }
 }

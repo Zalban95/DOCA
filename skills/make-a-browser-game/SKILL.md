@@ -28,8 +28,8 @@ in it. Read `docs/README.md` in it: which file does what, and how to add each th
 `docs/plan.json` (copy `docs/plan.example.json`) is the game's content as a list: worlds with their levels, look and
 music, every enemy, item and boss with what it does, every picture, sound and tune, every story beat. Then
 `node scripts/plan.js`: a stand-in file for each planned entity (so levels can use its name at once), each family's
-and world's index. From then on `npm test` lists every planned thing not yet real as a todo, and `npm run test:full`
-fails until none is left. The plan is the contract — a thin plan makes a thin game.
+and world's index. From then on `npm test` lists every planned thing not yet real as a todo, `npm run test:part --
+<part>` fails until that part is real, and `npm run test:full` fails until none is left. The plan is the contract — a thin plan makes a thin game.
 
 "A game" with nothing more said: one world of three levels, three enemies, two items. **"Rich", "full", "with lots of
 features", "like a real one"** means at least: three worlds of three to four levels, each world its own look, music
@@ -58,8 +58,10 @@ create (more go on with `team` add):
 | integrate | — (all, after every task above) | `npm run test:full` passes on the merged game |
 | review | — (after integrate) | a numbered list of what is wrong or missing, each with the file that owns it |
 
-Every code task: `test: "npm test"` (its own part done; the other parts show as todo), a "done when" a person would
-see, and the files it owns in its errand. Give integrate `test: "npm run test:full"`. The team's context says: read
+Every code task gets its own part's gate as its test — `test: "npm run test:part -- enemies"` (bosses, items, world1,
+art, audio, story…; the player and ui tasks, which own no plan part, `npm test`) — which fails until that part of the
+plan is real while the other parts show as todo; a "done when" a person would see; and the files it owns in its errand.
+Give integrate `test: "npm run test:full"`. The team's context says: read
 `docs/README.md` and `docs/design.md` first; touch only your own files; after adding a file to a family or a level,
 run `node scripts/plan.js`; never change `docs/plan.json` (say in your report what you would add); keep the code simple and the content rich (`ponytail` is about code, never about fewer
 features); commit on your branch with a message that says why.

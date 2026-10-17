@@ -55,6 +55,8 @@ test('the plan: stand-ins for every planned entity, listed as todo, and the full
   // Made real: the stand-in mark gone, the todo with it.
   const bat = path.join(dir, 'src', 'entities', 'enemies', 'bat.js');
   fs.writeFileSync(bat, fs.readFileSync(bat, 'utf8').replace('  static stub = true;\n', ''));
+  assert.notEqual(nodeTest(dir, ['test/plan.test.js'], { GAME_PLAN: 'items' }).status, 0, 'a part\'s own gate fails while its stand-ins remain');
   r = nodeTest(dir, ['test/plan.test.js']);
   assert.doesNotMatch(r.stdout, /enemies: bat # TODO/);
+  assert.equal(nodeTest(dir, ['test/plan.test.js'], { GAME_PLAN: 'enemies' }).status, 0, 'the enemies part is real: its gate passes, the rest still todo');
 });
