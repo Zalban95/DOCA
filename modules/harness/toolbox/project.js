@@ -142,8 +142,8 @@ module.exports = [
   {
     name: 'project',
     description: 'Projects: a folder with its kind, its build/test commands, and what is installed. info: the project '
-      + 'this conversation works in (or `id`). list: all projects. open: make a folder a project (root). bind: make '
-      + 'this conversation work in a project. run: run one of its commands by name (build, test, lint, install…), in '
+      + 'this conversation works in (or `id`). list: all projects. open: make a folder a project (root) — a conversation not yet in a '
+      + 'project then works in it. bind: make this conversation work in a project. run: run one of its commands by name (build, test, lint, install…), in '
       + 'the project root; it waits up to waitSec (default 60) and otherwise returns a background job to follow '
       + 'with shell_job. Checkpoints undo a run: one is taken before each of your turns in a project (when '
       + 'files changed); checkpoint takes one now, checkpoints lists them, changes shows what differs since '
@@ -182,7 +182,19 @@ module.exports = [
       };
       switch (a.action) {
         case 'list': return access.visible(person, projects.list()).map(p => `${p.id} — ${p.name} — ${p.root}${(r => (r === 'see' ? ' (shared to see)' : r === 'work' ? ' (shared to work on)' : ''))(access.rightOn(person, p))}`).join('\n') || 'No projects yet.';
-        case 'open': { const p = projects.create({ root: resolvePath(a.root, ctx), name: a.name }, person); return `Project ${p.id}: ${p.name} at ${p.root}.`; }
+        case 'open': {
+          const p = projects.create({ root: resolvePath(a.root, ctx), name: a.name }, person);
+          // A work chat or a person's chat that makes a project works in it from then on — its tools start there and the
+          // Projects page shows it as the project's chat (2026-10-17: a game team's leader made its project and stayed
+          // outside it). The Orchestrator stays the front desk; a specialist works where its leader sent it.
+          const s = ctx.sessionId && require('../memory').getSession(ctx.sessionId);
+          if (s && !s.projectId && !require('../own-main').isMain(ctx.sessionId) && !require('../../agents/missions').forSession(ctx.sessionId)) {
+            projects.bind(p.id, ctx.sessionId);
+            require('../../projects/brief').forget(p.id);
+            return `Project ${p.id}: ${p.name} at ${p.root}. This conversation now works in it: your tools start there, and it is the project's chat.`;
+          }
+          return `Project ${p.id}: ${p.name} at ${p.root}.`;
+        }
         case 'bind': {
           if (!ctx.sessionId) throw new Error('No conversation to bind.');
           const p = projects.bind(pick().id, ctx.sessionId);

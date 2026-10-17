@@ -1,0 +1,40 @@
+/* The page: the game centred in whatever space it has. On a touch screen the controls take space of their own —
+   below the game held upright, beside it held sideways — never on top of it. */
+html, body { margin: 0; height: 100%; background: #0b0f1a; overflow: hidden; }
+body { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  font-family: system-ui, sans-serif; }
+#app { position: fixed; inset: 0; display: grid; grid-template: "stage" 1fr / 1fr;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+#stage { grid-area: stage; position: relative; min-width: 0; min-height: 0; }
+#game { position: absolute; inset: 0; }
+#game canvas { display: block; }
+
+.pad { display: none; }
+body.touch .pad { display: flex; align-items: center; justify-content: center; gap: 18px; }
+#pad-left { grid-area: left; }
+#pad-right { grid-area: right; }
+
+/* Held upright: the game on top, the pads in a row under it. */
+body.touch #app { grid-template: "stage stage" 1fr "left right" minmax(150px, 28vh) / 1fr 1fr; }
+/* Held sideways: the pads in columns either side. */
+@media (orientation: landscape) {
+  body.touch #app { grid-template: "left stage right" 1fr / minmax(150px, 20vw) 1fr minmax(150px, 20vw); }
+  body.touch #pad-right { flex-direction: column-reverse; }
+}
+
+.btn { width: 76px; height: 76px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .35);
+  background: rgba(255, 255, 255, .08); color: #fff; font: 700 24px system-ui, sans-serif; touch-action: none;
+  display: grid; place-items: center; padding: 0; }
+.btn.on { background: rgba(255, 255, 255, .32); transform: scale(.94); }
+.btn-a { border-color: rgba(120, 220, 140, .7); }
+.btn-b { border-color: rgba(240, 170, 90, .7); }
+@media (orientation: landscape) and (max-height: 500px) { .btn { width: 64px; height: 64px; } }
+
+/* Pause, for a thumb: in a corner that is never the game's — above it held upright, in the left column sideways. */
+#pause, #turn { display: none; }
+body.touch #pause { display: grid; position: fixed; top: calc(10px + env(safe-area-inset-top)); left: calc(10px + env(safe-area-inset-left));
+  width: 48px; height: 48px; font-size: 16px; }
+@media (orientation: portrait) {
+  body.touch #turn { display: block; position: fixed; top: calc(24px + env(safe-area-inset-top)); left: 70px; right: 70px;
+    text-align: center; color: #cfd8dc; font-size: 14px; opacity: .75; pointer-events: none; }
+}

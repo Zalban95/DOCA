@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b0f1a">
+<meta name="mobile-web-app-capable" content="yes">
+<title>__TITLE__</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- The game sits in #stage, centred and scaled to fit. On a touch screen the pads get space of their own beside or
+     below it (style.css), so a thumb never covers the game. -->
+<div id="app">
+  <div id="pad-left" class="pad">
+    <button class="btn" data-key="left" aria-label="Left">&#9664;</button>
+    <button class="btn" data-key="right" aria-label="Right">&#9654;</button>
+  </div>
+  <div id="stage"><div id="game"></div></div>
+  <div id="pad-right" class="pad">
+    <button class="btn btn-b" data-key="action" aria-label="Action">B</button>
+    <button class="btn btn-a" data-key="jump" aria-label="Jump">A</button>
+  </div>
+</div>
+<button id="pause" class="btn" data-key="pause" aria-label="Pause">II</button>
+<div id="turn">Turn your phone sideways for a bigger game</div>
+<script src="vendor/phaser.min.js"></script>
+<script type="module" src="src/main.js"></script>
+</body>
+</html>

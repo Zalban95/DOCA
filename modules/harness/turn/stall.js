@@ -20,7 +20,7 @@
 const path = require('path');
 
 const PLAN_MOVES = new Set(['add', 'change', 'cancel', 'split', 'draft', 'propose']);
-const HANDED = { team: a => ['create', 'keep_going'].includes(a.action), agent_dispatch: () => true,
+const HANDED = { team: a => ['create', 'add', 'keep_going', 'merge'].includes(a.action), agent_dispatch: () => true,
   work_chats: a => ['create', 'send', 'report', 'restart'].includes(a.action) };
 const WRITES = new Set(['write_file', 'replace_in_files']);
 const GIT = /\bgit\b[^;&|\n]*\b(commit|merge|cherry-pick)\b/;

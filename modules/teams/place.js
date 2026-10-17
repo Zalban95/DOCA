@@ -43,9 +43,17 @@ function before(team, id, seen = new Set()) {
   return seen;
 }
 
-/** Whether a task gets its own worktree: asked for, or a writer that another writer could run beside. */
+/** The worktrees of the tasks this one comes after (a task with tries: the one kept). */
+const depWorktrees = (team, t) => (t.after || []).map(id => require('./tries').taskFor(team, id)?.place?.worktree).filter(Boolean);
+
+/**
+ * Whether a task gets its own worktree: asked for; after tasks that worked in worktrees (their work is on their
+ * branches, not in the project's folder, so only a worktree made from them holds it — a reader's too); or a writer
+ * that another writer could run beside.
+ */
 function wantsWorktree(team, t) {
   if (t.worktree === true || t.worktree === false) return t.worktree;
+  if (depWorktrees(team, t).length) return true;
   if (!writes(t.agent)) return false;
   const mine = before(team, t.id);
   return team.tasks.some(o => o.id !== t.id && writes(o.agent) && !mine.has(o.id) && !before(team, o.id).has(t.id));
@@ -74,10 +82,16 @@ async function forTask(team, t) {
   if (t.place?.worktree && fs.existsSync(t.place.worktree.path)) return { fields: { projectId: p.id, worktree: t.place.worktree }, place: t.place };
   if (wantsWorktree(team, t)) {
     try {
-      // After a task that worked in a worktree, start from its branch: what it made is there, not in the root yet.
-      const dep = (t.after || []).map(id => require('./tries').taskFor(team, id)?.place?.worktree).find(Boolean);   // a group: its kept try
-      const wt = await require('../projects/worktrees').add(root, { branch: `team/${require('./doc').slug(team.title)}/${t.id}`, base: dep?.branch || null });
-      return { fields: { projectId: p.id, worktree: wt }, place: { root: wt.path, worktree: wt } };
+      // After tasks that worked in worktrees, start from their branches: what they made is there, not in the root yet.
+      // The first is the base and the others are merged in, so a task after several (the integration, the test) has
+      // all of it (2026-10-17: a team's last task started from one of four branches); a conflict is named, not forced.
+      const deps = [...new Set(depWorktrees(team, t).map(w => w.branch))];
+      const worktrees = require('../projects/worktrees');
+      const wt = await worktrees.add(root, { branch: `team/${require('./doc').slug(team.title)}/${t.id}`, base: deps[0] || null });
+      const joined = deps.length > 1 ? await worktrees.mergeInto(wt.path, deps.slice(1)) : null;
+      return { fields: { projectId: p.id, worktree: wt }, place: { root: wt.path, worktree: wt,
+        ...(deps.length ? { from: deps.filter(b => !joined?.conflicts.some(c => c.branch === b)) } : {}),
+        ...(joined?.conflicts.length ? { conflicts: joined.conflicts } : {}) } };
     } catch (e) {
       return { fields: fields.projectId ? fields : null, place: { root, shared: true, why: `no worktree of its own: ${String(e.message || e).slice(0, 160)}` } };
     }

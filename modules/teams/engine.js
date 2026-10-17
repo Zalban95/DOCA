@@ -63,6 +63,8 @@ async function dispatch(team, t) {
     if (t.trial && !place?.worktree) { t.error = `a try works in a worktree of its own, and none could be made${place?.why ? `: ${place.why}` : ''}`; return; }
     if (place) t.place = place;
     const where = place ? `\n\n## Where you work\n${place.worktree ? `In the project's git worktree ${place.worktree.path}, on the branch ${place.worktree.branch} — your own, so teammates working at the same time do not touch your files. Commit your work there; merging it back is the person's call.`
+      + (place.from?.length ? ` It starts with the work of the tasks before yours: ${place.from.join(', ')}${place.from.length > 1 ? ', merged' : ''}.` : '')
+      + (place.conflicts?.length ? ` These branches could not be merged in for you, because they change the same lines: ${place.conflicts.map(c => `${c.branch} (${c.files.join(', ') || 'files not named'})`).join('; ')}. Merge each first (\`git merge <branch>\`), keep what both meant, commit, then do your task.` : '')
       : `In the project's folder ${place.root}, shared with your teammates.${place.why ? ` (${place.why})` : ''}`}` : '';
     if (t.agent === 'work') {
       const org = require('../harness/organization');
@@ -123,6 +125,12 @@ async function step(id) {
     for (const v of views(team)) {
       const t = team.tasks.find(x => x.id === v.id);
       if (v.state === 'checking' && !t.verdict) {
+        // Work left uncommitted in its own worktree is committed on its branch first: the tasks after it start from
+        // the branch, and a cheaper model often forgets the commit its errand asked for.
+        if (t.place?.worktree?.path && !require('./outside').isOutside(t.agent)) {
+          const n = await require('../projects/worktrees').commitLeft(t.place.worktree.path, `${t.id}: what the task "${t.title}" left uncommitted, committed by its team at its end`).catch(() => 0);
+          if (n) require('./announce').line(team, `${t.id} "${t.title}": ${n} file${n === 1 ? '' : 's'} it left uncommitted committed on ${t.place.worktree.branch}`);
+        }
         const sessionId = t.missionId ? require('../agents/missions').get(t.missionId)?.sessionId : t.sessionId;   // its test, as it ran it
         const at = t.trial ? require('./tries').folder(t) : { cwd: cwdOf(team, t) };   // a try: in its own worktree, never the project's folder
         const score = require('./tries-score');
