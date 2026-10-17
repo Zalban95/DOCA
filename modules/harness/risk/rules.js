@@ -39,7 +39,7 @@ const TOOLS = {
   project: reads(['info', 'list', 'checkpoints', 'changes', 'worktree_status', 'open'],
     { when: { action: ['run', 'restore', 'worktree_remove'] }, tier: 'reversible', way: WAY.project, touches: true }).concat([{ tier: 'reversible', way: WAY.project }]),
   shell_job: reads(['status', 'output', 'list'], { tier: 'reversible', way: WAY.hub }),
-  skill: reads(['list', 'read', 'file', 'search'], { tier: 'reversible', way: 'a skill is a file in the skills folder; shipped skills are never overwritten' }),
+  skill: reads(['list', 'read', 'file', 'search', 'find'], { tier: 'reversible', way: 'a skill is a file in the skills folder; shipped skills are never overwritten' }),
   canvas: reads(['read', 'list', 'preview'], { tier: 'reversible', way: 'a canvas keeps its revisions' }),
   recipe: reads(['list', 'show'], { tier: 'reversible', way: 'a recipe keeps its earlier revisions; each step of a run is classified itself' }),
   work_chats: reads(['list', 'read', 'recall'], { tier: 'reversible', way: WAY.work }),
