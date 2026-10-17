@@ -4,7 +4,8 @@
  * Who started a machine, read back from what was written down (acts.js, and the hub's own lines in activity.js) — so a
  * machine row can say "started by <the person's name> from <the screen's or device's name>, 2 h ago" (both read from their records), "started by an agent in the
  * conversation …", "started by DOCA (lent to a mission)", or, for one running that no line started — a VM started
- * with virt-manager, a container started with docker run in a terminal — "started outside DOCA" (asked 2026-10-08:
+ * with virt-manager, a container started with docker run in a terminal — "started outside DOCA", unless Docker's own
+ * restart policy brought it up (at boot, or after it failed: started.js says which) (asked 2026-10-08:
  * "I started the VMs manually, log the actions so there is no confusion"). A stopped machine says who stopped it.
  *
  * A machine is found by its keys: `kind:id`, and for a container also the service it is (`doca-<id>` → `service:<id>`)
@@ -55,7 +56,13 @@ function of(kind, id, { up, name = null, project = null, fallback = null } = {})
   const lines = keysOf(kind, id, { name, project }).map(k => map.get(k)).filter(Boolean).sort((a, b) => (a.at < b.at ? 1 : -1));
   const last = lines[0];
   if (up) {
-    if (last && STARTS.has(last.act)) return phrase(last);
+    // A container Docker brought up by its restart policy (after a reboot, after a failure): said so, also over an
+    // older line of DOCA's whose start it is no longer (started.js).
+    const docker = kind === 'container' ? (name || id) : kind === 'service' ? `doca-${id}` : null;
+    const byDocker = docker && require('./started').phrase(docker);
+    const since = byDocker && Date.parse(require('./started').startedAt(docker));
+    if (last && STARTS.has(last.act) && !(byDocker && Date.parse(last.at) < since - 120000)) return phrase(last);
+    if (byDocker) return byDocker;
     if (fallback) return { text: fallback, at: null, by: 'hub', outside: false };
     return { text: 'started outside DOCA', at: null, by: null, outside: true };
   }

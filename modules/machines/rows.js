@@ -89,6 +89,7 @@ async function read() {
   ];
   // Who started each (origin.js): "started by …" or "started outside DOCA"; a stopped one, who stopped it.
   const origin = require('./origin');
+  await require('./started').read(rows.filter(r => r.kind === 'container' && r.point !== 'down').map(r => r.name));
   for (const r of rows) {
     const c = r.kind === 'computer' ? computers.list.find(x => x.id === r.id) : null;
     if (r.stray && r.install !== 'this') { r.origin = origin.of('computer', r.id, { up: true }); continue; }
