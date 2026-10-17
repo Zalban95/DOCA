@@ -26,8 +26,10 @@ function stats(ids) {
   for (const id of ids) {
     // Its last report, which is what the person gets (audit 2026-10-17: the judge read only the front's hand-over and
     // failed three runs that had delivered every file).
-    const said = memory().messages(id).filter(r => r.role === 'assistant' && String(r.content || '').trim()).at(-1)?.content;
-    if (said) out.childText = `${out.childText}${out.childText ? '\n\n' : ''}${String(said).slice(0, 4000)}`;
+    // The last three things it said: a report is often followed by a short correction to it ("the report quoted above,
+    // with four corrections"), and the correction alone read as nothing delivered (Haiku run, 2026-10-17).
+    const said = memory().messages(id).filter(r => r.role === 'assistant' && String(r.content || '').trim()).slice(-3).map(r => String(r.content)).join('\n\n');
+    if (said) out.childText = `${out.childText}${out.childText ? '\n\n' : ''}${said.slice(-6000)}`;
     for (const r of memory().messages(id)) if (r.role === 'assistant' && Array.isArray(r.tool_calls)) out.childTools.push(...r.tool_calls.map(c => c.function?.name).filter(Boolean));
     for (const run of require('../harness/runs').forSession(id, 200)) {
       out.childSteps += run.steps || 0;
