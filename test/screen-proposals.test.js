@@ -52,7 +52,7 @@ test('only the keys a screen may be proposed, and never someone else\'s screen o
   const memberPerson = { ...member.user, role: 'member' };
   assert.match(await propose([{ path: 'ambient.place', value: 'Rome' }], phone.device.id, memberPerson), /someone else's/);
   assert.match(await tools.call('settings_propose', { reason: 'r', screen: 'this', changes: [{ path: 'call.silenceMs', value: 900 }] }, [], { user: owner() }),
-    /did not come from a screen; name one/);
+    /did not come from a screen: leave screen out to change the default every screen starts from/);
 });
 
 test('a hive proposal is unchanged: it writes the prefs file', async () => {
