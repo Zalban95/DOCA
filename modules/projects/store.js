@@ -53,7 +53,9 @@ function create({ root, name } = {}, person = null) {
       root = path.join(mine, slug);
       fs.mkdirSync(root, { recursive: true });
     }
-    const inside = (path.resolve(String(root)) + path.sep).startsWith(mine + path.sep);
+    // By real path: a symlinked folder inside theirs (a cloned repository can carry one) is where it points, not where it sits.
+    const real = f => { try { return fs.realpathSync(f); } catch { return path.resolve(f); } };
+    const inside = (real(String(root)) + path.sep).startsWith(real(mine) + path.sep);
     if (!inside) throw bad(`Your projects live in ${mine}: name a new one, or open a folder inside it. Other folders of this machine are an admin's.`, 403);
   }
   const abs = path.resolve(String(root || '').replace(/^~(?=$|[/\\])/, require('os').homedir()));
