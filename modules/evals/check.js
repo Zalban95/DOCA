@@ -17,17 +17,25 @@
  * With --follow the tool checks read the front's tools and its work chats' together (`allTools`).
  *
  * The judge is the harness's own `ask` (no tools, no memory, no charter): it reads the question, the rubric and the
- * answer, and its first word is PASS or FAIL. It is the only check that spends tokens. Comparing models, one judge grades
+ * answer, with the turn's calls in order, and its first word is PASS or FAIL. It is the only check that spends tokens. Comparing models, one judge grades
  * them all (DOCA_EVAL_JUDGE: --judge, else the hub's configured model), never the model under test.
  */
 const named = (tools, name) => tools.some(t => t === name || (name.endsWith('__') && t.startsWith(name)));
+
+/** The calls a judge reads: name and a clipped line of arguments (run.js `calls`), else names; none said as such. */
+function calledLines(o) {
+  const calls = (o.calls?.length ? o.calls : (o.allTools || o.tools || []).map(name => ({ name, args: '' }))).slice(0, 40);
+  return calls.length ? calls.map((c, i) => `${i + 1}. ${c.name}${c.args ? ` ${String(c.args).slice(0, 120)}` : ''}`).join('\n') : '(none)';
+}
 
 async function judge(rubric, prompt, outcome) {
   // A comparison's one judge (bin/doca-eval.js sets it): `provider/model`, never the model under test.
   const [jp, ...jm] = String(process.env.DOCA_EVAL_JUDGE || '').split('/');
   const reply = await require('../harness/agent').ask({ ...(jp && jm.length ? { provider: jp, model: jm.join('/') } : {}),
-    system: 'You grade an AI assistant\'s answer against a rubric. Reply with PASS or FAIL as the first word, then one short sentence saying why. Judge only what the rubric asks.',
-    user: `Question:\n${prompt}\n\nRubric:\n${rubric}\n\nAnswer:\n${String(outcome.text || '').slice(0, 6000)}`,
+    system: 'You grade an AI assistant\'s turn against a rubric: what it did (the tools it called, in order) and what it answered. Reply with PASS or FAIL as the first word, then one short sentence saying why. Judge only what the rubric asks.',
+    // What it did, not only what it said (audit 2026-10-17: three models read the android-app skill first and were failed
+    // for "not reading a procedure", because the judge saw only the final words).
+    user: `Question:\n${prompt}\n\nRubric:\n${rubric}\n\nTools it called, in order:\n${calledLines(outcome)}\n\nAnswer:\n${String(outcome.text || '').slice(0, 6000)}`,
   });
   return { pass: /^\W*pass\b/i.test(reply), why: reply.replace(/^\W*(pass|fail)\b[:.\s-]*/i, '').slice(0, 300) };
 }

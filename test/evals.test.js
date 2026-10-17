@@ -196,3 +196,12 @@ test('comparing models, one judge grades them all — never the model under test
     assert.equal(asked[0].model, 'judge-model');
   } finally { agent.ask = real; delete process.env.DOCA_EVAL_JUDGE; }
 });
+
+test('the judge reads what the turn did — its calls — as well as what it answered (audit 2026-10-17)', async () => {
+  const agent = require('../modules/harness/agent'), real = agent.ask, asked = [];
+  agent.ask = async o => { asked.push(o); return 'PASS read it'; };
+  try {
+    await require('../modules/evals/check').one({ judge: 'reads the skill' }, 'q', { text: 'Built.', calls: [{ name: 'skill', args: '{"action":"read","name":"android-app"}' }] });
+    assert.match(asked[0].user, /Tools it called, in order:\n1\. skill \{"action":"read","name":"android-app"\}/);
+  } finally { agent.ask = real; }
+});
