@@ -46,7 +46,7 @@ async function ask(e, { client, sessionId, signal, say = () => {} }) {
     signal?.addEventListener?.('abort', () => ctrl.abort(), { once: true });
     answer.then(() => ctrl.abort());
     require('../harness/reach').ask({ to: [deviceId], question: 'Go over your budget for this turn?', note: req.summary,
-      choices: [{ id: 'approve', label: 'Yes, this turn' }, { id: 'deny', label: 'No' }], timeoutSec: 240, signal: ctrl.signal })
+      choices: [{ id: 'approve', label: 'Yes, this turn' }, { id: 'deny', label: 'No' }], timeoutSec: 240, signal: ctrl.signal, personId: person?.id || null })
       .then(r => {
         if (r?.status !== 'answered') return;
         try { require('../harness/approval-answer').answerAs({ id, decision: r.choiceId === 'approve' ? 'once' : 'deny', person }); } catch { /* answered at the panel */ }

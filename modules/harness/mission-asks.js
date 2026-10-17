@@ -99,7 +99,7 @@ async function ask(gate, use, { sessionId, missionId, profile, signal, say = () 
   const ctrl = new AbortController();
   const mine = devicesOf(personId);
   if (mine.length) require('./reach').ask({ to: mine.map(d => d.id), question: `Allow ${who} to use ${use.machine}?`, note: require('./approval-explain').noteFor(req),
-    choices: [{ id: 'approve', label: 'Allow once' }, { id: 'deny', label: 'Deny' }], timeoutSec: sec, signal: ctrl.signal })
+    choices: [{ id: 'approve', label: 'Allow once' }, { id: 'deny', label: 'Deny' }], timeoutSec: sec, signal: ctrl.signal, personId: personId || null })
     .then(r => {
       const d = r?.status === 'answered' && mine.find(x => x.id === r.device?.id);   // one of theirs answered (not a card at a panel)
       if (!d) return;
