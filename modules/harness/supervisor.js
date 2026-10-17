@@ -38,6 +38,7 @@ const CUT_OFF = '[panel] Your last reply was cut off: it reached the reply lengt
   + 'Carry on from where it stopped — shorter, or in parts.';
 
 const short = (v, n) => String(v || '').replace(/\s+/g, ' ').slice(0, n);
+const lastAnswer = id => { const rows = require('./memory').messages(id); for (let i = rows.length - 1; i >= 0; i--) if (rows[i].role === 'assistant' && rows[i].content) return rows[i].content; return ''; };
 
 /* ── Starting a turn ──────────────────────────────────── */
 
@@ -188,6 +189,17 @@ function decide(id, info = {}) {
     if (retry) return wake(id, retry, { retry: () => decide(id) });
     setJob(id, { ...job, state: 'blocked' });
     org.report(id, 'blocked', `Blocked: ${why}.${escalate.note(s)} Last brief: ${short(s.brief, 300) || '(none)'}`, 'panel');
+    return deliver(s.parentId);
+  }
+
+  // Many steps and nothing moving (turn/stall.js): another automatic turn would go round the same circle. One try on a
+  // stronger model, else blocked — its report goes to whoever leads it, who asks the person.
+  if (info.stalled) {
+    const why = `${info.stalled.steps} steps without the work moving (harness.config.doca.stallSteps)`;
+    const retry = escalate.tryEscalate(s, why, require('./agent').params());
+    if (retry) return wake(id, retry, { retry: () => decide(id) });
+    setJob(id, { ...job, state: 'blocked' });
+    org.report(id, 'blocked', `Blocked: ${why}.${escalate.note(s)} Its report: ${short(lastAnswer(id), 600) || '(none)'}`, 'panel');
     return deliver(s.parentId);
   }
 

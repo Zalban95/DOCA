@@ -63,6 +63,7 @@ function changed(sessionId, ctrl = null) {
     require('../supervisor').afterTurn(sessionId, {
       auto: !!ctrl.auto, preempted: !!ctrl.preempted, steps: ctrl.steps ?? null, truncated: !!ctrl.truncated,
       stopped: ctrl.signal.aborted && !ctrl.preempted, looped: require('./failures').looped(ctrl.signal), failed: ctrl.failed || null,
+      stalled: require('./stall').of(ctrl.signal),   // stopped for lack of progress (turn/stall.js)
     });
   } catch { /* nor does deciding what comes next */ }
 }

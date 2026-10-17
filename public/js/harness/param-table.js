@@ -69,6 +69,11 @@ const HARNESS_PARAMS = [
         + 'when its specialists finish, the panel wakes it. This is how many such turns one job may take '
         + 'before it is reported as stalled instead. 0 switches this off: work then waits to be asked.' },
 
+  { key: 'stallSteps', label: 'Steps without progress', attrs: 'min="0" max="1000" step="1"',
+    hint: 'How many steps a job with a plan may take while nothing moves — no plan step done, nothing handed on, '
+        + 'nothing written or committed in its project — before it is told to stop and say where it stands. '
+        + 'A quarter more and it must write that report, and its leader asks you what next. 0 switches this off.' },
+
   { key: 'autoWakesPerHour', label: 'Automatic turns per hour', attrs: 'min="0" max="1000" step="1"',
     hint: 'Every turn the panel starts by itself, across all work chats and the Orchestrator together. Each '
         + 'is a model call you pay for; past this many in an hour the panel waits instead, and says so.' },
