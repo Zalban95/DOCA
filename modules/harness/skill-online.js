@@ -9,6 +9,7 @@
  *   openai/skills        OpenAI's skills for Codex
  *   obra/superpowers     a development method as skills (planning, debugging, review)
  *   huggingface/skills   Hugging Face's (models, datasets, training)
+ *   gamedev-skills/awesome-gamedev-agent-skills   game development (Godot, Phaser, three.js, Unity, Unreal, genres, game feel)
  *
  * Read as data, GET only: the repository's file list from GitHub's API (one request per collection an hour — the
  * unauthenticated limit is 60 an hour; `GITHUB_TOKEN` in the environment raises it), each SKILL.md's front matter from
@@ -26,6 +27,7 @@ const SOURCES = [
   { id: 'openai', repo: 'openai/skills', label: 'OpenAI' },
   { id: 'superpowers', repo: 'obra/superpowers', label: 'Superpowers' },
   { id: 'huggingface', repo: 'huggingface/skills', label: 'Hugging Face' },
+  { id: 'gamedev', repo: 'gamedev-skills/awesome-gamedev-agent-skills', label: 'Game development' },   // Apache-2.0, asked 2026-10-17 for a team's game
 ];
 const TTL_MS = 3600000, PER_REPO = 120, MAX_FILES = 60, MAX_FILE = 300000, MAX_TOTAL = 3000000;
 const SCRIPT = /(\.(sh|bash|zsh|py|js|mjs|cjs|ts|rb|pl|ps1|bat|cmd|exe|bin)$)|(^|\/)scripts\//i;
