@@ -44,6 +44,10 @@ test('Flow: the opening warms the pages and goes; a warmed page is drawn at once
   assert.ok(await B.until("!document.getElementById('flow-opening')", 6000), 'the opening went');
   const warmed = await B.evaluate('_flowWarm.done.slice()');
   assert.ok(warmed.includes('models'), `models warmed (${warmed})`);
+  // Warming gives a page 4 s and goes on; a slow read (the disk sizes, on a busy Windows runner) still lands in the
+  // warmed page after it. Wait for it there, off screen, before opening — what is measured is that a warmed page then
+  // opens at once (failed four CI runs on 2026-10-17 when the read outlasted the cap).
+  assert.ok(await B.until("!document.querySelector('#models-disk-strip .pulse')", 20000), 'the warmed page finished drawing off screen');
   const warm = await B.evaluate(MODELS_DRAWN);
   assert.ok(warm < coldStandard, `warm ${Math.round(warm)} ms < cold ${Math.round(coldStandard)} ms`);
   assert.equal(await B.evaluate('window.__waited'), false, `drawn as it opened, with nothing to wait for (${Math.round(warm)} ms)`);
