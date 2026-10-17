@@ -394,7 +394,13 @@ The harness gives its agent eight rules for working on any repository (charter r
   in space of their own, menus, saving, sound and pictures in code, `window.__game`, a level solver and a real-browser
   test at three sizes) and a plan file (`docs/plan.json`, `scripts/plan.js` stand-ins) that `npm test` lists as todo and
   `npm run test:full` fails on until real (`test/game-starter.test.js`). `ponytail` says lean code, never a poorer
-  product than asked.
+  product than asked. **What kept that team from finishing alone** (the Emberfall run, `test/team-autonomy.test.js`): a
+  test run counts however it was honestly run (`teams/test-runs.js`: the project tool's run, a reported `shell_job`, a
+  `cd` into the task's own folder, `VAR=value`, `timeout`, a pipe into one filter read by the runner's summary); a code
+  task given no test gets the project's own (`teams/contracts.js`, said by the team tool); a task that gives up reaches
+  its leader at once (an unread report and a wake, `announce.js`), and keep going asked again is a fresh round; a
+  mission whose step no model answers (a stall, out of capacity, a 5xx, no connection) is paused and carried on in its
+  own conversation after 1, 3 and 7 minutes (`agents/outage.js`), never asked of the person, carried on by a restart.
 - **Where it shows**: the missions bar (a team row with a thin bar, opened into its tasks; its missions under it, not
   twice), Harness → Teams (`public/js/harness-console/teams.js`, `css/teams.css`) and Agents → Teams (below), Workstream
   lines of kind `team`, the leader's readings and an unread report when it ends, the live feed's `teams` topic (by the
