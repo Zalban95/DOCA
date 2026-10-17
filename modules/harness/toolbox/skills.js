@@ -58,12 +58,16 @@ module.exports = [
       + 'prompt: read returns its instructions and the files beside them, file one of those files, list them all. '
       + 'write keeps a procedure you worked out, on this machine, for the next time: steps, commands, what to check — '
       + 'never a person\'s or a client\'s data. search looks through every skill on this machine, other harnesses\' too, '
-      + 'when none in your list fits.',
+      + 'when none in your list fits; find looks in the public skill collections online (Anthropic, OpenAI, Superpowers, '
+      + 'Hugging Face, game development) and get brings one in after checking it — then read it. When none exists anywhere, '
+      + 'work it out, and once it worked, write it.',
     parameters: {
       type: 'object',
       properties: {
-        action:      { type: 'string', enum: ['list', 'read', 'file', 'write', 'search'] },
-        query:       { type: 'string', description: 'For search: words to look for in every skill on this machine — DOCA\'s and other harnesses\' (Claude Code, Codex, Gemini CLI).' },
+        action:      { type: 'string', enum: ['list', 'read', 'file', 'write', 'search', 'find', 'get'] },
+        query:       { type: 'string', description: 'For search: words to look for in every skill on this machine — DOCA\'s and other harnesses\' (Claude Code, Codex, Gemini CLI). For find: words for the public collections online.' },
+        source:      { type: 'string', description: 'For get: the collection, as find names it (e.g. anthropics/skills).' },
+        dir:         { type: 'string', description: 'For get: the skill\'s folder in that collection, as find names it.' },
         name:        { type: 'string' },
         path:        { type: 'string', description: 'For file: a path inside the skill, as read lists it.' },
         description: { type: 'string', description: 'For write: when to use it, in one line.' },
@@ -71,9 +75,11 @@ module.exports = [
       },
       required: ['action'],
     },
-    run: a => {
+    run: (a, ctx = {}) => {   // synchronous but for find and get, which answer a promise (they reach the network)
       const skills = require('../skills');
       switch (a.action) {
+        case 'find': return require('../skill-get').find(a.query);
+        case 'get': return require('../skill-get').get(a, ctx);
         case 'list': return require('../skill-use').offered().map(s => `${s.name} (${s.source}): ${s.description}`).join('\n') || 'No skills yet.';
         case 'read': {
           if (require('../skill-use').isOff(a.name)) return `The skill ${a.name} is switched off on this hub (Settings → Harness → Skills): the person can switch it back on, or attach it to this chat.`;
@@ -88,7 +94,7 @@ module.exports = [
           return hits.length ? hits.map(h => `${h.name} — ${h.where}${h.inDoca ? '' : ' (not in DOCA: the user can import it in Settings → Harness → Skills)'}: ${h.description}`).join('\n')
             : `No skill on this machine mentions "${a.query}".`;
         }
-        default: throw new Error('action is list, read, file, write or search.');
+        default: throw new Error('action is list, read, file, write, search, find or get.');
       }
     },
   },

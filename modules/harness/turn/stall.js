@@ -73,14 +73,14 @@ function since(rows, root = []) {
       if (name === 'mission_plan') state.missionDone = (Array.isArray(a.items) ? a.items : []).filter(x => ['done', 'failed'].includes(x?.state)).length;
     }
   });
-  let steps = 0, noted = false;
+  let steps = 0, noted = false, from = 0;
   for (let i = rows.length - 1; i >= 0; i--) {
-    if (moves[i]) break;
+    if (moves[i]) { from = i + 1; break; }
     const r = rows[i];
     if (r.role === 'assistant' && (r.tool_calls || []).length) steps++;
     if (r.role === 'user' && r.stall) noted = true;
   }
-  return { steps, noted };
+  return { steps, noted, from };
 }
 
 /** The project folders this conversation works in, for counting writes there. */
@@ -104,7 +104,9 @@ const how = session => (session.kind === 'work' ? 'work_chats report (outcome bl
 function at({ session, rows, p, signal }) {
   const lim = limits(p);
   if (!lim || !counted(session)) return null;
-  const { steps, noted } = since(rows, rootsOf(session));
+  const { steps, noted, from } = since(rows, rootsOf(session));
+  const again = steps < lim.note && require('./rereads').note(rows.slice(from), DOCA);   // the same files read over and over: said early, once
+  if (again) return { report: false, row: again };
   if (steps >= lim.report) {
     if (signal) _stalled.set(signal, { steps });
     return { report: true, row: { role: 'user', from: DOCA, stall: true,

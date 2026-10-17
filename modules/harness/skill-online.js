@@ -104,8 +104,12 @@ async function plan(repo, dir) {
     exists: require('./skills').list().some(s => s.name === skill.name), validName: /^[a-z0-9][a-z0-9-]{0,63}$/.test(skill.name) };
 }
 
-/** Copy it into this machine's skills (a host's click after the plan). Its files are written, never run. */
-async function importSkill(repo, dir, { overwrite = false } = {}) {
+/**
+ * Copy it into this machine's skills (a host's click after the plan, or the agent's `skill get` with `scan`: every
+ * text file read by skill-scan.js and secret-scan.js first, and anything found refuses it). Its files are written,
+ * never run.
+ */
+async function importSkill(repo, dir, { overwrite = false, scan = false } = {}) {
   const p = await plan(repo, dir);
   if (p.tooBig) throw bad(`Not imported: it carries ${p.tooBig}. Copy it by hand if you want it.`);
   if (!p.validName) throw bad(`"${p.name}" is not a skill name here (lower-case letters, digits and -).`);
@@ -120,6 +124,18 @@ async function importSkill(repo, dir, { overwrite = false } = {}) {
       const r = await fetch(`${raw()}/${repo}/HEAD/${prefix}${f.path.split('/').map(encodeURIComponent).join('/')}`, { headers: { 'User-Agent': 'doca-skills' }, signal: AbortSignal.timeout(20000) });
       if (!r.ok) throw bad(`${f.path} could not be read (${r.status}).`, 502);
       fs.writeFileSync(dest, Buffer.from(await r.arrayBuffer()), { mode: 0o644 });
+    }
+    if (scan) {
+      const found = [];
+      for (const f of p.files) {
+        const at = path.resolve(root, f.path);
+        if (!fs.existsSync(at) || f.bytes > MAX_FILE) continue;
+        const text = fs.readFileSync(at);
+        if (text.includes(0)) continue;   // a binary file: not read as text
+        found.push(...require('./skill-scan').scan(text.toString('utf8'), { file: f.path }),
+          ...require('../secret-scan').scan(text.toString('utf8')).map(x => ({ file: f.path, line: x.line, what: `what looks like a key (${x.kind})` })));
+      }
+      if (found.length) throw bad(`Not brought in: ${found.slice(0, 5).map(x => `${x.file}:${x.line} ${x.what}`).join('; ')}. A person can read it and bring it in from Settings → Harness → Skills.`, 422);
     }
     const out = require('./skills').importFrom(tmp, { overwrite });
     return { imported: out, from: p.url, scripts: p.scripts };

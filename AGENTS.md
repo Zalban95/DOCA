@@ -401,6 +401,12 @@ The harness gives its agent eight rules for working on any repository (charter r
   its leader at once (an unread report and a wake, `announce.js`), and keep going asked again is a fresh round; a
   mission whose step no model answers (a stall, out of capacity, a 5xx, no connection) is paused and carried on in its
   own conversation after 1, 3 and 7 minutes (`agents/outage.js`), never asked of the person, carried on by a restart.
+  The same files read six times over since the work last moved draw one early note (`turn/rereads.js`, from the stall
+  rule). **Skills the harness finds and learns** (the owner, 2026-10-17): `skill find` searches the public collections
+  and `skill get` brings one in after `skill-scan.js` (words aimed at the agent, exfiltration, piped installers,
+  encoded blobs, invisible characters) and `secret-scan.js` read every file (`harness/skill-get.js`); **the learning
+  loop** (`harness/learn-loop.js`, `skillSuggest.learn`, on) reads a work chat's job that ended done after real work
+  once in the background and keeps a skill from it (NONE when routine), with a notice.
 - **Where it shows**: the missions bar (a team row with a thin bar, opened into its tasks; its missions under it, not
   twice), Harness → Teams (`public/js/harness-console/teams.js`, `css/teams.css`) and Agents → Teams (below), Workstream
   lines of kind `team`, the leader's readings and an unread report when it ends, the live feed's `teams` topic (by the
