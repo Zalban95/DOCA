@@ -148,6 +148,19 @@ test('comparing: --flag runs the set with the experiment off and on, and prints 
   assert.equal(code, 0, err.slice(-2000));
 });
 
+test('comparing: --set changes a setting in the sandbox\'s copy only, and the run says which (2026-10-17)', async () => {
+  const before = require('../modules/utils').loadPrefs().harness?.config?.doca?.maxSteps;
+  const child = require('node:child_process').spawn(process.execPath, [require('node:path').join(__dirname, '..', 'bin', 'doca-eval.js'), 'tiny', '--set', 'harness.config.doca.maxSteps=3', '--json'], { env: process.env });
+  let out = '', err = '';
+  child.stdout.on('data', d => { out += d; }); child.stderr.on('data', d => { err += d; });
+  const code = await new Promise(r => child.on('close', r));
+  const cmp = out.split('\n').filter(Boolean).map(l => { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean).find(l => l.compare)?.compare;
+  assert.ok(cmp, out + err);
+  assert.deepEqual(cmp.map(x => x.label), ['configured model · harness.config.doca.maxSteps=3']);
+  assert.equal(code, 0, err.slice(-2000));
+  assert.equal(require('../modules/utils').loadPrefs().harness?.config?.doca?.maxSteps, before, 'the real settings untouched');
+});
+
 test('anyTool passes when one of several right tools was called', async () => {
   const { one } = require('../modules/evals/check');
   assert.equal((await one({ anyTool: ['skill', 'work_chats'] }, 'q', { tools: ['work_chats'] })).pass, true);
@@ -203,5 +216,15 @@ test('the judge reads what the turn did — its calls — as well as what it ans
   try {
     await require('../modules/evals/check').one({ judge: 'reads the skill' }, 'q', { text: 'Built.', calls: [{ name: 'skill', args: '{"action":"read","name":"android-app"}' }] });
     assert.match(asked[0].user, /Tools it called, in order:\n1\. skill \{"action":"read","name":"android-app"\}/);
+  } finally { agent.ask = real; }
+});
+
+test('the judge reads what the work chats reported and called, not only the hand-over (audit 2026-10-17)', async () => {
+  const agent = require('../modules/harness/agent'), real = agent.ask, asked = [];
+  agent.ask = async o => { asked.push(o); return 'PASS delivered'; };
+  try {
+    await require('../modules/evals/check').one({ judge: 'files delivered' }, 'q', { text: 'Handed to a work chat.', calls: [{ name: 'work_chats', args: '{}' }], childTools: ['write_file'], childText: 'Wrote parts/a.stl and video.mp4.' });
+    assert.match(asked[0].user, /write_file \(in a work chat\)/);
+    assert.match(asked[0].user, /reported when they finished[^]*Wrote parts\/a\.stl/);
   } finally { agent.ask = real; }
 });

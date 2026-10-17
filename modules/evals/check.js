@@ -24,7 +24,8 @@ const named = (tools, name) => tools.some(t => t === name || (name.endsWith('__'
 
 /** The calls a judge reads: name and a clipped line of arguments (run.js `calls`), else names; none said as such. */
 function calledLines(o) {
-  const calls = (o.calls?.length ? o.calls : (o.allTools || o.tools || []).map(name => ({ name, args: '' }))).slice(0, 40);
+  const front = o.calls?.length ? o.calls : (o.tools || []).map(name => ({ name, args: '' }));
+  const calls = [...front, ...(o.childTools || []).map(name => ({ name: `${name} (in a work chat)`, args: '' }))].slice(0, 60);
   return calls.length ? calls.map((c, i) => `${i + 1}. ${c.name}${c.args ? ` ${String(c.args).slice(0, 120)}` : ''}`).join('\n') : '(none)';
 }
 
@@ -35,7 +36,8 @@ async function judge(rubric, prompt, outcome) {
     system: 'You grade an AI assistant\'s turn against a rubric: what it did (the tools it called, in order) and what it answered. Reply with PASS or FAIL as the first word, then one short sentence saying why. Judge only what the rubric asks.',
     // What it did, not only what it said (audit 2026-10-17: three models read the android-app skill first and were failed
     // for "not reading a procedure", because the judge saw only the final words).
-    user: `Question:\n${prompt}\n\nRubric:\n${rubric}\n\nTools it called, in order:\n${calledLines(outcome)}\n\nAnswer:\n${String(outcome.text || '').slice(0, 6000)}`,
+    user: `Question:\n${prompt}\n\nRubric:\n${rubric}\n\nTools it called, in order:\n${calledLines(outcome)}\n\nAnswer:\n${String(outcome.text || '').slice(0, 6000)}${
+      outcome.childText ? `\n\nWhat the work chats it handed the job to reported when they finished (the person gets this too):\n${String(outcome.childText).slice(0, 6000)}` : ''}`,
   });
   return { pass: /^\W*pass\b/i.test(reply), why: reply.replace(/^\W*(pass|fail)\b[:.\s-]*/i, '').slice(0, 300) };
 }

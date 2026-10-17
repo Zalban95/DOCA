@@ -22,8 +22,12 @@ const ended = id => { const s = memory().getSession(id); return !require('../har
 
 /** What the work chats did: tools in order, steps and tokens summed over their runs. */
 function stats(ids) {
-  const out = { childTools: [], childSteps: 0, childTokens: 0, childTokensIn: 0, childTokensCached: 0, childTokensOut: 0 };
+  const out = { childTools: [], childSteps: 0, childTokens: 0, childTokensIn: 0, childTokensCached: 0, childTokensOut: 0, childText: '' };
   for (const id of ids) {
+    // Its last report, which is what the person gets (audit 2026-10-17: the judge read only the front's hand-over and
+    // failed three runs that had delivered every file).
+    const said = memory().messages(id).filter(r => r.role === 'assistant' && String(r.content || '').trim()).at(-1)?.content;
+    if (said) out.childText = `${out.childText}${out.childText ? '\n\n' : ''}${String(said).slice(0, 4000)}`;
     for (const r of memory().messages(id)) if (r.role === 'assistant' && Array.isArray(r.tool_calls)) out.childTools.push(...r.tool_calls.map(c => c.function?.name).filter(Boolean));
     for (const run of require('../harness/runs').forSession(id, 200)) {
       out.childSteps += run.steps || 0;
