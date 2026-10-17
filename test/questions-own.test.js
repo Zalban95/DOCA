@@ -42,3 +42,11 @@ test('a panel question reaches only its person', async () => {
   await H.api(null, 'POST', `/api/harness/questions/${mine[0].id}`, { choiceId: 'c2' });
   await nobody;
 });
+
+test('a question nobody answered leaves the person\'s decision waiting, not taken for them', async () => {
+  const tools = require('../modules/harness/tools');
+  const r = await tools.call('ask_device', { question: 'Which level first?', choices: ['One', 'Two'], timeoutSec: 5 });
+  assert.match(r, /^Nobody answered within 5s/);
+  assert.match(r, /do not take it for them/);
+  assert.doesNotMatch(r, /Decide without it/);
+});

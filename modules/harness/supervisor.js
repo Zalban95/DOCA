@@ -296,7 +296,9 @@ function deliver(orchestratorId) {
   const failed = latest.some(n => leaders.outcomeOf(n) === 'failed') ? 'Do not retry failed work or send it anything new: say what failed and ask whether to try again. ' : '';
   const how = wake(ceo.id, '[panel] Work reported back. Tell the person what matters, in a few lines. ' + failed
     + 'Where a decision is theirs, ask it with ask_device and give the choices — it reaches their phone, '
-    + `their watch and the panel at once.\n${latest.map(leaders.lineOf).join('\n')}`, { retry: () => deliver(ceo.id) });
+    + 'their watch and the panel at once. Ask the decision the report names, in its terms and with its options; '
+    + 'say nothing about the work that the report does not say or you have not seen yourself.'
+    + `\n${latest.map(leaders.lineOf).join('\n')}`, { retry: () => deliver(ceo.id) });
   if (how === 'woken') leaders.markWoken(ceo.id, rest);
   return how;
 }
