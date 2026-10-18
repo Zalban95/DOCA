@@ -74,7 +74,7 @@ function read(name) {
   walk(s.dir);
   // Not adapted yet: a note above the body says how to translate it (skill-audit.js).
   const note = s.harness ? require('./skill-audit').readingNote(require('./skill-audit').audit(name)) : '';
-  return { ...s, body: (note + body + recipesNote(s.dir) + servicesNote(s)).slice(0, MAX_BODY), files };
+  return { ...s, body: (note + body + recipesNote(s.dir) + servicesNote(s) + require('./skill-lessons').note(name)).slice(0, MAX_BODY), files };
 }
 
 /**

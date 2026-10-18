@@ -37,7 +37,7 @@ const KIT_OF = {
   agent_results: 'organization', agent_resume: 'organization', schedule: 'organization', remind: 'devices', computer: 'computer', computer_login: 'computer', computer_look: 'computer', computer_next: 'computer', vnc_look: 'computer', vnc_input: 'computer', permission_grant: 'organization', mission_plan: 'organization', scout_report: 'organization', team: 'organization', team_note: 'organization', model_scout: 'organization',
   search_files: 'code', replace_in_files: 'code', git: 'code', project: 'code', project_params: 'code', repo_rules: 'code',
   read_file: 'files', write_file: 'files', list_dir: 'files', library_search: 'files', check_output: 'files',
-  shell: 'shell', shell_job: 'shell',
+  shell: 'shell', shell_job: 'shell', run_code: 'shell',
   canvas: 'canvas',
   http_fetch: 'web', research_docs: 'web', web_search: 'web', api_call: 'connectors', service: 'connectors', calendar: 'connectors', mail: 'connectors',
   memory_write: 'memory', memory_rules_write: 'memory', memory_search: 'memory', memory_list: 'memory',

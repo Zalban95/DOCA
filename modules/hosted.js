@@ -104,7 +104,7 @@ const ROUTES = [
 const SOCKETS = [/^\/ws\/terminal/, /^\/ws\/harness/, /^\/ws\/lsp/, /^\/ws\/vm\//];
 
 // The agent's tools that run a command line on the machine, or run git on its files.
-const TOOLS = ['shell', 'shell_job', 'hub_command', 'git', 'machine_backup', 'nearby'];
+const TOOLS = ['shell', 'shell_job', 'run_code', 'hub_command', 'git', 'machine_backup', 'nearby'];
 
 // The panel's pages that are the machine itself (nav.js leaves them out).
 const TABS = ['terminal', 'files', 'docker', 'vms', 'nearby'];

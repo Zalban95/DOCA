@@ -50,3 +50,16 @@ test('routine work, a job that kept a skill, a NONE and the switch off keep noth
   const p = prefs.loadPrefs(); prefs.savePrefs({ ...p, skillSuggest: { ...(p.skillSuggest || {}), learn: false } });
   assert.equal((await learn.learn(job(work(25)), { ask: never })).why, 'switched off');
 });
+
+test('a skill it followed that missed something gets lessons beside it, shown when the skill is read — never a rewrite', async () => {
+  const learn = require('../modules/harness/learn-loop');
+  const u = require('../modules/utils'), p = u.loadPrefs();
+  u.savePrefs({ ...p, skillSuggest: { ...(p.skillSuggest || {}), learn: true } });   // the test before switched it off
+  const id = job([call('r', 'skill', { action: 'read', name: 'freecad-modelling' }), result('r', '# freecad'), ...work(22)]);
+  const r = await learn.learn(id, { ask: async () => 'LESSONS freecad-modelling\n- Export STEP after recompute, or the file is empty: the document keeps stale shapes.\n- not a lesson line' });
+  assert.equal(r.why, 'lessons kept');
+  const read = require('../modules/harness/skills').read('freecad-modelling');
+  assert.match(read.body, /## Lessons from work on this machine\n- Export STEP after recompute, or the file is empty: the document keeps stale shapes\. \(\d{4}-\d\d-\d\d/);
+  assert.equal((await learn.learn(id, { ask: async () => 'LESSONS freecad-modelling\n- Export STEP after recompute, or the file is empty: the document keeps stale shapes.' })).why, 'its lessons were there already');
+  assert.equal((await learn.learn(id, { ask: async () => 'LESSONS unity\n- x' })).why, 'lessons for unity, a skill it did not read');
+});

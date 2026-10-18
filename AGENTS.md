@@ -408,6 +408,12 @@ The harness gives its agent eight rules for working on any repository (charter r
   loop** (`harness/learn-loop.js`, `skillSuggest.learn`, on) reads a work chat's job that ended done after real work
   once in the background and keeps a skill from it (NONE when routine), with a notice. **A file that does not parse
   says so at once** (`toolbox/syntax.js`: write_file and replace_in_files check JSON, JavaScript, Python, shell).
+  The learning loop also keeps **lessons beside a skill** it followed that missed something (`harness/skill-lessons.js`,
+  `skill-lessons/<name>.md`, shown under the skill when read; never a rewrite, so shipped skills keep their updates).
+  **Programmatic tool calls** (experiment `codeCalls`, `harness/code-calls.js`, tool `run_code`): one script calls
+  several tools, each through the turn's own `runToolCalls` in a conversation of the script's own — held where `shell`
+  is, a bare environment, 60 calls and 600 s at most. **Godot installs on Linux without Flatpak or root** (its own
+  release, checked against SHA512-SUMS, into ~/.local/opt).
 - **Where it shows**: the missions bar (a team row with a thin bar, opened into its tasks; its missions under it, not
   twice), Harness → Teams (`public/js/harness-console/teams.js`, `css/teams.css`) and Agents → Teams (below), Workstream
   lines of kind `team`, the leader's readings and an unread report when it ends, the live feed's `teams` topic (by the
