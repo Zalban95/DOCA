@@ -8,14 +8,21 @@
  * skill it read already covers it, or writes a skill — lessons, not a log: when to use it, the steps, each pitfall with
  * why, how to check it is done. Kept as a skill on this machine (skills.write: the name checked, never over one that
  * exists, a key refused), an activity line and a notice to the job's person, who removes it in Settings → Harness →
- * Skills like any. A job that wrote a skill itself is not read again. Switch: `skillSuggest.learn` (on; the owner's).
+ * Skills like any. When a skill it read covered the work but missed something, the answer is lessons for that skill
+ * instead, kept beside it (skill-lessons.js) so a shipped skill keeps its updates. A job that wrote a skill itself is
+ * not read again. Switch: `skillSuggest.learn` (on; the owner's).
  */
 const MIN_CALLS = 20, MIN_SETBACKS = 2, MAX_LINES = 140;
 
 const PROMPT = `You keep a team's know-how. Below is how one piece of work went. If it shows a way of working that will
 help the next time a similar task comes — steps that worked, a dead end and the way around it, a correction the person
-made — write it as a skill: lessons, not a log. Answer exactly NONE when the work was routine, or when a skill it read
-already covers it. Otherwise answer only the skill's file:
+made — write it as a skill: lessons, not a log. Answer exactly NONE when the work was routine. When a skill it read
+covers the work but the work found something that skill does not say (a pitfall, a step that was missing), answer instead
+
+LESSONS <that skill's name>
+- <one general rule plus, in one clause, why — one line each, at most five>
+
+Otherwise answer only the skill's file:
 
 ---
 name: <lower-case words joined by -, naming the kind of task, never this project or a person>
@@ -78,6 +85,14 @@ async function learn(sessionId, { ask = null } = {}) {
   const person = (() => { try { const id = require('./session-access').ownerOf(sessionId); return id ? { id } : null; } catch { return null; } })();
   const text = String(await (ask || require('./agent').ask)({ system: PROMPT, user: record, person }) || '').trim();
   if (/^NONE\b/i.test(text)) return { skill: null, why: 'the model found nothing new to keep' };
+  const les = /^LESSONS\s+([a-z0-9][a-z0-9-]{0,63})\s*\n([\s\S]+)$/.exec(text);
+  if (les) {
+    if (!d.read.includes(les[1])) return { skill: null, why: `lessons for ${les[1]}, a skill it did not read` };
+    const added = require('./skill-lessons').add(les[1], les[2].split('\n').filter(l => /^\s*[-*]/.test(l)).slice(0, 5), { from: short(s.title, 60) });
+    if (!added.length) return { skill: null, why: 'its lessons were there already' };
+    require('../activity').note({ from: 'skills', sessionId, what: `kept ${added.length} lesson${added.length === 1 ? '' : 's'} for the skill ${les[1]} from "${short(s.title, 80)}"`, why: 'the work found what the skill did not say (the learning loop)' });
+    return { skill: les[1], lessons: added, why: 'lessons kept' };
+  }
   const m = /^---\s*\n([\s\S]*?)\n---\s*\n([\s\S]+)$/.exec(text.replace(/^```\w*\n|\n```$/g, ''));
   const name = /^name:\s*([a-z0-9][a-z0-9-]{0,63})\s*$/m.exec(m?.[1] || '')?.[1], description = /^description:\s*(.+)$/m.exec(m?.[1] || '')?.[1];
   if (!m || !name || !description) return { skill: null, why: 'what came back was not a skill' };
