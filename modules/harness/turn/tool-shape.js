@@ -24,6 +24,7 @@ function switches() {
   if (!require('../../accounts/store').any())
     for (const name of ['calendar', 'mail']) out.push({ name, why: 'nobody has connected their own Google or Microsoft 365 account yet (Field → Connectors → Your accounts)' });
   if (!require('../../experiments').on('alwaysFree')) out.push({ name: 'background', why: 'the always-free experiment is off' });
+  if (!require('../../experiments').on('codeCalls')) out.push({ name: 'run_code', why: 'the programmatic tool calls experiment (codeCalls) is off' });
   if (!require('../../library/indexer').on()) out.push({ name: 'library_search', why: 'the Library experiment is off, or no embedding model is set for it' });
   if (require('./tool-tiers').mode() === 'all') out.push({ name: 'tools_more', why: 'every tool is sent in full (harness.config.doca.toolsLoading: all)' });
   // An old name kept so old transcripts and recipes still run (tools.call maps it); never offered.

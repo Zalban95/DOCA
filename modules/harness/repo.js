@@ -155,4 +155,9 @@ function backupPath(abs) {
   return path.join(require('../store').dir(path.join('harness', 'backups', id)), `${path.relative(root, abs)}.bak`);
 }
 
-module.exports = { backupPath, ROOT_FILES, NESTED_FILES, rootOf, ruleFiles, gitState, brief, unreadRoot, markRead };
+/** A conversation that works for another (a script's, harness/code-calls.js) has read what that one read. */
+function inherit(to, from) {
+  for (const root of introduced.get(from || '-') || []) markRead(to, root);
+}
+
+module.exports = { backupPath, ROOT_FILES, NESTED_FILES, rootOf, ruleFiles, gitState, brief, unreadRoot, markRead, inherit };

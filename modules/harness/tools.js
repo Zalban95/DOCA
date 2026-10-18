@@ -59,6 +59,7 @@ const TOOLS = [
   ...require('./toolbox/meetings'),
   ...require('./toolbox/chronicle'),
   ...require('./toolbox/machine-backup'),
+  ...require('./toolbox/code'),   // run_code: several tool calls in one script, each through the gates (experiment codeCalls)
   ...require('./toolbox/library'),
 ].filter(t => !require('../hosted').absentTool(t.name));   // a hosted hive has no command line on its machine (hosted.js)
 
@@ -109,6 +110,7 @@ async function call(name, args, disabled = [], ctx = {}) {
   if (ALIASES[name] || TOOLS.some(t => t.name === name)) require('../features/usage').count(`tool:${name}`);
   name = ALIASES[name] || name;   // an old name: old transcripts and recipes still run
   if (disabled.includes(name)) return `Error: the "${name}" tool is switched off for this harness.`;
+  if (require('../hosted').absentTool(name)) return `Error: no tool named "${name}".`;   // a hosted hive never had it, licensed or not
   const unlicensed = require('../license/use').refuse(name, args);   // not licensed here, or read-only after a lapse (license/use.js)
   if (unlicensed) return unlicensed;
   if (ctx.signal?.aborted) return 'Not run: the turn was stopped before this call.';

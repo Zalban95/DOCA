@@ -12,6 +12,7 @@ const LEADS = {
   team: 'Run specialists as a team: tasks that wait on each other, each with a contract — use it when a job needs several specialists.',
   team_note: 'Post a short finding to your team\'s board — use it when a teammate needs a path, a decision or a pitfall you found.',
   shell_job: 'Check, read or stop a command started with shell background: true — use it for builds and servers that outlive a step.',
+  run_code: 'Run a short script that calls several tools in one step — use it when many calls follow one plan (read many files, sweep a command).',
   read_file: 'Read a text file on the host, whole or a slice — use it before editing a file or answering from one.',
   repo_rules: 'Read a git repository\'s rules, branch and uncommitted changes — call it before your first change in that repository.',
   effort: 'Set how hard you think in this conversation — use it when the person asks you to think harder or answer quickly.',

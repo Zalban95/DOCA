@@ -54,6 +54,7 @@ const PURPOSE = {
   mcp_status: 'the MCP servers, their state and tools',
   agent_resume: 'carry on or drop a paused mission',
   shell_job: 'a long command in the background (a dev server, a build)',
+  run_code: 'several tool calls in one script, each through your approvals',
   replace_in_files: 'replace text across files',
   tool_note: 'a note on how a tool behaves on this install',
   features: 'everything this hub can do and where it is',
