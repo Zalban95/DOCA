@@ -79,8 +79,25 @@ function verdictOf(output) {
 
 const argsOf = c => { try { return JSON.parse(c?.function?.arguments || '{}'); } catch { return {}; } };
 
+/**
+ * Whether a shell line may change the work (so a test run before it no longer proves the work): anything but commands
+ * that only read or record — ls, cat, grep, find without -delete/-exec, git status/log/diff/show/add/commit… — and no
+ * redirect into a file. Errs towards "may": the cost is one more run of the test. (2026-10-17: a member regenerated its
+ * levels with a script after a failing run, never ran the test again, and reported green.)
+ */
+const READ_ONLY = /^(?:ls|ll|cat|head|tail|less|more|grep|egrep|fgrep|rg|wc|echo|printf|pwd|which|type|stat|file|du|df|diff|sort|uniq|cut|tr|nl|date|true|false|sleep|cd|test|\[|env|printenv|tree|basename|dirname|realpath|readlink|jq|node\s+--check|sed\s+-n|awk\s+'[^']*'(?:\s+\S+)*$|find(?![^|;&]*(?:-delete|-exec|-ok))|git\s+(?:status|log|diff|show|add|commit|branch|rev-parse|ls-files|stash\s+list|remote|config\s+--get))\b/;
+function mayChange(command, test) {
+  const line = String(command || '').replace(/\\\n/g, ' ');
+  if (/(^|[^0-9&>])>{1,2}\s*(?!\/dev\/null|&\d)\S/.test(line.replace(/2>&1/g, ''))) return true;   // a redirect into a file
+  return line.split(/&&|\|\||;|\|/).map(x => x.trim()).filter(Boolean).some(seg => {
+    if (test && shape(seg, test)) return false;
+    const bare = seg.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)+/, '').replace(/^(?:timeout\s+\d+[smhd]?\s+|sudo\s+)/, '');
+    return !READ_ONLY.test(bare);
+  });
+}
+
 /** Every command a hub conversation ran, in order — `[{command, code, output, changes}]` — from its own rows. */
-function fromRows(rows) {
+function fromRows(rows, test = null) {
   const calls = new Map(), runs = [];
   for (const r of rows) {
     if (r.role === 'assistant') for (const c of r.tool_calls || []) {
@@ -93,7 +110,8 @@ function fromRows(rows) {
     const out = String(r.content || '');
     if (c.name === 'shell' && !c.a.background) {
       const m = /^exit (-?\d+)/.exec(out);
-      if (m || /^(Timed out|Not finished)/.test(out)) runs.push({ command: String(c.a.command || ''), code: m ? Number(m[1]) : null, output: out });   // a refused call is no run
+      if (m || /^(Timed out|Not finished)/.test(out)) runs.push({ command: String(c.a.command || ''), code: m ? Number(m[1]) : null, output: out,
+        changes: mayChange(c.a.command, test) });   // a refused call is no run; one that may have changed files makes an earlier run stale
     } else if (c.name === 'project' && c.a.action === 'run') {
       const m = /^(.+?) — [\w ]+?(?: \(exit (-?\d+)\))?\n/.exec(`${out}\n`);
       if (m && !/still running/.test(m[0])) runs.push({ command: m[1], code: m[2] != null ? Number(m[2]) : null, output: out });
@@ -124,4 +142,4 @@ function verdict(test, runs, where = '', { root = null } = {}) {
   return { state: 'failed', why: code == null ? `\`${want}\` did not finish` : `\`${want}\` exited ${code}` };
 }
 
-module.exports = { core, shape, verdictOf, fromRows, verdict };
+module.exports = { core, shape, verdictOf, fromRows, verdict, mayChange };

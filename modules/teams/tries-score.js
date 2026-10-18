@@ -29,7 +29,7 @@ const isTestRun = (command, test, root = null) => runs().shape(command, test, ro
 /** The test's verdict from commands in order: the last run of it decides, unless a change came after it. */
 const fromRuns = (test, list, where, opts) => runs().verdict(test, list, where, opts);
 /** A try on the hub: its own conversation's commands, as `fromRuns` reads them. */
-const hubRuns = rows => runs().fromRows(rows);
+const hubRuns = (rows, test = null) => runs().fromRows(rows, test);
 
 /** What the try's own record says of its test: { state: passed|failed|unknown, why }. */
 function testEvidence(t, sessionId, root = null) {
@@ -43,7 +43,7 @@ function testEvidence(t, sessionId, root = null) {
   let rows = [];
   try { rows = sessionId ? require('../harness/memory').messages(sessionId) : []; } catch { rows = []; }
   if (!rows.length) return { state: 'unknown', why: `the hub keeps no record of \`${want}\` being run` };
-  return fromRuns(want, hubRuns(rows), '', { root });
+  return fromRuns(want, hubRuns(rows, want), '', { root });
 }
 
 /**

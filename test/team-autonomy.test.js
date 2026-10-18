@@ -37,6 +37,19 @@ test('a test run counts however it was honestly run: cd into its own folder, set
   assert.equal(verdict('npm test', [{ command: 'npm test', code: 0 }, { command: '', changes: true }]).state, 'unknown', 'a write after it');
 });
 
+test('a shell line that may change the work after the last run makes it stale; reading and committing do not', () => {
+  const { fromRows, verdict, mayChange } = runs();
+  for (const c of ['ls src', 'cd /w && git add -A && git commit -m x', 'grep -n x f.js | head', 'git status', 'echo hi > /dev/null'])
+    assert.equal(mayChange(c, 'npm test'), false, c);
+  for (const c of ['python3 gen.py', 'node scripts/plan.js', 'cat a > b', 'sed -i s/a/b/ f', 'find . -name x -delete'])
+    assert.equal(mayChange(c, 'npm test'), true, c);
+  const rows = [call('t', 'shell', { command: 'npm test 2>&1 | tail -20' }), result('t', 'exit 0\n# pass 4\n# fail 1'),
+    call('g', 'shell', { command: 'python3 gen-levels.py' }), result('g', 'exit 0 wrote level1.js'),
+    call('c', 'shell', { command: 'git add -A && git commit -qm levels' }), result('c', 'exit 0')];
+  assert.equal(verdict('npm test', fromRows(rows, 'npm test')).state, 'unknown', 'regenerated after a failing run: run it again');
+  assert.equal(verdict('npm test', fromRows([...rows.slice(0, 2), ...rows.slice(4)], 'npm test')).state, 'failed', 'only a commit after it: the run stands');
+});
+
 test('the project tool\'s run and a background job are runs of the test too', () => {
   const { fromRows, verdict } = runs();
   const rows = [

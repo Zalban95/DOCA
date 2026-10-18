@@ -90,6 +90,11 @@ function failed(team, t, v) {
   if (t.failedFor === key) return;
   t.failedFor = key;
   if (t.trial) { t.gaveUp = true; return; }   // a try is not tried again on its own: its siblings are the retry (tries.js)
+  // Its own last run of its test failed: sent back once to fix it and run it again, whether or not the team keeps going
+  // (2026-10-17: a member regenerated its levels after a failing run, reported green, and gave up the task at once).
+  if (t.verdict?.test?.state === 'failed' && !t.trial && !t.testAsked) return again(team, t, v, `## Your test fails\nYour task is done when `
+    + `\`${t.test}\` passes, and your last run of it did not: ${t.verdict.test.why}. Fix what fails, run \`${t.test}\` again as your last step — `
+    + 'after your last change — then finish.', true);
   // Its own contract unproven, not failed: sent back once to run its test, whether or not the team keeps going.
   if (t.verdict?.untested && !t.testAsked) return again(team, t, v, `## Run your test\nYour task is done when \`${t.test}\` passes, and the hub reads `
     + `your own run of it: ${t.verdict.test.why}. Run \`${t.test}\` as your last step, in the folder you work in — in the shell, or with the project tool's run — fix what fails, then finish.`, true);

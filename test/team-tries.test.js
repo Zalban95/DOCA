@@ -44,7 +44,9 @@ before(async () => {
       const errand = msgs.find(m => m.role === 'user' && !String(m.content).startsWith('[panel readings'))?.content || '';
       errands.push(errand);
       const k = /You are try (\d+) of \d+/.exec(all)?.[1];
-      const what = k ? new RegExp(`T${k}:(\\S+)`).exec(errand)?.[1] || '' : '';
+      // Not a try: ONE: on the first errand, AGAIN: once the task was sent back because its test failed (engine.js).
+      const what = k ? new RegExp(`T${k}:(\\S+)`).exec(errand)?.[1] || ''
+        : /## Your test fails/.test(all) ? /AGAIN:(\S+)/.exec(errand)?.[1] || '' : /ONE:(\S+)/.exec(errand)?.[1] || '';
       const tok = Number(/TOK=(\d+)/.exec(what)?.[1] || 100);
       const did = msgs.flatMap(m => m.tool_calls || []).map(c => c.function.name);
       if (/^FAIL/.test(what)) { res.writeHead(400); return res.end('{"error":"broken"}'); }
@@ -160,6 +162,15 @@ test('the test a try ran itself: its exit code decides, and the hub never runs i
   assert.equal(end.state, 'done');
   assert.match(j.report, /^2 tries — #2 kept: its check held, its test passed; #1 failed '`node t\.js` exited 1'/);
   assert.match(errands.find(e => /You are try 1 of 2/.test(e) && e.startsWith('Fix it')), /the test `node t\.js` passing — run exactly `node t\.js` yourself, as a command of its own/);
+});
+
+test('a task whose own test failed is sent back once to fix it and run it again — not given up', async () => {
+  const made = await teams().create({ title: 'Fails once', project: 'Shop', tasks: [
+    { id: 'f', agent: 'coder', task: 'Fix it. ONE:TEST=1 AGAIN:TEST=0', test: 'node t.js' }] }, { by: lead() });
+  const end = await ended(made.id);
+  assert.equal(end.state, 'done', JSON.stringify(end.tasks.map(t => [t.id, t.state, t.why])));
+  assert.ok(errands.some(e => /## Your test fails\nYour task is done when `node t\.js` passes, and your last run of it did not: `node t\.js` exited 1/.test(e)));
+  assert.equal(teams().get(made.id).tasks[0].tries.length, 1, 'one send-back, and it held');
 });
 
 test('a try that never finishes is stopped after the wait that follows the first good one, and scored as unfinished', async () => {
