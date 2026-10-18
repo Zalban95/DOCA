@@ -413,7 +413,9 @@ The harness gives its agent eight rules for working on any repository (charter r
   **Programmatic tool calls** (experiment `codeCalls`, `harness/code-calls.js`, tool `run_code`): one script calls
   several tools, each through the turn's own `runToolCalls` in a conversation of the script's own — held where `shell`
   is, a bare environment, 60 calls and 600 s at most. **Godot installs on Linux without Flatpak or root** (its own
-  release, checked against SHA512-SUMS, into ~/.local/opt).
+  release, checked against SHA512-SUMS, into ~/.local/opt). **A task whose own last test run failed goes back once**
+  to fix it and run it again, as an untested one does, and a shell line that may change the work after the last run
+  (`test-runs.mayChange`: anything but reading and recording, or a redirect into a file) makes that run not known.
 - **Where it shows**: the missions bar (a team row with a thin bar, opened into its tasks; its missions under it, not
   twice), Harness → Teams (`public/js/harness-console/teams.js`, `css/teams.css`) and Agents → Teams (below), Workstream
   lines of kind `team`, the leader's readings and an unread report when it ends, the live feed's `teams` topic (by the
