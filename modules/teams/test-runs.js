@@ -61,6 +61,47 @@ function shape(command, test, root = null) {
   return REDIRECTS.test(rest.slice(0, pipe)) && FILTER.test(rest.slice(pipe).trim()) ? 'piped' : null;
 }
 
+/** A command line cut at its top-level `&&`, `||` and `;` (quotes respected): [{text, before}] — `before` the operator ahead of it. */
+function chain(command) {
+  const out = [];
+  let cur = '', q = null, before = null;
+  const s = String(command || '');
+  for (let i = 0; i < s.length; i++) {
+    const ch = s[i];
+    if (q) { cur += ch; if (ch === q && s[i - 1] !== '\\') q = null; continue; }
+    if (ch === '"' || ch === "'") { q = ch; cur += ch; continue; }
+    const two = s.slice(i, i + 2);
+    if (two === '&&' || two === '||' || ch === ';' || ch === '\n') {
+      out.push({ text: cur.trim(), before });
+      before = two === '&&' || two === '||' ? two : ';';
+      cur = '';
+      if (two === '&&' || two === '||') i++;
+      continue;
+    }
+    cur += ch;
+  }
+  out.push({ text: cur.trim(), before });
+  return out.filter(p => p.text);
+}
+
+/**
+ * The test run inside a chain (`node scripts/plan.js && npm test 2>&1 | tail -8; echo done`, 2026-10-18: members chain
+ * a preparation before it and an echo after): { last, piped } when one segment runs the test, nothing masks it with
+ * `||`, and every `cd` before it goes to the task's own folder; else null.
+ */
+function inChain(command, test, root = null) {
+  const parts = chain(command);
+  if (parts.length < 2) return null;
+  const i = parts.findIndex(p => shape(p.text, test, root));
+  if (i < 0) return null;
+  if (parts[i].before === '||' || parts[i + 1]?.before === '||') return null;
+  for (const p of parts.slice(0, i)) {
+    const cd = /^cd\s+("[^"]*"|'[^']*'|\S+)\s*$/.exec(p.text);
+    if (cd && (!root || path.resolve(root, unquote(cd[1])) !== path.resolve(root))) return null;
+  }
+  return { last: i === parts.length - 1, piped: shape(parts[i].text, test, root) === 'piped' };
+}
+
 /** 0 passed, 1 failed, from the summary a test runner prints; null when the output has none. */
 const SUMMARIES = [
   o => { const f = /^\s*(?:#|ℹ) fail (\d+)/m.exec(o), p = /^\s*(?:#|ℹ) pass (\d+)/m.exec(o); return f ? (Number(f[1]) > 0 ? 1 : p && Number(p[1]) > 0 ? 0 : null) : null; },   // node --test
@@ -89,7 +130,7 @@ const READ_ONLY = /^(?:ls|ll|cat|head|tail|less|more|grep|egrep|fgrep|rg|wc|echo
 function mayChange(command, test) {
   const line = String(command || '').replace(/\\\n/g, ' ');
   if (/(^|[^0-9&>])>{1,2}\s*(?!\/dev\/null|&\d)\S/.test(line.replace(/2>&1/g, ''))) return true;   // a redirect into a file
-  return line.split(/&&|\|\||;|\|/).map(x => x.trim()).filter(Boolean).some(seg => {
+  return chain(line).flatMap(p => p.text.split('|')).map(x => x.trim()).filter(Boolean).some(seg => {
     if (test && shape(seg, test)) return false;
     const bare = seg.replace(/^(?:[A-Za-z_][A-Za-z0-9_]*=\S*\s+)+/, '').replace(/^(?:timeout\s+\d+[smhd]?\s+|sudo\s+)/, '');
     return !READ_ONLY.test(bare);
@@ -132,14 +173,18 @@ function verdict(test, runs, where = '', { root = null } = {}) {
   let last = -1, code = null, piped = false;
   runs.forEach((r, i) => {
     const s = shape(r.command, want, root);
-    if (s === 'exact') { last = i; code = r.code; piped = false; }
-    else if (s === 'piped') { const v = verdictOf(r.output); if (v != null) { last = i; code = v; piped = true; } }
+    if (s === 'exact') { last = i; code = r.code; piped = false; return; }
+    if (s === 'piped') { const v = verdictOf(r.output); if (v != null) { last = i; code = v; piped = true; } return; }
+    const c = inChain(r.command, want, root);   // in a chain: the runner's summary, else the exit when it ran last
+    if (!c) return;
+    const v = verdictOf(r.output);
+    if (v != null) { last = i; code = v; piped = true; } else if (c.last && !c.piped) { last = i; code = r.code; piped = false; }
   });
   if (last < 0) return { state: 'unknown', why: `\`${want}\` was never run${where}` };
-  if (runs.slice(last + 1).some(r => r.changes && !shape(r.command, want, root))) return { state: 'unknown', why: `\`${want}\` was last run before a later change` };
+  if (runs.slice(last + 1).some(r => r.changes && !shape(r.command, want, root) && !inChain(r.command, want, root))) return { state: 'unknown', why: `\`${want}\` was last run before a later change` };
   if (code === 0) return { state: 'passed', why: `\`${want}\` passed` };
   if (piped) return { state: 'failed', why: `\`${want}\` failed (its runner's summary)` };
   return { state: 'failed', why: code == null ? `\`${want}\` did not finish` : `\`${want}\` exited ${code}` };
 }
 
-module.exports = { core, shape, verdictOf, fromRows, verdict, mayChange };
+module.exports = { core, shape, inChain, chain, verdictOf, fromRows, verdict, mayChange };

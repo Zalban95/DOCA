@@ -50,6 +50,18 @@ test('a shell line that may change the work after the last run makes it stale; r
   assert.equal(verdict('npm test', fromRows([...rows.slice(0, 2), ...rows.slice(4)], 'npm test')).state, 'failed', 'only a commit after it: the run stands');
 });
 
+test('a test run inside a chain counts: the runner\'s summary, or the exit when it ran last; a mask or another folder does not', () => {
+  const { verdict } = runs();
+  const T = 'npm run test:part -- world3', root = '/w/g';
+  const v = (command, output, code = 0) => verdict(T, [{ command, code, output }], '', { root }).state;
+  assert.equal(v('cd /w/g && node scripts/plan.js && npm run test:part -- world3 2>&1 | tail -8; echo "GATE_EXIT=${PIPESTATUS[0]}"', '# pass 40\n# fail 0\n# todo 81\nGATE_EXIT=0'), 'passed');
+  assert.equal(v('git status --short && npm run test:part -- world3 2>&1 | tail -25', '# pass 3\n# fail 2'), 'failed');
+  assert.equal(v('node scripts/plan.js && npm run test:part -- world3', 'no summary', 1), 'failed', 'last in the chain: its exit');
+  assert.equal(v('npm run test:part -- world3 2>&1 | grep -E "^# fail" > /dev/null; echo done', 'done'), 'unknown', 'nothing shows its result');
+  assert.equal(v('npm run test:part -- world3 || true', '# fail 0\n# pass 3'), 'unknown', 'masked');
+  assert.equal(v('cd /elsewhere && npm run test:part -- world3', '# fail 0\n# pass 3'), 'unknown', 'another folder');
+});
+
 test('the project tool\'s run and a background job are runs of the test too', () => {
   const { fromRows, verdict } = runs();
   const rows = [
